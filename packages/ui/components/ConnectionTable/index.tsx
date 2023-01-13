@@ -19,7 +19,7 @@ import GppMaybeIcon from "@mui/icons-material/GppMaybe";
 import Link from "next/link";
 import Status from "../Status";
 import { useContext } from "react";
-import SessionContext from "../../contexts/session";
+import SessionContext from "../../contexts/app";
 
 const dataGridCustom = {
   "&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable":

@@ -12,5 +12,7 @@ services:
     build:
       context: packages/ui
       dockerfile: Dockerfile
+    environment:
+      - IZG_ENDPOINT_CERT_DIR_PATH=/certs
 volumes:
   certs:

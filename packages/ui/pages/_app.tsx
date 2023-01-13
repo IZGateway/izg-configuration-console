@@ -1,4 +1,5 @@
 import * as React from "react";
+import { SessionProvider } from "next-auth/react";
 import type { AppProps } from "next/app";
 import { CacheProvider, EmotionCache } from "@emotion/react";
 import { ThemeProvider, CssBaseline, createTheme } from "@mui/material";
@@ -11,9 +12,10 @@ import "@fontsource/ubuntu/500.css";
 import "@fontsource/ubuntu/700.css";
 import createEmotionCache from "../utility/createEmotionCache";
 import lightThemeOptions from "../styles/theme/lightThemeOptions";
-import { SessionProvider } from '../contexts/session';
+import { AppProvider } from "../contexts/app";
 interface MyAppProps extends AppProps {
   emotionCache?: EmotionCache;
+  pageProps: { session: any; pageProps: any };
 }
 
 const clientSideEmotionCache = createEmotionCache();
@@ -36,18 +38,20 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
   }
 
   return (
-    <CacheProvider value={emotionCache}>
-      <ThemeProvider theme={lightTheme}>
-        <CssBaseline />
-        <ApolloProvider client={client}>
-          <Layout>
-          <SessionProvider>
-          <Component {...pageProps}/>
-          </SessionProvider>
-          </Layout>
-        </ApolloProvider>
-      </ThemeProvider>
-    </CacheProvider>
+    <SessionProvider session={pageProps.session}>
+      <CacheProvider value={emotionCache}>
+        <ThemeProvider theme={lightTheme}>
+          <CssBaseline />
+          <ApolloProvider client={client}>
+            <Layout>
+              <AppProvider>
+                <Component {...pageProps} />
+              </AppProvider>
+            </Layout>
+          </ApolloProvider>
+        </ThemeProvider>
+      </CacheProvider>
+    </SessionProvider>
   );
 };
 

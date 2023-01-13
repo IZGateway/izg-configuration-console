@@ -27,6 +27,7 @@
   "dependencies": {
     "@yarnpkg/pnpify": "^4.0.0-rc.28",
     "concurrently": "^7.5.0",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.4.23",
+    "next-auth": "^4.18.6"
   }
 }
