@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery } from "@apollo/client";
 import { FETCH_ALL_DESTINATIONS } from "../../lib/queries/fetch";
-import { DataGrid, GridColDef } from "@mui/x-data-grid";
+import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
 import testConnectionImage from "/public/Health_Check.svg";
 import Image from "next/image";
 import {
@@ -37,9 +37,20 @@ const dataGridCustom = {
     paddingBottom: "1em",
     boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.25)",
   },
-
+  "& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter": {
+    width: "32vw",
+  },
   "& .MuiDataGrid-columnHeaders": {
     backgroundColor: "#FFF",
+  },
+  "& .MuiDataGrid-toolbarContainer": {
+    display: "flex",
+    flexDirection: "row-reverse",
+    backgroundColor: "#FFF",
+    padding: "24px 16px 16px 16px",
+    boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.25)",
+    border: "1px solid rgba(224, 224, 224, 1)",
+    marginBottom:"8px",
   },
   "& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root":
     {
@@ -91,7 +102,7 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
     {
       field: "dest_type",
       headerName: "ENVIRONMENT",
-      width: 135,
+      width: 150,
       valueFormatter: ({ value }) => value?.type,
     },
     {
@@ -103,7 +114,7 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
     {
       field: "dest_uri",
       headerName: "ENDPOINT URL",
-      width: 600,
+      width: 550,
     },
     {
       field: "status",
@@ -181,6 +192,7 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
       field: "action",
       headerName: "ACTION",
       sortable: false,
+      filterable: false,
       width: 200,
       renderCell: (params) => {
         const onClick = (e) => {
@@ -237,11 +249,12 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
             zIndex: 10,
             height: "auto",
             boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.40)",
+            marginBottom: "-16px",
           }}
         >
           <Typography
             id="title-table"
-            sx={{ padding: 1, fontSize: "1.75rem", fontWeight: 700 }}
+            sx={{ padding: 2, fontSize: "1.75rem", fontWeight: 700 }}
             flexGrow={1}
             display="flex"
             align="center"
@@ -263,11 +276,61 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
         }}
         disableSelectionOnClick
         disableColumnMenu
+        disableColumnSelector
+        disableDensitySelector
         onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
         rowsPerPageOptions={[5, 10, 20]}
         getRowId={(row) => row.dest_id}
         density={"comfortable"}
         pagination
+        components={{ Toolbar: GridToolbar}}
+        componentsProps={{
+          toolbar: {
+            showQuickFilter: true,
+            quickFilterProps: { debounceMs: 500 },
+            printOptions: { disableToolbarButton: true },
+            columns: { field: 'action', filterable: false },
+          },
+          panel: { 
+            placement: "bottom-end",
+            sx: {
+              '& .MuiTypography-root': {
+                fontSize: 20,
+              },
+              '& .MuiDataGrid-filterForm': {
+                flexDirection: 'column',
+                gap: '8px',
+              },
+              '& .MuiDataGrid-filterFormColumnInput': {
+                width: '100%',
+                display: 'flex',
+              },
+              '& .MuiDataGrid-filterFormOperatorInput':{
+                width: '100%',
+              },
+              '& .MuiDataGrid-paper': {
+                marginTop: '-73px',
+                paddingBottom: '3vh',
+                paddingTop: '1vh',
+                paddingRight: '1vh',
+                paddingLeft: '1vh',
+                borderRadius:'0 0 30px 30px',
+                border: '1px solid rgba(224, 224, 224, 1)',
+                width:"fit-content",
+               },
+              '& .MuiDataGrid-filterFormDeleteIcon':{
+                flexDirection: 'row',
+                marginRight: '-4px',
+                marginBottom: '-16px',
+                color: 'green',
+              },
+              '& .MuiDataGrid-filterFormValueInput': {
+                width: '100%',
+              },
+            },
+          },
+
+        }}
       />
     </div>
   );
