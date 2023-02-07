@@ -4,4 +4,7 @@ export type ConnectionTestRequest = {
   ip: string;
   port: number;
   order: number;
+  keyPath?: string;
+  certPath?: string;
+  passphrase?: string;
 };

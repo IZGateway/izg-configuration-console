@@ -17,7 +17,14 @@ export default async function handler(
     query: { id },
     method,
   } = request;
-  const testSuite: string[] = ["dns", "tcp", "tls", "cipher", "wsdl","connectivity"];
+  const testSuite: string[] = [
+    "dns",
+    "tcp",
+    "tls",
+    "cipher",
+    "wsdl",
+    "connectivity",
+  ];
   const testResults: ConnectionTestResult[] = [];
 
   const destination = await lookupDestinationURL(id);
@@ -61,6 +68,10 @@ export default async function handler(
     });
   }
 
+  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined;
+  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined;
+  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined;
+
   const destIdURL = convertUrlStringToUrlObject(
     destination?.data?.destinationById.dest_uri
   );
@@ -71,6 +82,9 @@ export default async function handler(
     hostname: destIdURL.hostname,
     path: destIdURL.pathname,
     order: 0,
+    certPath: IZG_ENDPOINT_CRT_PATH,
+    keyPath: IZG_ENDPOINT_KEY_PATH,
+    passphrase: IZG_ENDPOINT_PASSCODE,
   };
 
   console.info(

@@ -28,12 +28,14 @@ interface testListProps {
   testResults: any[];
   destination: string;
   destinationType: string;
+  jurisdictionUrl: string;
 }
 
 const testsList = ({
   testResults,
   destination,
   destinationType,
+  jurisdictionUrl,
 }: testListProps) => {
   const handleBack = () => {
     history.back();
@@ -173,8 +175,9 @@ const testsList = ({
               {destinationType}
             </Typography>
             <Typography align="center" variant="body1">
-              Some text stating that this is only testing the connection and
-              they cant edit any fields
+              Test results for the URL <strong>{jurisdictionUrl}</strong> are
+              displayed below. For any tests that fail, please make required
+              changes to the connection and then retry testing.
             </Typography>
           </Box>
           <Card

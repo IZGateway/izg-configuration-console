@@ -12,6 +12,7 @@ const TestConnection = () => {
   const [tests, setTests] = useState([]);
   const [jurisdiction, setJurisdiction] = useState("");
   const [type, setType] = useState("");
+  const [jurisdictionUrl, setJurisdictionUrl] = useState("");
   const router = useRouter();
   const { id } = router.query;
   const TEST_API_DOMAIN =
@@ -33,6 +34,7 @@ const TestConnection = () => {
         setType(data.destType);
         setTests(data.testResults);
         setJurisdiction(data.jurisdictionDescription);
+        setJurisdictionUrl(data.destUrl);
         setLoading(false);
       })
       .catch((err) => {
@@ -57,6 +59,7 @@ const TestConnection = () => {
               testResults={tests}
               destination={jurisdiction}
               destinationType={type}
+              jurisdictionUrl={jurisdictionUrl}
             />
           )}
         </Container>

@@ -12,25 +12,17 @@ export const IZG_STATUS_UPDATE_POLL_RATE =
   ONE_HOUR_MILLISECONDS;
 const IZG_STATUS_ENDPOINT_URL =
   process.env.IZG_STATUS_ENDPOINT_URL || "unknown";
-const IZG_ENDPOINT_CERT_DIR_PATH =
-  process.env.IZG_ENDPOINT_CERT_DIR_PATH || "unknown";
-const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || "";
-
-const pemPath = fs
-  .readdirSync(IZG_ENDPOINT_CERT_DIR_PATH)
-  .filter((fn) => fn.endsWith(".pem"))[0];
-
-const keyPath = fs
-  .readdirSync(IZG_ENDPOINT_CERT_DIR_PATH)
-  .filter((fn) => fn.endsWith(".key"))[0];
+  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined;
+  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined;
+  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined;
 
 const httpsAgentOptions = {
   cert: fs.readFileSync(
-    path.resolve(IZG_ENDPOINT_CERT_DIR_PATH, pemPath),
+    path.resolve(IZG_ENDPOINT_CRT_PATH),
     `utf-8`
   ),
   key: fs.readFileSync(
-    path.resolve(IZG_ENDPOINT_CERT_DIR_PATH, keyPath),
+    path.resolve(IZG_ENDPOINT_KEY_PATH),
     "utf-8"
   ),
   passphrase: IZG_ENDPOINT_PASSCODE,
@@ -44,7 +36,7 @@ const fetchEndpointStatus = async () => {
   try {
     const response = await fetch(IZG_STATUS_ENDPOINT_URL, {
       agent: sslConfiguredAgent,
-      timeout: 5000,
+      timeout: 30000,
     });
     if (!response.ok) {
       const message = `An error has occured: ${response.status}`;
