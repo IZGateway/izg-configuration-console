@@ -37,9 +37,10 @@ const dataGridCustom = {
     paddingBottom: "1em",
     boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.25)",
   },
-  "& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter": {
-    width: "32vw",
-  },
+  "& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter":
+    {
+      width: "32vw",
+    },
   "& .MuiDataGrid-columnHeaders": {
     backgroundColor: "#FFF",
   },
@@ -50,7 +51,7 @@ const dataGridCustom = {
     padding: "24px 16px 16px 16px",
     boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.25)",
     border: "1px solid rgba(224, 224, 224, 1)",
-    marginBottom:"8px",
+    marginBottom: "8px",
   },
   "& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root":
     {
@@ -98,18 +99,19 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
     throw new Error(isLoadingConnectionsError.message);
   }
 
+  const getEnvironmentType = (value) => {
+    return value.type;
+  };
   const columns: GridColDef[] = [
     {
       field: "dest_type",
       headerName: "ENVIRONMENT",
       width: 150,
-      valueFormatter: ({ value }) => value?.type,
     },
     {
       field: "jurisdiction",
       headerName: "JURISDICTION",
       width: 200,
-      valueFormatter: ({ value }) => value?.description || "N/A",
     },
     {
       field: "dest_uri",
@@ -265,7 +267,13 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
       </Box>
       <DataGrid
         sx={dataGridCustom}
-        rows={connections.allDestinations}
+        rows={connections.allDestinations.map((x: any) => {
+          return {
+            ...x,
+            dest_type: x.dest_type.type,
+            jurisdiction: x.jurisdiction?.description || "N/A",
+          };
+        })}
         columns={columns}
         pageSize={pageSize}
         autoHeight
@@ -283,53 +291,52 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
         getRowId={(row) => row.dest_id}
         density={"comfortable"}
         pagination
-        components={{ Toolbar: GridToolbar}}
+        components={{ Toolbar: GridToolbar }}
         componentsProps={{
           toolbar: {
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
             printOptions: { disableToolbarButton: true },
-            columns: { field: 'action', filterable: false },
+            columns: { field: "action", filterable: false },
           },
-          panel: { 
+          panel: {
             placement: "bottom-end",
             sx: {
-              '& .MuiTypography-root': {
+              "& .MuiTypography-root": {
                 fontSize: 20,
               },
-              '& .MuiDataGrid-filterForm': {
-                flexDirection: 'column',
-                gap: '8px',
+              "& .MuiDataGrid-filterForm": {
+                flexDirection: "column",
+                gap: "8px",
               },
-              '& .MuiDataGrid-filterFormColumnInput': {
-                width: '100%',
-                display: 'flex',
+              "& .MuiDataGrid-filterFormColumnInput": {
+                width: "100%",
+                display: "flex",
               },
-              '& .MuiDataGrid-filterFormOperatorInput':{
-                width: '100%',
+              "& .MuiDataGrid-filterFormOperatorInput": {
+                width: "100%",
               },
-              '& .MuiDataGrid-paper': {
-                marginTop: '-73px',
-                paddingBottom: '3vh',
-                paddingTop: '1vh',
-                paddingRight: '1vh',
-                paddingLeft: '1vh',
-                borderRadius:'0 0 30px 30px',
-                border: '1px solid rgba(224, 224, 224, 1)',
-                width:"fit-content",
-               },
-              '& .MuiDataGrid-filterFormDeleteIcon':{
-                flexDirection: 'row',
-                marginRight: '-4px',
-                marginBottom: '-16px',
-                color: 'green',
+              "& .MuiDataGrid-paper": {
+                marginTop: "-73px",
+                paddingBottom: "3vh",
+                paddingTop: "1vh",
+                paddingRight: "1vh",
+                paddingLeft: "1vh",
+                borderRadius: "0 0 30px 30px",
+                border: "1px solid rgba(224, 224, 224, 1)",
+                width: "fit-content",
               },
-              '& .MuiDataGrid-filterFormValueInput': {
-                width: '100%',
+              "& .MuiDataGrid-filterFormDeleteIcon": {
+                flexDirection: "row",
+                marginRight: "-4px",
+                marginBottom: "-16px",
+                color: "green",
+              },
+              "& .MuiDataGrid-filterFormValueInput": {
+                width: "100%",
               },
             },
           },
-
         }}
       />
     </div>
