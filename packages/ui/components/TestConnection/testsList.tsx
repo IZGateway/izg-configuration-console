@@ -37,9 +37,7 @@ const testsList = ({
   destinationType,
   jurisdictionUrl,
 }: testListProps) => {
-  const handleBack = () => {
-    history.back();
-  };
+  const handleReload = () => window.location.reload();
   const componentRef = useRef(null);
   const passeddata = testResults.filter(
     (item) => item.status === "PASS"
@@ -132,12 +130,12 @@ const testsList = ({
         <Button
           color="primary"
           variant="outlined"
-          onClick={handleBack}
+          onClick={handleReload}
           sx={{
             borderRadius: "30px",
           }}
         >
-          BACK TO CONNECTIONS
+          RERUN TEST
         </Button>
         <ReactToPrint
           trigger={() => (
