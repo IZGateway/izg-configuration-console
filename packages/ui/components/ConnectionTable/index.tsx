@@ -279,7 +279,7 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
         autoHeight
         initialState={{
           sorting: {
-            sortModel: [{ field: "jurisdiction", sort: "desc" }],
+            sortModel: [{ field: "jurisdiction", sort: "asc" }],
           },
         }}
         disableSelectionOnClick
