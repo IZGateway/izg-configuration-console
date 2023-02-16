@@ -169,7 +169,7 @@ const testsList = ({
               fontSize="32px"
               id="test-connection"
             >
-              Running Test for {destination === "unknown" ? "N/A" : destination}{" "}
+              Connection testing for {destination === "unknown" ? "N/A" : destination}{" "}
               {destinationType}
             </Typography>
             <Typography align="center" variant="body1">
@@ -182,7 +182,7 @@ const testsList = ({
             sx={{ marginTop: 4, borderRadius: "0px 0px 16px 16px" }}
             id="test-connection-info"
           >
-            <CardHeader title="Test your connections" />
+            <CardHeader title="Test your connection" />
             <Divider />
             <CardContent>
               <Typography variant="body1">
