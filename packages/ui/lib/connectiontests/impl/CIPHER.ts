@@ -45,7 +45,7 @@ export default class CIPHER extends ConnectionTest {
         path.resolve(this.connectionTestRequest.keyPath),
         "utf-8"
       ),
-      passphrase: this.connectionTestRequest.keyPath,
+      passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
       keepAlive: true,
     };
