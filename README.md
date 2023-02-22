@@ -6,7 +6,7 @@ This project contains the api and ui for the IZ Gateway Configurtion Console. Th
 ```
 yarn install
 ```
-Add .env file under Ui and api directories
+Add .env.local file under Ui and  add .env file api directories
 
 in the /packages/api folder run the following to generate the Prisma client
 
