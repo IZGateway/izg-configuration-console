@@ -122,7 +122,7 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
       field: "status",
       headerName: "STATUS",
       width: 200,
-      valueFormatter: ({ value }) => value?.status || "N/A",
+      filterable: false,
       renderCell: ({ value }) => {
         const isConnected = value?.status === "Connected" ? true : false;
         const asOfDate = value?.ran_at
