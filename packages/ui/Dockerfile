@@ -5,7 +5,8 @@
 ##
 FROM node:18-alpine as builder
 WORKDIR /usr/src/app
-
+# Custom cache invalidation
+ARG CACHEBUST=1
 ##
 ## Add all files from the current directory (if you need to ignore anything, you can use .dockerignore)
 ##
@@ -31,6 +32,10 @@ WORKDIR /usr/src/app
 COPY package.json ./
 RUN yarn install --production && rm -rf "$(yarn cache clean)"
 COPY --from=builder /usr/src/app/.next ./.next
+
+# Run container as non-root (unprivileged) user
+# The node user is provided in the Node.js Alpine base image
+USER node
 
 ##
 ## Expose our port and run the production app, assumes `backend-api/package.json` has a script named `start:prod`

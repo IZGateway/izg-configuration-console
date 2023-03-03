@@ -53,3 +53,5 @@ tmp
 
 .idea
 .vscode
+
+nginx/

@@ -5,7 +5,8 @@
 ##
 FROM node:18-alpine as builder
 WORKDIR /usr/src/app
-
+# Custom cache invalidation
+ARG CACHEBUST=1
 ##
 ## Add all files from the current directory (if you need to ignore anything, you can use .dockerignore)
 ##

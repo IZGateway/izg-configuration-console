@@ -17,6 +17,8 @@ export const typeDefs = [
       dest_version: String
       signed_mou: Boolean
       jurisdiction: Jurisdiction
+      username: String
+      password: String
       status: EndpointStatus
     }
 
