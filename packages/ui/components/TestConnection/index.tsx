@@ -15,15 +15,13 @@ const TestConnection = () => {
   const [jurisdictionUrl, setJurisdictionUrl] = useState("");
   const router = useRouter();
   const { id } = router.query;
-  const TEST_API_DOMAIN =
-    process.env.ENDPOINT_TEST_API_DOMAIN || "http://localhost:3000";
 
   useEffect(() => {
     if (!router.isReady) return;
     setError(null);
     setLoading(true);
 
-    fetch(`${TEST_API_DOMAIN}/api/tests/connectiontest/${id}`)
+    fetch(`/api/tests/connectiontest/${id}`)
       .then((res) => {
         if (!res.ok) {
           setError(res.statusText);

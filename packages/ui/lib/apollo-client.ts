@@ -12,7 +12,7 @@ const apolloClientFactory = async () => {
     uri: isDevelopment
       ? "http://localhost:4000"
       : isBrowser
-      ? "http://localhost:4000"
+      ? "http://localhost/graphql"
       : "http://api:4000",
     cache,
   });

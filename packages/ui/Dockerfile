@@ -31,15 +31,18 @@ FROM node:18-alpine
 WORKDIR /usr/src/app
 COPY package.json ./
 RUN yarn install --production && rm -rf "$(yarn cache clean)"
-COPY --from=builder /usr/src/app/.next ./.next
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --chown=nextjs:nodejs --from=builder /usr/src/app/.next ./.next
 
 # Run container as non-root (unprivileged) user
 # The node user is provided in the Node.js Alpine base image
-USER node
+USER nextjs
 
 ##
 ## Expose our port and run the production app, assumes `backend-api/package.json` has a script named `start:prod`
 ##
-#EXPOSE 3000
+EXPOSE 3000
 CMD ["yarn", "start"]
-

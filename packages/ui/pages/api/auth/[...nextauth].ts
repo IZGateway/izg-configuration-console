@@ -8,9 +8,10 @@ export const authOptions = {
       // clientId: process.env.KEYCLOAK_ID,
       // clientSecret: process.env.KEYCLOAK_SECRET,
       // issuer: process.env.KEYCLOAK_ISSUER,
-      clientId: "myclient",
+      clientId: "izgateway-config-console",
       clientSecret: "client-credentials-mock-client-secret",
       issuer: "http://192.168.0.159:8080/realms/myrealm",
     })
+  ]
 };
 export default NextAuth(authOptions);

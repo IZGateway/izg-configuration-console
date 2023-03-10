@@ -1,4 +1,8 @@
 import { ApolloServer } from "apollo-server";
+import {
+  ApolloServerPluginLandingPageGraphQLPlayground,
+  ApolloServerPluginLandingPageDisabled,
+} from "apollo-server-core";
 import { resolvers, typeDefs } from "./schema";
 import { context } from "./context";
 import fetch from "node-fetch";
@@ -12,19 +16,13 @@ export const IZG_STATUS_UPDATE_POLL_RATE =
   ONE_HOUR_MILLISECONDS;
 const IZG_STATUS_ENDPOINT_URL =
   process.env.IZG_STATUS_ENDPOINT_URL || "unknown";
-  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined;
-  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined;
-  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined;
+const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined;
+const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined;
+const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined;
 
 const httpsAgentOptions = {
-  cert: fs.readFileSync(
-    path.resolve(IZG_ENDPOINT_CRT_PATH),
-    `utf-8`
-  ),
-  key: fs.readFileSync(
-    path.resolve(IZG_ENDPOINT_KEY_PATH),
-    "utf-8"
-  ),
+  cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), `utf-8`),
+  key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), "utf-8"),
   passphrase: IZG_ENDPOINT_PASSCODE,
   rejectUnauthorized: false,
   keepAlive: true,
@@ -69,10 +67,18 @@ function startPollingIZGStatus() {
   }, IZG_STATUS_UPDATE_POLL_RATE);
 }
 
-new ApolloServer({ resolvers, typeDefs, context: context }).listen(
-  { port: 4000 },
-  () =>
-    console.log(`
+new ApolloServer({
+  resolvers,
+  typeDefs,
+  context: context,
+  introspection: process.env.NODE_ENV !== "production",
+  plugins: [
+    process.env.NODE_ENV === "production"
+      ? ApolloServerPluginLandingPageDisabled()
+      : ApolloServerPluginLandingPageGraphQLPlayground(),
+  ],
+}).listen({ port: 4000 }, () =>
+  console.log(`
 🚀 Server ready at: http://localhost:4000
 ⭐️ See sample queries: http://pris.ly/e/ts/graphql-sdl-first#using-the-graphql-api`)
 );
