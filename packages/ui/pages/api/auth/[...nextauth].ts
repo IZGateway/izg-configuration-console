@@ -8,9 +8,9 @@ export const authOptions = {
       // clientId: process.env.KEYCLOAK_ID,
       // clientSecret: process.env.KEYCLOAK_SECRET,
       // issuer: process.env.KEYCLOAK_ISSUER,
-      clientId: "izgateway-config-console",
+      clientId: process.env.KEYCLOAK_CLIENT_ID,
       clientSecret: "client-credentials-mock-client-secret",
-      issuer: "http://192.168.0.159:8080/realms/myrealm",
+      issuer: process.env.KEYCLOAK_ISSUER,
     })
   ]
 };
