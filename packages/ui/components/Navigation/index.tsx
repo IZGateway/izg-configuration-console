@@ -182,7 +182,8 @@ const MiniDrawer = () => {
           textDecoration: "underline",
           position: "absolute",
           left: "10px",
-          bottom: "20px"
+          bottom: "20px",
+          textTransform: "capitalize"
         }}
       >
         Log Out
