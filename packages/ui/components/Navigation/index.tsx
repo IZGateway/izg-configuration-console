@@ -4,6 +4,7 @@ import IZGLogo from "./Branding";
 import MuiDrawer from "@mui/material/Drawer";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import { signOut } from "next-auth/react";
 import {
   Collapse,
   styled,
@@ -14,6 +15,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Button
 } from "@mui/material";
 import { menuItems } from "./menuItems";
 
@@ -75,6 +77,7 @@ const MiniDrawer = () => {
   const [open, setOpen] = React.useState(true);
   const [selectedIndex, setSelectedIndex] = React.useState(1);
 
+
   const handleClick = () => {
     setOpen(!open);
   };
@@ -85,6 +88,11 @@ const MiniDrawer = () => {
   ) => {
     setSelectedIndex(index);
   };
+
+  
+  const handleSignOut = async() => {
+    await signOut({callbackUrl: `/api/auth/logout`});
+  }
 
   const list = () => (
     <>
@@ -166,6 +174,19 @@ const MiniDrawer = () => {
       </div>
       <Divider color="#00D998" />
       {list()}
+      <Button
+        variant="text"
+        onClick={handleSignOut}
+        sx={{
+          color: "#FFFFFF" ,
+          textDecoration: "underline",
+          position: "absolute",
+          left: "10px",
+          bottom: "20px"
+        }}
+      >
+        Log Out
+      </Button>
       <Collapse in={!open} timeout="auto" />
       {/* Commenting this code as it is not part of any user story right now */}
       {/* <Button

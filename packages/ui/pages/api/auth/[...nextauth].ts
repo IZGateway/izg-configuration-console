@@ -5,13 +5,20 @@ export const authOptions = {
   // Configure one or more authentication providers
   providers: [
     KeycloakProvider({
-      // clientId: process.env.KEYCLOAK_ID,
-      // clientSecret: process.env.KEYCLOAK_SECRET,
-      // issuer: process.env.KEYCLOAK_ISSUER,
       clientId: process.env.KEYCLOAK_CLIENT_ID,
       clientSecret: "client-credentials-mock-client-secret",
       issuer: process.env.KEYCLOAK_ISSUER,
+      idToken: true,
     })
-  ]
+  ],
+  callbacks: {
+    async jwt({ token, account }) {
+      if (account) {
+        token.id_token = account.id_token
+        token.provider = account.provider
+      }
+      return token
+    },
+  },
 };
 export default NextAuth(authOptions);
