@@ -1,9 +1,11 @@
 import * as React from "react";
-import { Box, Typography , CardHeader , Card, CardContent, Divider} from "@mui/material";
+import { Box, Typography , CardHeader , Card, CardContent, Divider, Button} from "@mui/material";
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import Link from 'next/link'
 import Status from "../Status"
+import ConnectionInfoDetail from "./connectionInfoDetail";
 
-interface InfoProps {
+interface InfoProps  {
     destinationById: {
       dest_uri: String,
       dest_type: {
@@ -15,15 +17,34 @@ interface InfoProps {
       status : {
         status: String
       }
+      username: String,
+      password: String,
+      facility_id: String,
+      MSH3: String,
+      MSH4: String,
+      MSH5: String,
+      MSH6: String,
+      MSH22: String,
+      RXA11: String,
     }
 }
 
 const ConnectionInfo = ({destinationById} : InfoProps) => {
+  const [open,setOpen] = React.useState(false);
 
+  const toggleDrawer = () => {
+    setOpen(!open)
+  }
   return (
     <div>
     <Card sx={{ marginTop:4, borderRadius: '0px 0px 16px 16px'}} id="connection-info">
     <CardHeader title="Connection Info"/>
+    <Button onClick={toggleDrawer} > 
+    <VisibilityIcon sx={{
+      display:"flex"
+    }}/>
+    </Button>
+    {open && <ConnectionInfoDetail data={destinationById} open={open} display={toggleDrawer}/>}
     <Divider />
       <CardContent>
       <Box sx={{ display:'flex', gap:'2rem'}}>

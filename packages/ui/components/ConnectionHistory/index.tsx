@@ -1,13 +1,13 @@
 import * as React from "react";
 import { Typography, Box, BoxProps } from "@mui/material";
 import { useQuery } from "@apollo/client";
-import { DESTINATION_INFO } from "../../lib/queries/history/connectionhistory";
+import { FETCH_DESTINATION } from "../../lib/queries/fetch";
 import TestHistory from "./testHistory";
 import ConnectionInfo from "./connectionInfo";
 import Close from "../Close";
 
 const ConnectionHistory = (props: any) => {
-  const { loading, error, data } = useQuery(DESTINATION_INFO, {
+  const { loading, error, data } = useQuery(FETCH_DESTINATION, {
     variables: { destId: props.destId },
   });
 

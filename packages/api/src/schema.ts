@@ -25,7 +25,8 @@ export const typeDefs = [
       MSH4: String,
       MSH5: String,
       MSH6: String,
-      MSH22: String
+      MSH22: String,
+      RXA11: String
     }
 
     type DestinationType {

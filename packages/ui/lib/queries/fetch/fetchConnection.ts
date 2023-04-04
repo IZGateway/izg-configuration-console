@@ -20,6 +20,10 @@ export const FETCH_DESTINATION = gql`
       MSH5
       MSH6
       MSH22
+      RXA11
+      status {
+        status
+      }
     }
   }
 `;
