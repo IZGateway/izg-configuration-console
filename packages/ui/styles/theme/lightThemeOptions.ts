@@ -121,7 +121,21 @@ const lightThemeOptions: ThemeOptions = {
         },
       },
     },
-   },
+    MuiFilledInput:{
+      styleOverrides:{
+        root:{
+          '&.Mui-disabled':{
+            border: '1px dotted',
+            borderRadius: '4px',
+          },
+          '&.Mui-disabled:before':{
+            borderBottom: 'hidden',
+            borderRadius: '4px',
+          },
+        },
+      },
+    },
+  },
 };
 
 export default lightThemeOptions;

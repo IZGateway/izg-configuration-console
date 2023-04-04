@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Box, Typography, Drawer, TextField, Button, InputAdornment, IconButton } from "@mui/material";
+import { Box, Typography, Drawer, TextField, Button, InputAdornment, IconButton, CardContent } from "@mui/material";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
@@ -29,78 +29,209 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
       //   sx: { width: "30%" },
       // }}
       >
-        <Typography variant="h2" sx={{ paddingLeft: 2, paddingTop: 2 }}>
-          Connection Info
-        </Typography>
+        <CardContent>
+          <Box display="flex" flexDirection="column" justifyContent="space-between" minHeight="96vh">
+            <Box>
+              <Typography variant="h2" fontSize="28px">
+                <strong>Connection Info</strong>
+              </Typography>
+              <Typography pt={2} pb={2} variant="body1">
+                View connection information below. Editing is not available on this panel.
+              </Typography>
+              <Box display="flex" gap={2} flexDirection="column" justifyContent="space-between"
+                sx={{
+                }}
+              >
+                <Typography variant="body1">
+                  <strong> Configuration Fields </strong>
+                </Typography>
+                <Box display="flex" gap={2} flexDirection="column" justifyContent="space-between" sx={{
+                }} >
+                  <TextField
+                    id="jurisdiction"
+                    label="Jurisdiction"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.jurisdiction.description}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
 
-        <Typography variant="body1" sx={{ paddingLeft: 2 }}>
-          View connection information below. Editing is not available on this panel.
-        </Typography>
+                  <TextField
+                    id="type"
+                    label="Type of Connection"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.dest_type.type}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
+                  <TextField
+                    id="url"
+                    label="Endpoint URL"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.dest_uri}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
+                </Box>
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap={2}
+                >
 
-        <Box
+                  <TextField
+                    id="username"
+                    label="Username"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.username}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                  <TextField
+                    id="Facility ID"
+                    label="Facility ID"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.facility_id}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                </Box>
+
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap={2}
+                >
+
+                  <TextField
+                    id="MSH-3"
+                    label="MSH-3"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.MSH3}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                  <TextField
+                    id="MSH-4"
+                    label="MSH-4"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.MSH4}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                </Box>
+
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap={2}
+                >
+
+                  <TextField
+                    id="MSH-5"
+                    label="MSH-5"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.MSH5}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                  <TextField
+                    id="MSH-6"
+                    label="MSH-6"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.MSH6}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                </Box>
+
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap={2}
+                >
+
+                  <TextField
+                    id="MSH-22"
+                    label="MSH-22"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.MSH22}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+
+                  <TextField
+                    id="type"
+                    label="RXA-11"
+                    variant="filled"
+                    disabled
+                    defaultValue={data.RXA11}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+                </Box>
+
+                {/* <Button
+          color="primary"
+          variant="filled"
+          onClick={()=> display(open)}
           sx={{
-            paddingTop: 2,
-            paddingBottom: 2,
-            paddingleft: 2,
-            '& .MuiTextField-root': { m: 2.5 },
+            borderRadius: "30px",
+            width:'60em', 
           }}
         >
-          <Typography variant="body1" sx={{ paddingLeft: 2, paddingTop: 1 }}>
-            <strong> Configuration Fields </strong></Typography>
-          <Box display="flex" flexDirection="column" justifyContent="space-between"
-            alignItems="left" sx={{
-              paddingTop: 1,
-              '& .MuiTextField-root': { m: 1 },
-            }} >
-            <TextField
-              id="jurisdiction"
-              label="Jurisdiction"
-              variant="outlined"
-              disabled
-              defaultValue={data.jurisdiction.description}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
+          CLOSE
+        </Button>     
+       
+        ** Below is a pre built password hider will be used on additional pages **
 
-            <TextField
-              id="type"
-              label="Type of Connection"
-              variant="outlined"
-              disabled
-              defaultValue={data.dest_type.type}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-            <TextField
-              id="url"
-              label="Endpoint URL"
-              variant="outlined"
-              disabled
-              defaultValue={data.dest_uri}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-          </Box>
-          <Box display="flex" flexDirection="row" justifyContent="space-between"
-            alignItems="center" >
-
-            <TextField
-              id="username"
-              label="Username"
-              variant="outlined"
-              disabled
-              defaultValue={data.username}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-            <TextField
+        <TextField
               id="password"
               label="Password"
-              variant="outlined"
+              variant="filled"
               disabled
               defaultValue={data.password}
               InputProps={{
@@ -118,123 +249,24 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
               }}
               type={showPassword ? 'text' : 'password'}
             />
+        */}
+              </Box>
+            </Box>
+            <Box pt={4} textAlign='center'>
+              <Button
+                color="primary"
+                variant="outlined"
+                fullWidth
+                onClick={() => display(open)}
+                sx={{
+                  borderRadius: "30px",
+                }}
+              >
+                CLOSE
+              </Button>
+            </Box>
           </Box>
-
-          <Box display="flex" flexDirection="row" justifyContent="space-between"
-            alignItems="center" >
-
-            <TextField
-              id="Facility ID"
-              label="Facility ID"
-              variant="outlined"
-              disabled
-              defaultValue={data.facility_id}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-
-            <TextField
-              id="MSH-3"
-              label="MSH-3"
-              variant="outlined"
-              disabled
-              defaultValue={data.MSH3}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-          </Box>
-
-          <Box display="flex" flexDirection="row" justifyContent="space-between"
-            alignItems="center" >
-
-            <TextField
-              id="MSH-4"
-              label="MSH-4"
-              variant="outlined"
-              disabled
-              defaultValue={data.MSH4}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-
-            <TextField
-              id="MSH-5"
-              label="MSH-5"
-              variant="outlined"
-              disabled
-              defaultValue={data.MSH5}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-
-          </Box>
-
-          <Box display="flex" flexDirection="row" justifyContent="space-between"
-            alignItems="center" >
-
-            <TextField
-              id="MSH-6"
-              label="MSH-6"
-              variant="outlined"
-              disabled
-              defaultValue={data.MSH6}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-            <TextField
-              id="MSH-22"
-              label="MSH-22"
-              variant="outlined"
-              disabled
-              defaultValue={data.MSH22}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-          </Box>
-          <Box display="flex" flexDirection="column" justifyContent="space-between"
-            alignItems="left" >
-            <TextField
-              id="type"
-              label="RXA-11"
-              variant="outlined"
-              disabled
-              defaultValue={data.RXA11}
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-            {/* <Button
-          color="primary"
-          variant="outlined"
-          onClick={()=> display(open)}
-          sx={{
-            borderRadius: "30px",
-            width:'60em', 
-          }}
-        >
-          CLOSE
-        </Button>     */}
-          </Box>
-        </Box>
-        <Box textAlign='center'>
-          <Button
-            color="primary"
-            variant="outlined"
-            onClick={() => display(open)}
-            sx={{
-              borderRadius: "30px",
-              width: '30em',
-            }}
-          >
-            CLOSE
-          </Button>
-        </Box>
+        </CardContent>
       </Drawer>
     </div>
 
