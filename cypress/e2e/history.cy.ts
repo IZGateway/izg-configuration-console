@@ -14,7 +14,7 @@ describe('As a user, on manage connections page', () => {
 
   beforeEach (() => {
     cy.visit('http://localhost:3000/manage');
-    cy.get(`[data-id="${destination}"]`).find('#edit').click()
+    cy.get(`[data-id="${destination}"]`).find('#history').click()
   })
 
     it('should open "Connection History" page for the destination', () => {

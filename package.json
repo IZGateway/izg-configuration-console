@@ -27,6 +27,7 @@
   "dependencies": {
     "@yarnpkg/pnpify": "^4.0.0-rc.28",
     "concurrently": "^7.5.0",
+    "cypress": "^12.9.0",
     "moment": "^2.29.4",
     "uuid": "^9.0.0",
     "xml2js": "^0.4.23"

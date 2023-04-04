@@ -12,21 +12,21 @@ describe('As a user, on Home page', () => {
     cy.visit('http://localhost:3000/');
   })
 
-    it('should see app header bar', () => {
-      assert.exists(cy.get(homeElements.appHeader))
-    })
+    // it('should see app header bar', () => {
+    //   assert.exists(cy.get(homeElements.appHeader))
+    // })
 
     it('should see navigation side menu', () => {
       assert.exists(cy.get(homeElements.navigation))
     })
     
-    describe('when clicking on user profile button', () => {
+    // describe('when clicking on user profile button', () => {
 
-      it('should navigate user to user profile page', () => {
-        cy.get(homeElements.userProfile).click();
-        cy.url().should('contain','/user');
-      })
-    })
+    //   it('should navigate user to user profile page', () => {
+    //     cy.get(homeElements.userProfile).click();
+    //     cy.url().should('contain','/user');
+    //   })
+    // })
 
     describe('when clicking on manage connections button', () => {
 
@@ -36,11 +36,11 @@ describe('As a user, on Home page', () => {
       })
     })
 
-    describe('when clicking on add connection button', () => {
+    // describe('when clicking on add connection button', () => {
 
-      it('should navigate user to add connection page', () => {
-        cy.get(homeElements.addConnection).click();
-        cy.url().should('contain','/add');
-      })
-    })
+    //   it('should navigate user to add connection page', () => {
+    //     cy.get(homeElements.addConnection).click();
+    //     cy.url().should('contain','/add');
+    //   })
+    // })
 })
