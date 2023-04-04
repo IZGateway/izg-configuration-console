@@ -1,6 +1,15 @@
 
 import * as React from "react";
-import { Box, Typography, Drawer, TextField, Button, InputAdornment, IconButton, CardContent } from "@mui/material";
+import {
+  Box,
+  Button,
+  CardContent,
+  Drawer,
+  IconButton,
+  InputAdornment,
+  TextField,
+  Typography,
+} from "@mui/material";
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
@@ -30,23 +39,42 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
       // }}
       >
         <CardContent>
-          <Box display="flex" flexDirection="column" justifyContent="space-between" minHeight="96vh">
+          <Box
+            display="flex"
+            flexDirection="column"
+            justifyContent="space-between"
+            minHeight="96vh"
+          >
             <Box>
-              <Typography variant="h2" fontSize="28px">
+              <Typography
+                variant="h2"
+                fontSize="28px"
+              >
                 <strong>Connection Info</strong>
               </Typography>
-              <Typography pt={2} pb={2} variant="body1">
+              <Typography
+                pt={2}
+                pb={2}
+                variant="body1"
+              >
                 View connection information below. Editing is not available on this panel.
               </Typography>
-              <Box display="flex" gap={2} flexDirection="column" justifyContent="space-between"
-                sx={{
-                }}
+              <Box
+                display="flex"
+                gap={2}
+                flexDirection="column"
+                justifyContent="space-between"
               >
-                <Typography variant="body1">
+                <Typography
+                  variant="body1">
                   <strong> Configuration Fields </strong>
                 </Typography>
-                <Box display="flex" gap={2} flexDirection="column" justifyContent="space-between" sx={{
-                }} >
+                <Box
+                  display="flex"
+                  gap={2}
+                  flexDirection="column"
+                  justifyContent="space-between"
+                >
                   <TextField
                     id="jurisdiction"
                     label="Jurisdiction"
@@ -110,7 +138,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                     }}
                     fullWidth
                   />
-
                 </Box>
 
                 <Box
@@ -144,7 +171,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                     }}
                     fullWidth
                   />
-
                 </Box>
 
                 <Box
@@ -178,7 +204,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                     }}
                     fullWidth
                   />
-
                 </Box>
 
                 <Box
@@ -252,7 +277,10 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
         */}
               </Box>
             </Box>
-            <Box pt={4} textAlign='center'>
+            <Box
+              pt={4}
+              textAlign='center'
+            >
               <Button
                 color="primary"
                 variant="outlined"
