@@ -34,11 +34,14 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
         anchor={"right"}
         open={open}
         onClose={display}
+        
       // PaperProps={{
       //   sx: { width: "30%" },
       // }}
       >
-        <CardContent>
+        <CardContent
+        id="detailDrawer"
+        >
           <Box
             display="flex"
             flexDirection="column"
@@ -49,6 +52,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
               <Typography
                 variant="h2"
                 fontSize="28px"
+                id="title"
               >
                 <strong>Connection Info</strong>
               </Typography>
@@ -128,7 +132,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   />
 
                   <TextField
-                    id="Facility ID"
+                    id="facilityId"
                     label="Facility ID"
                     variant="filled"
                     disabled
@@ -149,7 +153,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                 >
 
                   <TextField
-                    id="MSH-3"
+                    id="msh3"
                     label="MSH-3"
                     variant="filled"
                     disabled
@@ -161,7 +165,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   />
 
                   <TextField
-                    id="MSH-4"
+                    id="msh4"
                     label="MSH-4"
                     variant="filled"
                     disabled
@@ -182,7 +186,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                 >
 
                   <TextField
-                    id="MSH-5"
+                    id="msh5"
                     label="MSH-5"
                     variant="filled"
                     disabled
@@ -194,7 +198,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   />
 
                   <TextField
-                    id="MSH-6"
+                    id="msh6"
                     label="MSH-6"
                     variant="filled"
                     disabled
@@ -215,7 +219,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                 >
 
                   <TextField
-                    id="MSH-22"
+                    id="msh22"
                     label="MSH-22"
                     variant="filled"
                     disabled
@@ -227,7 +231,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   />
 
                   <TextField
-                    id="type"
+                    id="rxa11"
                     label="RXA-11"
                     variant="filled"
                     disabled
@@ -239,17 +243,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   />
                 </Box>
 
-                {/* <Button
-          color="primary"
-          variant="filled"
-          onClick={()=> display(open)}
-          sx={{
-            borderRadius: "30px",
-            width:'60em', 
-          }}
-        >
-          CLOSE
-        </Button>     
+                {/*     
        
         ** Below is a pre built password hider will be used on additional pages **
 
@@ -282,6 +276,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
               textAlign='center'
             >
               <Button
+                id="closeDetail"
                 color="primary"
                 variant="outlined"
                 fullWidth

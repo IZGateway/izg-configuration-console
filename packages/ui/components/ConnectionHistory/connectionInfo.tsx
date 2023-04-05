@@ -41,7 +41,7 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
         <CardHeader title="Connection Info"
           action={
             <Tooltip placement="top" arrow  title="View all connection information">
-            <IconButton color='primary' onClick={toggleDrawer} >
+            <IconButton color='primary' onClick={toggleDrawer} id="detail">
               <VisibilityIcon sx={{
                 display: "flex"
               }} />
