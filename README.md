@@ -1,6 +1,6 @@
 # izg-configuration-console
 
-This project contains the api and ui for the IZ Gateway Configurtion Console. This is written using the following technologies:
+This project contains the api and ui for the IZ Gateway Configuration Console. This is written using the following technologies:
 
 - NodeJS 
 - NextJS 
@@ -12,15 +12,16 @@ This project contains the api and ui for the IZ Gateway Configurtion Console. Th
 - Keycloak image
 
 
-
 ## Usage for local development
-The following prerequesites must be met for the first-time install and run the application on a local environment
+The following prerequisites must be met for the first-time install and run the application on a local environment
 - Yarn 3 installed and active
 - Docker compose installed
 
-A certificate for connecting to an instance of IZ Gateway is not neccessary, however the connection status feature will not function without a certificate. You will see errors in the console but they do not prevent the application from running.
+A certificate for connecting to an instance of IZ Gateway is not necessary, however the connection status feature will not function without a certificate. You will see errors in the console but they do not prevent the application from running.
 
 ### **Step 1: start docker**
+Prerequisite: Existing services running on port 3306, such as another database instance, must be stopped. Or, you can modify the port by creating a docker-compose.override.yml and setting a port value.
+
 In a terminal window at the root of the project directory, start the MySQL and Keycloak containers by running
 
 ```
@@ -67,7 +68,7 @@ This will start the config console api and ui services. To open the application,
 
 `http://localhost:3000`
 
-Running in development mode uses the concurrently package to start both the api graphql server and the ui nextjs server in development mode. Use the following credentials to log into the applicaiton when prompted:
+Running in development mode uses the concurrently package to start both the api graphql server and the ui nextjs server in development mode. Use the following credentials to log into the application when prompted:
 
 Username: brian     
 Password: test
@@ -80,3 +81,10 @@ yarn docker-development:up
 ```
 
 This command will start the docker containers and then start the config console project.
+
+### **Stopping the application**
+Use ctrl+c to stop the config console's api and ui services. Run the following command to stop the docker containers
+
+```
+yarn docker:down
+```
