@@ -8,7 +8,7 @@ const TestSkeleton = (props) => {
       <Skeleton sx={{ marginBottom: 6}} variant="rectangular" width='75%' height={24} />
     </Box>
 
-    <Card>
+    <Card id="skeleton">
     <CardContent>
         <Skeleton sx={{ marginBottom: 2, marginTop: 1,}}variant="rectangular" width='30%' height={32} />
         <Divider/>
