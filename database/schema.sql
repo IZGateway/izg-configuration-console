@@ -165,10 +165,10 @@ TRUNCATE destinations;
 --
 
 INSERT INTO destinations(dest_id, dest_uri, username, password, facility_id, MSH3, MSH4, MSH5, MSH6, MSH22, RXA11, dest_version, signed_mou, pass_expiry, dest_type) VALUES
-	('aira','https://florence.immregistries.org/iis-sandbox/soap','IZgtwy','IZgtwy','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,'2023-07-12',1),
+	('aira','https://florence.immregistries.org/iis-sandbox/soappp','IZgtwy','IZgtwy','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,'2023-07-12',1),
 	('404','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/NotFound','NOT_FOUND_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',2),
 	('devwup','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',2),
-	('dev','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
+	('dev','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','user','pass','IZGW','IZGW','IZGW','TEST','TC_04','','','2014',0,'2023-07-12',1),
 	('dev2011','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/client_Service','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,'2023-07-12',1),
 	('down','https://192.0.2.0/dev/IISService','NON_RESPONDING_IP_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
 	('invalid','https://iis.invalid','NON_DNS_RESOLVABLE_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
