@@ -68,22 +68,18 @@ const testsList = ({
                 <ListItemText
                   primary={item.name}
                   secondary={
-                    <React.Fragment>
-                      <Typography variant="body2" color="default">
-                        Cannot test Further on failure
-                      </Typography>
-                    </React.Fragment>
+                    <Typography variant="body2" color="default">
+                      Cannot test Further on failure
+                    </Typography>
                   }
                 />
               ) : (
                 <ListItemText
                   primary={item.name}
                   secondary={
-                    <React.Fragment>
-                      <Typography variant="body2" color="secondary">
-                        {item.message}
-                      </Typography>
-                    </React.Fragment>
+                    <Typography variant="body2" color="secondary">
+                      {item.message}
+                    </Typography>
                   }
                 />
               )}
@@ -94,8 +90,8 @@ const testsList = ({
                   item.status === "PASS"
                     ? "primary"
                     : item.status === "SKIPPED"
-                    ? "default"
-                    : "secondary"
+                      ? "default"
+                      : "secondary"
                 }
                 sx={{
                   borderRadius: "4px",

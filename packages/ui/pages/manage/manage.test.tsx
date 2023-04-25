@@ -1,13 +1,9 @@
 import React from 'react';
-import { getAllByRole, getByRole, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Manage from './index';
 import { act } from 'react-dom/test-utils';
-const wait = require('waait');
-
 import { MockedProvider } from '@apollo/react-testing';
-
-// The component AND the query need to be exported
 import { FETCH_ALL_DESTINATIONS } from '../../lib/queries/fetch';
 
 const mocks = [
@@ -17,7 +13,7 @@ const mocks = [
     },
     result: {
       data: {
-        allDestinations: [ {
+        allDestinations: [{
           dest_id: "1",
           dest_uri: "www.google.com",
           dest_version: "2014",
@@ -51,8 +47,8 @@ describe('Manage page', () => {
     );
     expect(screen.getByText("Loading your connections...")).toBeInTheDocument();
   })
-  it('should render properly after loading state', async() => {
-    const { getByText, queryByText, getByRole,getAllByRole } = render(
+  it('should render properly after loading state', async () => {
+    const { getByText, queryByText, getByRole, getAllByRole } = render(
       <MockedProvider mocks={mocks}>
         <Manage />
       </MockedProvider>
@@ -62,7 +58,6 @@ describe('Manage page', () => {
       expect(queryByText("Loading your connections...")).not.toBeInTheDocument();
     });
     expect(getByRole("grid")).toBeInTheDocument();
-    // expect(getAllByRole("row")).toHaveLength(1)
   });
- 
+
 })
