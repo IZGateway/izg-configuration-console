@@ -37,3 +37,8 @@ yarn-error.log*
 
 # Docker override file
 docker-compose.override.yml
+
+# Cypress file
+cypress/screenshots/
+cypress/videos/
+

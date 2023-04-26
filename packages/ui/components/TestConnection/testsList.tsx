@@ -48,9 +48,9 @@ const testsList = ({
   const list = () => (
     <>
       <List>
-        {testResults.map((item) => (
+        {testResults.map((item,index) => (
           <>
-            <ListItem key={item.name}>
+            <ListItem key={item.name} id={item.name}>
               <ListItemIcon>
                 {item.status === "PASS" && <CheckCircleIcon color="primary" />}
                 {item.status === "FAIL" && <ErrorIcon color="secondary" />}
@@ -124,6 +124,7 @@ const testsList = ({
         }}
       >
         <Button
+          id="rerun"
           color="primary"
           variant="outlined"
           onClick={handleReload}
@@ -136,6 +137,7 @@ const testsList = ({
         <ReactToPrint
           trigger={() => (
             <Button
+              id="print"
               variant="contained"
               color="primary"
               endIcon={<PrintIcon />}
@@ -182,7 +184,7 @@ const testsList = ({
             <Divider />
             <CardContent>
               <Typography variant="body1">
-                <Box component="span" fontWeight="fontWeightMedium">
+                <Box component="span" fontWeight="fontWeightMedium" id="progress-bar">
                   {progressPct}% Passed
                 </Box>
               </Typography>
