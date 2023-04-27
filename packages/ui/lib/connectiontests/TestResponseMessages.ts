@@ -1,8 +1,8 @@
 export class TestResponseMessages {
-  public static readonly TCP_TIMEOUT =
-    "The connection timed out.  Your endpoint must whitelist connections from {IZGW-ip-address}.";
-  public static readonly TCP_REJECT =
-    "The connection was rejected. Your endpoint must whitelist connections from {IZGW-ip-address}.";
+  public static readonly TCP_TIMEOUT = (ipAddress: string) =>
+    `The connection timed out.  Your endpoint must whitelist connections from ${ipAddress}.`;
+  public static readonly TCP_REJECT = (ipAddress: string) =>
+    `The connection was rejected. Your endpoint must whitelist connections from ${ipAddress}.`;
   public static readonly DNS_LOOKUP_FAIL = (url: string) =>
     `There is no available DNS entry for ${url}`;
   public static readonly CIPHER_NOT_APPROPRIATE = (url: string) =>
