@@ -102,7 +102,9 @@ export default class WSDL extends ConnectionTest {
           resolve([
             {
               ...wsdlConnectionTestResult,
-              message: TestResponseMessages.WSDL_NOT_ACCESSED,
+              message: TestResponseMessages.WSDL_NOT_ACCESSED(
+                options.hostname+options.port+ options.path
+              ),
               status: TestStatus.FAIL,
             },
           ]);
