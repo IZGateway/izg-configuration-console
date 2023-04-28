@@ -128,17 +128,27 @@ export default class CONNECTIVITY extends ConnectionTest {
                   status: TestStatus.WARNING,
                 },
               ]);
+            } else if (
+              requestEchoback !== responseEchoback ||
+              !responseEchoback?.includes(requestEchoback)
+            ) {
+              resolve([
+                {
+                  ...connectivityTestResult,
+                  detail: { response: responseEchoback },
+                  message:
+                    TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+                  status: TestStatus.FAIL,
+                },
+              ]);
             }
-          } else if (
-            requestEchoback !== responseEchoback ||
-            !responseEchoback?.includes(requestEchoback)
-          ) {
+          } else {
             resolve([
               {
                 ...connectivityTestResult,
-                detail: { response: responseEchoback },
+                detail: {statuscode: res.statusCode, message: res.statusMessage},
                 message:
-                  TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+                  TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
                 status: TestStatus.FAIL,
               },
             ]);

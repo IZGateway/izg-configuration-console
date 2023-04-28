@@ -20,6 +20,8 @@ export class TestResponseMessages {
     "The WSDL {WSDL-location} for this endpoint could not be accessed.";
   public static readonly CONNECTIVITY_ECHOBACK_NOT_EXPECTED =
     "The echoback response did not contain the expected content.";
+  public static readonly CONNECTIVITY_NOT_CONNECT =
+    "We cannot connect to the url right now. Please try again later";
   public static readonly CONNECTIVITY_WARNING = (
     testEchoback: string,
     responseEchoback: string
