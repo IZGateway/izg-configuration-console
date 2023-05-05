@@ -3,14 +3,14 @@ import ConnectionsTable from "../../components/ConnectionTable";
 import ErrorBoundary from "../../components/ErrorBoundary";
 import Container from "../../components/Container";
 
-const Manage =() => {
+const Manage = () => {
   return (
     <Container title="Manage Connections">
       <ErrorBoundary>
-      <ConnectionsTable />
+        <ConnectionsTable />
       </ErrorBoundary>
     </Container>
   );
-}
+};
 
 export default Manage;

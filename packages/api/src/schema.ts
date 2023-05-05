@@ -20,12 +20,12 @@ export const typeDefs = [
       signed_mou: Boolean
       jurisdiction: Jurisdiction
       status: EndpointStatus
-      facility_id: String,
-      MSH3: String,
-      MSH4: String,
-      MSH5: String,
-      MSH6: String,
-      MSH22: String,
+      facility_id: String
+      MSH3: String
+      MSH4: String
+      MSH5: String
+      MSH6: String
+      MSH22: String
       RXA11: String
     }
 

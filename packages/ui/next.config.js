@@ -12,11 +12,10 @@ module.exports = {
   async redirects() {
     return [
       {
-        source: '/',
-        destination: '/manage',
-        permanent: true
-      }
-    ]
-  }
+        source: "/",
+        destination: "/manage",
+        permanent: true,
+      },
+    ];
+  },
 };
-

@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import {
   Box,
@@ -10,21 +9,25 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
-
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 interface ConnectionDetailProps {
-  data: any,
-  open: boolean,
-  display: (isOpen: boolean) => void
+  data: any;
+  open: boolean;
+  display: (isOpen: boolean) => void;
 }
 
-const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) => {
-
+const ConnectionInfoDetail = ({
+  data,
+  open,
+  display,
+}: ConnectionDetailProps) => {
   const [showPassword, setShowPassword] = React.useState(false);
   const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseDownPassword = (
+    event: React.MouseEvent<HTMLButtonElement>
+  ) => {
     event.preventDefault();
   };
 
@@ -34,14 +37,12 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
         anchor={"right"}
         open={open}
         onClose={display}
-        
-      // PaperProps={{
-      //   sx: { width: "30%" },
-      // }}
+
+        // PaperProps={{
+        //   sx: { width: "30%" },
+        // }}
       >
-        <CardContent
-        id="detailDrawer"
-        >
+        <CardContent id="detailDrawer">
           <Box
             display="flex"
             flexDirection="column"
@@ -49,19 +50,12 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
             minHeight="96vh"
           >
             <Box>
-              <Typography
-                variant="h2"
-                fontSize="28px"
-                id="title"
-              >
+              <Typography variant="h2" fontSize="28px" id="title">
                 <strong>Connection Info</strong>
               </Typography>
-              <Typography
-                pt={2}
-                pb={2}
-                variant="body1"
-              >
-                View connection information below. Editing is not available on this panel.
+              <Typography pt={2} pb={2} variant="body1">
+                View connection information below. Editing is not available on
+                this panel.
               </Typography>
               <Box
                 display="flex"
@@ -69,8 +63,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                 flexDirection="column"
                 justifyContent="space-between"
               >
-                <Typography
-                  variant="body1">
+                <Typography variant="body1">
                   <strong> Configuration Fields </strong>
                 </Typography>
                 <Box
@@ -118,7 +111,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   alignItems="center"
                   gap={2}
                 >
-
                   <TextField
                     id="username"
                     label="Username"
@@ -151,7 +143,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   alignItems="center"
                   gap={2}
                 >
-
                   <TextField
                     id="msh3"
                     label="MSH-3"
@@ -184,7 +175,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   alignItems="center"
                   gap={2}
                 >
-
                   <TextField
                     id="msh5"
                     label="MSH-5"
@@ -217,7 +207,6 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
                   alignItems="center"
                   gap={2}
                 >
-
                   <TextField
                     id="msh22"
                     label="MSH-22"
@@ -271,10 +260,7 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
         */}
               </Box>
             </Box>
-            <Box
-              pt={4}
-              textAlign='center'
-            >
+            <Box pt={4} textAlign="center">
               <Button
                 id="closeDetail"
                 color="primary"
@@ -292,9 +278,8 @@ const ConnectionInfoDetail = ({ data, open, display }: ConnectionDetailProps) =>
         </CardContent>
       </Drawer>
     </div>
-
-  )
-}
+  );
+};
 
 export default ConnectionInfoDetail;
 // sx={{marginTop: 2, borderRadius: "30px", textTransform: 'none'}}

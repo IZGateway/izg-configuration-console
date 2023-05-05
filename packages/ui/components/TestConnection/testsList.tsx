@@ -48,7 +48,7 @@ const testsList = ({
   const list = () => (
     <>
       <List>
-        {testResults.map((item,index) => (
+        {testResults.map((item, index) => (
           <>
             <ListItem key={item.name} id={item.name}>
               <ListItemIcon>
@@ -90,8 +90,8 @@ const testsList = ({
                   item.status === "PASS"
                     ? "primary"
                     : item.status === "SKIPPED"
-                      ? "default"
-                      : "secondary"
+                    ? "default"
+                    : "secondary"
                 }
                 sx={{
                   borderRadius: "4px",
@@ -167,7 +167,8 @@ const testsList = ({
               fontSize="32px"
               id="test-connection"
             >
-              Connection testing for {destination === "unknown" ? "N/A" : destination}{" "}
+              Connection testing for{" "}
+              {destination === "unknown" ? "N/A" : destination}{" "}
               {destinationType}
             </Typography>
             <Typography align="center" variant="body1">
@@ -184,7 +185,11 @@ const testsList = ({
             <Divider />
             <CardContent>
               <Typography variant="body1">
-                <Box component="span" fontWeight="fontWeightMedium" id="progress-bar">
+                <Box
+                  component="span"
+                  fontWeight="fontWeightMedium"
+                  id="progress-bar"
+                >
                   {progressPct}% Passed
                 </Box>
               </Typography>

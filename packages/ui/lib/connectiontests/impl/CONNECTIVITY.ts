@@ -146,9 +146,11 @@ export default class CONNECTIVITY extends ConnectionTest {
             resolve([
               {
                 ...connectivityTestResult,
-                detail: {statuscode: res.statusCode, message: res.statusMessage},
-                message:
-                  TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
+                detail: {
+                  statuscode: res.statusCode,
+                  message: res.statusMessage,
+                },
+                message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
                 status: TestStatus.FAIL,
               },
             ]);

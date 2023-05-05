@@ -7,7 +7,7 @@ const Test = () => {
   return (
     <Container title="Test Connection">
       <ErrorBoundary>
-      <TestConnection />
+        <TestConnection />
       </ErrorBoundary>
     </Container>
   );

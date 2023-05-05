@@ -7,7 +7,6 @@ import { TestResponseMessages } from "../TestResponseMessages";
 var fs = require("fs");
 import path from "path";
 
-
 const TEST_NAME = "Cipher Suites Appropriate";
 export default class CIPHER extends ConnectionTest {
   private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string[] = [

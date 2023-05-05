@@ -15,7 +15,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Button
+  Button,
 } from "@mui/material";
 import { menuItems } from "./menuItems";
 
@@ -77,7 +77,6 @@ const MiniDrawer = () => {
   const [open, setOpen] = React.useState(true);
   const [selectedIndex, setSelectedIndex] = React.useState(1);
 
-
   const handleClick = () => {
     setOpen(!open);
   };
@@ -89,10 +88,9 @@ const MiniDrawer = () => {
     setSelectedIndex(index);
   };
 
-  
-  const handleSignOut = async() => {
-    await signOut({callbackUrl: `/api/auth/logout`});
-  }
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: `/api/auth/logout` });
+  };
 
   const list = () => (
     <>
@@ -178,12 +176,12 @@ const MiniDrawer = () => {
         variant="text"
         onClick={handleSignOut}
         sx={{
-          color: "#FFFFFF" ,
+          color: "#FFFFFF",
           textDecoration: "underline",
           position: "absolute",
           left: "10px",
           bottom: "20px",
-          textTransform: "capitalize"
+          textTransform: "capitalize",
         }}
       >
         Log Out

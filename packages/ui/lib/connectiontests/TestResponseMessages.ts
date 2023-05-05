@@ -16,7 +16,7 @@ export class TestResponseMessages {
     `Unknown error trying to connect to ${url}`;
   public static readonly WSDL_NOT_SUPPORTED = (location: string) =>
     `The WSDL for this endpoint ${location} is not one of those supported by IZ Gateway.`;
-  public static readonly WSDL_NOT_ACCESSED  = (location: string) =>
+  public static readonly WSDL_NOT_ACCESSED = (location: string) =>
     `The WSDL for ${location} endpoint could not be accessed.`;
   public static readonly CONNECTIVITY_ECHOBACK_NOT_EXPECTED =
     "The echoback response did not contain the expected content.";

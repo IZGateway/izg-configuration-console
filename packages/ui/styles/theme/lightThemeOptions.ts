@@ -4,12 +4,12 @@ import { error } from "console";
 const lightThemeOptions: ThemeOptions = {
   palette: {
     mode: "light",
-    background:{
-      default: "#F9F9F9"
+    background: {
+      default: "#F9F9F9",
     },
     common: {
-      black:"#000",
-      white:'#FFF',
+      black: "#000",
+      white: "#FFF",
     },
     primary: {
       light: "#00D998",
@@ -41,7 +41,7 @@ const lightThemeOptions: ThemeOptions = {
       main: "#0655B6",
       dark: "#0A3F7E",
     },
-    grey:{
+    grey: {
       50: "#FEFEFE",
       100: "#FAFAFA",
       200: "#EEEEEE",
@@ -55,34 +55,34 @@ const lightThemeOptions: ThemeOptions = {
     },
   },
   shadows: [
-      //Drop Shadows//
-      "none",
-      "0px 3px 5px rgba(0, 0, 0, 0.25)",
-      "0px 3px 5px rgba(0, 0, 0, 0.30)",
-      "0px 3px 5px rgba(0, 0, 0, 0.35)",
-      "0px 3px 5px rgba(0, 0, 0, 0.40)",
-      "0px 3px 5px rgba(0, 0, 0, 0.45)",
-      "0px 3px 5px rgba(0, 0, 0, 0.50)",
-      "0px 3px 5px rgba(0, 0, 0, 0.55)",
-      "0px 3px 5px rgba(0, 0, 0, 0.60)",
-      "0px 3px 5px rgba(0, 0, 0, 0.65)",
-      "0px 3px 5px rgba(0, 0, 0, 0.70)",
-      "0px 3px 5px rgba(0, 0, 0, 0.80)",
-      "0px 3px 5px rgba(0, 0, 0, 0.85)",
-      "0px 3px 5px rgba(0, 0, 0, 0.90)",
-      "0px 3px 5px rgba(0, 0, 0, 0.95)",
-      "auto",
-      "auto",
-      "auto",
-      "auto",
-      "auto",
-      "auto",
-      "auto",
-      "auto",
-      //Inner Shadows//
-      "inset 0px 0px 25px rgba(0, 0, 0, 0.25)",
-      "inset 0px 0px 25px rgba(0, 0, 0, 0.50)",
-    ],
+    //Drop Shadows//
+    "none",
+    "0px 3px 5px rgba(0, 0, 0, 0.25)",
+    "0px 3px 5px rgba(0, 0, 0, 0.30)",
+    "0px 3px 5px rgba(0, 0, 0, 0.35)",
+    "0px 3px 5px rgba(0, 0, 0, 0.40)",
+    "0px 3px 5px rgba(0, 0, 0, 0.45)",
+    "0px 3px 5px rgba(0, 0, 0, 0.50)",
+    "0px 3px 5px rgba(0, 0, 0, 0.55)",
+    "0px 3px 5px rgba(0, 0, 0, 0.60)",
+    "0px 3px 5px rgba(0, 0, 0, 0.65)",
+    "0px 3px 5px rgba(0, 0, 0, 0.70)",
+    "0px 3px 5px rgba(0, 0, 0, 0.80)",
+    "0px 3px 5px rgba(0, 0, 0, 0.85)",
+    "0px 3px 5px rgba(0, 0, 0, 0.90)",
+    "0px 3px 5px rgba(0, 0, 0, 0.95)",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    "auto",
+    //Inner Shadows//
+    "inset 0px 0px 25px rgba(0, 0, 0, 0.25)",
+    "inset 0px 0px 25px rgba(0, 0, 0, 0.50)",
+  ],
   typography: {
     fontFamily: [
       "Ubuntu",
@@ -104,9 +104,9 @@ const lightThemeOptions: ThemeOptions = {
         paper: {
           display: "flex",
           borderRadius: "0px 20px 20px 0px",
-          },
         },
       },
+    },
     MuiAppBar: {
       styleOverrides: {
         root: {
@@ -114,23 +114,23 @@ const lightThemeOptions: ThemeOptions = {
         },
       },
     },
-    MuiLinearProgress:{
-      styleOverrides:{
+    MuiLinearProgress: {
+      styleOverrides: {
         root: {
           backgroundColor: "#C4C4C4",
         },
       },
     },
-    MuiFilledInput:{
-      styleOverrides:{
-        root:{
-          '&.Mui-disabled':{
-            border: '1px dotted',
-            borderRadius: '4px',
+    MuiFilledInput: {
+      styleOverrides: {
+        root: {
+          "&.Mui-disabled": {
+            border: "1px dotted",
+            borderRadius: "4px",
           },
-          '&.Mui-disabled:before':{
-            borderBottom: 'hidden',
-            borderRadius: '4px',
+          "&.Mui-disabled:before": {
+            borderBottom: "hidden",
+            borderRadius: "4px",
           },
         },
       },

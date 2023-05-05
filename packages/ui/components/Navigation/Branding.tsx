@@ -1,7 +1,7 @@
 import * as React from "react";
 import Image from "next/image";
 import izgLogo from "/public/IZ_Gateway_Logo 1.png";
-import { CardContent, Typography , Avatar, Card, Box} from "@mui/material";
+import { CardContent, Typography, Avatar, Card, Box } from "@mui/material";
 export interface IIZGLogoProps {}
 
 const IZGLogo = (props: IIZGLogoProps) => {

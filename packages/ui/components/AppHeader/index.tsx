@@ -8,7 +8,7 @@ import userImage from "/public/userImage.png";
 interface AppHeaderProps {
   loggedInUserName: string;
   open: boolean;
-  display: (isOpened: boolean) => void
+  display: (isOpened: boolean) => void;
 }
 
 const headerStyle = {
@@ -23,7 +23,7 @@ const headerStyle = {
 const AppHeaderBar = (props: AppHeaderProps) => {
   return (
     <AppBar sx={headerStyle} position={"sticky"}>
-      <Toolbar  id='app-header'>
+      <Toolbar id="app-header">
         <Avatar
           sx={{
             alt: "User Image",
@@ -43,7 +43,7 @@ const AppHeaderBar = (props: AppHeaderProps) => {
         >
           | Welcome {props.loggedInUserName} to IZ Gateway
         </Typography>
-        <IconButton onClick={()=> props.display(props.open)}>
+        <IconButton onClick={() => props.display(props.open)}>
           <CloseIcon sx={{ color: "#212121" }} />
         </IconButton>
       </Toolbar>

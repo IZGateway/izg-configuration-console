@@ -45,7 +45,9 @@ export default class TCP extends ConnectionTest {
             detail: error,
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
-                ? TestResponseMessages.TCP_TIMEOUT(this.connectionTestRequest.ip)
+                ? TestResponseMessages.TCP_TIMEOUT(
+                    this.connectionTestRequest.ip
+                  )
                 : TestResponseMessages.TCP_REJECT(this.connectionTestRequest.ip)
               : "",
             status: TestStatus.FAIL,

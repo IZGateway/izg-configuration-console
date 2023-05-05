@@ -24,7 +24,7 @@ export default async function handler(
     "cipher",
     "wsdl",
     "connectivity",
-    "qbp"
+    "qbp",
   ];
   const testResults: ConnectionTestResult[] = [];
 

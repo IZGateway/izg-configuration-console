@@ -123,7 +123,8 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
       headerName: "STATUS",
       width: 200,
       filterable: false,
-      valueFormatter: ({ value }) => value?.status === "Connected" ? "Connected" : "Not Connected",
+      valueFormatter: ({ value }) =>
+        value?.status === "Connected" ? "Connected" : "Not Connected",
       renderCell: ({ value }) => {
         const isConnected = value?.status === "Connected" ? true : false;
         const asOfDate = value?.ran_at
@@ -299,7 +300,9 @@ const ConnectionsTable = (props: ConnectionTableProps) => {
             quickFilterProps: { debounceMs: 500 },
             printOptions: { disableToolbarButton: true },
             columns: { field: "action", filterable: false },
-            csvOptions: { fields: ["dest_type", "jurisdiction", "dest_uri", "status"] },
+            csvOptions: {
+              fields: ["dest_type", "jurisdiction", "dest_uri", "status"],
+            },
           },
           panel: {
             placement: "bottom-end",

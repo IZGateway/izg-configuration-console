@@ -44,14 +44,19 @@ export default class QBP extends ConnectionTest {
       <ns3:submitSingleMessage xmlns:ns3="urn:cdc:iisb:2011">
       <ns3:username>${destination.data?.destinationById.username}</ns3:username>
       <ns3:password>${destination.data?.destinationById.password}</ns3:password>
-      <ns3:facilityID>${destination.data?.destinationById.facility_id
-          }</ns3:facilityID>
-      <ns3:hl7Message>MSH|^~\&amp;|${destination.data?.destinationById.MSH3}|${destination.data?.destinationById.MSH4
-          }|${destination.data?.destinationById.MSH5}|${destination.data?.destinationById.MSH6
-          }|${moment().format("YYYYMMDDHHmmss").concat(".000") +
+      <ns3:facilityID>${
+        destination.data?.destinationById.facility_id
+      }</ns3:facilityID>
+      <ns3:hl7Message>MSH|^~\&amp;|${destination.data?.destinationById.MSH3}|${
+          destination.data?.destinationById.MSH4
+        }|${destination.data?.destinationById.MSH5}|${
+          destination.data?.destinationById.MSH6
+        }|${
+          moment().format("YYYYMMDDHHmmss").concat(".000") +
           date.getTimezoneOffset()
-          }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination.data?.destinationById.MSH22
-          }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</ns3:hl7Message>
+        }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
+          destination.data?.destinationById.MSH22
+        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</ns3:hl7Message>
       </ns3:submitSingleMessage>
       </soap:Body>
       </soap:Envelope>`;
@@ -63,18 +68,25 @@ export default class QBP extends ConnectionTest {
         </soap:Header>
         <soap:Body>
           <urn1:SubmitSingleMessageRequest>
-          <urn1:Username>${destination.data?.destinationById.username
+          <urn1:Username>${
+            destination.data?.destinationById.username
           }</urn1:Username>
-      <urn1:Password>${destination.data?.destinationById.password
-          }</urn1:Password>
-            <urn1:FacilityID>${destination.data?.destinationById.facility_id
-          }</urn1:FacilityID>
-            <urn1:Hl7Message>MSH|^~\&amp;|${destination.data?.destinationById.MSH3
-          }|${destination.data?.destinationById.MSH4}|${destination.data?.destinationById.MSH5
-          }|${destination.data?.destinationById.MSH6}|${moment().format("YYYYMMDDHHmmss").concat(".000") +
+      <urn1:Password>${
+        destination.data?.destinationById.password
+      }</urn1:Password>
+            <urn1:FacilityID>${
+              destination.data?.destinationById.facility_id
+            }</urn1:FacilityID>
+            <urn1:Hl7Message>MSH|^~\&amp;|${
+              destination.data?.destinationById.MSH3
+            }|${destination.data?.destinationById.MSH4}|${
+          destination.data?.destinationById.MSH5
+        }|${destination.data?.destinationById.MSH6}|${
+          moment().format("YYYYMMDDHHmmss").concat(".000") +
           date.getTimezoneOffset()
-          }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination.data?.destinationById.MSH22
-          }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</urn1:Hl7Message>
+        }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
+          destination.data?.destinationById.MSH22
+        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</urn1:Hl7Message>
             </urn1:SubmitSingleMessageRequest>
         </soap:Body>
       </soap:Envelope>`;
@@ -149,7 +161,7 @@ export default class QBP extends ConnectionTest {
         return true;
       } else {
         return false;
-      }  
+      }
     };
 
     return new Promise((resolve, reject) => {
@@ -168,9 +180,15 @@ export default class QBP extends ConnectionTest {
                 return;
               }
               if (destination.data?.destinationById.dest_version === "2011") {
-                responseMessage = result["soap:Envelope"]["soap:Body"][0]["ns3:submitSingleMessageResponse"][0];
+                responseMessage =
+                  result["soap:Envelope"]["soap:Body"][0][
+                    "ns3:submitSingleMessageResponse"
+                  ][0];
               } else {
-                responseMessage = result["soap:Envelope"]["soap:Body"][0]["SubmitSingleMessageResponse"][0];
+                responseMessage =
+                  result["soap:Envelope"]["soap:Body"][0][
+                    "SubmitSingleMessageResponse"
+                  ][0];
               }
               if (!isHl7MessagePresent(responseMessage)) {
                 resolve([
@@ -240,15 +258,15 @@ export default class QBP extends ConnectionTest {
               },
             ]);
           });
-        } else if(res.statusCode == 500) {
+        } else if (res.statusCode == 500) {
           try {
             res.on("data", (chunk) => {
               data = data + chunk.toString();
             });
-  
+
             res.on("end", function () {
               xml2js.parseString(data, options, (err, result) => {
-                if(isFaultPresent(result)) {
+                if (isFaultPresent(result)) {
                   resolve([
                     {
                       ...hl7QueryTestResult,
@@ -260,7 +278,7 @@ export default class QBP extends ConnectionTest {
                 }
               });
             });
-          } catch(error) {
+          } catch (error) {
             resolve([
               {
                 ...hl7QueryTestResult,

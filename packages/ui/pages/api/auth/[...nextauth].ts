@@ -9,15 +9,15 @@ export const authOptions = {
       clientSecret: "client-credentials-mock-client-secret",
       issuer: process.env.KEYCLOAK_ISSUER,
       idToken: true,
-    })
+    }),
   ],
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
-        token.id_token = account.id_token
-        token.provider = account.provider
+        token.id_token = account.id_token;
+        token.provider = account.provider;
       }
-      return token
+      return token;
     },
   },
 };
