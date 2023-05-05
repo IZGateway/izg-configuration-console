@@ -9,11 +9,6 @@ const prisma = new PrismaClient({
   log: showSql ? ["query", "info", "warn", "error"] : [],
 });
 
-// prisma.$on("query", (e) => {
-//   console.log("Query: " + e.query);
-//   console.log("Params: " + e.params);
-//   console.log("Duration: " + e.duration + "ms");
-// });
 export interface Context {
   prisma: PrismaClient;
 }

@@ -1,0 +1,25 @@
+{
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "project": "./tsconfig.json"
+    },
+    "extends": [
+      "eslint:recommended",
+      "standard",
+      "prettier",
+      "plugin:@typescript-eslint/recommended",
+      "prettier/@typescript-eslint",
+      "next/core-web-vitals"
+    ],
+    "plugins": ["@typescript-eslint", "no-loops", "prettier"],
+    "env": {
+      "es6": true,
+      "node": true
+    },
+    "ignorePatterns": ["dist", "node_modules", "examples", "scripts"],
+    "rules": {
+      "no-loops/no-loops": 2,
+      "no-console": 1,
+      "prettier/prettier": 2
+    }
+  }

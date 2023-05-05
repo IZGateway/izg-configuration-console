@@ -1,9 +1,0 @@
-{
-  "plugins": ["no-loops", "prettier"],
-  "extends": ["next/core-web-vitals", "prettier"],
-  "rules": {
-    "no-loops/no-loops": 2,
-    "no-console": 1,
-    "prettier/prettier": 2
-  }
-}

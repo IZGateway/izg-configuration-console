@@ -21,7 +21,7 @@ const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined;
 const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined;
 
 const httpsAgentOptions = {
-  cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), `utf-8`),
+  cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), "utf-8"),
   key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), "utf-8"),
   passphrase: IZG_ENDPOINT_PASSCODE,
   rejectUnauthorized: false,

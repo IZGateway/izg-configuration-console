@@ -1,5 +1,9 @@
 {
-    "exclude": ["node_modules"],
+    "compilerOptions": {
+      "noImplicitThis": true,
+      "noUnusedLocals": true,
+    },
+    "exclude": ["node_modules", "dist", "*.d.ts", "build", ".next"],
     "references": [
       {
         "path": "./packages/ui"
