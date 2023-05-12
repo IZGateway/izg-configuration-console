@@ -6,7 +6,7 @@ RUN rm /etc/nginx/conf.d/*
 
 # Copy config files
 # *.conf files in conf.d/ dir get included in main config
-COPY ./default.conf /etc/nginx/conf.d/
+COPY ./ngnix/default.conf /etc/nginx/conf.d/
 
 # Expose the listening port
 EXPOSE 80
