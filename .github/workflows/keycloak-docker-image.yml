@@ -1,4 +1,4 @@
-name: Create and publish a Docker NGNIX image
+name: Create and publish a Docker KeyCloak image
 
 on:
   push:
@@ -32,18 +32,11 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Start KeyCloak
-        run: |
-          docker run -d -p 8080:8080 -e KEYCLOAK_USER=admin -e KEYCLOAK_PASSWORD=admin quay.io/keycloak/keycloak:latest
-
-      - name: Wait for Keycloak to start
-        run: |
-          until $(curl --output /dev/null --silent --head --fail http://localhost:8080/auth); do
-            printf '.'
-            sleep 5
-          done
-          echo "Keycloak is ready."
-
-      - name: Import realm
-        run: |
-          curl -X POST -H "Content-Type: application/json" -d @auth/realm-export.json http://localhost:8080/auth/realms/master/import
+      - name: Build and push Docker KEYCLOAK image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: keycloak/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
