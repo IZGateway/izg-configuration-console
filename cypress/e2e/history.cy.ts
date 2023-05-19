@@ -17,10 +17,11 @@ const historyElements = {
   msh6: "#msh6",
   msh22: "#msh22",
   rxa11: "#rxa11",
-  drawer:"#detailDrawer"
+  drawer: "#detailDrawer",
+  changeHistory: "#change-history",
 };
 
-const expectedResults= {
+const expectedResults = {
   jurisdiction: "Alaska",
   type: "TEST",
   url: "https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService",
@@ -32,7 +33,7 @@ const expectedResults= {
   msh6: "VacTrAK",
   msh22: "AKIIS",
   rxa11: "SIIS10543",
-}
+};
 
 describe("As a user, on manage connections page", () => {
   const destination = "ak";
@@ -60,6 +61,10 @@ describe("As a user, on manage connections page", () => {
       assert.exists(cy.get(historyElements.testHistory));
     });
 
+    it('should have "Change History" section', () => {
+      assert.exists(cy.get(historyElements.changeHistory));
+    });
+
     it('should navigate back to manage connections page when "Close" button is clicked', () => {
       cy.get(historyElements.close).click();
       cy.get(historyElements.manageTitle).should("have.text", "My Connections");
@@ -69,18 +74,24 @@ describe("As a user, on manage connections page", () => {
     beforeEach(() => {
       cy.visit("http://localhost:3000/manage");
       cy.get(`[data-id="${destination}"]`).find("#history").click();
-      cy.get(historyElements.detail).click();     
+      cy.get(historyElements.detail).click();
     });
 
     it("should have correct information about the connection", () => {
-      cy.get(historyElements.jurisdiction).should("have.value", expectedResults.jurisdiction);
-      cy.get(historyElements.type).should("have.value", expectedResults.type);
-      cy.get(historyElements.url).should(
+      cy.get(historyElements.jurisdiction).should(
         "have.value",
-        expectedResults.url
+        expectedResults.jurisdiction
       );
-      cy.get(historyElements.username).should("have.value", expectedResults.username);
-      cy.get(historyElements.facilityId).should("have.value", expectedResults.facilityId);
+      cy.get(historyElements.type).should("have.value", expectedResults.type);
+      cy.get(historyElements.url).should("have.value", expectedResults.url);
+      cy.get(historyElements.username).should(
+        "have.value",
+        expectedResults.username
+      );
+      cy.get(historyElements.facilityId).should(
+        "have.value",
+        expectedResults.facilityId
+      );
       cy.get(historyElements.msh3).should("have.value", expectedResults.msh3);
       cy.get(historyElements.msh4).should("have.value", expectedResults.msh4);
       cy.get(historyElements.msh5).should("have.value", expectedResults.msh5);
@@ -91,7 +102,7 @@ describe("As a user, on manage connections page", () => {
 
     it("should close detail for the connection and user should be back to connection history page", () => {
       cy.get(historyElements.closeDetail).scrollIntoView().click();
-      cy.get(historyElements.drawer).should('not.exist');
+      cy.get(historyElements.drawer).should("not.exist");
       cy.get(historyElements.title).should("have.text", "Connection History");
     });
   });

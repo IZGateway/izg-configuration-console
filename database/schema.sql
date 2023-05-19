@@ -119,7 +119,26 @@ CREATE TABLE messageheaderinfo (
     iis character varying(128),	
     sourceType character varying(128)	
 );
+--
+-- DROP TABLE audit_history if exists;
+--
 
+DROP TABLE IF EXISTS audit_history;
+
+--
+-- CREATE TABLE audit_history;
+--
+
+CREATE TABLE audit_history (
+  id          INT         NOT NULL AUTO_INCREMENT,
+  tableName   VARCHAR(50) NOT NULL,
+  userName    VARCHAR(50) NOT NULL,
+  changeType  ENUM('Insert', 'Update', 'Delete') NOT NULL,
+  oldValues   VARCHAR(1024)        NULL,
+  newValues   VARCHAR(1024)        NULL,
+  createdAt   DATETIME    NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id)
+);
 --
 -- DROP TABLE accesscontrol if exists;
 --

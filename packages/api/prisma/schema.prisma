@@ -62,3 +62,19 @@ model endpointstatus {
   dest_id        String?  @db.VarChar(128)
   ran_at         DateTime @db.DateTime(0)
 }
+
+model audit_history {
+  id         Int                      @id @default(autoincrement())
+  tableName  String                   @db.VarChar(50)
+  userName   String                   @db.VarChar(50)
+  changeType audit_history_changeType
+  oldValues  Json?                  
+  newValues  Json?                  
+  createdAt  DateTime                 @default(now()) @db.DateTime(0)
+}
+
+enum audit_history_changeType {
+  Insert
+  Update
+  Delete
+}

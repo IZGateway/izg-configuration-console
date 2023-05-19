@@ -1,6 +1,7 @@
 //import { endpointstatus } from "@prisma/client";
 import { gql } from "apollo-server";
 import { DateTimeTypeDefinition, DateTimeResolver } from "graphql-scalars";
+import GraphQLJSON, { GraphQLJSONObject } from "graphql-type-json";
 import { Context } from "./context";
 import { IZG_STATUS_UPDATE_POLL_RATE } from "./server";
 
@@ -10,6 +11,9 @@ const MAX_STATUS_HISTORY_RETURNED =
 export const typeDefs = [
   DateTimeTypeDefinition,
   gql`
+    scalar JSON
+    scalar JSONObject
+
     type Destination {
       dest_id: String
       dest_uri: String
@@ -54,20 +58,59 @@ export const typeDefs = [
       historyInterval: String
     }
 
+    type AuditHistory {
+      id: Int
+      tableName: String
+      userName: String
+      changeType: String
+      oldValues: JSONObject
+      newValues: JSONObject
+      createdAt: DateTime
+    }
+
+    input DestinationUpdateInput {
+      username: String
+      password: String
+      facility_id: String
+    }
+
     type Query {
       allDestinations: [Destination]!
+      allAudit: [AuditHistory]!
       destinationById(dest_id: String!): Destination!
       endpointStatusHistoryByDestId(dest_id: String!): [EndpointStatus]!
       statusHistoryInterval: StatusHistoryInterval!
+      auditBydestIdByUser(
+        dest_id: String!
+        table: String!
+        user: String!
+      ): [AuditHistory]!
+    }
+
+    type Mutation {
+      createJurisdiction(
+        name: String!
+        description: String
+        dest_id: String
+      ): Jurisdiction!
+      updateDestination(
+        data: DestinationUpdateInput!
+        dest_id: String!
+      ): Destination!
     }
   `,
 ];
-
+///createJurisdiction is added only for an example of create mutation
 export const resolvers = {
+  JSON: GraphQLJSON,
+  JSONObject: GraphQLJSONObject,
   DateTime: DateTimeResolver,
   Query: {
     allDestinations: (_parent: any, _args: any, context: Context) => {
       return context.prisma.destinations.findMany();
+    },
+    allAudit: (_parent: any, _args: any, context: Context) => {
+      return context.prisma.audit_history.findMany();
     },
     destinationById: (
       _parent: any,
@@ -76,6 +119,23 @@ export const resolvers = {
     ) => {
       return context.prisma.destinations.findUnique({
         where: { dest_id: _args.dest_id },
+      });
+    },
+    auditBydestIdByUser: (
+      _parent: any,
+      _args: { dest_id: string; table: string; user: string },
+      context: Context
+    ) => {
+      return context.prisma.audit_history.findMany({
+        where: {
+          tableName: _args.table,
+          userName: _args.user,
+          oldValues: {
+            path: "$.dest_id",
+            equals: _args.dest_id,
+          },
+        },
+        orderBy: { createdAt: "desc" },
       });
     },
     endpointStatusHistoryByDestId: (
@@ -121,6 +181,25 @@ export const resolvers = {
   StatusHistoryInterval: {
     historyInterval: () => {
       return IZG_STATUS_UPDATE_POLL_RATE;
+    },
+  },
+  Mutation: {
+    createJurisdiction: async (_parent: any, _args: any, context: Context) => {
+      const jurisdiction = await context.prisma.jurisdiction.create({
+        data: {
+          name: _args.name,
+          description: _args.description,
+          dest_id: _args.dest_id,
+        },
+      });
+      return jurisdiction;
+    },
+    updateDestination: async (_parent: any, _args: any, context: Context) => {
+      const destination = await context.prisma.destinations.update({
+        where: { dest_id: _args.dest_id },
+        data: _args.data,
+      });
+      return destination;
     },
   },
 };

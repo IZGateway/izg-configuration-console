@@ -3,6 +3,7 @@ import { Typography, Box, BoxProps } from "@mui/material";
 import { useQuery } from "@apollo/client";
 import { FETCH_DESTINATION } from "../../lib/queries/fetch";
 import TestHistory from "./testHistory";
+import ChangeHistory from "./changeHistory"
 import ConnectionInfo from "./connectionInfo";
 import Close from "../Close";
 
@@ -50,6 +51,7 @@ const ConnectionHistory = (props: any) => {
         </Item>
         <Item sx={{ flexGrow: 1 }}>
           <TestHistory destId={data.destinationById.dest_id} />
+          <ChangeHistory destId={data.destinationById.dest_id} />
         </Item>
       </Box>
     </div>
