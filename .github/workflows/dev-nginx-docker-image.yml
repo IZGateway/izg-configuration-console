@@ -2,7 +2,9 @@ name: Create and publish a Docker NGINX image
 
 on:
   push:
-    branches: ["mvp"]
+    branches: ["development"]
+  tags:
+    - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   REGISTRY: ghcr.io
@@ -19,6 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug
+        run: |
+          echo "github.ref -> {{ github.ref }}"
+
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
@@ -31,8 +37,17 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value={{sha}},enable=${{ github.ref_type != 'tag' }}
+
+      # - name: Sets env vars for merge to Release
+      #   run: |
+      #     echo IMAGE_TAG=mvp >> $GITHUB_ENV
 
       - name: Build and push Docker NGNIX image
+        id: docker_build
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
@@ -58,8 +73,6 @@ jobs:
           ECR_REPOSITORY: izg-configuration-console-nginx
         working-directory: ./nginx
         run: |
-          # docker image tag izg-configuration-console-ngix:${{env.IMAGE_TAG}} $ECR_REGISTRY/$ECR_REPOSITORY:${{env.IMAGE_TAG}}
-          # docker image tag izg-configuration-console-ngix:${{env.IMAGE_TAG}} $ECR_REGISTRY/$ECR_REPOSITORY:${{env.IMAGE_BRANCH_TAG}}
-          echo ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          docker image tag izg-configuration-console-nginx $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo REGISTRY: ${{ env.REGISTRY }} IMAGE NAME: ${{ env.IMAGE_NAME }} IMAGE TAG: ${{env.IMAGE_TAG}}
+          docker image tag ghcr.io/izgateway/izg-configuration-console-nginx:mvp $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker image push --all-tags $ECR_REGISTRY/$ECR_REPOSITORY
