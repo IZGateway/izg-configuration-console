@@ -3,7 +3,7 @@ name: Create and publish a Docker NGINX image
 on:
   push:
     branches:
-      - "push_images_action"
+      - "push_images_actions"
     paths:
       - "nginx/**"
 
