@@ -10,7 +10,6 @@ on:
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
   GITHUB_REGISTRY_NAME: izgateway
-  GITHUB_REGISTRY: ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}
   IMAGE_NAME: ${{ github.repository }}-nginx
   BUILD_ID: ${{github.run_number}}
 
