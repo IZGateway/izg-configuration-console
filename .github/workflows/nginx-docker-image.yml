@@ -3,7 +3,9 @@ name: Create and publish a Docker NGINX image
 on:
   push:
     branches:
-      - ["main", "development", "production"]
+      - main
+      - development
+      - production
     paths:
       - "nginx/**"
 
