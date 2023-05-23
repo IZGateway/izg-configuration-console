@@ -1,0 +1,70 @@
+name: Create and publish a Docker NGINX image
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - production
+    paths:
+      - "nginx/**"
+
+env:
+  GITHUB_REGISTRY_PREFIX: ghcr.io
+  GITHUB_REGISTRY_NAME: izgateway
+  IMAGE_NAME: ${{ github.repository }}-nginx
+  BUILD_ID: ${{github.run_number}}
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Login to the GitHub Container registry
+        id: login-ghcr
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to the Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.IMAGE_NAME }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=true
+
+      - name: Build and push Docker NGNIX image
+        id: docker_build
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: nginx/Dockerfile
+          push: true
+          tags: |
+            # ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-nginx:latest
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-nginx:${{ env.BUILD_ID }}
+            # ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-nginx:latest
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-nginx:${{ env.BUILD_ID }}
+          labels: ${{ steps.meta.outputs.labels }}
