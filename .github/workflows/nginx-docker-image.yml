@@ -63,8 +63,8 @@ jobs:
           file: nginx/Dockerfile
           push: true
           tags: |
-            # ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-nginx:latest
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-nginx:latest
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-nginx:${{ env.BUILD_ID }}
-            # ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-nginx:latest
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-nginx:latest
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-nginx:${{ env.BUILD_ID }}
           labels: ${{ steps.meta.outputs.labels }}
