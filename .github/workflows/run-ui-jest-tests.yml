@@ -1,9 +1,15 @@
 # Name of this action
-name: Jest Automatic Testing
+name: Jest Automatic UI Testing
 
 # Event triggers on pull request event
 # For more detail visit https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#on
-on: pull_request
+on:
+  push:
+    branches:
+      - main
+      - development
+      - production
+      - "feature/*"
 
 # The jobs this action will run. You can write as many jobs as you want.
 # For more detail on this section visit https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobs
