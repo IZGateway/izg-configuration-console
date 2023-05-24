@@ -1,12 +1,20 @@
-name: Create and publish a Docker UI image
+name: Create and publish a Docker Config Console UI image
 
 on:
   push:
-    branches: ['mvp']
+    branches:
+      - main
+      - development
+      - production
+    paths:
+      - "packages/ui/**"
+      - "package.json"
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}-api
+  GITHUB_REGISTRY_PREFIX: ghcr.io
+  GITHUB_REGISTRY_NAME: izgateway
+  IMAGE_NAME: ${{ github.repository }}-ui
+  BUILD_ID: ${{github.run_number}}
 
 jobs:
   build-and-push-image:
@@ -19,24 +27,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log in to the Container registry
+      - name: Login to the GitHub Container registry
+        id: login-ghcr
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      - name: Build and push Docker UI image
+      - name: Login to the Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.IMAGE_NAME }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=true
+
+      - name: Build and push Docker Config Console ui image
+        id: docker_build
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: .
-          file: docker/Dockerfile.ui
+          file: docker/Dockerfile.api
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:latest
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:latest
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
           labels: ${{ steps.meta.outputs.labels }}
