@@ -62,7 +62,7 @@ const fetchEndpointStatus = async () => {
 function startPollingIZGStatus() {
   console.info("STATUS POLLING STARTED...");
   setInterval(async function () {
-    console.debug("Fetching status....");
+    console.info("Fetching status....");
     fetchEndpointStatus();
   }, IZG_STATUS_UPDATE_POLL_RATE);
 }
