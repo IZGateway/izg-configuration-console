@@ -2,7 +2,13 @@ name: Create and publish a Docker Config Console UI image
 
 on:
   push:
-    branches: ["mvp"]
+    branches:
+      - main
+      - development
+      - production
+    paths:
+      - "packages/ui/**"
+      - "package.json"
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io

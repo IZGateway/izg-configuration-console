@@ -1,17 +1,18 @@
 <<<<<<< HEAD
 =======
 # Name of this action
-name: Jest Automatic UI Testing
+name: Jest UI Testing
 
 # Event triggers on pull request event
 # For more detail visit https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#on
 on:
+  pull_request:
+    types: [opened, reopened]
   push:
     branches:
       - main
       - development
       - production
-      - "feature/*"
 
 # The jobs this action will run. You can write as many jobs as you want.
 # For more detail on this section visit https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobs
@@ -43,6 +44,6 @@ jobs:
       - name: Install all dependencies
         run: yarn install
 
-      - name: Run Jest Tests
+      - name: Run UI Jest Tests
         run: yarn workspace @monorepo/ui test
 >>>>>>> a7603d6 (chore(cicd): firing testing workflow)
