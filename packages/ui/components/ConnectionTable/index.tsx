@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useQuery } from "@apollo/client";
 import { FETCH_ALL_DESTINATIONS } from "../../lib/queries/fetch";
 import { DataGrid, GridColDef, GridToolbar } from "@mui/x-data-grid";
@@ -18,7 +18,7 @@ import HistoryIcon from "@mui/icons-material/History";
 import GppMaybeIcon from "@mui/icons-material/GppMaybe";
 import Link from "next/link";
 import Status from "../Status";
-import { useContext } from "react";
+
 import SessionContext from "../../contexts/app";
 
 const dataGridCustom = {

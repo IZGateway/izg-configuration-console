@@ -47,6 +47,9 @@ runs:
       working-directory: ${{ inputs.cwd }}
       run: corepack enable
 
+    - name: ⚙️ Import Workspace-tools
+      run: yarn plugin import workspace-tools
+
     - name: ⚙️ Expose yarn config as "$GITHUB_OUTPUT"
       id: yarn-config
       shell: bash

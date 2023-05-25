@@ -10,9 +10,6 @@ on:
       - main
       - development
       - production
-    paths:
-      - "packages/api/**"
-      - "package.json"
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
