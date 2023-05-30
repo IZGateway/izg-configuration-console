@@ -121,6 +121,20 @@ const lightThemeOptions: ThemeOptions = {
         },
       },
     },
+    MuiStepIcon: {
+      styleOverrides: {
+        root: {
+          boxShadow: "0px 3px 5px rgba(0, 0, 0, 0.30)",
+          borderRadius: "30px",
+          width: "1.5em",
+          height: "1.5em",
+          color: "#ffffff",
+        },
+        text: {
+          fill: "#8D3359",
+        },
+      },
+    },
     MuiFilledInput: {
       styleOverrides: {
         root: {

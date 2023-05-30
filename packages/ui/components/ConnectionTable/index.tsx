@@ -197,16 +197,18 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            {/* <Tooltip arrow placement="bottom" title="Edit">
-              <IconButton
-                id="edit"
-                aria-label="edit"
-                color="primary"
-                sx={actionButtonStyle}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip> */}
+            <Link href={`/edit/${params.id}`}>
+              <Tooltip arrow placement="bottom" title="Edit">
+                <IconButton
+                  id="edit"
+                  aria-label="edit"
+                  color="primary"
+                  sx={actionButtonStyle}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Link>
             <Link href={`/test/${params.id}`}>
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
