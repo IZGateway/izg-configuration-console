@@ -1,7 +1,7 @@
 {
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
-      "project": "./tsconfig.json"
+      // "project": "./tsconfig.json"
     },
     "extends": [
       "eslint:recommended",
@@ -19,11 +19,6 @@
     "rules": {
       "no-loops/no-loops": 2,
       "no-console": ["error", { "allow": ["warn", "error", "info"] }],
-      "prettier/prettier": [
-        "error",
-        {
-          "endOfLine": "auto"
-        }
-      ]
+      "prettier/prettier": "error"
     }
   }
