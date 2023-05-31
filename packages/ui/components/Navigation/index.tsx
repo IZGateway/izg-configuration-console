@@ -1,10 +1,10 @@
-import * as React from "react";
-import NextLink from "next/link";
-import IZGLogo from "./Branding";
-import MuiDrawer from "@mui/material/Drawer";
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { signOut } from "next-auth/react";
+import * as React from 'react'
+import NextLink from 'next/link'
+import IZGLogo from './Branding'
+import MuiDrawer from '@mui/material/Drawer'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { signOut } from 'next-auth/react'
 import {
   Collapse,
   styled,
@@ -16,104 +16,104 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
-} from "@mui/material";
-import { menuItems } from "./menuItems";
+} from '@mui/material'
+import { menuItems } from './menuItems'
 
-const drawerWidthOpen = "20em";
-const drawerWidthClosed = "5em";
+const drawerWidthOpen = '20em'
+const drawerWidthClosed = '5em'
 
 const closedMixin = () => ({
   width: drawerWidthClosed,
-  overflowX: "hidden",
-  background: "#1E4D3B",
-  color: "#FFFFFF",
-  boxShadow: "5px 0px 10px rgb(0 0 0 / 30%)",
-});
+  overflowX: 'hidden',
+  background: '#1E4D3B',
+  color: '#FFFFFF',
+  boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+})
 
 const openMixin = () => ({
   width: drawerWidthOpen,
-  overflowX: "hidden",
-  background: "#1E4D3B",
-  color: "#FFFFFF",
-  boxShadow: "5px 0px 10px rgb(0 0 0 / 30%)",
-});
+  overflowX: 'hidden',
+  background: '#1E4D3B',
+  color: '#FFFFFF',
+  boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+})
 
-const DrawerHeader = styled("div")(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
+const DrawerHeader = styled('div')(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'flex-end',
   padding: theme.spacing(2),
   // necessary for content to be below app bar
   ...theme.mixins.toolbar,
-}));
+}))
 
 const Drawer = styled(MuiDrawer, {
-  shouldForwardProp: (prop) => prop !== "open",
+  shouldForwardProp: (prop) => prop !== 'open',
 })(({ open }) => ({
   width: drawerWidthOpen,
   flexShrink: 1,
-  whiteSpace: "nowrap",
-  boxSizing: "border-box",
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
   padding: 2,
 
-  ...(open && { "& .MuiDrawer-paper": openMixin() }),
+  ...(open && { '& .MuiDrawer-paper': openMixin() }),
   ...(!open && {
     width: drawerWidthClosed,
-    "& .MuiDrawer-paper": closedMixin(),
+    '& .MuiDrawer-paper': closedMixin(),
   }),
-}));
+}))
 
 export type MenuItem = {
-  label: string;
-  icon: any;
-  path: string;
-};
+  label: string
+  icon: any
+  path: string
+}
 
 // export interface MenuItems extends Array<MenuItem> {
 //   items: MenuItem[];
 // }
 
 const MiniDrawer = () => {
-  const [open, setOpen] = React.useState(true);
-  const [selectedIndex, setSelectedIndex] = React.useState(1);
+  const [open, setOpen] = React.useState(true)
+  const [selectedIndex, setSelectedIndex] = React.useState(1)
 
   const handleClick = () => {
-    setOpen(!open);
-  };
+    setOpen(!open)
+  }
 
   const handleListItemClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    index: number
+    index: number,
   ) => {
-    setSelectedIndex(index);
-  };
+    setSelectedIndex(index)
+  }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: `/api/auth/logout` });
-  };
+    await signOut({ callbackUrl: `/api/auth/logout` })
+  }
 
   const list = () => (
     <>
       <List
         sx={{
-          padding: "0 0",
-          "&& .Mui-selected , && .Mui-selected:hover": {
-            backgroundColor: "white",
-            "&, & .MuiListItemIcon-root": {
-              color: "#015A2F",
+          padding: '0 0',
+          '&& .Mui-selected , && .Mui-selected:hover': {
+            backgroundColor: 'white',
+            '&, & .MuiListItemIcon-root': {
+              color: '#015A2F',
             },
-            "&, & .MuiListItemText-root": {
-              color: "black",
+            '&, & .MuiListItemText-root': {
+              color: 'black',
             },
-            "span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root":
+            'span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root':
               {
                 fontWeight: 700,
               },
           },
-          "& .MuiListItemButton-root:hover": {
-            bgcolor: "rgb(255 255 255 / 10%)",
-            "&, & .MuiListItemIcon-root": {
-              color: "white",
+          '& .MuiListItemButton-root:hover': {
+            bgcolor: 'rgb(255 255 255 / 10%)',
+            '&, & .MuiListItemIcon-root': {
+              color: 'white',
             },
           },
         }}
@@ -123,15 +123,15 @@ const MiniDrawer = () => {
             <ListItem
               key={item.label}
               sx={{
-                padding: "0 0",
+                padding: '0 0',
               }}
             >
               <ListItemButton
                 sx={{
-                  padding: "1rem 1.5rem",
-                  borderBottom: "1px solid #00D998",
-                  "&& .Mui-selected , && .Mui-selected:hover": {
-                    fontWeight: "700",
+                  padding: '1rem 1.5rem',
+                  borderBottom: '1px solid #00D998',
+                  '&& .Mui-selected , && .Mui-selected:hover': {
+                    fontWeight: '700',
                   },
                 }}
                 key={item.label}
@@ -141,7 +141,7 @@ const MiniDrawer = () => {
               >
                 <ListItemIcon
                   sx={{
-                    color: "white",
+                    color: 'white',
                   }}
                 >
                   {item.icon}
@@ -154,16 +154,16 @@ const MiniDrawer = () => {
         ))}
       </List>
     </>
-  );
+  )
 
   return (
     <Drawer variant="permanent" open={open} id="navigation">
       <DrawerHeader>
         <IconButton onClick={handleClick}>
           {!open ? (
-            <ChevronRightIcon fontSize="large" sx={{ color: "#FFFFFF" }} />
+            <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
           ) : (
-            <ChevronLeftIcon fontSize="large" sx={{ color: "#FFFFFF" }} />
+            <ChevronLeftIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
           )}
         </IconButton>
       </DrawerHeader>
@@ -176,12 +176,12 @@ const MiniDrawer = () => {
         variant="text"
         onClick={handleSignOut}
         sx={{
-          color: "#FFFFFF",
-          textDecoration: "underline",
-          position: "absolute",
-          left: "10px",
-          bottom: "20px",
-          textTransform: "capitalize",
+          color: '#FFFFFF',
+          textDecoration: 'underline',
+          position: 'absolute',
+          left: '10px',
+          bottom: '20px',
+          textTransform: 'capitalize',
         }}
       >
         Log Out
@@ -202,7 +202,7 @@ const MiniDrawer = () => {
         Need Help?
       </Button> */}
     </Drawer>
-  );
-};
+  )
+}
 
-export default MiniDrawer;
+export default MiniDrawer

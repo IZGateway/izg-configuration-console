@@ -1,30 +1,25 @@
-import ConnectionTest from "../ConnectionTest";
-import { ConnectionTestRequest } from "../types/ConnectionTestRequest";
-import { ConnectionTestResult } from "../types/ConnectionTestResult";
-import { TestStatus } from "../TestStatus";
-import net from "net";
-import { TestResponseMessages } from "../TestResponseMessages";
+import ConnectionTest from '../ConnectionTest'
+import { ConnectionTestResult } from '../types/ConnectionTestResult'
+import { TestStatus } from '../TestStatus'
+import net from 'net'
+import { TestResponseMessages } from '../TestResponseMessages'
 
-const TEST_NAME = "TCP Connectivity Test";
+const TEST_NAME = 'TCP Connectivity Test'
 export default class TCP extends ConnectionTest {
-  private static readonly TIMEOUT_ERROR_CODE: string = "ETIMEDOUT";
-
-  constructor(connectionTestRequest: ConnectionTestRequest) {
-    super(connectionTestRequest);
-  }
+  private static readonly TIMEOUT_ERROR_CODE: string = 'ETIMEDOUT'
 
   run = (): Promise<ConnectionTestResult[]> => {
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
-      message: "",
+      message: '',
       detail: null,
       status: this.status,
-    };
+    }
 
-    return new Promise((resolve, reject) => {
-      const client = new net.Socket();
-      client.setTimeout(5000);
+    return new Promise((resolve) => {
+      const client = new net.Socket()
+      client.setTimeout(5000)
       client.connect(
         this.connectionTestRequest.port,
         this.connectionTestRequest.ip,
@@ -34,11 +29,11 @@ export default class TCP extends ConnectionTest {
               ...dnsConnectionTestResult,
               status: TestStatus.PASS,
             },
-          ]);
-        }
-      );
+          ])
+        },
+      )
 
-      client.on("error", (error: any) => {
+      client.on('error', (error: any) => {
         resolve([
           {
             ...dnsConnectionTestResult,
@@ -46,16 +41,16 @@ export default class TCP extends ConnectionTest {
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
                 ? TestResponseMessages.TCP_TIMEOUT(
-                    this.connectionTestRequest.ip
+                    this.connectionTestRequest.ip,
                   )
                 : TestResponseMessages.TCP_REJECT(this.connectionTestRequest.ip)
-              : "",
+              : '',
             status: TestStatus.FAIL,
           },
-        ]);
-      });
+        ])
+      })
 
-      client.end();
-    });
-  };
+      client.end()
+    })
+  }
 }

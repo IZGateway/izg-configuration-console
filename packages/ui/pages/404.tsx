@@ -1,16 +1,14 @@
-import { Box, Typography, Button, List, ListItem } from "@mui/material";
-import pageNotFound from "../public/PageNotFound.png";
-import Image from "next/image";
-import { useRouter } from "next/router";
+import { Box, Typography, Button, List, ListItem } from '@mui/material'
+import pageNotFound from '../public/PageNotFound.png'
+import Image from 'next/image'
+import { useRouter } from 'next/router'
 
-export interface ErrorProps {}
-
-const PageNotFound = (props: ErrorProps) => {
-  const router = useRouter();
+const PageNotFound = () => {
+  const router = useRouter()
 
   const refreshPage = () => {
-    router.reload();
-  };
+    router.reload()
+  }
 
   return (
     <Box justifyContent="center" paddingLeft={10} paddingTop={10}>
@@ -18,22 +16,22 @@ const PageNotFound = (props: ErrorProps) => {
         variant="h1"
         display="flex"
         flexGrow={1}
-        fontWeight={"700"}
-        lineHeight={"auto"}
+        fontWeight={'700'}
+        lineHeight={'auto'}
         sx={{
           width: {
-            xs: "6em",
-            sm: "8em",
-            md: "8em",
-            lg: "10em",
-            xl: "12em",
+            xs: '6em',
+            sm: '8em',
+            md: '8em',
+            lg: '10em',
+            xl: '12em',
           },
           fontSize: {
-            xs: "2rem",
-            sm: "3rem",
-            md: "4rem",
-            lg: "4rem",
-            xl: "4rem",
+            xs: '2rem',
+            sm: '3rem',
+            md: '4rem',
+            lg: '4rem',
+            xl: '4rem',
           },
         }}
       >
@@ -44,28 +42,28 @@ const PageNotFound = (props: ErrorProps) => {
         variant="h2"
         flexGrow={1}
         display="flex"
-        fontWeight={"400"}
-        fontSize={"24px"}
-        lineHeight={"28px"}
+        fontWeight={'400'}
+        fontSize={'24px'}
+        lineHeight={'28px'}
       >
         There might be mutiple reasons why this page is not found.
       </Typography>
       <List
         sx={{
-          listStyleType: "disc",
-          fontWeight: "400",
-          fontSize: "14px",
-          lineHeight: "16px",
+          listStyleType: 'disc',
+          fontWeight: '400',
+          fontSize: '14px',
+          lineHeight: '16px',
           padding: 2,
         }}
       >
-        <ListItem sx={{ display: "list-item" }}>
+        <ListItem sx={{ display: 'list-item' }}>
           Page has been deleted or never existed
         </ListItem>
-        <ListItem sx={{ display: "list-item" }}>
+        <ListItem sx={{ display: 'list-item' }}>
           Moved to a new location
         </ListItem>
-        <ListItem sx={{ display: "list-item" }}>
+        <ListItem sx={{ display: 'list-item' }}>
           Misspelling in the URL
         </ListItem>
       </List>
@@ -78,9 +76,9 @@ const PageNotFound = (props: ErrorProps) => {
         sx={{
           marginRight: 2,
           marginTop: 2,
-          width: "15em",
-          borderRadius: "30px",
-          textTransform: "none",
+          width: '15em',
+          borderRadius: '30px',
+          textTransform: 'none',
         }}
       >
         Need Help
@@ -90,9 +88,9 @@ const PageNotFound = (props: ErrorProps) => {
         color="primary"
         sx={{
           marginTop: 2,
-          width: "15em",
-          borderRadius: "30px",
-          textTransform: "none",
+          width: '15em',
+          borderRadius: '30px',
+          textTransform: 'none',
         }}
         onClick={refreshPage}
       >
@@ -101,30 +99,35 @@ const PageNotFound = (props: ErrorProps) => {
       <Box
         sx={{
           position: {
-            md: "fixed",
+            md: 'fixed',
           },
           marginTop: {
-            xs: "2em",
-            sm: "2em",
-            md: "auto",
-            lg: "auto",
-            xl: "auto",
+            xs: '2em',
+            sm: '2em',
+            md: 'auto',
+            lg: 'auto',
+            xl: 'auto',
           },
           marginBottom: {
-            xs: "-2em",
-            sm: "-2em",
-            md: "auto",
-            lg: "auto",
-            xl: "auto",
+            xs: '-2em',
+            sm: '-2em',
+            md: 'auto',
+            lg: 'auto',
+            xl: 'auto',
           },
-          right: "0",
-          bottom: "0",
+          right: '0',
+          bottom: '0',
         }}
       >
-        <Image src={pageNotFound} width={600} height={500} />
+        <Image
+          src={pageNotFound}
+          width={600}
+          height={500}
+          alt="page not found image"
+        />
       </Box>
     </Box>
-  );
-};
+  )
+}
 
-export default PageNotFound;
+export default PageNotFound

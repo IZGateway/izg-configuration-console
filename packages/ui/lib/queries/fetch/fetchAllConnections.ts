@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import { gql } from '@apollo/client'
 
 export const FETCH_ALL_DESTINATIONS = gql`
   query {
@@ -23,4 +23,4 @@ export const FETCH_ALL_DESTINATIONS = gql`
       }
     }
   }
-`;
+`

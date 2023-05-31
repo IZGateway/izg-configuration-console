@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import { gql } from '@apollo/client'
 
 export const STATUS_HISTORY = gql`
   query EndpointStatusHistoryByDestId($destId: String!) {
@@ -11,4 +11,4 @@ export const STATUS_HISTORY = gql`
       historyInterval
     }
   }
-`;
+`

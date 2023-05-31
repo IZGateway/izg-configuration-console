@@ -1,6 +1,6 @@
-import * as React from "react";
-import { Skeleton, Box, Card, CardContent, Divider } from "@mui/material";
-const TestSkeleton = (props) => {
+import * as React from 'react'
+import { Skeleton, Box, Card, CardContent, Divider } from '@mui/material'
+const TestSkeleton = () => {
   return (
     <>
       <Box display="flex" flexDirection="column" alignItems="center">
@@ -203,14 +203,14 @@ const TestSkeleton = (props) => {
       </Card>
       <Box display="flex" flexDirection="column" alignItems="center">
         <Skeleton
-          sx={{ marginTop: 6, borderRadius: "24px" }}
+          sx={{ marginTop: 6, borderRadius: '24px' }}
           variant="rectangular"
           width="70%"
           height={40}
         />
       </Box>
     </>
-  );
-};
+  )
+}
 
-export default TestSkeleton;
+export default TestSkeleton

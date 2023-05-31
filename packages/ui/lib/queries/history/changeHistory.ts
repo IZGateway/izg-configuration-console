@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import { gql } from '@apollo/client'
 
 export const AUDIT_TRAIL = gql`
   query AuditBydestIdByUser($destId: String!, $table: String!, $user: String!) {
@@ -12,4 +12,4 @@ export const AUDIT_TRAIL = gql`
       createdAt
     }
   }
-`;
+`

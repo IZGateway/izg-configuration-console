@@ -1,12 +1,12 @@
-//import { endpointstatus } from "@prisma/client";
-import { gql } from "apollo-server";
-import { DateTimeTypeDefinition, DateTimeResolver } from "graphql-scalars";
-import GraphQLJSON, { GraphQLJSONObject } from "graphql-type-json";
-import { Context } from "./context";
-import { IZG_STATUS_UPDATE_POLL_RATE } from "./server";
+// import { endpointstatus } from "@prisma/client";
+import { gql } from 'apollo-server'
+import { DateTimeTypeDefinition, DateTimeResolver } from 'graphql-scalars'
+import GraphQLJSON, { GraphQLJSONObject } from 'graphql-type-json'
+import { Context } from './context'
+import { IZG_STATUS_UPDATE_POLL_RATE } from './server'
 
 const MAX_STATUS_HISTORY_RETURNED =
-  parseInt(<string>process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 20;
+  parseInt(<string>process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 20
 
 export const typeDefs = [
   DateTimeTypeDefinition,
@@ -99,70 +99,70 @@ export const typeDefs = [
       ): Destination!
     }
   `,
-];
-///createJurisdiction is added only for an example of create mutation
+]
+/// createJurisdiction is added only for an example of create mutation
 export const resolvers = {
   JSON: GraphQLJSON,
   JSONObject: GraphQLJSONObject,
   DateTime: DateTimeResolver,
   Query: {
     allDestinations: (_parent: any, _args: any, context: Context) => {
-      return context.prisma.destinations.findMany();
+      return context.prisma.destinations.findMany()
     },
     allAudit: (_parent: any, _args: any, context: Context) => {
-      return context.prisma.audit_history.findMany();
+      return context.prisma.audit_history.findMany()
     },
     destinationById: (
       _parent: any,
       _args: { dest_id: string },
-      context: Context
+      context: Context,
     ) => {
       return context.prisma.destinations.findUnique({
         where: { dest_id: _args.dest_id },
-      });
+      })
     },
     auditBydestIdByUser: (
       _parent: any,
       _args: { dest_id: string; table: string; user: string },
-      context: Context
+      context: Context,
     ) => {
       return context.prisma.audit_history.findMany({
         where: {
           tableName: _args.table,
           userName: _args.user,
           oldValues: {
-            path: "$.dest_id",
+            path: '$.dest_id',
             equals: _args.dest_id,
           },
         },
-        orderBy: { createdAt: "desc" },
-      });
+        orderBy: { createdAt: 'desc' },
+      })
     },
     endpointStatusHistoryByDestId: (
       _parent: any,
       _args: any,
-      context: Context
+      context: Context,
     ) => {
       return context.prisma.endpointstatus.findMany({
         take: MAX_STATUS_HISTORY_RETURNED,
         where: { dest_id: _args.dest_id },
-        orderBy: { ran_at: "desc" },
-      });
+        orderBy: { ran_at: 'desc' },
+      })
     },
     statusHistoryInterval: () => {
-      return {};
+      return {}
     },
   },
   Destination: {
     dest_type: (_parent: any, _args: any, context: Context) => {
       return context.prisma.destination_type.findUnique({
         where: { type_id: _parent?.dest_type || undefined },
-      });
+      })
     },
     jurisdiction: (_parent: any, _args: any, context: Context) => {
       return context.prisma.jurisdiction.findFirst({
         where: { dest_id: _parent?.dest_id },
-      });
+      })
     },
     status: async (_parent: any, _args: any, context: Context) => {
       const thisStauts = await context.prisma.$queryRaw<
@@ -174,13 +174,13 @@ export const resolvers = {
             FROM endpointstatus 
             WHERE dest_id = ${_parent?.dest_id}
             GROUP BY dest_id
-          ) AS max USING (dest_id, ran_at);`;
-      return thisStauts[0];
+          ) AS max USING (dest_id, ran_at);`
+      return thisStauts[0]
     },
   },
   StatusHistoryInterval: {
     historyInterval: () => {
-      return IZG_STATUS_UPDATE_POLL_RATE;
+      return IZG_STATUS_UPDATE_POLL_RATE
     },
   },
   Mutation: {
@@ -191,15 +191,15 @@ export const resolvers = {
           description: _args.description,
           dest_id: _args.dest_id,
         },
-      });
-      return jurisdiction;
+      })
+      return jurisdiction
     },
     updateDestination: async (_parent: any, _args: any, context: Context) => {
       const destination = await context.prisma.destinations.update({
         where: { dest_id: _args.dest_id },
         data: _args.data,
-      });
-      return destination;
+      })
+      return destination
     },
   },
-};
+}

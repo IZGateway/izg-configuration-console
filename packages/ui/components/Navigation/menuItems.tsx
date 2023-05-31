@@ -1,7 +1,5 @@
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import CallMergeIcon from "@mui/icons-material/CallMerge";
-import CloseIcon from "@mui/icons-material/Close";
-import { MenuItem } from ".";
+import CallMergeIcon from '@mui/icons-material/CallMerge'
+import { MenuItem } from '.'
 
 export const menuItems: MenuItem[] = [
   // {
@@ -10,16 +8,16 @@ export const menuItems: MenuItem[] = [
   //   path: "/user",
   // },
   {
-    label: "Manage Connections",
+    label: 'Manage Connections',
     icon: (
       <CallMergeIcon
         sx={{
-          transform: "rotate(90deg)",
+          transform: 'rotate(90deg)',
         }}
         fontSize="large"
       />
     ),
-    path: "/manage",
+    path: '/manage',
   },
   // {
   //   label: "Add Connection",
@@ -31,4 +29,4 @@ export const menuItems: MenuItem[] = [
   //   ),
   //   path: "/add",
   // },
-];
+]

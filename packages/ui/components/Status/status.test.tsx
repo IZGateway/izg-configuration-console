@@ -1,42 +1,42 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
-import "@testing-library/jest-dom";
-import Status from "./index";
+import React from 'react'
+import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
+import Status from './index'
 
-describe("Status of a connection", () => {
-  it("should show Connected if it is passed as Connected", () => {
+describe('Status of a connection', () => {
+  it('should show Connected if it is passed as Connected', () => {
     render(
       <Status
         status={{
-          status: "Connected",
+          status: 'Connected',
         }}
         color={true}
-      />
-    );
-    expect(screen.getByText("Connected")).toBeInTheDocument();
-  });
+      />,
+    )
+    expect(screen.getByText('Connected')).toBeInTheDocument()
+  })
 
-  it("should show Not Connected if it is passed as null", () => {
+  it('should show Not Connected if it is passed as null', () => {
     render(
       <Status
         status={{
-          status: "",
+          status: '',
         }}
         color={true}
-      />
-    );
-    expect(screen.getByText("Not Connected")).toBeInTheDocument();
-  });
+      />,
+    )
+    expect(screen.getByText('Not Connected')).toBeInTheDocument()
+  })
 
-  it("should show Not Connected if it is passed as anything other than Connected", () => {
+  it('should show Not Connected if it is passed as anything other than Connected', () => {
     render(
       <Status
         status={{
-          status: "XYZ",
+          status: 'XYZ',
         }}
         color={true}
-      />
-    );
-    expect(screen.getByText("Not Connected")).toBeInTheDocument();
-  });
-});
+      />,
+    )
+    expect(screen.getByText('Not Connected')).toBeInTheDocument()
+  })
+})

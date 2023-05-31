@@ -1,18 +1,18 @@
-import * as React from "react";
-import Container from "../../components/Container";
-import ConnectionHistory from "../../components/ConnectionHistory/index";
-import { useRouter } from "next/router";
-import ErrorBoundary from "../../components/ErrorBoundary";
+import * as React from 'react'
+import Container from '../../components/Container'
+import ConnectionHistory from '../../components/ConnectionHistory/index'
+import { useRouter } from 'next/router'
+import ErrorBoundary from '../../components/ErrorBoundary'
 
 const HistoryPage = () => {
-  const router = useRouter();
+  const router = useRouter()
   return (
     <Container title="Connection History">
       <ErrorBoundary>
         <ConnectionHistory destId={router.query?.id as string} />
       </ErrorBoundary>
     </Container>
-  );
-};
+  )
+}
 
-export default HistoryPage;
+export default HistoryPage

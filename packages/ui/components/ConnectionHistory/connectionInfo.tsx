@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react'
 import {
   IconButton,
   Box,
@@ -7,48 +7,47 @@ import {
   Card,
   CardContent,
   Divider,
-  Button,
   Tooltip,
-} from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import Link from "next/link";
-import Status from "../Status";
-import ConnectionInfoDetail from "./connectionInfoDetail";
+} from '@mui/material'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import Link from 'next/link'
+import Status from '../Status'
+import ConnectionInfoDetail from './connectionInfoDetail'
 
 interface InfoProps {
   destinationById: {
-    dest_uri: String;
+    dest_uri: string
     dest_type: {
-      type: String;
-    };
+      type: string
+    }
     jurisdiction: {
-      description: String;
-    };
+      description: string
+    }
     status: {
-      status: String;
-    };
-    username: String;
-    password: String;
-    facility_id: String;
-    MSH3: String;
-    MSH4: String;
-    MSH5: String;
-    MSH6: String;
-    MSH22: String;
-    RXA11: String;
-  };
+      status: string
+    }
+    username: string
+    password: string
+    facility_id: string
+    MSH3: string
+    MSH4: string
+    MSH5: string
+    MSH6: string
+    MSH22: string
+    RXA11: string
+  }
 }
 
 const ConnectionInfo = ({ destinationById }: InfoProps) => {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false)
 
   const toggleDrawer = () => {
-    setOpen(!open);
-  };
+    setOpen(!open)
+  }
   return (
     <div>
       <Card
-        sx={{ marginTop: 4, borderRadius: "0px 0px 16px 16px" }}
+        sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
         id="connection-info"
       >
         <CardHeader
@@ -62,7 +61,7 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
               <IconButton color="primary" onClick={toggleDrawer} id="detail">
                 <VisibilityIcon
                   sx={{
-                    display: "flex",
+                    display: 'flex',
                   }}
                 />
               </IconButton>
@@ -78,8 +77,8 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
         )}
         <Divider />
         <CardContent>
-          <Box sx={{ display: "flex", gap: "2rem" }}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          <Box sx={{ display: 'flex', gap: '2rem' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <Box>
                 <Typography variant="subtitle1" component="div">
                   ENVIRONMENT
@@ -96,7 +95,7 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
                   <Link href={destinationById.dest_uri.toString()}>
                     <a
                       target="_blank"
-                      style={{ color: "#015A2F", overflowWrap: "anywhere" }}
+                      style={{ color: '#015A2F', overflowWrap: 'anywhere' }}
                     >
                       {destinationById.dest_uri.toString()}
                     </a>
@@ -104,14 +103,14 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <Box>
                 <Typography variant="subtitle1" component="div">
                   JURISDICTION
                 </Typography>
                 <Typography gutterBottom variant="body1">
                   {destinationById.jurisdiction === null
-                    ? "N/A"
+                    ? 'N/A'
                     : destinationById.jurisdiction.description}
                 </Typography>
               </Box>
@@ -126,7 +125,7 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
         </CardContent>
       </Card>
     </div>
-  );
-};
+  )
+}
 
-export default ConnectionInfo;
+export default ConnectionInfo

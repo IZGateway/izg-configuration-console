@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node build/server.js",
     "dev": "nodemon src/server.ts",
-    "build": "rimraf ./build && tsc --build --force --verbose"
+    "build": "rimraf ./build && tsc --build --force --verbose",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "npm run lint -- --fix"
   },
   "devDependencies": {
     "@types/graphql": "^14.5.0",

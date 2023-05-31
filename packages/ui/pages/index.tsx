@@ -1,6 +1,5 @@
-import Container from "../components/Container";
-import type { NextPage } from "next";
-import styles from "../styles/Home.module.css";
+import Container from '../components/Container'
+import type { NextPage } from 'next'
 
 const Home: NextPage = () => {
   return (
@@ -10,7 +9,7 @@ const Home: NextPage = () => {
         datatable
       </div>
     </Container>
-  );
-};
+  )
+}
 
-export default Home;
+export default Home

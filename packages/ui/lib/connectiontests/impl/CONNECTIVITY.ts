@@ -1,28 +1,30 @@
-import ConnectionTest from "../ConnectionTest";
-import { ConnectionTestRequest } from "../types/ConnectionTestRequest";
-import { ConnectionTestResult } from "../types/ConnectionTestResult";
-import { TestStatus } from "../TestStatus";
-import https from "https";
-import { TestResponseMessages } from "../TestResponseMessages";
-import * as fs from "fs";
-import path from "path";
-import { Parser } from "xml2js";
-var parser = new Parser();
+import ConnectionTest from '../ConnectionTest'
+import { ConnectionTestResult } from '../types/ConnectionTestResult'
+import { TestStatus } from '../TestStatus'
+import https from 'https'
+import { TestResponseMessages } from '../TestResponseMessages'
+import * as fs from 'fs'
+import path from 'path'
+import { StatusCodes } from 'http-status-codes'
+import * as xml2js from 'xml2js'
 
-const TEST_NAME = "Connectivity Test";
+const pasrseOptions = {
+  explicitArray: false,
+  tagNameProcessors: [xml2js.processors.stripPrefix],
+}
+
+const parser = new xml2js.Parser(pasrseOptions)
+
+const TEST_NAME = 'Connectivity Test'
 export default class CONNECTIVITY extends ConnectionTest {
-  constructor(connectionTestRequest: ConnectionTestRequest) {
-    super(connectionTestRequest);
-  }
-
   run = (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
-      message: "",
+      message: '',
       detail: null,
       status: this.status,
-    };
+    }
 
     const requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
       <soap:Header>
@@ -41,71 +43,67 @@ export default class CONNECTIVITY extends ConnectionTest {
       !</EchoBack>
       </ConnectivityTestRequest>
       </soap:Body>
-      </soap:Envelope>`;
+      </soap:Envelope>`
 
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`
+        `utf-8`,
       ),
       key: fs.readFileSync(
         path.resolve(this.connectionTestRequest.keyPath),
-        "utf-8"
+        'utf-8',
       ),
       passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
       keepAlive: true,
-    };
+    }
 
     const options = {
       hostname: this.connectionTestRequest.hostname,
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path,
-      method: "POST",
+      method: 'POST',
       agent: new https.Agent(httpsAgentOptions),
       headers: {
         Host: this.connectionTestRequest.hostname,
-        "Content-Type": "application/xml",
+        'Content-Type': 'application/xml',
       },
-    };
+    }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const req = https.request(options, (res) => {
-        var data = "";
-        var requestEchoback;
-        var responseEchoback;
+        let data = ''
+        let requestEchoback: string
+        let responseEchoback: string
 
-        res.on("data", (chunk) => {
-          data = data + chunk.toString();
-        });
+        res.on('data', (chunk) => {
+          data = data + chunk.toString()
+        })
 
-        res.on("end", function () {
-          if (res.statusCode == 200) {
-            parser.parseString(data, function (err, result) {
+        res.on('end', function () {
+          if (res.statusCode === StatusCodes.OK) {
+            parser.parseString(data, function (err: Error, result) {
               if (err) {
                 resolve([
-                  {
-                    ...connectivityTestResult,
-                    detail: err,
-                    message: TestResponseMessages.UNKNOWN_ERROR(
-                      options.hostname
-                    ),
-                    status: TestStatus.FAIL,
-                  },
-                ]);
+                  this.unknownErrorResult(connectivityTestResult, err, options),
+                ])
               } else {
+                console.log(
+                  'DEBUG ---> no errors.. parsing: ' + JSON.stringify(result),
+                )
                 responseEchoback =
-                  result["soap:Envelope"]["soap:Body"][0][
-                    "ConnectivityTestResponse"
-                  ][0]["EchoBack"].toString();
+                  result['soap:Envelope'][
+                    'soap:Body'
+                  ][0].ConnectivityTestResponse[0].EchoBack.toString()
               }
-            });
-            parser.parseString(requestBody, function (err, result) {
+            })
+            parser.parseString(requestBody, function (result) {
               requestEchoback =
-                result["soap:Envelope"]["soap:Body"][0][
-                  "ConnectivityTestRequest"
-                ][0]["EchoBack"].toString();
-            });
+                result['soap:Envelope'][
+                  'soap:Body'
+                ][0].ConnectivityTestRequest[0].EchoBack.toString()
+            })
 
             if (requestEchoback === responseEchoback) {
               resolve([
@@ -115,7 +113,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                   message: null,
                   status: TestStatus.PASS,
                 },
-              ]);
+              ])
             } else if (responseEchoback?.includes(requestEchoback)) {
               resolve([
                 {
@@ -123,11 +121,11 @@ export default class CONNECTIVITY extends ConnectionTest {
                   detail: { response: responseEchoback },
                   message: TestResponseMessages.CONNECTIVITY_WARNING(
                     requestEchoback,
-                    responseEchoback
+                    responseEchoback,
                   ),
                   status: TestStatus.WARNING,
                 },
-              ]);
+              ])
             } else if (
               requestEchoback !== responseEchoback ||
               !responseEchoback?.includes(requestEchoback)
@@ -140,7 +138,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                     TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
                   status: TestStatus.FAIL,
                 },
-              ]);
+              ])
             }
           } else {
             resolve([
@@ -153,23 +151,38 @@ export default class CONNECTIVITY extends ConnectionTest {
                 message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
                 status: TestStatus.FAIL,
               },
-            ]);
+            ])
           }
-        });
-      });
+        })
+      })
 
-      req.on("error", (error) => {
+      req.on('error', (error) => {
         resolve([
-          {
-            ...connectivityTestResult,
-            detail: error,
-            message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
-            status: TestStatus.FAIL,
-          },
-        ]);
-      });
-      req.write(requestBody);
-      req.end();
-    });
-  };
+          this.unknownErrorResult(connectivityTestResult, error, options),
+        ])
+      })
+      req.write(requestBody)
+      req.end()
+    })
+  }
+
+  private unknownErrorResult(
+    connectivityTestResult: ConnectionTestResult,
+    err: Error,
+    options: {
+      hostname: string
+      port: number
+      path: string
+      method: string
+      agent: https.Agent
+      headers: { Host: string; 'Content-Type': string }
+    },
+  ): ConnectionTestResult {
+    return {
+      ...connectivityTestResult,
+      detail: err.message,
+      message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
+      status: TestStatus.FAIL,
+    }
+  }
 }
