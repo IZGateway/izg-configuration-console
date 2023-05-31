@@ -89,20 +89,13 @@ export default class CONNECTIVITY extends ConnectionTest {
                   this.unknownErrorResult(connectivityTestResult, err, options),
                 ])
               } else {
-                console.log(
-                  'DEBUG ---> no errors.. parsing: ' + JSON.stringify(result),
-                )
                 responseEchoback =
-                  result['soap:Envelope'][
-                    'soap:Body'
-                  ][0].ConnectivityTestResponse[0].EchoBack.toString()
+                  result.Envelope.Body.ConnectivityTestResponse.EchoBack.toString()
               }
             })
-            parser.parseString(requestBody, function (result) {
+            parser.parseString(requestBody, function (_err, result) {
               requestEchoback =
-                result['soap:Envelope'][
-                  'soap:Body'
-                ][0].ConnectivityTestRequest[0].EchoBack.toString()
+                result.Envelope.Body.ConnectivityTestRequest.EchoBack.toString()
             })
 
             if (requestEchoback === responseEchoback) {
