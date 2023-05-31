@@ -93,7 +93,7 @@ runs:
       run: yarn install --immutable --inline-builds
       env:
         # Overrides/align yarnrc.yml options (v3, v4) for a CI context
-        YARN_PATH: .yarn/releases/yarn-3.2.4.cjs
+        YARN_YARN_PATH: .yarn/releases/yarn-3.2.4.cjs
         YARN_ENABLE_GLOBAL_CACHE: 'false' # Use local cache folder to keep downloaded archives
         YARN_NM_MODE: 'hardlinks-local' # Reduce node_modules size
         YARN_INSTALL_STATE_PATH: '.yarn/ci-cache/install-state.gz' # Might speed up resolution step when node_modules present
