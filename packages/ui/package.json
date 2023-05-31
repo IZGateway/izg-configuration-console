@@ -44,7 +44,7 @@
     "react-to-print": "^2.14.7",
     "saml2-js": "^4.0.1",
     "waait": "^1.0.5",
-    "xml2js": "^0.4.23"
+    "xml2js": "^0.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.9",
