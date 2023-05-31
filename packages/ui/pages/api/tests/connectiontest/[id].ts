@@ -108,9 +108,9 @@ export default async function handler(
     )
     const result = await T.run()
     testResults.push(...result)
-    if (test === 'dns' && result[0]?.detail?.address) {
-      console.info('Resolved IP address is: ' + result[0]?.detail?.address)
-      connectionTestRequest.ip = result[0]?.detail?.address
+    if (test === 'dns') {
+      console.info('Resolved IP address is: ' + result[0]?.detail)
+      connectionTestRequest.ip = result[0]?.detail
     }
   }
 

@@ -20,14 +20,11 @@ export default class DNS extends ConnectionTest {
     return new Promise((resolve) => {
       dns.lookup(
         this.connectionTestRequest.hostname,
-        (error: unknown, address: any, family: any) => {
+        (error: Error, address: string) => {
           resolve([
             {
               ...dnsConnectionTestResult,
-              detail: error || {
-                address,
-                family,
-              },
+              detail: error?.message || address,
               message: error
                 ? TestResponseMessages.DNS_LOOKUP_FAIL(
                     this.connectionTestRequest.hostname,

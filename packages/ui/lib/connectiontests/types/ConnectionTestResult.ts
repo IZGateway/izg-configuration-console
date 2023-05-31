@@ -4,9 +4,6 @@ export type ConnectionTestResult = {
   name: string
   status: TestStatus
   message: string
-  detail:
-    | string
-    | []
-    | { response?: string | string[]; statuscode?: number; message?: string }
+  detail: string
   order: number
 }

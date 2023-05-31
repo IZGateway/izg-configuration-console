@@ -235,7 +235,7 @@ export default class QBP extends ConnectionTest {
                   resolve([
                     {
                       ...hl7QueryTestResult,
-                      detail: error,
+                      detail: error?.message,
                       message: TestResponseMessages.HL7MESSAGE_CANNOT_PARSE,
                       status: TestStatus.FAIL,
                     },
@@ -247,7 +247,7 @@ export default class QBP extends ConnectionTest {
             resolve([
               {
                 ...hl7QueryTestResult,
-                detail: {},
+                detail: null,
                 message:
                   TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
                 status: TestStatus.FAIL,
@@ -278,7 +278,7 @@ export default class QBP extends ConnectionTest {
             resolve([
               {
                 ...hl7QueryTestResult,
-                detail: error,
+                detail: error?.message,
                 message: TestResponseMessages.SERVER_ERROR,
                 status: TestStatus.FAIL,
               },
@@ -299,7 +299,7 @@ export default class QBP extends ConnectionTest {
         resolve([
           {
             ...hl7QueryTestResult,
-            detail: error,
+            detail: error?.message,
             message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
             status: TestStatus.FAIL,
           },

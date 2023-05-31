@@ -56,7 +56,7 @@ export default class WSDL extends ConnectionTest {
                 resolve([
                   {
                     ...wsdlConnectionTestResult,
-                    detail: err,
+                    detail: err?.message,
                     message: TestResponseMessages.UNKNOWN_ERROR(
                       options.hostname,
                     ),
@@ -73,7 +73,7 @@ export default class WSDL extends ConnectionTest {
                   resolve([
                     {
                       ...wsdlConnectionTestResult,
-                      detail: { targetNameSpace },
+                      detail: targetNameSpace,
                       status: TestStatus.PASS,
                     },
                   ])
@@ -81,7 +81,7 @@ export default class WSDL extends ConnectionTest {
                   resolve([
                     {
                       ...wsdlConnectionTestResult,
-                      detail: { targetNameSpace },
+                      detail: targetNameSpace,
                       message:
                         TestResponseMessages.WSDL_NOT_SUPPORTED(
                           targetNameSpace,
@@ -110,7 +110,7 @@ export default class WSDL extends ConnectionTest {
         resolve([
           {
             ...wsdlConnectionTestResult,
-            detail: error,
+            detail: error?.message,
             message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
             status: TestStatus.FAIL,
           },

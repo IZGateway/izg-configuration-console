@@ -102,7 +102,7 @@ export default class CONNECTIVITY extends ConnectionTest {
               resolve([
                 {
                   ...connectivityTestResult,
-                  detail: { response: responseEchoback },
+                  detail: responseEchoback,
                   message: null,
                   status: TestStatus.PASS,
                 },
@@ -111,7 +111,7 @@ export default class CONNECTIVITY extends ConnectionTest {
               resolve([
                 {
                   ...connectivityTestResult,
-                  detail: { response: responseEchoback },
+                  detail: responseEchoback,
                   message: TestResponseMessages.CONNECTIVITY_WARNING(
                     requestEchoback,
                     responseEchoback,
@@ -126,7 +126,7 @@ export default class CONNECTIVITY extends ConnectionTest {
               resolve([
                 {
                   ...connectivityTestResult,
-                  detail: { response: responseEchoback },
+                  detail: responseEchoback,
                   message:
                     TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
                   status: TestStatus.FAIL,
@@ -137,10 +137,7 @@ export default class CONNECTIVITY extends ConnectionTest {
             resolve([
               {
                 ...connectivityTestResult,
-                detail: {
-                  statuscode: res.statusCode,
-                  message: res.statusMessage,
-                },
+                detail: res.statusCode + ': ' + res.statusMessage,
                 message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
                 status: TestStatus.FAIL,
               },

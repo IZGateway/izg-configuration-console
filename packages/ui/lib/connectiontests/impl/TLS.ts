@@ -64,7 +64,7 @@ export default class TLS extends ConnectionTest {
         resolve([
           {
             ...dnsConnectionTestResult,
-            detail: error,
+            detail: error?.message,
             message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
             status: TestStatus.FAIL,
           },
