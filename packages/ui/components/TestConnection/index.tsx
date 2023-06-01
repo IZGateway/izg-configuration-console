@@ -3,8 +3,8 @@ import TestSkeleton from '../../components/Skeleton'
 import { useState, useEffect } from 'react'
 import Close from '../Close'
 import { Box, Container } from '@mui/material'
-import TestsList from './TestsList'
 import { useRouter } from 'next/router'
+import TestsList from './TestsList'
 
 const TestConnection = () => {
   const [isLoading, setLoading] = useState(false)
