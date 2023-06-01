@@ -2,8 +2,7 @@ import React, { useContext } from 'react'
 import { useQuery } from '@apollo/client'
 import { FETCH_ALL_DESTINATIONS } from '../../lib/queries/fetch'
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
-import testConnectionImage from '../../public/Health_Check.svg'
-import Image from 'next/image'
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import {
   Box,
   IconButton,
@@ -84,6 +83,10 @@ const actionButtonStyle = {
 
 const ConnectionsTable = () => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  // const [paginationModel, setPaginationModel] = React.useState({
+  //   pageSize: 5,
+  //   page: 0,
+  // })
   const {
     loading: isLoadingConnections,
     error: isLoadingConnectionsError,
@@ -212,10 +215,7 @@ const ConnectionsTable = () => {
                   color="primary"
                   sx={actionButtonStyle}
                 >
-                  <Image
-                    src={testConnectionImage}
-                    alt="test connection image"
-                  />
+                  <MonitorHeartOutlinedIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Link>
@@ -270,19 +270,19 @@ const ConnectionsTable = () => {
           }
         })}
         columns={columns}
-        pageSize={pageSize}
+        pageSizeOptions={[5, 25, 50, 100]}
         autoHeight
         initialState={{
           sorting: {
             sortModel: [{ field: 'jurisdiction', sort: 'asc' }],
           },
+          pagination: { paginationModel: { pageSize } },
         }}
-        disableSelectionOnClick
+        disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector
         disableDensitySelector
-        onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-        rowsPerPageOptions={[5, 10, 20]}
+        onPaginationModelChange={(model) => setPageSize(model.pageSize)}
         getRowId={(row) => row.dest_id}
         density={'comfortable'}
         pagination
