@@ -15,17 +15,26 @@ import * as yup from "yup";
 import ModeEditIcon from '@mui/icons-material/ModeEdit';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
-const validationSchemaIdentify = yup.object().shape({
-  username: yup.string().required("Required"),
-  password: yup.string().required("Required"),
-  url: yup.string().required("Required"),
-  facilityId: yup.string().required("Required"),
-  MSH4: yup.string().required("Required"),
-  MSH6: yup.string().required("Required"),
-});
+// const validationSchemaIdentify = yup.object().shape({
+//   username: yup.string().required("Required"),
+//   password: yup.string().required("Required"),
+//   url: yup.string().required("Required"),
+//   facilityId: yup.string().required("Required"),
+//   MSH4: yup.string().required("Required"),
+//   MSH6: yup.string().required("Required"),
+// });
 
 const Identify = (props: any) => {
+  const [click, setClick] = React.useState(false)
 
+  const handleChange = (event) => {
+    event.preventDefault();
+    if (event.target.name === "newPassword" || event.target.name === "confirmPassword") {
+      props.setValue({ ...props.value, "password": event.target.value });
+    } else {
+      props.setValue({ ...props.value, [event.target.name]: event.target.value });
+    }
+  };
 
   // const identifyFormik = useFormik({
   //   initialValues: {
@@ -47,6 +56,54 @@ const Identify = (props: any) => {
   //   },
   // });
 
+  const updatePassword = () => {
+    setClick(true)
+  }
+
+  const newPassword = () => {
+    return (
+      <div>
+        <TextField
+          id="current-password"
+          label="Current Password"
+          variant="outlined"
+          fullWidth
+          disabled
+          defaultValue={props.destinationById.password}
+          InputProps={{
+            readOnly: true,
+          }}
+          sx={{ marginTop: 1 }}
+        />
+        <TextField
+          id="new-password"
+          name="newPassword"
+          label="New Password"
+          variant="outlined"
+          fullWidth
+          value={props.value.newPassword}
+          onChange={handleChange}
+          sx={{ marginTop: 1 }}
+        />
+        <Typography
+          fontSize={"12px"}
+          sx={{ marginLeft: 2 }}
+        >
+          Passwords must have a length of 15 characters.  Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)
+        </Typography>
+        <TextField
+          id="confirm-new-password"
+          name="confirmPassword"
+          label="Confirm New Password"
+          variant="outlined"
+          fullWidth
+          value={props.value.confirmPassword}
+          onChange={handleChange}
+          sx={{ marginTop: 1 }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -73,14 +130,12 @@ const Identify = (props: any) => {
             />
             <TextField
               id="username"
+              name="username"
               label="Username"
               variant="outlined"
               fullWidth
-              disabled
-              defaultValue={props.destinationById.username}
-              InputProps={{
-                readOnly: true,
-              }}
+              value={props.value.username}
+              onChange={handleChange}
               sx={{ marginTop: 1 }}
             />
             <Typography
@@ -89,40 +144,47 @@ const Identify = (props: any) => {
             >
               Username must contain one uppercase letter, at least 8 characters and one number
             </Typography>
-            <TextField
-              id="password"
-              label="Password"
-              variant="outlined"
-              fullWidth
-              disabled
-              defaultValue={props.destinationById.password}
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{ marginTop: 1 }}
-            />
-            <Typography
-              fontSize={"12px"}
-              sx={{ marginLeft: 2 }}
-            >
-              Password must contain one uppercase letter, at least 8 characters  and one number. To change password click on the change password button below.
-            </Typography>
+            {click ? newPassword() :
+              <div>
+                <TextField
+                  id="password"
+                  label="Password"
+                  variant="outlined"
+                  fullWidth
+                  disabled
+                  defaultValue={props.destinationById.password}
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                  sx={{ marginTop: 1 }}
+                />
+                <Typography
+                  fontSize={"12px"}
+                  sx={{ marginLeft: 2 }}
+                >
+                  Password must contain one uppercase letter, at least 8 characters  and one number. To change password click on the change password button below.
+                </Typography>
+              </div>
+            }
           </Box>
         </CardContent>
-        <Button
-          color="primary"
-          variant="contained"
-          size="large"
-          sx={{
-            margin: "1em",
-            alignItems: "center",
-            borderRadius: "30px",
-            marginTop: 0.5
-          }}
-        >
-          CHANGE PASSWORD
-          <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
-        </Button>
+        {!click &&
+          <Button
+            color="primary"
+            variant="outlined"
+            size="large"
+            onClick={updatePassword}
+            sx={{
+              margin: "1em",
+              alignItems: "center",
+              borderRadius: "30px",
+              marginTop: 0.5
+            }}
+          >
+            CHANGE PASSWORD
+            <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
+          </Button>
+        }
       </Card>
       <Card sx={{ minWidth: 275, borderRadius: "0px 0px 30px 30px", marginTop: 5 }}>
         <CardHeader title="View Additional Data Configurations" />
@@ -134,67 +196,67 @@ const Identify = (props: any) => {
           <Box sx={{ display: "flex", gap: "2rem", marginTop: 2 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <TextField
-                id="facilityID"
+                id="facilityId"
+                name="facility_id"
                 label="Facility ID"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.facility_id}
+                value={props.value.facility_id}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
               <TextField
                 id="msh4"
+                name="msh4"
                 label="MSH-4"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.msh4}
+                value={props.value.msh4}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
               <TextField
                 id="msh6"
+                name="msh6"
                 label="MSH-6"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.msh6}
+                value={props.value.msh6}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
             </Box>
             <Box sx={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               <TextField
                 id="msh3"
+                name="msh3"
                 label="MSH-3"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.msh3}
+                value={props.value.msh3}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
 
               <TextField
                 id="msh5"
+                name="msh5"
                 label="MSH-5"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.msh5}
+                value={props.value.msh5}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
 
               <TextField
                 id="msh22"
+                name="msh22"
                 label="MSH-22"
                 variant="outlined"
-                disabled
-                defaultValue={props.destinationById.msh22}
+                value={props.value.msh22}
+                onChange={handleChange}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
                 }} />
             </Box>
@@ -202,19 +264,17 @@ const Identify = (props: any) => {
           <Box sx={{ marginTop: "1rem" }}>
             <TextField
               id="rxa11"
+              name="rxa11"
               label="RXA-11"
               variant="outlined"
-              disabled
               fullWidth
-              defaultValue={props.destinationById.rxa11}
+              value={props.value.rxa11}
+              onChange={handleChange}
               InputProps={{
-                readOnly: true,
                 endAdornment: <InputAdornment position="start"><InfoOutlinedIcon /></InputAdornment>,
               }}
             />
           </Box>
-
-
         </CardContent>
       </Card>
       {/* <Typography variant="h2">Confirm Credentials</Typography>

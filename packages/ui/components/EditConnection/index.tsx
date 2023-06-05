@@ -13,42 +13,81 @@ import StepConnector, {
   stepConnectorClasses,
 } from "@mui/material/StepConnector";
 import { styled } from "@mui/material/styles";
-import SubmitModal from "./submitModal";
 import { gql, useMutation, useQuery } from "@apollo/client";
 import { FETCH_DESTINATION } from "../../lib/queries/fetch";
 import ServiceAgreement from "./serviceAgreement";
 import Identify from "./identify";
 import Verify from "./verify";
 import Jurisdiction from "./jurisdiction";
+import { useRouter } from 'next/router';
 
 // interface editConnectionProps { }
 
-// export const ADD_CONNECTION = gql`
-//   mutation AddConnection($uri: String) {
-//     addConnection(uri: $uri) {
-//       success
-//     }
-//   }
-// `;
+export const UPDATE_CONNECTION = gql`
+mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
+  updateDestination(data: $data, dest_id: $destId) {
+    username
+    password
+    facility_id
+  }
+}
+
+`;
 
 const steps = ["SERVICE AGREEMENT", "JURISDICTION", "IDENTIFY", "VERIFY"];
 
 const EditConnection = (props: any) => {
-  const { loading, error, data } = useQuery(FETCH_DESTINATION, {
+  const router = useRouter();
+  const [updateConnection, { loading: mutationLoading, error: mutationError }] = useMutation(UPDATE_CONNECTION)
+  const { loading: queryLoading, error: queryError, data } = useQuery(FETCH_DESTINATION, {
     variables: { destId: props.destId },
   });
+
+  React.useEffect(() => {
+    if (!mutationLoading && !queryLoading) {
+    }
+  }, [mutationLoading, queryLoading]);
+
+  if (mutationLoading || queryLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (mutationError || queryError) {
+    throw new Error(mutationError?.message || queryError?.message);
+  }
+  console.log(data)
   const [activeStep, setActiveStep] = React.useState(0);
   const [agreed, setAgreed] = React.useState(false);
   const [accepted, setAccepted] = React.useState(false);
-  if (loading) return null;
-  if (error) {
-    throw new Error(error.message);
+  const initialValues = {
+    username: data.destinationById.username,
+    password: data.destinationById.password,
+    newPassword: null,
+    confirmPassword: null,
+    facility_id: data.destinationById.facility_id,
+    msh3: data.destinationById.MSH3,
+    msh4: data.destinationById.MSH4,
+    msh5: data.destinationById.MSH5,
+    msh6: data.destinationById.MSH6,
+    msh22: data.destinationById.MSH22,
+    rxa11: data.destinationById.RXA11,
   }
+  const [value, setValue] = React.useState(initialValues);
+  console.log(value)
+
   const handleIAgreeButton = () => {
     setAgreed(true);
   };
-  // const mutateFunction = useMutation(ADD_CONNECTION);
-
+  const handleSubmit = (event) => {
+    console.log(value)
+    updateConnection({
+      variables: {
+        "data": value,
+        "destId": data.destinationById.dest_id
+      }
+    })
+    router.push("/manage")
+  }
   const handleAccept = () => {   ///DO WE REALLY NEED THIS METHOD???????????
     setAccepted(true)
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -58,9 +97,8 @@ const EditConnection = (props: any) => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
-  const handleBack = () => {
+  const handlePrevious = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
-    setAgreed(false)
   };
 
   const StepperLine = styled(StepConnector)(() => ({
@@ -110,7 +148,7 @@ const EditConnection = (props: any) => {
           color="primary"
           variant="outlined"
           disabled={activeStep === 0}
-          onClick={handleBack}
+          onClick={handlePrevious}
           sx={{
             borderRadius: "30px",
           }}
@@ -123,12 +161,7 @@ const EditConnection = (props: any) => {
             type="submit"
             color="primary"
             variant="contained"
-            // onClick={handleNext}
-            // disabled={
-            //   activeStep === 0
-            //     ? !(jurisdictionFormik.dirty && jurisdictionFormik.isValid)
-            //     : !(identifyFormik.dirty && identifyFormik.isValid)
-            // }
+            onClick={handleSubmit}
             sx={{
               borderRadius: "30px",
             }}
@@ -142,11 +175,6 @@ const EditConnection = (props: any) => {
             color="primary"
             variant="contained"
             onClick={handleNext}
-            // disabled={
-            //   activeStep === 0
-            //     ? !(jurisdictionFormik.dirty && jurisdictionFormik.isValid)
-            //     : !(identifyFormik.dirty && identifyFormik.isValid)
-            // }
             sx={{
               borderRadius: "30px",
             }}
@@ -218,9 +246,9 @@ const EditConnection = (props: any) => {
           </Stepper>
         </Box>
 
-        {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} />}
+        {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />}
         {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 && <Identify {...data} />}
+        {activeStep === 2 && <Identify {...data} setValue={setValue} value={value} />}
         {activeStep === 3 && <Verify />}
         <Container
           maxWidth="sm"

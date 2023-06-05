@@ -72,6 +72,12 @@ export const typeDefs = [
       username: String
       password: String
       facility_id: String
+      MSH3: String
+      MSH4: String
+      MSH5: String
+      MSH6: String
+      MSH22: String
+      RXA11: String
     }
 
     type Query {
