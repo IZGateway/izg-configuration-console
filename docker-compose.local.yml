@@ -1,0 +1,61 @@
+version: '3'
+services:
+  nginx:
+    build:
+      context: ./
+      dockerfile: ./nginx/Dockerfile
+    ports:
+      - 80:80
+  api:
+    container_name: api
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile.api
+    environment:
+      - IZG_ENDPOINT_CERT_DIR_PATH=/certs
+      - DATABASE_PROVIDER=mysql
+      - DATABASE_URL=<CONNECTION PATH>
+      - IZG_STATUS_UPDATE_POLL_RATE=300000
+      - IZG_MAX_STATUS_HISTORY_RETURNED=20
+      - IZG_STATUS_ENDPOINT_URL=<status endpoint to call>
+      - IZG_ENDPOINT_CRT_PATH=/usr/src/app/certs/<your cert>.crt
+      - IZG_ENDPOINT_KEY_PATH=/usr/src/app/certs/<your key>.key
+      - IZG_ENDPOINT_PASSCODE=<your pass>
+    volumes:
+      - c:/cert/directory/path/on/your/local/system:/usr/src/app/certs
+  ui:
+    container_name: ui
+    build:
+      context: ./
+      dockerfile: ./docker/Dockerfile.ui
+    environment:
+      - IZG_ENDPOINT_CERT_DIR_PATH=/certs
+      - GRAPHQL_URL=http://localhost/graphql
+      - IZG_ENDPOINT_CRT_PATH=/usr/src/app/certs/<your cert>.crt
+      - IZG_ENDPOINT_KEY_PATH=/usr/src/app/certs/<your key>.key
+      - IZG_ENDPOINT_PASSCODE=<your pass>
+      - KEYCLOAK_ISSUER=http://<your local IP address>:8080/realms/myrealm
+      - KEYCLOAK_CLIENT_ID=izgateway-config-console
+      - NEXTAUTH_URL=http://localhost/
+      - NEXTAUTH_SECRET=<next auth secret you created>
+    volumes:
+      - c:/cert/directory/path/on/your/local/system:/usr/src/app/certs
+  mysql:
+    build: ./database
+    ports:
+      - 3306:3306
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY: edge
+    command:
+      - start-dev
+      - --import-realm
+    ports:
+      - 8080:8080
+    volumes:
+      - ./auth/realm-export.json:/opt/keycloak/data/import/real-export.json:ro
+      - ./:/usr/src/app/my-app
+      - /usr/src/app/my-app/node_modules

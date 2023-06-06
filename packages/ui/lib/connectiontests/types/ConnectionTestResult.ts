@@ -1,9 +1,9 @@
-import { TestStatus } from "../TestStatus";
+import { TestStatus } from '../TestStatus'
 
 export type ConnectionTestResult = {
-  name: string;
-  status: TestStatus;
-  message: string;
-  detail: any;
-  order: number;
-};
+  name: string
+  status: TestStatus
+  message: string
+  detail: string
+  order: number
+}

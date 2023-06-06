@@ -1,25 +1,39 @@
 {
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "project": "./tsconfig.json"
-    },
-    "extends": [
-      "eslint:recommended",
-      "standard",
-      "prettier",
-      "plugin:@typescript-eslint/recommended",
-      "prettier/@typescript-eslint",
-      "next/core-web-vitals"
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    // "project": "./tsconfig.json"
+  },
+  "extends": [
+    "eslint:recommended",
+    "standard",
+    "plugin:@typescript-eslint/recommended",
+    "next/core-web-vitals",
+    "prettier"
+  ],
+  "plugins": ["@typescript-eslint", "no-loops", "prettier"],
+  "env": {
+    "es6": true,
+    "node": true
+  },
+  "ignorePatterns": ["dist", "node_modules", "examples", "scripts"],
+  "rules": {
+    "no-loops/no-loops": 2,
+    "no-console": ["error", { "allow": ["warn", "error", "info", "log"] }],
+    "@typescript-eslint/no-explicit-any": "off",
+    "no-irregular-whitespace": [
+      "error",
+      {
+        "skipStrings": true,
+        "skipComments": false,
+        "skipRegExps": false,
+        "skipTemplates": true
+      }
     ],
-    "plugins": ["@typescript-eslint", "no-loops", "prettier"],
-    "env": {
-      "es6": true,
-      "node": true
-    },
-    "ignorePatterns": ["dist", "node_modules", "examples", "scripts"],
-    "rules": {
-      "no-loops/no-loops": 2,
-      "no-console": 1,
-      "prettier/prettier": 2
-    }
+    "prettier/prettier": [
+      "error",
+      {
+        "endOfLine": "auto"
+      }
+    ]
   }
+}

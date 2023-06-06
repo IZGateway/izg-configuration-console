@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client";
+import { gql } from '@apollo/client'
 
 export const FETCH_DESTINATION = gql`
   query DestinationById($destId: String!) {
@@ -26,4 +26,4 @@ export const FETCH_DESTINATION = gql`
       }
     }
   }
-`;
+`

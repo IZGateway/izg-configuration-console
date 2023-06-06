@@ -1,47 +1,40 @@
-import ConnectionTest from "../ConnectionTest";
-import { ConnectionTestRequest } from "../types/ConnectionTestRequest";
-import { ConnectionTestResult } from "../types/ConnectionTestResult";
-import { TestStatus } from "../TestStatus";
-import { TestResponseMessages } from "../TestResponseMessages";
+import ConnectionTest from '../ConnectionTest'
+import { ConnectionTestResult } from '../types/ConnectionTestResult'
+import { TestStatus } from '../TestStatus'
+import { TestResponseMessages } from '../TestResponseMessages'
 
-const TEST_NAME = "DNS Lookup Test";
+const TEST_NAME = 'DNS Lookup Test'
 
 export default class DNS extends ConnectionTest {
-  constructor(connectionTestRequest: ConnectionTestRequest) {
-    super(connectionTestRequest);
-  }
-
   run = (): Promise<ConnectionTestResult[]> => {
-    const dns = require("dns");
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const dns = require('dns')
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
-      message: "",
+      message: '',
       detail: null,
       status: this.status,
-    };
+    }
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       dns.lookup(
         this.connectionTestRequest.hostname,
-        (error: any, address: any, family: any) => {
+        (error: Error, address: string) => {
           resolve([
             {
               ...dnsConnectionTestResult,
-              detail: error || {
-                address: address,
-                family: family,
-              },
+              detail: error?.message || address,
               message: error
                 ? TestResponseMessages.DNS_LOOKUP_FAIL(
-                    this.connectionTestRequest.hostname
+                    this.connectionTestRequest.hostname,
                   )
-                : "",
+                : '',
               status: error ? TestStatus.FAIL : TestStatus.PASS,
             },
-          ]);
-        }
-      );
-    });
-  };
+          ])
+        },
+      )
+    })
+  }
 }

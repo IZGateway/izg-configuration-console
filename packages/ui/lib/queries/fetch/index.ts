@@ -1,2 +1,2 @@
-export * from "./fetchAllConnections";
-export * from "./fetchConnection";
+export * from './fetchAllConnections'
+export * from './fetchConnection'

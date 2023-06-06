@@ -1,21 +1,17 @@
-import * as React from "react";
+import * as React from 'react'
 import {
   Box,
   Button,
   CardContent,
   Drawer,
-  IconButton,
-  InputAdornment,
   TextField,
   Typography,
-} from "@mui/material";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
+} from '@mui/material'
 
 interface ConnectionDetailProps {
-  data: any;
-  open: boolean;
-  display: (isOpen: boolean) => void;
+  data: any
+  open: boolean
+  display: (isOpen: boolean) => void
 }
 
 const ConnectionInfoDetail = ({
@@ -23,18 +19,10 @@ const ConnectionInfoDetail = ({
   open,
   display,
 }: ConnectionDetailProps) => {
-  const [showPassword, setShowPassword] = React.useState(false);
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword = (
-    event: React.MouseEvent<HTMLButtonElement>
-  ) => {
-    event.preventDefault();
-  };
-
   return (
     <div>
       <Drawer
-        anchor={"right"}
+        anchor={'right'}
         open={open}
         onClose={display}
 
@@ -268,7 +256,7 @@ const ConnectionInfoDetail = ({
                 fullWidth
                 onClick={() => display(open)}
                 sx={{
-                  borderRadius: "30px",
+                  borderRadius: '30px',
                 }}
               >
                 CLOSE
@@ -278,8 +266,8 @@ const ConnectionInfoDetail = ({
         </CardContent>
       </Drawer>
     </div>
-  );
-};
+  )
+}
 
-export default ConnectionInfoDetail;
+export default ConnectionInfoDetail
 // sx={{marginTop: 2, borderRadius: "30px", textTransform: 'none'}}

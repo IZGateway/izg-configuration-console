@@ -17,28 +17,28 @@
 #   - latest: https://gist.github.com/belgattitude/042f9caf10d029badbde6cf9d43e400a    #
 ########################################################################################
 
-name: "Monorepo install (yarn)"
-description: "Run yarn install with node_modules linker and cache enabled"
+name: 'Monorepo install (yarn)'
+description: 'Run yarn install with node_modules linker and cache enabled'
 inputs:
   enable-corepack:
-    description: "Enable corepack"
+    description: 'Enable corepack'
     required: false
-    default: "false"
+    default: 'false'
   cache-node-modules:
-    description: "Cache node_modules, might speed up link step (invalidated lock/os/node-version/branch)"
+    description: 'Cache node_modules, might speed up link step (invalidated lock/os/node-version/branch)'
     required: false
-    default: "false"
+    default: 'false'
   cache-install-state:
-    description: "Cache yarn install state, might speed up resolution step when node-modules cache is activated (invalidated lock/os/node-version/branch)"
+    description: 'Cache yarn install state, might speed up resolution step when node-modules cache is activated (invalidated lock/os/node-version/branch)'
     required: false
-    default: "true"
+    default: 'true'
   cwd:
     description: "Changes node's process.cwd() if the project is not located on the root. Default to process.cwd()"
     required: false
-    default: "."
+    default: '.'
 
 runs:
-  using: "composite"
+  using: 'composite'
 
   steps:
     - name: ⚙️ Enable Corepack
@@ -47,12 +47,16 @@ runs:
       working-directory: ${{ inputs.cwd }}
       run: corepack enable
 
+    - name: ⚙️ Import Workspace-tools
+      shell: bash
+      run: yarn plugin import workspace-tools
+
     - name: ⚙️ Expose yarn config as "$GITHUB_OUTPUT"
       id: yarn-config
       shell: bash
       working-directory: ${{ inputs.cwd }}
       env:
-        YARN_ENABLE_GLOBAL_CACHE: "false"
+        YARN_ENABLE_GLOBAL_CACHE: 'false'
       run: |
         echo "CACHE_FOLDER=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
         echo "CURRENT_NODE_VERSION="node-$(node --version)"" >> $GITHUB_OUTPUT
@@ -89,8 +93,9 @@ runs:
       run: yarn install --immutable --inline-builds
       env:
         # Overrides/align yarnrc.yml options (v3, v4) for a CI context
-        YARN_ENABLE_GLOBAL_CACHE: "false" # Use local cache folder to keep downloaded archives
-        YARN_NM_MODE: "hardlinks-local" # Reduce node_modules size
-        YARN_INSTALL_STATE_PATH: ".yarn/ci-cache/install-state.gz" # Might speed up resolution step when node_modules present
+        YARN_YARN_PATH: .yarn/releases/yarn-3.2.4.cjs
+        YARN_ENABLE_GLOBAL_CACHE: 'false' # Use local cache folder to keep downloaded archives
+        YARN_NM_MODE: 'hardlinks-local' # Reduce node_modules size
+        YARN_INSTALL_STATE_PATH: '.yarn/ci-cache/install-state.gz' # Might speed up resolution step when node_modules present
         # Other environment variables
-        HUSKY: "0" # By default do not run HUSKY install
+        HUSKY: '0' # By default do not run HUSKY install

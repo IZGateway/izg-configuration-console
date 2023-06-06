@@ -1,8 +1,8 @@
-import Head from "next/head";
+import Head from 'next/head'
 
 export interface ContainerProps {
-  title: string;
-  children: React.ReactNode;
+  title: string
+  children: React.ReactNode
 }
 
 const Container = ({ title, children }: ContainerProps) => {
@@ -15,7 +15,7 @@ const Container = ({ title, children }: ContainerProps) => {
       </Head>
       {children}
     </>
-  );
-};
+  )
+}
 
-export default Container;
+export default Container

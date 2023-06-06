@@ -1,11 +1,11 @@
-import * as React from "react";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ReportProblemIcon from "@mui/icons-material/ReportProblem";
-import ErrorIcon from "@mui/icons-material/Error";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import ReactToPrint from "react-to-print";
-import PrintIcon from "@mui/icons-material/Print";
-import { useRef } from "react";
+import * as React from 'react'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ReportProblemIcon from '@mui/icons-material/ReportProblem'
+import ErrorIcon from '@mui/icons-material/Error'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import ReactToPrint from 'react-to-print'
+import PrintIcon from '@mui/icons-material/Print'
+import { useRef } from 'react'
 import {
   Card,
   CardHeader,
@@ -22,49 +22,47 @@ import {
   ListItemText,
   ListItem,
   Chip,
-} from "@mui/material";
+} from '@mui/material'
 
 interface testListProps {
-  testResults: any[];
-  destination: string;
-  destinationType: string;
-  jurisdictionUrl: string;
+  testResults: any[]
+  destination: string
+  destinationType: string
+  jurisdictionUrl: string
 }
 
-const testsList = ({
+const TestsList = ({
   testResults,
   destination,
   destinationType,
   jurisdictionUrl,
 }: testListProps) => {
-  const handleReload = () => window.location.reload();
-  const componentRef = useRef(null);
-  const passeddata = testResults.filter(
-    (item) => item.status === "PASS"
-  ).length;
-  const totaldata = testResults.length;
-  const progressPct = Number(((passeddata / totaldata) * 100).toFixed());
+  const handleReload = () => window.location.reload()
+  const componentRef = useRef(null)
+  const passeddata = testResults.filter((item) => item.status === 'PASS').length
+  const totaldata = testResults.length
+  const progressPct = Number(((passeddata / totaldata) * 100).toFixed())
 
   const list = () => (
     <>
       <List>
-        {testResults.map((item, index) => (
+        {testResults.map((item) => (
           <>
             <ListItem key={item.name} id={item.name}>
               <ListItemIcon>
-                {item.status === "PASS" && <CheckCircleIcon color="primary" />}
-                {item.status === "FAIL" && <ErrorIcon color="secondary" />}
-                {item.status === "WARNING" && (
+                {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
+                {item.status === 'FAIL' && <ErrorIcon color="secondary" />}
+                {item.status === 'WARNING' && (
                   <ReportProblemIcon color="warning" />
                 )}
-                {item.status === "SKIPPED" && (
-                  <ErrorOutlineIcon sx={{ color: "#424242" }} />
+                {item.status === 'SKIPPED' && (
+                  <ErrorOutlineIcon sx={{ color: '#424242' }} />
                 )}
               </ListItemIcon>
 
-              {item.status === "PASS" ? (
+              {item.status === 'PASS' ? (
                 <ListItemText primary={item.name} />
-              ) : item.status === "SKIPPED" ? (
+              ) : item.status === 'SKIPPED' ? (
                 <ListItemText
                   primary={item.name}
                   secondary={
@@ -84,18 +82,18 @@ const testsList = ({
                 />
               )}
               <Chip
-                label={item.status === "SKIPPED" ? "N/A" : item.status}
+                label={item.status === 'SKIPPED' ? 'N/A' : item.status}
                 variant="outlined"
                 color={
-                  item.status === "PASS"
-                    ? "primary"
-                    : item.status === "SKIPPED"
-                    ? "default"
-                    : "secondary"
+                  item.status === 'PASS'
+                    ? 'primary'
+                    : item.status === 'SKIPPED'
+                    ? 'default'
+                    : 'secondary'
                 }
                 sx={{
-                  borderRadius: "4px",
-                  marginTop: "8px",
+                  borderRadius: '4px',
+                  marginTop: '8px',
                 }}
               />
             </ListItem>
@@ -104,7 +102,7 @@ const testsList = ({
         ))}
       </List>
     </>
-  );
+  )
 
   const buttonGroup = () => (
     <Container
@@ -118,9 +116,9 @@ const testsList = ({
         fullWidth
         size="large"
         sx={{
-          margin: "1em",
-          alignItems: "center",
-          borderRadius: "30px",
+          margin: '1em',
+          alignItems: 'center',
+          borderRadius: '30px',
         }}
       >
         <Button
@@ -129,7 +127,7 @@ const testsList = ({
           variant="outlined"
           onClick={handleReload}
           sx={{
-            borderRadius: "30px",
+            borderRadius: '30px',
           }}
         >
           RERUN TEST
@@ -142,7 +140,7 @@ const testsList = ({
               color="primary"
               endIcon={<PrintIcon />}
               sx={{
-                borderRadius: "30px",
+                borderRadius: '30px',
               }}
             >
               PRINT
@@ -152,10 +150,10 @@ const testsList = ({
         />
       </ButtonGroup>
     </Container>
-  );
+  )
 
   return (
-    <Box sx={{ position: "relative" }}>
+    <Box sx={{ position: 'relative' }}>
       <div>
         <Container ref={componentRef}>
           <Box sx={{ marginTop: 8 }}>
@@ -167,8 +165,8 @@ const testsList = ({
               fontSize="32px"
               id="test-connection"
             >
-              Connection testing for{" "}
-              {destination === "unknown" ? "N/A" : destination}{" "}
+              Connection testing for{' '}
+              {destination === 'unknown' ? 'N/A' : destination}{' '}
               {destinationType}
             </Typography>
             <Typography align="center" variant="body1">
@@ -178,7 +176,7 @@ const testsList = ({
             </Typography>
           </Box>
           <Card
-            sx={{ marginTop: 4, borderRadius: "0px 0px 16px 16px" }}
+            sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
             id="test-connection-info"
           >
             <CardHeader title="Test your connection" />
@@ -200,7 +198,7 @@ const testsList = ({
                   marginTop: 1,
                   marginBottom: 1,
                   height: 8,
-                  borderRadius: "8px",
+                  borderRadius: '8px',
                 }}
               />
               <Typography variant="body1">
@@ -213,7 +211,7 @@ const testsList = ({
         {buttonGroup()}
       </div>
     </Box>
-  );
-};
+  )
+}
 
-export default testsList;
+export default TestsList

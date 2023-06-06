@@ -1,24 +1,24 @@
-import * as React from "react";
-import { Typography, Box, BoxProps } from "@mui/material";
-import { useQuery } from "@apollo/client";
-import { FETCH_DESTINATION } from "../../lib/queries/fetch";
-import TestHistory from "./testHistory";
-import ChangeHistory from "./changeHistory"
-import ConnectionInfo from "./connectionInfo";
-import Close from "../Close";
+import * as React from 'react'
+import { Typography, Box, BoxProps } from '@mui/material'
+import { useQuery } from '@apollo/client'
+import { FETCH_DESTINATION } from '../../lib/queries/fetch'
+import TestHistory from './testHistory'
+import ChangeHistory from './changeHistory'
+import ConnectionInfo from './connectionInfo'
+import Close from '../Close'
 
 const ConnectionHistory = (props: any) => {
   const { loading, error, data } = useQuery(FETCH_DESTINATION, {
     variables: { destId: props.destId },
-  });
+  })
 
-  if (loading) return null;
+  if (loading) return null
   if (error) {
-    throw new Error(error.message);
+    throw new Error(error.message)
   }
 
   function Item(props: BoxProps) {
-    const { sx, ...other } = props;
+    const { sx, ...other } = props
     return (
       <Box
         sx={{
@@ -26,7 +26,7 @@ const ConnectionHistory = (props: any) => {
         }}
         {...other}
       />
-    );
+    )
   }
 
   return (
@@ -45,8 +45,8 @@ const ConnectionHistory = (props: any) => {
           Find users, view the test history and view additional information.
         </Typography>
       </Box>
-      <Box sx={{ display: "flex", gap: 4 }}>
-        <Item sx={{ width: "40%" }}>
+      <Box sx={{ display: 'flex', gap: 4 }}>
+        <Item sx={{ width: '40%' }}>
           <ConnectionInfo {...data} />
         </Item>
         <Item sx={{ flexGrow: 1 }}>
@@ -55,7 +55,7 @@ const ConnectionHistory = (props: any) => {
         </Item>
       </Box>
     </div>
-  );
-};
+  )
+}
 
-export default ConnectionHistory;
+export default ConnectionHistory
