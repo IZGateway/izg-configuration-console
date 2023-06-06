@@ -36,23 +36,23 @@ const fetchEndpointStatus = async () => {
       timeout: 30000,
     })
     if (!response.ok) {
-      const message = `An error has occured: ${response.status}`
-      throw new Error(message)
+      console.info(`An error fetching status has occured: ${response.status}`)
+    } else {
+      const statusResponse = await response.json()
+      const runtime = new Date()
+      const statuses = Object.entries(statusResponse).map(
+        ([, value]: [any, any]) => ({
+          dest_id: value.id,
+          status: value.status,
+          detail: value.detail,
+          diagnostics: value.diagnostics,
+          retry_strategy: value.retryStrategy,
+          ran_at: runtime,
+        }),
+      )
+      await context.prisma.endpointstatus.createMany({ data: statuses })
+      statuses.length = 0
     }
-    const statusResponse = await response.json()
-    const runtime = new Date()
-    const statuses = Object.entries(statusResponse).map(
-      ([, value]: [any, any]) => ({
-        dest_id: value.id,
-        status: value.status,
-        detail: value.detail,
-        diagnostics: value.diagnostics,
-        retry_strategy: value.retryStrategy,
-        ran_at: runtime,
-      }),
-    )
-    await context.prisma.endpointstatus.createMany({ data: statuses })
-    statuses.length = 0
   } catch (error) {
     console.log('ERROR ---> ' + error)
   }
