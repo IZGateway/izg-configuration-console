@@ -6,31 +6,9 @@ import {
     Divider,
     TextField
 } from "@mui/material";
-import { useFormik } from "formik";
-import * as yup from "yup";
-
-const validationSchemaJurisdiction = yup.object().shape({
-    jurisdiction: yup.string().required("Required"),
-    connection: yup.string().required("Required"),
-});
 
 
 const Jurisdiction = (props: any) => {
-    const connectionType = ["Test", "Production"];
-
-    // const jurisdictionFormik = useFormik({
-    //   initialValues: {
-    //     jurisdiction: "",
-    //     connection: "",
-    //   },
-    //   validationSchema: validationSchemaJurisdiction,
-    //   onSubmit: (values) => {
-    //     console.log(values);
-    //     // mutateFunction({ variables: { type: input.value } });
-    //     jurisdictionFormik.setSubmitting(false);
-    //   },
-    // });
-
     return (
         <>
             <Card sx={{ minWidth: 275, borderRadius: "0px 0px 30px 30px" }}>
@@ -76,44 +54,7 @@ const Jurisdiction = (props: any) => {
                 </CardContent>
             </Card>
         </>
-        // <div>
-        //   <Typography variant="h2">
-        //     Select a Jurisdiction to get started
-        //   </Typography>
-        //   <Divider />
-        //   <Autocomplete
-        //     id="jurisdiction"
-        //     options={jurisdictions}
-        //     sx={{ width: 300 }}
-        //     value={jurisdictionFormik.values.jurisdiction}
-        //     onChange={(event, data) => {
-        //       jurisdictionFormik.setFieldValue("jurisdiction", data);
-        //     }}
-        //     renderInput={(params) => (
-        //       <TextField
-        //         required
-        //         {...params}
-        //         label="Start typing & select from the list..."
-        //       />
-        //     )}
-        //   />
-        //   <Typography variant="h3">Select a type of a connection</Typography>
-        //   <Divider />
-        //   <Autocomplete
-        //     id="connection"
-        //     options={connectionType}
-        //     sx={{ width: 300, marginTop: 5 }}
-        //     value={jurisdictionFormik.values.connection}
-        //     onChange={(event, data) => {
-        //       jurisdictionFormik.setFieldValue("connection", data);
-        //     }}
-        //     renderInput={(params) => (
-        //       <TextField required {...params} label="Select from the list..." />
-        //     )}
-        //   />
-        // </div>
     );
-    // }
 };
 
 export default Jurisdiction;

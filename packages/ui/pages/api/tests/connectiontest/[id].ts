@@ -15,6 +15,7 @@ export default async function handler(
   const DEFAULT_PORT = 443
   const {
     query: { id },
+    method,
   } = request
   const testSuite: string[] = [
     'dns',
@@ -97,20 +98,29 @@ export default async function handler(
       connectionTestRequest.port,
   )
 
-  let testCounter = 0
-  // eslint-disable-next-line no-loops/no-loops
-  for (const test of testSuite) {
-    console.info('running test: ' + test)
-    connectionTestRequest.order = ++testCounter
+  if (headers.referer.includes('/edit')) {
     const T = ConnectionTestFactory.getConnectionTest(
-      test,
+      'qbp',
       connectionTestRequest,
     )
     const result = await T.run()
     testResults.push(...result)
-    if (test === 'dns') {
-      console.info('Resolved IP address is: ' + result[0]?.detail)
-      connectionTestRequest.ip = result[0]?.detail
+  } else {
+    let testCounter = 0
+    // eslint-disable-next-line no-loops/no-loops
+    for (const test of testSuite) {
+      console.info('running test: ' + test)
+      connectionTestRequest.order = ++testCounter
+      const T = ConnectionTestFactory.getConnectionTest(
+        test,
+        connectionTestRequest,
+      )
+      const result = await T.run()
+      testResults.push(...result)
+      if (test === 'dns' && result[0]?.detail) {
+        console.info('Resolved IP address is: ' + result[0]?.detail)
+        connectionTestRequest.ip = result[0]?.detail
+      }
     }
   }
 

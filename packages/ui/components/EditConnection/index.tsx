@@ -20,7 +20,9 @@ import Identify from "./identify";
 import Verify from "./verify";
 import Jurisdiction from "./jurisdiction";
 import { useRouter } from 'next/router';
-
+import { useState, useEffect } from "react";
+import AlertDialog from "./alertDialog";
+import Loader from "../Loader";
 // interface editConnectionProps { }
 
 export const UPDATE_CONNECTION = gql`
@@ -29,6 +31,12 @@ mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
     username
     password
     facility_id
+    MSH3
+    MSH4
+    MSH5
+    MSH6
+    MSH22
+    RXA11
   }
 }
 
@@ -37,13 +45,15 @@ mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
 const steps = ["SERVICE AGREEMENT", "JURISDICTION", "IDENTIFY", "VERIFY"];
 
 const EditConnection = (props: any) => {
+
   const router = useRouter();
+
   const [updateConnection, { loading: mutationLoading, error: mutationError }] = useMutation(UPDATE_CONNECTION)
   const { loading: queryLoading, error: queryError, data } = useQuery(FETCH_DESTINATION, {
     variables: { destId: props.destId },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!mutationLoading && !queryLoading) {
     }
   }, [mutationLoading, queryLoading]);
@@ -55,34 +65,69 @@ const EditConnection = (props: any) => {
   if (mutationError || queryError) {
     throw new Error(mutationError?.message || queryError?.message);
   }
-  console.log(data)
-  const [activeStep, setActiveStep] = React.useState(0);
-  const [agreed, setAgreed] = React.useState(false);
-  const [accepted, setAccepted] = React.useState(false);
   const initialValues = {
     username: data.destinationById.username,
     password: data.destinationById.password,
     newPassword: null,
     confirmPassword: null,
     facility_id: data.destinationById.facility_id,
-    msh3: data.destinationById.MSH3,
-    msh4: data.destinationById.MSH4,
-    msh5: data.destinationById.MSH5,
-    msh6: data.destinationById.MSH6,
-    msh22: data.destinationById.MSH22,
-    rxa11: data.destinationById.RXA11,
+    MSH3: data.destinationById.MSH3,
+    MSH4: data.destinationById.MSH4,
+    MSH5: data.destinationById.MSH5,
+    MSH6: data.destinationById.MSH6,
+    MSH22: data.destinationById.MSH22,
+    RXA11: data.destinationById.RXA11,
   }
-  const [value, setValue] = React.useState(initialValues);
-  console.log(value)
+  const [activeStep, setActiveStep] = useState(0);
+  const [agreed, setAgreed] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [formValues, setFormValues] = useState(initialValues);
+  const [testResult, setTestResult] = useState();
+  const [openAlert, setOpenAlert] = React.useState(false);
+  const [isTestRunning, setIsTestRunning] = useState(false);
+  const [isDifference, setIsDifference] = useState(false);
+  const { id } = router.query;
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (activeStep === 2 && isDifference) {
+      setIsTestRunning(true);
+      fetch(`/api/tests/connectiontest/${id}`)
+        .then((res) => {
+          if (!res.ok) {
+            console.log("response not ok")
+          }
+          return res.json();
+        })
+        .then((data) => {
+          setTestResult(data.testResults[0].status);
+          setIsTestRunning(false);
+          if (testResult === "FAIL") {
+            setActiveStep((prevActiveStep) => prevActiveStep + 1);
+          } else {
+            setOpenAlert(true);
+          }
+        })
+        .catch((err) => {
+          throw new Error(err.message);
+        });
+    }
+  }, [isDifference]);
+
+  const handleCloseAlert = () => {
+    setOpenAlert(false);
+    setIsDifference(false)
+  };
 
   const handleIAgreeButton = () => {
     setAgreed(true);
   };
+
   const handleSubmit = (event) => {
-    console.log(value)
+    console.log(formValues)
     updateConnection({
       variables: {
-        "data": value,
+        "data": formValues,
         "destId": data.destinationById.dest_id
       }
     })
@@ -92,9 +137,22 @@ const EditConnection = (props: any) => {
     setAccepted(true)
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
+  const isFormDirty = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
   const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    if (activeStep === 2) {
+
+      if (isFormDirty) {
+        setIsDifference(true)
+      }
+      // else {
+      //   setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      //   ///WHat to do if there is no change in values ???7
+      // }
+    } else {
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    }
+    console.log(isDifference)
   };
 
   const handlePrevious = () => {
@@ -175,6 +233,7 @@ const EditConnection = (props: any) => {
             color="primary"
             variant="contained"
             onClick={handleNext}
+            disabled={activeStep === 2 && !isFormDirty}
             sx={{
               borderRadius: "30px",
             }}
@@ -248,8 +307,10 @@ const EditConnection = (props: any) => {
 
         {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />}
         {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 && <Identify {...data} setValue={setValue} value={value} />}
-        {activeStep === 3 && <Verify />}
+        {activeStep === 2 && (!isTestRunning ? <Identify {...data} setValue={setFormValues} value={formValues} /> : <Loader open={true} />)}
+        {(openAlert) && <AlertDialog open={openAlert} close={handleCloseAlert} />}
+        {activeStep === 3 && <Verify {...data} value={formValues} />}
+
         <Container
           maxWidth="sm"
           sx={{
