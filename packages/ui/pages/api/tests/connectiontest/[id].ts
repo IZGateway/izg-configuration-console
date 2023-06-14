@@ -16,6 +16,7 @@ export default async function handler(
   const {
     query: { id },
     method,
+    headers,
   } = request
   const testSuite: string[] = [
     'dns',
