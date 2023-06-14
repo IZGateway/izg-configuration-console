@@ -8,14 +8,16 @@ module.exports = {
     IZG_ENDPOINT_PASSCODE: process.env.IZG_ENDPOINT_PASSCODE,
     KEYCLOAK_ISSUER: process.env.KEYCLOAK_ISSUER,
     KEYCLOAK_CLIENT_ID: process.env.KEYCLOAK_CLIENT_ID,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/manage",
-        permanent: true,
-      },
-    ];
-  },
-};
+  // async redirects() {
+  //   return [
+  //     {
+  //       source: "/",
+  //       destination: "/manage",
+  //       permanent: true,
+  //     },
+  //   ];
+  // },
+}
