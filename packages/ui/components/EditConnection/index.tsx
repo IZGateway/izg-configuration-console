@@ -55,8 +55,49 @@ const EditConnection = (props: any) => {
 
   useEffect(() => {
     if (!mutationLoading && !queryLoading) {
+      setFormValues(initialValues)
     }
   }, [mutationLoading, queryLoading]);
+
+
+  const [activeStep, setActiveStep] = useState(0);
+  const [agreed, setAgreed] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [formValues, setFormValues] = useState({});
+  const [openAlert, setOpenAlert] = React.useState(false);
+  const [isTestRunning, setIsTestRunning] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+
+  const { id } = router.query;
+
+  let testResult;
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (activeStep === 2 && isFormDirty) {
+      setIsTestRunning(true);
+      fetch(`/api/tests/connectiontest/${id}`)
+        .then((res) => {
+          if (!res.ok) {
+            setOpenAlert(true);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          testResult = data.testResults[0].status;
+          setIsTestRunning(false);
+          setIsFormDirty(false)
+          if (testResult === "FAIL") {
+            setActiveStep((prevActiveStep) => prevActiveStep + 1);
+          } else {
+            setOpenAlert(true);
+          }
+        })
+        .catch((err) => {
+          throw new Error(err.message);
+        });
+    }
+  }, [isFormDirty]);
 
   if (mutationLoading || queryLoading) {
     return <div>Loading...</div>;
@@ -65,6 +106,7 @@ const EditConnection = (props: any) => {
   if (mutationError || queryError) {
     throw new Error(mutationError?.message || queryError?.message);
   }
+
   const initialValues = {
     username: data.destinationById.username,
     password: data.destinationById.password,
@@ -78,53 +120,17 @@ const EditConnection = (props: any) => {
     MSH22: data.destinationById.MSH22,
     RXA11: data.destinationById.RXA11,
   }
-  const [activeStep, setActiveStep] = useState(0);
-  const [agreed, setAgreed] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [formValues, setFormValues] = useState(initialValues);
-  const [testResult, setTestResult] = useState();
-  const [openAlert, setOpenAlert] = React.useState(false);
-  const [isTestRunning, setIsTestRunning] = useState(false);
-  const [isDifference, setIsDifference] = useState(false);
-  const { id } = router.query;
-
-  useEffect(() => {
-    if (!router.isReady) return;
-    if (activeStep === 2 && isDifference) {
-      setIsTestRunning(true);
-      fetch(`/api/tests/connectiontest/${id}`)
-        .then((res) => {
-          if (!res.ok) {
-            console.log("response not ok")
-          }
-          return res.json();
-        })
-        .then((data) => {
-          setTestResult(data.testResults[0].status);
-          setIsTestRunning(false);
-          if (testResult === "FAIL") {
-            setActiveStep((prevActiveStep) => prevActiveStep + 1);
-          } else {
-            setOpenAlert(true);
-          }
-        })
-        .catch((err) => {
-          throw new Error(err.message);
-        });
-    }
-  }, [isDifference]);
 
   const handleCloseAlert = () => {
     setOpenAlert(false);
-    setIsDifference(false)
+    setIsFormDirty(false);
   };
 
   const handleIAgreeButton = () => {
     setAgreed(true);
   };
 
-  const handleSubmit = (event) => {
-    console.log(formValues)
+  const handleSubmit = () => {
     updateConnection({
       variables: {
         "data": formValues,
@@ -133,26 +139,19 @@ const EditConnection = (props: any) => {
     })
     router.push("/manage")
   }
-  const handleAccept = () => {   ///DO WE REALLY NEED THIS METHOD???????????
+  const handleAccept = () => {
     setAccepted(true)
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
-  const isFormDirty = JSON.stringify(formValues) !== JSON.stringify(initialValues);
+
+  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
   const handleNext = () => {
-    if (activeStep === 2) {
-
-      if (isFormDirty) {
-        setIsDifference(true)
-      }
-      // else {
-      //   setActiveStep((prevActiveStep) => prevActiveStep + 1);
-      //   ///WHat to do if there is no change in values ???7
-      // }
+    if (isFormChanged) {
+      setIsFormDirty(true)
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
-    console.log(isDifference)
   };
 
   const handlePrevious = () => {
@@ -233,7 +232,7 @@ const EditConnection = (props: any) => {
             color="primary"
             variant="contained"
             onClick={handleNext}
-            disabled={activeStep === 2 && !isFormDirty}
+            disabled={activeStep === 2 && !isFormChanged}
             sx={{
               borderRadius: "30px",
             }}
