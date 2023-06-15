@@ -39,7 +39,6 @@ mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
     RXA11
   }
 }
-
 `;
 
 const steps = ["SERVICE AGREEMENT", "JURISDICTION", "IDENTIFY", "VERIFY"];
@@ -87,7 +86,7 @@ const EditConnection = (props: any) => {
           testResult = data.testResults[0].status;
           setIsTestRunning(false);
           setIsFormDirty(false)
-          if (testResult === "FAIL") {
+          if (testResult === "PASS") {
             setActiveStep((prevActiveStep) => prevActiveStep + 1);
           } else {
             setOpenAlert(true);
@@ -144,7 +143,7 @@ const EditConnection = (props: any) => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
-  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
+  let isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
   const handleNext = () => {
     if (isFormChanged) {
