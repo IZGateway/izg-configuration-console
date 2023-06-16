@@ -11,13 +11,13 @@ module.exports = {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
   },
-  // async redirects() {
-  //   return [
-  //     {
-  //       source: "/",
-  //       destination: "/manage",
-  //       permanent: true,
-  //     },
-  //   ];
-  // },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/manage',
+        permanent: true,
+      },
+    ]
+  },
 }
