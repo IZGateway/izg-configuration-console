@@ -19,6 +19,4 @@ const apolloClientFactory = async () => {
   return apolloClient
 }
 
-ApolloClient.
-
 export default apolloClientFactory
