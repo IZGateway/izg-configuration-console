@@ -23,6 +23,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from "react";
 import AlertDialog from "./alertDialog";
 import Loader from "../Loader";
+import { validate as uuidValidate } from 'uuid';
 // interface editConnectionProps { }
 
 export const UPDATE_CONNECTION = gql`
@@ -220,7 +221,6 @@ const EditConnection = (props: any) => {
               }));
               hasErrors = true;
             }
-
           }
           else {
             if (formValues[field] !== null) {
@@ -230,7 +230,15 @@ const EditConnection = (props: any) => {
                   [field]: `Invalid ${errorMessages[field]}`,
                 }));
                 hasErrors = true;
-              } else if (formValues["newPassword"] !== formValues["confirmPassword"]) {
+              }
+              else if (uuidValidate(formValues["newPassword"])) {
+                setFormErrors((prevErrors) => ({
+                  ...prevErrors,
+                  ["newPassword"]: `Password can not be in the form of UUID`,
+                }));
+                hasErrors = true;
+              }
+              else if (formValues["newPassword"] !== formValues["confirmPassword"]) {
                 setFormErrors((prevErrors) => ({
                   ...prevErrors,
                   ["confirmPassword"]: `Both New Password and Confirm New Password should match`,
