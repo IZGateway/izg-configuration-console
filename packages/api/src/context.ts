@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // eslint-disable-next-line camelcase
 import { PrismaClient, audit_history_changeType } from '@prisma/client'
 
@@ -30,7 +31,8 @@ const auditMiddleware = async (params, next) => {
     await prisma.audit_history.create({ data: auditTrailData })
   }
   if (params.action === 'update') {
-    const record = await prisma[params.model.toString()].findUnique({
+    // @ts-ignore
+    const record = await prisma.destinations.findUnique({
       where: { dest_id: params.args.where.dest_id },
     })
 
@@ -44,9 +46,10 @@ const auditMiddleware = async (params, next) => {
       createdAt: new Date(),
     }
 
-    await prisma.audit_history.create({ data: auditTrailData })
+    await prisma.audit_history.create({ data: auditTrailData as any })
   } else if (params.action === 'delete') {
-    const record = await prisma[params.model.toString()].findUnique({
+    // @ts-ignore
+    const record = await prisma.destinations.findUnique({
       where: { dest_id: params.args.where.dest_id },
     })
     const auditTrailData = {
@@ -58,7 +61,7 @@ const auditMiddleware = async (params, next) => {
       newValues: params.args.data,
       createdAt: new Date(),
     }
-    await prisma.audit_history.create({ data: auditTrailData })
+    await prisma.audit_history.create({ data: auditTrailData as any })
   }
   const result = await next(params)
   return result

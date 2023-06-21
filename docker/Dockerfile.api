@@ -14,7 +14,7 @@ ADD ./packages/api .
 RUN yarn install
 RUN yarn run prisma generate
 RUN rm -rf .yarn/cache
-RUN yarn build
+RUN yarn build --verbose
 
 FROM node:18-alpine  
 WORKDIR /usr/src/app

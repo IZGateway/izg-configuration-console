@@ -1,10 +1,9 @@
-import { ApolloClient, InMemoryCache } from '@apollo/client'
-
-const uri = process.env.GRAPHQL_URL
+import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client'
 
 const apolloClientFactory = async () => {
+  const uri = process.env.GRAPHQL_URL
   const cache = new InMemoryCache()
-  console.log(
+  console.info(
     'DEBUG ---> environment is ' +
       process.env.NODE_ENV +
       ' and using URL ' +
@@ -12,7 +11,11 @@ const apolloClientFactory = async () => {
       ' to connect to the GraphQL API',
   )
   const apolloClient = new ApolloClient({
-    uri,
+    ssrMode: true,
+    link: createHttpLink({
+      uri,
+      credentials: 'same-origin',
+    }),
     cache,
   })
 
