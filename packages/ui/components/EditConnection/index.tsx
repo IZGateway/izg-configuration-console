@@ -66,7 +66,19 @@ const EditConnection = (props: any) => {
   const [openAlert, setOpenAlert] = React.useState(false);
   const [isTestRunning, setIsTestRunning] = useState(false);
   const [isFormDirty, setIsFormDirty] = useState(false);
-
+  const [isButtonClicked, setIsButtonClicked] = useState(false);
+  const [formErrors, setFormErrors] = React.useState({
+    username: '',
+    newPassword: '',
+    confirmPassword: '',
+    facility_id: '',
+    MSH3: '',
+    MSH4: '',
+    MSH5: '',
+    MSH6: '',
+    MSH22: '',
+    RXA11: '',
+  });
   const { id } = router.query;
 
   let testResult;
@@ -109,8 +121,8 @@ const EditConnection = (props: any) => {
   const initialValues = {
     username: data.destinationById.username,
     password: data.destinationById.password,
-    newPassword: null,
-    confirmPassword: null,
+    newPassword: "",
+    confirmPassword: "",
     facility_id: data.destinationById.facility_id,
     MSH3: data.destinationById.MSH3,
     MSH4: data.destinationById.MSH4,
@@ -119,6 +131,31 @@ const EditConnection = (props: any) => {
     MSH22: data.destinationById.MSH22,
     RXA11: data.destinationById.RXA11,
   }
+  const validationRules = {
+    username: /^(?=.*[A-Z])(?=.*\d).{8,}$/,
+    newPassword: /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+    confirmPassword: /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+    facility_id: /^[A-Za-z0-9_-]{0,25}$/,
+    MSH3: /^[A-Za-z0-9_-]{0,25}$/,
+    MSH4: /^[A-Za-z0-9_-]{0,25}$/,
+    MSH5: /^[A-Za-z0-9_-]{0,25}$/,
+    MSH6: /^[A-Za-z0-9_-]{0,25}$/,
+    MSH22: /^[A-Za-z0-9_-]{0,25}$/,
+    RXA11: /^[A-Za-z0-9_-]{0,25}$/,
+  };
+
+  const errorMessages = {
+    username: 'Username value should meet requirement as below',
+    newPassword: 'Password value should meet requirement as above',
+    confirmPassword: 'Password value should meet requirement as above',
+    facility_id: `Facility ID value should meet requirement as above`,
+    MSH3: `MSH-3 value should meet requirement as above`,
+    MSH4: `MSH-4 value should meet requirement as above`,
+    MSH5: `MSH-5 value should meet requirement as above`,
+    MSH6: `MSH-6 value should meet requirement as above`,
+    MSH22: `MSH-22 value should meet requirement as above`,
+    RXA11: `RXA-11 value should meet requirement as above`,
+  };
 
   const handleCloseAlert = () => {
     setOpenAlert(false);
@@ -145,9 +182,81 @@ const EditConnection = (props: any) => {
 
   let isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
-  const handleNext = () => {
-    if (isFormChanged) {
-      setIsFormDirty(true)
+  const handleFormFieldChange = (fieldName: string, value: string) => {
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      [fieldName]: value,
+    }));
+  };
+  const handleNext = (e) => {
+    if (isFormChanged && activeStep === 2) {
+      e.preventDefault();
+      setIsButtonClicked(true);
+      let hasErrors = false;
+      for (const field in formValues) {
+
+        if (formValues[field] !== initialValues[field]) {   //Added this so that it wont perform validation on existing values
+
+          if (formValues[field] === "") {
+            if (formValues["username"] === "") {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                ["username"]: `Username cannot be empty`,
+              }));
+              hasErrors = true;
+            }
+
+            else if (formValues["MSH3"] === '' && formValues["MSH4"] === '') {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                ["MSH3"]: `At least one of MSH-3 and MSH-4 must be provided`,
+              }));
+              hasErrors = true;
+            }
+            else if (formValues["MSH5"] === '' && formValues["MSH6"] === '') {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                ["MSH5"]: `At least one of MSH-5 and MSH-6 must be provided`,
+              }));
+              hasErrors = true;
+            }
+
+          }
+          else {
+            if (formValues[field] !== null) {
+              if (!formValues[field].match(validationRules[field])) {
+                setFormErrors((prevErrors) => ({
+                  ...prevErrors,
+                  [field]: `Invalid ${errorMessages[field]}`,
+                }));
+                hasErrors = true;
+              } else if (formValues["newPassword"] !== formValues["confirmPassword"]) {
+                setFormErrors((prevErrors) => ({
+                  ...prevErrors,
+                  ["confirmPassword"]: `Both New Password and Confirm New Password should match`,
+                }));
+                hasErrors = true;
+              }
+              else if (formValues[field] !== null && formValues["confirmPassword"] === formValues["facility_id"]) {
+                setFormErrors((prevErrors) => ({
+                  ...prevErrors,
+                  ["confirmPassword"]: `Password can not be same as Facility ID`,
+                }));
+                hasErrors = true;
+              }
+              else {
+                setFormErrors((prevErrors) => ({
+                  ...prevErrors,
+                  [field]: ``,
+                }));
+              }
+            }
+          }
+        }
+      }
+      if (!hasErrors) {
+        setIsFormDirty(true)
+      }
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
@@ -305,7 +414,7 @@ const EditConnection = (props: any) => {
 
         {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />}
         {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 && (!isTestRunning ? <Identify {...data} setValue={setFormValues} value={formValues} /> : <Loader open={true} />)}
+        {activeStep === 2 && (!isTestRunning ? <Identify {...data} handleChange={handleFormFieldChange} value={formValues} formErrors={formErrors} isButtonClicked={isButtonClicked} /> : <Loader open={true} />)}
         {(openAlert) && <AlertDialog open={openAlert} close={handleCloseAlert} />}
         {activeStep === 3 && <Verify {...data} value={formValues} />}
 
