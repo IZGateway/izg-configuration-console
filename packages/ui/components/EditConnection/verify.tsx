@@ -23,7 +23,6 @@ const Verify = (props: any) => {
     delete props.value.confirmPassword;
     delete props.value.newPassword;
     const rows = Object.keys(props.value);
-    console.log(props.destinationById["MSH3"])
 
     return (
         <div>

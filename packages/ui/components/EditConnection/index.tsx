@@ -266,6 +266,10 @@ const EditConnection = (props: any) => {
         }
       }
       if (!hasErrors) {
+        setFormValues((prevValues) => ({
+          ...prevValues,
+          ['password']: formValues["newPassword"],
+        }));
         setIsFormDirty(true)
       }
     } else {
