@@ -92,13 +92,8 @@ const ConnectionInfo = ({ destinationById }: InfoProps) => {
                   ENDPOINT URL
                 </Typography>
                 <Typography>
-                  <Link href={destinationById.dest_uri.toString()}>
-                    <a
-                      target="_blank"
-                      style={{ color: '#015A2F', overflowWrap: 'anywhere' }}
-                    >
-                      {destinationById.dest_uri.toString()}
-                    </a>
+                  <Link href={destinationById.dest_uri.toString()} target="_blank" style={{ color: '#015A2F', overflowWrap: 'anywhere' }}>
+                    {destinationById.dest_uri.toString()}
                   </Link>
                 </Typography>
               </Box>

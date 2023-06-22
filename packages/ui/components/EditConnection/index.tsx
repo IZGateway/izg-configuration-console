@@ -59,16 +59,7 @@ const EditConnection = (props: any) => {
     }
   }, [mutationLoading, queryLoading]);
 
-
-  const [activeStep, setActiveStep] = useState(0);
-  const [agreed, setAgreed] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [formValues, setFormValues] = useState({});
-  const [openAlert, setOpenAlert] = React.useState(false);
-  const [isTestRunning, setIsTestRunning] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [isButtonClicked, setIsButtonClicked] = useState(false);
-  const [formErrors, setFormErrors] = React.useState({
+  const emptyErrors = {
     username: '',
     newPassword: '',
     confirmPassword: '',
@@ -79,10 +70,18 @@ const EditConnection = (props: any) => {
     MSH6: '',
     MSH22: '',
     RXA11: '',
-  });
-  const { id } = router.query;
-
+  }
   let testResult;
+  const [activeStep, setActiveStep] = useState(0);
+  const [agreed, setAgreed] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [formValues, setFormValues] = useState({});
+  const [openAlert, setOpenAlert] = React.useState(false);
+  const [isTestRunning, setIsTestRunning] = useState(false);
+  const [isFormDirty, setIsFormDirty] = useState(false);
+  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false);
+  const [formErrors, setFormErrors] = React.useState(emptyErrors);
+  const { id } = router.query;
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -99,7 +98,7 @@ const EditConnection = (props: any) => {
           testResult = data.testResults[0].status;
           setIsTestRunning(false);
           setIsFormDirty(false)
-          if (testResult === "PASS") {
+          if (testResult === "FAIL") {
             setActiveStep((prevActiveStep) => prevActiveStep + 1);
           } else {
             setOpenAlert(true);
@@ -144,7 +143,6 @@ const EditConnection = (props: any) => {
     MSH22: /^[A-Za-z0-9_-]{0,25}$/,
     RXA11: /^[A-Za-z0-9_-]{0,25}$/,
   };
-
   const errorMessages = {
     username: 'Username value should meet requirement as below',
     newPassword: 'Password value should meet requirement as above',
@@ -157,6 +155,8 @@ const EditConnection = (props: any) => {
     MSH22: `MSH-22 value should meet requirement as above`,
     RXA11: `RXA-11 value should meet requirement as above`,
   };
+
+  let isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
   const handleCloseAlert = () => {
     setOpenAlert(false);
@@ -181,7 +181,6 @@ const EditConnection = (props: any) => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
-  let isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
 
   const handleFormFieldChange = (fieldName: string, value: string) => {
     setFormValues((prevValues) => ({
@@ -189,15 +188,20 @@ const EditConnection = (props: any) => {
       [fieldName]: value,
     }));
   };
+
+
+  const handlePrevious = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setFormErrors(emptyErrors);
+  };
+
   const handleNext = (e) => {
     if (isFormChanged && activeStep === 2) {
       e.preventDefault();
-      setIsButtonClicked(true);
+      setIsNextButtonClicked(true);
       let hasErrors = false;
       for (const field in formValues) {
-
         if (formValues[field] !== initialValues[field]) {   //Added this so that it wont perform validation on existing values
-
           if (formValues[field] === "") {
             if (formValues["username"] === "") {
               setFormErrors((prevErrors) => ({
@@ -206,7 +210,6 @@ const EditConnection = (props: any) => {
               }));
               hasErrors = true;
             }
-
             else if (formValues["MSH3"] === '' && formValues["MSH4"] === '') {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -268,10 +271,6 @@ const EditConnection = (props: any) => {
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
-  };
-
-  const handlePrevious = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
   const StepperLine = styled(StepConnector)(() => ({
@@ -422,7 +421,7 @@ const EditConnection = (props: any) => {
 
         {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />}
         {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 && (!isTestRunning ? <Identify {...data} handleChange={handleFormFieldChange} value={formValues} formErrors={formErrors} isButtonClicked={isButtonClicked} /> : <Loader open={true} />)}
+        {activeStep === 2 && (!isTestRunning ? <Identify {...data} handleChange={handleFormFieldChange} value={formValues} formErrors={formErrors} isNextButtonClicked={isNextButtonClicked} /> : <Loader open={true} />)}
         {(openAlert) && <AlertDialog open={openAlert} close={handleCloseAlert} />}
         {activeStep === 3 && <Verify {...data} value={formValues} />}
 
@@ -435,8 +434,6 @@ const EditConnection = (props: any) => {
           {activeStep === 0 ? acceptButton() : actionButtons()}
 
         </Container>
-
-
       </div>
     </Container>
   );

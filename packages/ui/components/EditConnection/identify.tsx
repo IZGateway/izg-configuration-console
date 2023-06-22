@@ -39,7 +39,7 @@ const Identify = (props: any) => {
     { id: "confirm-new-password", name: "confirmPassword", label: "Confirm New Password", value: props.value.confirmPassword, group: 4 },
   ];
 
-  const newPassword = () => {
+  const newPasswordFields = () => {
     return (
       <div>
         <TextField
@@ -73,8 +73,8 @@ const Identify = (props: any) => {
               value={field.value}
               onChange={handleChange}
               InputProps={InputProps}
-              error={props.isButtonClicked && !!props.formErrors[field.name]}
-              helperText={props.isButtonClicked && props.formErrors[field.name]}
+              error={props.isNextButtonClicked && !!props.formErrors[field.name]}
+              helperText={props.isNextButtonClicked && props.formErrors[field.name]}
             />
           ))}
       </div>
@@ -111,8 +111,8 @@ const Identify = (props: any) => {
               fullWidth
               value={props.value.username}
               onChange={handleChange}
-              error={props.isButtonClicked && !!props.formErrors.username}
-              helperText={props.isButtonClicked && props.formErrors.username}
+              error={props.isNextButtonClicked && !!props.formErrors.username}
+              helperText={props.isNextButtonClicked && props.formErrors.username}
               sx={{ marginTop: 1 }}
             />
             <Typography
@@ -121,7 +121,7 @@ const Identify = (props: any) => {
             >
               Username must contain one uppercase letter, at least 8 characters and one number
             </Typography>
-            {isChangePasswordClicked ? newPassword() :
+            {isChangePasswordClicked ? newPasswordFields() :
               <div>
                 <TextField
                   id="password"
@@ -183,8 +183,8 @@ const Identify = (props: any) => {
                     value={field.value}
                     onChange={handleChange}
                     InputProps={InputProps}
-                    error={props.isButtonClicked && !!props.formErrors[field.name]}
-                    helperText={props.isButtonClicked && props.formErrors[field.name]}
+                    error={props.isNextButtonClicked && !!props.formErrors[field.name]}
+                    helperText={props.isNextButtonClicked && props.formErrors[field.name]}
                   />
                 ))}
             </Box>
@@ -200,8 +200,8 @@ const Identify = (props: any) => {
                     value={field.value}
                     onChange={handleChange}
                     InputProps={InputProps}
-                    error={props.isButtonClicked && !!props.formErrors[field.name]}
-                    helperText={props.isButtonClicked && props.formErrors[field.name]}
+                    error={props.isNextButtonClicked && !!props.formErrors[field.name]}
+                    helperText={props.isNextButtonClicked && props.formErrors[field.name]}
                   />
                 ))}
 
@@ -220,8 +220,8 @@ const Identify = (props: any) => {
                   value={field.value}
                   onChange={handleChange}
                   InputProps={InputProps}
-                  error={props.isButtonClicked && !!props.formErrors[field.name]}
-                  helperText={props.isButtonClicked && props.formErrors[field.name]}
+                  error={props.isNextButtonClicked && !!props.formErrors[field.name]}
+                  helperText={props.isNextButtonClicked && props.formErrors[field.name]}
                 />
               ))}
           </Box>
