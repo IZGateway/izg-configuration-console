@@ -167,14 +167,19 @@ const EditConnection = (props: any) => {
     setAgreed(true);
   };
 
-  const handleSubmit = () => {
-    updateConnection({
+  const handleSubmit = async () => {
+    const response = await updateConnection({
       variables: {
         "data": formValues,
         "destId": data.destinationById.dest_id
       }
     })
-    router.push("/manage")
+    if (response && response.data) {
+      router.push("/manage")
+    }
+    else {
+      throw new Error('Update was not successful. Please try again later')
+    }
   }
   const handleAccept = () => {
     setAccepted(true)
@@ -266,10 +271,16 @@ const EditConnection = (props: any) => {
         }
       }
       if (!hasErrors) {
-        setFormValues((prevValues) => ({
-          ...prevValues,
-          ['password']: formValues["newPassword"],
-        }));
+        if (formValues["newPassword"] === null && formValues["confirmPassword"] === null) {
+          setFormValues((prevValues) => ({
+            ...prevValues,
+          }));
+        } else {
+          setFormValues((prevValues) => ({
+            ...prevValues,
+            ['password']: formValues["newPassword"],
+          }));
+        }
         setIsFormDirty(true)
       }
     } else {
