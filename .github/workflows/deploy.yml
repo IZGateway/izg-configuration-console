@@ -75,6 +75,8 @@ jobs:
           images: |
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.UI_IMAGE_NAME }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.UI_IMAGE_NAME }}
+          tags: |
+            type=raw,value={{date 'YYYYMMDD'}}
           flavor: |
             latest=true
 
@@ -87,10 +89,8 @@ jobs:
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
-            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_DATETIME }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BRANCH }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_DATETIME }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -131,6 +131,8 @@ jobs:
           images: |
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.API_IMAGE_NAME }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.API_IMAGE_NAME }}
+          tags: |
+            type=raw,value={{date 'YYYYMMDD'}}
           flavor: |
             latest=true
 
@@ -143,10 +145,8 @@ jobs:
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BUILD_ID }}
-            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BUILD_DATETIME }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BRANCH }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BUILD_ID }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BUILD_DATETIME }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
