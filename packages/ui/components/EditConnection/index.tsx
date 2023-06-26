@@ -80,7 +80,18 @@ const EditConnection = (props: any) => {
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
-  const [formValues, setFormValues] = useState({})
+  const [formValues, setFormValues] = useState({
+    username: '',
+    newPassword: '',
+    confirmPassword: '',
+    facility_id: '',
+    MSH3: '',
+    MSH4: '',
+    MSH5: '',
+    MSH6: '',
+    MSH22: '',
+    RXA11: '',
+  })
   const [openAlert, setOpenAlert] = React.useState(false)
   const [isTestRunning, setIsTestRunning] = useState(false)
   const [isFormDirty, setIsFormDirty] = useState(false)
@@ -194,20 +205,10 @@ const EditConnection = (props: any) => {
   }
 
   const handleFormFieldChange = (fieldName: string, value: string) => {
-    // if (formValues["newPassword"] !== '' && formValues["confirmPassword"] !== '') {
-    //   setFormValues((prevValues) => ({
-    //     ...prevValues,
-    //     ['password']: formValues["newpassword"],
-    //   }));
-    //   console.log('i am in null null loop')
-    //   console.log(formValues)
-    // }
-    // else {
     setFormValues((prevValues) => ({
       ...prevValues,
       [fieldName]: value,
     }))
-    // }
   }
 
   const handlePrevious = () => {
