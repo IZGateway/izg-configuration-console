@@ -11,13 +11,16 @@ env:
   GITHUB_REGISTRY_NAME: izgateway
   API_IMAGE_NAME: ${{ github.repository }}-api
   UI_IMAGE_NAME: ${{ github.repository }}-ui
-  BUILD_ID: ${{github.run_number}}
+  BUILD_ID: ${{ github.run_number}}
+  BRANCH: ${{ github.ref_name }}
 
 jobs:
   code-quality-check:
     name: Test and Lint
     runs-on: ubuntu-latest
     steps:
+      - name: Dynamically set BUILD_RUN_DATETIME environment variable
+        run: echo "BUILD_DATETIME=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v3
       - name: Use Node.js
@@ -83,10 +86,12 @@ jobs:
           file: docker/Dockerfile.ui
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:latest
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:latest
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_DATETIME }}
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BRANCH }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:$${{ env.BUILD_DATETIME }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:$${{ env.BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
   build-and-push-api-image:
@@ -137,10 +142,12 @@ jobs:
           file: docker/Dockerfile.api
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:latest
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BUILD_ID }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:latest
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BUILD_DATETIME }}
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BRANCH }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BUILD_ID }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BUILD_DATETIME }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api:${{ env.BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy-staging:
