@@ -20,8 +20,19 @@ const TestConnection = () => {
     if (!router.isReady) return
     setError(null)
     setLoading(true)
-
-    fetch(`/api/tests/connectiontest/${id}`)
+    const testSuite: string[] = [
+      'dns',
+      'tcp',
+      'tls',
+      'cipher',
+      'wsdl',
+      'connectivity',
+      'qbp',
+    ]
+    fetch(`/api/tests/connectiontest/${id}`, {
+      method: 'POST',
+      body: JSON.stringify({ testSuite }),
+    })
       .then((res) => {
         if (!res.ok) {
           setError(res.statusText)

@@ -103,7 +103,11 @@ const EditConnection = (props: any) => {
     if (!router.isReady) return
     if (activeStep === 2 && isFormDirty) {
       setIsTestRunning(true)
-      fetch(`/api/tests/connectiontest/${id}`)
+      const testSuite = ['qbp'];
+      fetch(`/api/tests/connectiontest/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ testSuite }),
+      })
         .then((res) => {
           if (!res.ok) {
             setOpenAlert(true)
@@ -282,7 +286,6 @@ const EditConnection = (props: any) => {
         }
       }
       if (!hasErrors) {
-        console.log('i am in haserror loop')
         if (
           formValues.newPassword !== '' &&
           formValues.confirmPassword !== ''
@@ -291,8 +294,6 @@ const EditConnection = (props: any) => {
             ...prevValues,
             password: formValues.newPassword,
           }))
-          console.log('i am in null null loop')
-          console.log(formValues)
         } else {
           setFormValues((prevValues) => ({
             ...prevValues,
@@ -301,7 +302,6 @@ const EditConnection = (props: any) => {
         }
         setIsFormDirty(true)
       }
-      console.log(formValues)
     } else {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
