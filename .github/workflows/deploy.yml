@@ -90,8 +90,8 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_DATETIME }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BRANCH }}
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:$${{ env.BUILD_DATETIME }}
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:$${{ env.BRANCH }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BUILD_DATETIME }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui:${{ env.BRANCH }}
           labels: ${{ steps.meta.outputs.labels }}
 
   build-and-push-api-image:
