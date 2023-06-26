@@ -42,7 +42,7 @@ const fetchEndpointStatus = async () => {
       const runtime = new Date()
       const statuses = Object.entries(statusResponse).map(
         ([, value]: [any, any]) => ({
-          dest_id: value.id,
+          dest_id: value.destId,
           status: value.status,
           detail: value.detail,
           diagnostics: value.diagnostics,
