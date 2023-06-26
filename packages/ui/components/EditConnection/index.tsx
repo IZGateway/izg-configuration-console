@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react'
 import {
   Container,
   Typography,
@@ -8,56 +8,61 @@ import {
   ButtonGroup,
   Button,
   StepLabel,
-} from "@mui/material";
+} from '@mui/material'
 import StepConnector, {
   stepConnectorClasses,
-} from "@mui/material/StepConnector";
-import { styled } from "@mui/material/styles";
-import { gql, useMutation, useQuery } from "@apollo/client";
-import { FETCH_DESTINATION } from "../../lib/queries/fetch";
-import ServiceAgreement from "./serviceAgreement";
-import Identify from "./identify";
-import Verify from "./verify";
-import Jurisdiction from "./jurisdiction";
-import { useRouter } from 'next/router';
-import { useState, useEffect } from "react";
-import AlertDialog from "./alertDialog";
-import Loader from "../Loader";
-import { validate as uuidValidate } from 'uuid';
+} from '@mui/material/StepConnector'
+import { styled } from '@mui/material/styles'
+import { gql, useMutation, useQuery } from '@apollo/client'
+import { FETCH_DESTINATION } from '../../lib/queries/fetch'
+import ServiceAgreement from './serviceAgreement'
+import Identify from './identify'
+import Verify from './verify'
+import Jurisdiction from './jurisdiction'
+import { useRouter } from 'next/router'
+import { useState, useEffect } from 'react'
+import AlertDialog from './alertDialog'
+import Loader from '../Loader'
+import { validate as uuidValidate } from 'uuid'
 // interface editConnectionProps { }
 
 export const UPDATE_CONNECTION = gql`
-mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
-  updateDestination(data: $data, dest_id: $destId) {
-    username
-    password
-    facility_id
-    MSH3
-    MSH4
-    MSH5
-    MSH6
-    MSH22
-    RXA11
+  mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
+    updateDestination(data: $data, dest_id: $destId) {
+      username
+      password
+      facility_id
+      MSH3
+      MSH4
+      MSH5
+      MSH6
+      MSH22
+      RXA11
+    }
   }
-}
-`;
+`
 
-const steps = ["SERVICE AGREEMENT", "JURISDICTION", "IDENTIFY", "VERIFY"];
+const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
 
 const EditConnection = (props: any) => {
+  const router = useRouter()
 
-  const router = useRouter();
-
-  const [updateConnection, { loading: mutationLoading, error: mutationError }] = useMutation(UPDATE_CONNECTION)
-  const { loading: queryLoading, error: queryError, data } = useQuery(FETCH_DESTINATION, {
+  const [updateConnection, { loading: mutationLoading, error: mutationError }] =
+    useMutation(UPDATE_CONNECTION)
+  const {
+    loading: queryLoading,
+    error: queryError,
+    data,
+  } = useQuery(FETCH_DESTINATION, {
     variables: { destId: props.destId },
-  });
+    fetchPolicy: 'no-cache',
+  })
 
   useEffect(() => {
-    if (!mutationLoading && !queryLoading) {
+    if (!queryLoading) {
       setFormValues(initialValues)
     }
-  }, [mutationLoading, queryLoading]);
+  }, [queryLoading])
 
   const emptyErrors = {
     username: '',
@@ -71,58 +76,58 @@ const EditConnection = (props: any) => {
     MSH22: '',
     RXA11: '',
   }
-  let testResult;
-  const [activeStep, setActiveStep] = useState(0);
-  const [agreed, setAgreed] = useState(false);
-  const [accepted, setAccepted] = useState(false);
-  const [formValues, setFormValues] = useState({});
-  const [openAlert, setOpenAlert] = React.useState(false);
-  const [isTestRunning, setIsTestRunning] = useState(false);
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false);
-  const [formErrors, setFormErrors] = React.useState(emptyErrors);
-  const { id } = router.query;
+  let testResult
+  const [activeStep, setActiveStep] = useState(0)
+  const [agreed, setAgreed] = useState(false)
+  const [accepted, setAccepted] = useState(false)
+  const [formValues, setFormValues] = useState({})
+  const [openAlert, setOpenAlert] = React.useState(false)
+  const [isTestRunning, setIsTestRunning] = useState(false)
+  const [isFormDirty, setIsFormDirty] = useState(false)
+  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false)
+  const [formErrors, setFormErrors] = React.useState(emptyErrors)
+  const { id } = router.query
 
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady) return
     if (activeStep === 2 && isFormDirty) {
-      setIsTestRunning(true);
+      setIsTestRunning(true)
       fetch(`/api/tests/connectiontest/${id}`)
         .then((res) => {
           if (!res.ok) {
-            setOpenAlert(true);
+            setOpenAlert(true)
           }
-          return res.json();
+          return res.json()
         })
         .then((data) => {
-          testResult = data.testResults[0].status;
-          setIsTestRunning(false);
+          testResult = data.testResults[0].status
+          setIsTestRunning(false)
           setIsFormDirty(false)
-          if (testResult === "FAIL") {
-            setActiveStep((prevActiveStep) => prevActiveStep + 1);
+          if (testResult === 'FAIL') {
+            setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
-            setOpenAlert(true);
+            setOpenAlert(true)
           }
         })
         .catch((err) => {
-          throw new Error(err.message);
-        });
+          throw new Error(err.message)
+        })
     }
-  }, [isFormDirty]);
+  }, [isFormDirty])
 
   if (mutationLoading || queryLoading) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>
   }
 
   if (mutationError || queryError) {
-    throw new Error(mutationError?.message || queryError?.message);
+    throw new Error(mutationError?.message || queryError?.message)
   }
 
   const initialValues = {
     username: data.destinationById.username,
     password: data.destinationById.password,
-    newPassword: "",
-    confirmPassword: "",
+    newPassword: '',
+    confirmPassword: '',
     facility_id: data.destinationById.facility_id,
     MSH3: data.destinationById.MSH3,
     MSH4: data.destinationById.MSH4,
@@ -132,9 +137,11 @@ const EditConnection = (props: any) => {
     RXA11: data.destinationById.RXA11,
   }
   const validationRules = {
-    username: /^(?=.*[A-Z])(?=.*\d).{8,}$/,
-    newPassword: /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
-    confirmPassword: /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+    username: /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/,
+    newPassword:
+      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+    confirmPassword:
+      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
     facility_id: /^[A-Za-z0-9_-]{0,25}$/,
     MSH3: /^[A-Za-z0-9_-]{0,25}$/,
     MSH4: /^[A-Za-z0-9_-]{0,25}$/,
@@ -142,7 +149,7 @@ const EditConnection = (props: any) => {
     MSH6: /^[A-Za-z0-9_-]{0,25}$/,
     MSH22: /^[A-Za-z0-9_-]{0,25}$/,
     RXA11: /^[A-Za-z0-9_-]{0,25}$/,
-  };
+  }
   const errorMessages = {
     username: 'Username value should meet requirement as below',
     newPassword: 'Password value should meet requirement as above',
@@ -154,170 +161,181 @@ const EditConnection = (props: any) => {
     MSH6: `MSH-6 value should meet requirement as above`,
     MSH22: `MSH-22 value should meet requirement as above`,
     RXA11: `RXA-11 value should meet requirement as above`,
-  };
+  }
 
-  let isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValues);
+  const isFormChanged =
+    JSON.stringify(formValues) !== JSON.stringify(initialValues)
 
   const handleCloseAlert = () => {
-    setOpenAlert(false);
-    setIsFormDirty(false);
-  };
+    setOpenAlert(false)
+    setIsFormDirty(false)
+  }
 
   const handleIAgreeButton = () => {
-    setAgreed(true);
-  };
+    setAgreed(true)
+  }
 
   const handleSubmit = async () => {
     const response = await updateConnection({
       variables: {
-        "data": formValues,
-        "destId": data.destinationById.dest_id
-      }
+        data: formValues,
+        destId: data.destinationById.dest_id,
+      },
     })
     if (response && response.data) {
-      router.push("/manage")
-    }
-    else {
+      router.push('/manage')
+    } else {
       throw new Error('Update was not successful. Please try again later')
     }
   }
   const handleAccept = () => {
     setAccepted(true)
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  };
-
+    setActiveStep((prevActiveStep) => prevActiveStep + 1)
+  }
 
   const handleFormFieldChange = (fieldName: string, value: string) => {
+    // if (formValues["newPassword"] !== '' && formValues["confirmPassword"] !== '') {
+    //   setFormValues((prevValues) => ({
+    //     ...prevValues,
+    //     ['password']: formValues["newpassword"],
+    //   }));
+    //   console.log('i am in null null loop')
+    //   console.log(formValues)
+    // }
+    // else {
     setFormValues((prevValues) => ({
       ...prevValues,
       [fieldName]: value,
-    }));
-  };
-
+    }))
+    // }
+  }
 
   const handlePrevious = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
-    setFormErrors(emptyErrors);
-  };
+    setActiveStep((prevActiveStep) => prevActiveStep - 1)
+    setFormErrors(emptyErrors)
+  }
 
   const handleNext = (e) => {
     if (isFormChanged && activeStep === 2) {
-      e.preventDefault();
-      setIsNextButtonClicked(true);
-      let hasErrors = false;
+      e.preventDefault()
+      setIsNextButtonClicked(true)
+      let hasErrors = false
       for (const field in formValues) {
-        if (formValues[field] !== initialValues[field]) {   //Added this so that it wont perform validation on existing values
-          if (formValues[field] === "") {
-            if (formValues["username"] === "") {
+        if (formValues[field] !== initialValues[field]) {
+          // Added this so that it wont perform validation on existing values
+          if (formValues[field] === '') {
+            if (formValues.username === '') {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
-                ["username"]: `Username cannot be empty`,
-              }));
-              hasErrors = true;
-            }
-            else if (formValues["MSH3"] === '' && formValues["MSH4"] === '') {
+                username: `Username cannot be empty`,
+              }))
+              hasErrors = true
+            } else if (formValues.MSH3 === '' && formValues.MSH4 === '') {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
-                ["MSH3"]: `At least one of MSH-3 and MSH-4 must be provided`,
-              }));
-              hasErrors = true;
-            }
-            else if (formValues["MSH5"] === '' && formValues["MSH6"] === '') {
+                MSH3: `At least one of MSH-3 and MSH-4 must be provided`,
+              }))
+              hasErrors = true
+            } else if (formValues.MSH5 === '' && formValues.MSH6 === '') {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
-                ["MSH5"]: `At least one of MSH-5 and MSH-6 must be provided`,
-              }));
-              hasErrors = true;
+                MSH5: `At least one of MSH-5 and MSH-6 must be provided`,
+              }))
+              hasErrors = true
             }
-          }
-          else {
-            if (formValues[field] !== null) {
-              if (!formValues[field].match(validationRules[field])) {
-                setFormErrors((prevErrors) => ({
-                  ...prevErrors,
-                  [field]: `Invalid ${errorMessages[field]}`,
-                }));
-                hasErrors = true;
-              }
-              else if (uuidValidate(formValues["newPassword"])) {
-                setFormErrors((prevErrors) => ({
-                  ...prevErrors,
-                  ["newPassword"]: `Password can not be in the form of UUID`,
-                }));
-                hasErrors = true;
-              }
-              else if (formValues["newPassword"] !== formValues["confirmPassword"]) {
-                setFormErrors((prevErrors) => ({
-                  ...prevErrors,
-                  ["confirmPassword"]: `Both New Password and Confirm New Password should match`,
-                }));
-                hasErrors = true;
-              }
-              else if (formValues[field] !== null && formValues["confirmPassword"] === formValues["facility_id"]) {
-                setFormErrors((prevErrors) => ({
-                  ...prevErrors,
-                  ["confirmPassword"]: `Password can not be same as Facility ID`,
-                }));
-                hasErrors = true;
-              }
-              else {
-                setFormErrors((prevErrors) => ({
-                  ...prevErrors,
-                  [field]: ``,
-                }));
-              }
+          } else if (formValues[field] !== '') {
+            if (!validationRules[field].test(formValues[field])) {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                [field]: `${errorMessages[field]}`,
+              }))
+              hasErrors = true
+            } else if (uuidValidate(formValues.newPassword)) {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                newPassword: `Password can not be in the form of UUID`,
+              }))
+              hasErrors = true
+            } else if (formValues.newPassword !== formValues.confirmPassword) {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                confirmPassword: `Both New Password and Confirm New Password should match`,
+              }))
+              hasErrors = true
+            } else if (
+              formValues[field] !== null &&
+              formValues.confirmPassword === formValues.facility_id
+            ) {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                confirmPassword: `Password can not be same as Facility ID`,
+              }))
+              hasErrors = true
+            } else {
+              setFormErrors((prevErrors) => ({
+                ...prevErrors,
+                [field]: ``,
+              }))
             }
           }
         }
       }
       if (!hasErrors) {
-        if (formValues["newPassword"] === null && formValues["confirmPassword"] === null) {
+        console.log('i am in haserror loop')
+        if (
+          formValues.newPassword !== '' &&
+          formValues.confirmPassword !== ''
+        ) {
           setFormValues((prevValues) => ({
             ...prevValues,
-          }));
+            password: formValues.newPassword,
+          }))
+          console.log('i am in null null loop')
+          console.log(formValues)
         } else {
           setFormValues((prevValues) => ({
             ...prevValues,
-            ['password']: formValues["newPassword"],
-          }));
+            password: initialValues.password,
+          }))
         }
         setIsFormDirty(true)
       }
+      console.log(formValues)
     } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
-  };
+  }
 
   const StepperLine = styled(StepConnector)(() => ({
     [`&.${stepConnectorClasses.alternativeLabel}`]: {
       [`& .${stepConnectorClasses.line}`]: {
-        borderColor: "#EEEEEE",
+        borderColor: '#EEEEEE',
       },
       top: 18,
-      left: "calc(-50% + 18px)",
-      right: "calc(50% + 18px)",
+      left: 'calc(-50% + 18px)',
+      right: 'calc(50% + 18px)',
     },
     [`&.${stepConnectorClasses.active}`]: {
       [`& .${stepConnectorClasses.line}`]: {
-        borderColor: "#00D998",
+        borderColor: '#00D998',
       },
     },
     [`&.${stepConnectorClasses.completed}`]: {
       [`& .${stepConnectorClasses.line}`]: {
-        borderColor: "#00D998",
+        borderColor: '#00D998',
       },
     },
     [`& .${stepConnectorClasses.line}`]: {
-      top: "18px",
+      top: '18px',
       borderTopWidth: 2,
       borderRadius: 1,
     },
-  }));
+  }))
 
   const actionButtons = () => (
     <Box
       sx={{
-        textAlign: "center",
+        textAlign: 'center',
       }}
     >
       <ButtonGroup
@@ -325,9 +343,9 @@ const EditConnection = (props: any) => {
         fullWidth
         size="large"
         sx={{
-          margin: "1em",
-          alignItems: "center",
-          borderRadius: "30px",
+          margin: '1em',
+          alignItems: 'center',
+          borderRadius: '30px',
         }}
       >
         <Button
@@ -337,7 +355,7 @@ const EditConnection = (props: any) => {
           disabled={activeStep === 0}
           onClick={handlePrevious}
           sx={{
-            borderRadius: "30px",
+            borderRadius: '30px',
           }}
         >
           PREVIOUS
@@ -350,7 +368,7 @@ const EditConnection = (props: any) => {
             variant="contained"
             onClick={handleSubmit}
             sx={{
-              borderRadius: "30px",
+              borderRadius: '30px',
             }}
           >
             SUBMIT
@@ -364,7 +382,7 @@ const EditConnection = (props: any) => {
             onClick={handleNext}
             disabled={activeStep === 2 && !isFormChanged}
             sx={{
-              borderRadius: "30px",
+              borderRadius: '30px',
             }}
           >
             NEXT
@@ -372,10 +390,10 @@ const EditConnection = (props: any) => {
         )}
       </ButtonGroup>
     </Box>
-  );
+  )
 
   const acceptButton = () => (
-    <Box sx={{ textAlign: "center" }}>
+    <Box sx={{ textAlign: 'center' }}>
       <Button
         id="accept"
         variant="contained"
@@ -384,11 +402,11 @@ const EditConnection = (props: any) => {
         onClick={handleAccept}
         disabled={!agreed}
         sx={{
-          background: "secondary",
-          borderRadius: "37.5px",
-          margin: "1em",
-          alignItems: "center",
-          width: 350
+          background: 'secondary',
+          borderRadius: '37.5px',
+          margin: '1em',
+          alignItems: 'center',
+          width: 350,
         }}
       >
         ACCEPT
@@ -407,7 +425,8 @@ const EditConnection = (props: any) => {
             fontSize="32px"
             id="add-connecton"
           >
-            Editing {data.destinationById.jurisdiction.description} {data.destinationById.dest_type.type}
+            Editing {data.destinationById.jurisdiction.description}{' '}
+            {data.destinationById.dest_type.type}
           </Typography>
           <Typography gutterBottom align="center" variant="body1">
             Use the stepper to edit & manage sections of your connection
@@ -420,24 +439,37 @@ const EditConnection = (props: any) => {
             connector={<StepperLine />}
           >
             {steps.map((label, index) => {
-              const stepProps: { completed?: boolean } = {};
+              const stepProps: { completed?: boolean } = {}
               const labelProps: {
-                optional?: React.ReactNode;
-              } = {};
+                optional?: React.ReactNode
+              } = {}
 
               return (
                 <Step key={label} {...stepProps}>
                   <StepLabel {...labelProps}>{label}</StepLabel>
                 </Step>
-              );
+              )
             })}
           </Stepper>
         </Box>
 
-        {activeStep === 0 && <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />}
+        {activeStep === 0 && (
+          <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />
+        )}
         {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 && (!isTestRunning ? <Identify {...data} handleChange={handleFormFieldChange} value={formValues} formErrors={formErrors} isNextButtonClicked={isNextButtonClicked} /> : <Loader open={true} />)}
-        {(openAlert) && <AlertDialog open={openAlert} close={handleCloseAlert} />}
+        {activeStep === 2 &&
+          (!isTestRunning ? (
+            <Identify
+              {...data}
+              handleChange={handleFormFieldChange}
+              value={formValues}
+              formErrors={formErrors}
+              isNextButtonClicked={isNextButtonClicked}
+            />
+          ) : (
+            <Loader open={true} />
+          ))}
+        {openAlert && <AlertDialog open={openAlert} close={handleCloseAlert} />}
         {activeStep === 3 && <Verify {...data} value={formValues} />}
 
         <Container
@@ -447,11 +479,10 @@ const EditConnection = (props: any) => {
           }}
         >
           {activeStep === 0 ? acceptButton() : actionButtons()}
-
         </Container>
       </div>
     </Container>
-  );
-};
+  )
+}
 
-export default EditConnection;
+export default EditConnection

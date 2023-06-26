@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react'
 import {
   Card,
   CardHeader,
@@ -8,17 +8,16 @@ import {
   Divider,
   FormControlLabel,
   FormControl,
-} from "@mui/material";
+} from '@mui/material'
 
 interface PolicyProps {
-  clickOnAgree: any;
+  clickOnAgree: any
   agreed: any
 }
 
 const ServiceAgreement = (props: PolicyProps) => {
   return (
-
-    <Card sx={{ minWidth: 275, borderRadius: "0px 0px 30px 30px" }}>
+    <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
       <CardHeader title="Authorization Attestation" />
       <Divider />
       <CardContent>
@@ -32,13 +31,13 @@ const ServiceAgreement = (props: PolicyProps) => {
           rutrum, mi id malesuada viverra, erat arcu laoreet odio, sit amet
           pretium sapien neque nec erat. Vestibulum at tortor rutrum ex
           scelerisque fringilla sit amet quis tortor. Ut eu tristique lorem, a
-          tincidunt magna. Mauris volutpat ullamcorper massa, eget posuere
-          purus pellentesque id. Nunc sed porttitor ex, ut maximus augue.
-          Etiam risus est, fermentum non dictum nec, tempor nec tellus.
-          Curabitur interdum nunc pellentesque mauris ultricies, vel ornare
-          tortor cursus. Mauris et massa turpis. Nam eget sapien vitae magna
-          mollis semper ut vel lorem. Aenean blandit molestie lorem, sed
-          aliquet elit. Suspendisse efficitur dapibus faucibus.
+          tincidunt magna. Mauris volutpat ullamcorper massa, eget posuere purus
+          pellentesque id. Nunc sed porttitor ex, ut maximus augue. Etiam risus
+          est, fermentum non dictum nec, tempor nec tellus. Curabitur interdum
+          nunc pellentesque mauris ultricies, vel ornare tortor cursus. Mauris
+          et massa turpis. Nam eget sapien vitae magna mollis semper ut vel
+          lorem. Aenean blandit molestie lorem, sed aliquet elit. Suspendisse
+          efficitur dapibus faucibus.
         </div>
         <FormControl>
           <RadioGroup onChange={props.clickOnAgree}>
@@ -51,8 +50,7 @@ const ServiceAgreement = (props: PolicyProps) => {
         </FormControl>
       </CardContent>
     </Card>
+  )
+}
 
-  );
-};
-
-export default ServiceAgreement;
+export default ServiceAgreement
