@@ -9,13 +9,31 @@ import {
   Typography,
   Box,
   InputAdornment,
+  Tooltip,
+  IconButton
 } from '@mui/material'
 import ModeEditIcon from '@mui/icons-material/ModeEdit'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 const Identify = (props: any) => {
   const [isChangePasswordClicked, setIsChangePasswordClicked] =
     React.useState(false)
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showNewPassword, setShowNewPassword] = React.useState(false);
+  const [showConfirmNewPassword, setConfirmShowNewPassword] = React.useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmNewPasswordVisibility = () => {
+    setConfirmShowNewPassword(!showConfirmNewPassword);
+  };
 
   const handleChange = (e) => {
     props.handleChange(e.target.name, e.target.value)
@@ -24,13 +42,30 @@ const Identify = (props: any) => {
   const updatePassword = () => {
     setIsChangePasswordClicked(true)
   }
-  const InputProps = {
-    endAdornment: (
-      <InputAdornment position="start">
-        <InfoOutlinedIcon />
-      </InputAdornment>
-    ),
+
+  const getPasswordInputProps = (visible, togglePassword) => {
+    return {
+      endAdornment: (
+        <InputAdornment position="end">
+          <IconButton onClick={togglePassword} edge="end">
+            {visible ? <VisibilityOffIcon /> : <VisibilityIcon />}
+          </IconButton>
+        </InputAdornment>
+      ),
+    }
   }
+
+  const getInputProps = (title) => {
+    return {
+      endAdornment: (
+        <InputAdornment position="start">
+          <Tooltip placement="top" arrow title={title}>
+            <InfoOutlinedIcon />
+          </Tooltip>
+        </InputAdornment>
+      ),
+    };
+  };
   const formFields = [
     {
       id: 'facilityId',
@@ -38,27 +73,31 @@ const Identify = (props: any) => {
       label: 'Facility ID',
       value: props.value.facility_id,
       group: 1,
+      title: ''
     },
     {
       id: 'msh4',
       name: 'MSH4',
       label: 'MSH-4',
       value: props.value.MSH4,
-      group: 1,
+      group: 2,
+      title: 'Sending Facility: MSH.4 specifically represents the receiving application or system that is intended to receive and process.'
     },
     {
       id: 'msh6',
       name: 'MSH6',
       label: 'MSH-6',
       value: props.value.MSH6,
-      group: 1,
+      group: 3,
+      title: 'Receiving Facility: MSH.6 is the receiving application among multiple identical instances of the application running on behalf of different organizations.'
     },
     {
       id: 'msh3',
       name: 'MSH3',
       label: 'MSH-3',
       value: props.value.MSH3,
-      group: 2,
+      group: 1,
+      title: 'Sending Application: The MSH.3 field serves as a unique identifier for the sending application within a network enterprise & encompassing.'
     },
     {
       id: 'msh5',
@@ -66,34 +105,39 @@ const Identify = (props: any) => {
       label: 'MSH-5',
       value: props.value.MSH5,
       group: 2,
+      title: 'Receiving application: MSH.5 is the receiving application among all other applications within the network enterprise'
     },
     {
       id: 'msh22',
       name: 'MSH22',
       label: 'MSH-22',
       value: props.value.MSH22,
-      group: 2,
+      group: 3,
+      title: 'Version: MSH.22 represents the HL7 version being used.'
     },
     {
       id: 'rxa11',
       name: 'RXA11',
       label: 'RXA-11',
       value: props.value.RXA11,
-      group: 3,
+      group: 4,
+      title: 'Administered-at Location: RXA-11 represents the facility where the vaccination is administered, and is an alternate way of identifying the sender.'
     },
     {
       id: 'new-password',
       name: 'newPassword',
       label: 'New Password',
       value: props.value.newPassword,
-      group: 4,
+      group: 5,
+      title: 'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)'
     },
     {
       id: 'confirm-new-password',
       name: 'confirmPassword',
       label: 'Confirm New Password',
       value: props.value.confirmPassword,
-      group: 4,
+      group: 5,
+      title: 'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)'
     },
   ]
 
@@ -102,6 +146,7 @@ const Identify = (props: any) => {
       <div>
         <TextField
           id="current-password"
+          type={showPassword ? 'text' : 'password'}
           label="Current Password"
           variant="outlined"
           fullWidth
@@ -109,28 +154,36 @@ const Identify = (props: any) => {
           defaultValue={props.destinationById.password}
           InputProps={{
             readOnly: true,
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton onClick={togglePasswordVisibility} edge="end">
+                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                </IconButton>
+              </InputAdornment>
+            ),
           }}
           sx={{ marginTop: 1 }}
         />
-        <Typography fontSize={'12px'} sx={{ marginLeft: 2, marginTop: 2 }}>
+        <Typography fontSize={'12px'} sx={{ marginTop: 2 }}>
           Passwords must have a length of 15 characters. Passwords must include
           at least 2 of each the following: Numbers (0 through 9), Lowercase
           letters (a through z), Uppercase letters (A through Z), and Special
           Characters (!@#$%^()&)
         </Typography>
         {formFields
-          .filter((field) => field.group === 4)
+          .filter((field) => field.group === 5)
           .map((field) => (
             <TextField
               key={field.id}
               name={field.name}
+              type={field.name === "newPassword" ? (showNewPassword ? 'text' : 'password') : (showConfirmNewPassword ? 'text' : 'password')}
               label={field.label}
               variant="outlined"
               fullWidth
               sx={{ marginTop: 2 }}
               value={field.value}
               onChange={handleChange}
-              InputProps={InputProps}
+              InputProps={field.name === "newPassword" ? getPasswordInputProps(showNewPassword, toggleNewPasswordVisibility) : getPasswordInputProps(showConfirmNewPassword, toggleConfirmNewPasswordVisibility)}
               error={
                 props.isNextButtonClicked && !!props.formErrors[field.name]
               }
@@ -154,7 +207,7 @@ const Identify = (props: any) => {
             sensitive information, which can be detrimental to individuals or
             organizations
           </div>
-          <Box>
+          <Box display="flex" flexDirection="column" gap="1rem" >
             <TextField
               id="endpointURL"
               label="Endpoint URL"
@@ -166,7 +219,9 @@ const Identify = (props: any) => {
                 readOnly: true,
                 endAdornment: (
                   <InputAdornment position="start">
-                    <InfoOutlinedIcon />
+                    <Tooltip placement="top" arrow title={'A specific URL or URI  that represents a particular resource or functionality provided by an API'}>
+                      <InfoOutlinedIcon />
+                    </Tooltip>
                   </InputAdornment>
                 ),
               }}
@@ -186,7 +241,7 @@ const Identify = (props: any) => {
               }
               sx={{ marginTop: 1 }}
             />
-            <Typography fontSize={'12px'} sx={{ marginLeft: 2 }}>
+            <Typography fontSize={'12px'}>
               Username must contain one uppercase letter, at least 8 characters
               and one number
             </Typography>
@@ -198,15 +253,23 @@ const Identify = (props: any) => {
                   id="password"
                   label="Password"
                   variant="outlined"
+                  type={showPassword ? 'text' : 'password'}
                   fullWidth
                   disabled
                   defaultValue={props.destinationById.password}
                   InputProps={{
                     readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={togglePasswordVisibility} edge="end">
+                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
                   }}
                   sx={{ marginTop: 1 }}
                 />
-                <Typography fontSize={'12px'} sx={{ marginLeft: 2 }}>
+                <Typography fontSize={'12px'}>
                   To change password click on the change password button below.
                 </Typography>
               </div>
@@ -244,7 +307,7 @@ const Identify = (props: any) => {
             incorrect, please contact your administrator
           </div>
           <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
               {formFields
                 .filter((field) => field.group === 1)
                 .map((field) => (
@@ -255,7 +318,7 @@ const Identify = (props: any) => {
                     variant="outlined"
                     value={field.value}
                     onChange={handleChange}
-                    InputProps={InputProps}
+                    InputProps={getInputProps(field.title)}
                     error={
                       props.isNextButtonClicked &&
                       !!props.formErrors[field.name]
@@ -266,7 +329,9 @@ const Identify = (props: any) => {
                   />
                 ))}
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          </Box>
+          <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
               {formFields
                 .filter((field) => field.group === 2)
                 .map((field) => (
@@ -277,7 +342,31 @@ const Identify = (props: any) => {
                     variant="outlined"
                     value={field.value}
                     onChange={handleChange}
-                    InputProps={InputProps}
+                    InputProps={getInputProps(field.title)}
+                    error={
+                      props.isNextButtonClicked &&
+                      !!props.formErrors[field.name]
+                    }
+                    helperText={
+                      props.isNextButtonClicked && props.formErrors[field.name]
+                    }
+                  />
+                ))}
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              {formFields
+                .filter((field) => field.group === 3)
+                .map((field) => (
+                  <TextField
+                    key={field.id}
+                    name={field.name}
+                    label={field.label}
+                    variant="outlined"
+                    value={field.value}
+                    onChange={handleChange}
+                    InputProps={getInputProps(field.title)}
                     error={
                       props.isNextButtonClicked &&
                       !!props.formErrors[field.name]
@@ -291,7 +380,7 @@ const Identify = (props: any) => {
           </Box>
           <Box sx={{ marginTop: '1rem' }}>
             {formFields
-              .filter((field) => field.group === 3)
+              .filter((field) => field.group === 4)
               .map((field) => (
                 <TextField
                   key={field.id}
@@ -301,7 +390,7 @@ const Identify = (props: any) => {
                   fullWidth
                   value={field.value}
                   onChange={handleChange}
-                  InputProps={InputProps}
+                  InputProps={getInputProps(field.title)}
                   error={
                     props.isNextButtonClicked && !!props.formErrors[field.name]
                   }
@@ -313,7 +402,7 @@ const Identify = (props: any) => {
           </Box>
         </CardContent>
       </Card>
-    </form>
+    </form >
   )
 }
 

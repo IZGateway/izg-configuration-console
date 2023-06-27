@@ -7,7 +7,31 @@ import {
   TextField,
 } from '@mui/material'
 
-const Jurisdiction = (props: any) => {
+interface jurisdictionProps {
+  destinationById: {
+    dest_uri: string
+    dest_type: {
+      type: string
+    }
+    jurisdiction: {
+      description: string
+    }
+    status: {
+      status: string
+    }
+    username: string
+    password: string
+    facility_id: string
+    MSH3: string
+    MSH4: string
+    MSH5: string
+    MSH6: string
+    MSH22: string
+    RXA11: string
+  }
+}
+
+const Jurisdiction = ({ destinationById }: jurisdictionProps) => {
   return (
     <>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
@@ -26,7 +50,7 @@ const Jurisdiction = (props: any) => {
             variant="filled"
             fullWidth
             disabled
-            defaultValue={props.destinationById.jurisdiction.description}
+            defaultValue={destinationById.jurisdiction.description}
             InputProps={{
               readOnly: true,
             }}
@@ -50,7 +74,7 @@ const Jurisdiction = (props: any) => {
             variant="filled"
             fullWidth
             disabled
-            defaultValue={props.destinationById.dest_type.type}
+            defaultValue={destinationById.dest_type.type}
             InputProps={{
               readOnly: true,
             }}

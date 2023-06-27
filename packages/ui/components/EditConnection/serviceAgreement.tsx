@@ -12,7 +12,7 @@ import {
 
 interface PolicyProps {
   clickOnAgree: any
-  agreed: any
+  agreed: boolean
 }
 
 const ServiceAgreement = (props: PolicyProps) => {
@@ -45,6 +45,7 @@ const ServiceAgreement = (props: PolicyProps) => {
               value="agree"
               control={<Radio checked={props.agreed} />}
               label="I Agree"
+              data-testid="agree-button"
             />
           </RadioGroup>
         </FormControl>

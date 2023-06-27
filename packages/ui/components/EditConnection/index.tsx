@@ -1,18 +1,5 @@
 import * as React from 'react'
-import {
-  Container,
-  Typography,
-  Stepper,
-  Box,
-  Step,
-  ButtonGroup,
-  Button,
-  StepLabel,
-} from '@mui/material'
-import StepConnector, {
-  stepConnectorClasses,
-} from '@mui/material/StepConnector'
-import { styled } from '@mui/material/styles'
+import { Container, Typography, Box, ButtonGroup, Button } from '@mui/material'
 import { gql, useMutation, useQuery } from '@apollo/client'
 import { FETCH_DESTINATION } from '../../lib/queries/fetch'
 import ServiceAgreement from './serviceAgreement'
@@ -24,7 +11,11 @@ import { useState, useEffect } from 'react'
 import AlertDialog from './alertDialog'
 import Loader from '../Loader'
 import { validate as uuidValidate } from 'uuid'
-// interface editConnectionProps { }
+import StepperComponent from '../Stepper'
+
+interface editConnectionProps {
+  destId: string
+}
 
 export const UPDATE_CONNECTION = gql`
   mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
@@ -44,7 +35,7 @@ export const UPDATE_CONNECTION = gql`
 
 const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
 
-const EditConnection = (props: any) => {
+const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
 
   const [updateConnection, { loading: mutationLoading, error: mutationError }] =
@@ -103,7 +94,7 @@ const EditConnection = (props: any) => {
     if (!router.isReady) return
     if (activeStep === 2 && isFormDirty) {
       setIsTestRunning(true)
-      const testSuite = ['qbp'];
+      const testSuite = ['qbp']
       fetch(`/api/tests/connectiontest/${id}`, {
         method: 'POST',
         body: JSON.stringify({ testSuite }),
@@ -118,7 +109,7 @@ const EditConnection = (props: any) => {
           testResult = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          if (testResult === 'FAIL') {
+          if (testResult !== 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
@@ -178,49 +169,7 @@ const EditConnection = (props: any) => {
     RXA11: `RXA-11 value should meet requirement as above`,
   }
 
-  const isFormChanged =
-    JSON.stringify(formValues) !== JSON.stringify(initialValues)
-
-  const handleCloseAlert = () => {
-    setOpenAlert(false)
-    setIsFormDirty(false)
-  }
-
-  const handleIAgreeButton = () => {
-    setAgreed(true)
-  }
-
-  const handleSubmit = async () => {
-    const response = await updateConnection({
-      variables: {
-        data: formValues,
-        destId: data.destinationById.dest_id,
-      },
-    })
-    if (response && response.data) {
-      router.push('/manage')
-    } else {
-      throw new Error('Update was not successful. Please try again later')
-    }
-  }
-  const handleAccept = () => {
-    setAccepted(true)
-    setActiveStep((prevActiveStep) => prevActiveStep + 1)
-  }
-
-  const handleFormFieldChange = (fieldName: string, value: string) => {
-    setFormValues((prevValues) => ({
-      ...prevValues,
-      [fieldName]: value,
-    }))
-  }
-
-  const handlePrevious = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1)
-    setFormErrors(emptyErrors)
-  }
-
-  const handleNext = (e) => {
+  const formValidation = (e) => {
     if (isFormChanged && activeStep === 2) {
       e.preventDefault()
       setIsNextButtonClicked(true)
@@ -307,31 +256,51 @@ const EditConnection = (props: any) => {
     }
   }
 
-  const StepperLine = styled(StepConnector)(() => ({
-    [`&.${stepConnectorClasses.alternativeLabel}`]: {
-      [`& .${stepConnectorClasses.line}`]: {
-        borderColor: '#EEEEEE',
+  const isFormChanged =
+    JSON.stringify(formValues) !== JSON.stringify(initialValues)
+
+  const handleCloseAlert = () => {
+    setOpenAlert(false)
+    setIsFormDirty(false)
+  }
+
+  const handleIAgreeButton = () => {
+    setAgreed(true)
+  }
+
+  const handleSubmit = async () => {
+    const response = await updateConnection({
+      variables: {
+        data: formValues,
+        destId: data.destinationById.dest_id,
       },
-      top: 18,
-      left: 'calc(-50% + 18px)',
-      right: 'calc(50% + 18px)',
-    },
-    [`&.${stepConnectorClasses.active}`]: {
-      [`& .${stepConnectorClasses.line}`]: {
-        borderColor: '#00D998',
-      },
-    },
-    [`&.${stepConnectorClasses.completed}`]: {
-      [`& .${stepConnectorClasses.line}`]: {
-        borderColor: '#00D998',
-      },
-    },
-    [`& .${stepConnectorClasses.line}`]: {
-      top: '18px',
-      borderTopWidth: 2,
-      borderRadius: 1,
-    },
-  }))
+    })
+    if (response && response.data) {
+      router.push('/manage')
+    } else {
+      throw new Error('Update was not successful. Please try again later')
+    }
+  }
+  const handleAccept = () => {
+    setAccepted(true)
+    setActiveStep((prevActiveStep) => prevActiveStep + 1)
+  }
+
+  const handleFormFieldChange = (fieldName: string, value: string) => {
+    setFormValues((prevValues) => ({
+      ...prevValues,
+      [fieldName]: value,
+    }))
+  }
+
+  const handlePrevious = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1)
+    setFormErrors(emptyErrors)
+  }
+
+  const handleNext = (e) => {
+    formValidation(e);
+  }
 
   const actionButtons = () => (
     <Box
@@ -434,24 +403,7 @@ const EditConnection = (props: any) => {
           </Typography>
         </Box>
         <Box mt={4} mb={4}>
-          <Stepper
-            activeStep={activeStep}
-            alternativeLabel
-            connector={<StepperLine />}
-          >
-            {steps.map((label, index) => {
-              const stepProps: { completed?: boolean } = {}
-              const labelProps: {
-                optional?: React.ReactNode
-              } = {}
-
-              return (
-                <Step key={label} {...stepProps}>
-                  <StepLabel {...labelProps}>{label}</StepLabel>
-                </Step>
-              )
-            })}
-          </Stepper>
+          <StepperComponent activeStep={activeStep} steps={steps} />
         </Box>
 
         {activeStep === 0 && (
