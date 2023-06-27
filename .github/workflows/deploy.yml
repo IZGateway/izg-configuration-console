@@ -13,7 +13,7 @@ env:
   UI_IMAGE_NAME: ${{ github.repository }}-ui
   BUILD_ID: ${{ github.run_number}}
   BRANCH: ${{ github.ref_name }}
-  NOW: $(date +'%Y-%m-%dT%H:%M:%S')
+  NOW: ${{ $(date +'%Y-%m-%dT%H:%M:%S') }}
 
 jobs:
   code-quality-check:
@@ -89,6 +89,7 @@ jobs:
           file: docker/Dockerfile.ui
           push: true
           tags: |
+            ${{ steps.meta.outputs.tags }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BUILD_ID }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.BRANCH }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui:${{ env.NOW }}
@@ -147,6 +148,7 @@ jobs:
           file: docker/Dockerfile.api
           push: true
           tags: |
+            ${{ steps.meta.outputs.tags }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BUILD_ID }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.BRANCH }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api:${{ env.NOW }}
