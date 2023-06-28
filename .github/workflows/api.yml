@@ -9,8 +9,7 @@ on:
       - production
     paths:
       - 'packages/api/**'
-    paths-ignore:
-      - 'packages/ui/**'
+      - '!packages/ui/**'
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
