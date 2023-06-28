@@ -67,7 +67,7 @@ const EditConnection = (props: editConnectionProps) => {
     MSH22: '',
     RXA11: '',
   }
-  let testResult
+  let testResult;
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
@@ -131,7 +131,6 @@ const EditConnection = (props: editConnectionProps) => {
 
   const initialValues = {
     username: data.destinationById.username,
-    password: data.destinationById.password,
     newPassword: '',
     confirmPassword: '',
     facility_id: data.destinationById.facility_id,
@@ -225,30 +224,11 @@ const EditConnection = (props: editConnectionProps) => {
                 confirmPassword: `Password can not be same as Facility ID`,
               }))
               hasErrors = true
-            } else {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                [field]: ``,
-              }))
             }
           }
         }
       }
       if (!hasErrors) {
-        if (
-          formValues.newPassword !== '' &&
-          formValues.confirmPassword !== ''
-        ) {
-          setFormValues((prevValues) => ({
-            ...prevValues,
-            password: formValues.newPassword,
-          }))
-        } else {
-          setFormValues((prevValues) => ({
-            ...prevValues,
-            password: initialValues.password,
-          }))
-        }
         setIsFormDirty(true)
       }
     } else {

@@ -27,7 +27,6 @@ interface InfoProps {
       status: string
     }
     username: string
-    password: string
     facility_id: string
     MSH3: string
     MSH4: string

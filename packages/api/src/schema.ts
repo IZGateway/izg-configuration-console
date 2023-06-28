@@ -20,7 +20,6 @@ export const typeDefs = [
       dest_type: DestinationType!
       dest_version: String
       username: String
-      password: String
       signed_mou: Boolean
       jurisdiction: Jurisdiction
       status: EndpointStatus

@@ -18,15 +18,10 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 const Identify = (props: any) => {
-  const [isChangePasswordClicked, setIsChangePasswordClicked] =
-    React.useState(false)
-  const [showPassword, setShowPassword] = React.useState(false);
+  const [isChangePasswordClicked, setIsChangePasswordClicked] = React.useState(false)
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmNewPassword, setConfirmShowNewPassword] = React.useState(false);
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
   const toggleNewPasswordVisibility = () => {
     setShowNewPassword(!showNewPassword);
   };
@@ -73,7 +68,7 @@ const Identify = (props: any) => {
       label: 'Facility ID',
       value: props.value.facility_id,
       group: 1,
-      title: ''
+      title: 'The facility id is assigned by the IIS for each facility that connects to it through IZ Gateway for some use case (i.e., IIS SHARE, PATIENT ACCESS or PROVIDER CONNECT). If this value is not correct, the responding IIS will often fail with a security fault because the sender (as identified by facilityId) is not authorized to send messages to the IIS, even though the username and password may be correct.  IZ Gateway cannot distinguish between these security faults and those caused by an incorrect username or password.'
     },
     {
       id: 'msh4',
@@ -144,26 +139,6 @@ const Identify = (props: any) => {
   const newPasswordFields = () => {
     return (
       <div>
-        <TextField
-          id="current-password"
-          type={showPassword ? 'text' : 'password'}
-          label="Current Password"
-          variant="outlined"
-          fullWidth
-          disabled
-          defaultValue={props.destinationById.password}
-          InputProps={{
-            readOnly: true,
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={togglePasswordVisibility} edge="end">
-                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-          sx={{ marginTop: 1 }}
-        />
         <Typography fontSize={'12px'} sx={{ marginTop: 2 }}>
           Passwords must have a length of 15 characters. Passwords must include
           at least 2 of each the following: Numbers (0 through 9), Lowercase
@@ -195,10 +170,15 @@ const Identify = (props: any) => {
       </div>
     )
   }
+
   return (
     <form>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader title="Configure Credentials" />
+        <CardHeader title={
+          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+            Configure Credentials
+          </Typography>
+        } />
         <Divider />
         <CardContent>
           <div>
@@ -245,59 +225,41 @@ const Identify = (props: any) => {
               Username must contain one uppercase letter, at least 8 characters
               and one number
             </Typography>
+
             {isChangePasswordClicked ? (
               newPasswordFields()
             ) : (
               <div>
-                <TextField
-                  id="password"
-                  label="Password"
-                  variant="outlined"
-                  type={showPassword ? 'text' : 'password'}
-                  fullWidth
-                  disabled
-                  defaultValue={props.destinationById.password}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={togglePasswordVisibility} edge="end">
-                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{ marginTop: 1 }}
-                />
                 <Typography fontSize={'12px'}>
                   To change password click on the change password button below.
                 </Typography>
+                <Button
+                  color="primary"
+                  variant="outlined"
+                  size="large"
+                  onClick={updatePassword}
+                  sx={{
+                    alignItems: 'center',
+                    borderRadius: '30px',
+                    marginTop: 0.5,
+                  }}
+                >
+                  CHANGE PASSWORD
+                  <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
+                </Button>
               </div>
             )}
           </Box>
         </CardContent>
-        {!isChangePasswordClicked && (
-          <Button
-            color="primary"
-            variant="outlined"
-            size="large"
-            onClick={updatePassword}
-            sx={{
-              margin: '1em',
-              alignItems: 'center',
-              borderRadius: '30px',
-              marginTop: 0.5,
-            }}
-          >
-            CHANGE PASSWORD
-            <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
-          </Button>
-        )}
       </Card>
       <Card
         sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px', marginTop: 5 }}
       >
-        <CardHeader title="View Additional Data Configurations" />
+        <CardHeader title={
+          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+            View Additional Data Configurations
+          </Typography>
+        } />
         <Divider />
         <CardContent>
           <div>

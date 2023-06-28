@@ -17,7 +17,6 @@ describe('Jurisdiction component', () => {
                 status: '',
             },
             username: '',
-            password: '',
             facility_id: '',
             MSH3: '',
             MSH4: '',

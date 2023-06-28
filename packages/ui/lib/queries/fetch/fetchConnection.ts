@@ -10,7 +10,6 @@ export const FETCH_DESTINATION = gql`
       dest_uri
       dest_version
       username
-      password
       jurisdiction {
         description
       }

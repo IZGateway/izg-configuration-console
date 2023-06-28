@@ -9,6 +9,7 @@ import {
   TableHead,
   Divider,
   TableRow,
+  Typography
 } from '@mui/material'
 import { styled } from '@mui/material/styles'
 
@@ -21,13 +22,28 @@ const StyledDifferenceTableCell = styled(TableCell)(() => ({
 }))
 
 const Verify = (props: any) => {
-  delete props.value.confirmPassword
-  delete props.value.newPassword
-  const rows = Object.keys(props.value)
+  let submittingValue;
+  let existingValue;
+
+  if (props.value.newPassword === '' && props.value.confirmPassword === '') {
+    submittingValue = { ...props.value, 'password': '.........' }
+    existingValue = { ...props.destinationById, 'password': '.........' }
+  } else {
+    submittingValue = { ...props.value, 'password': props.value.newPassword }
+    existingValue = { ...props.destinationById, 'password': '.........' }
+  }
+
+  delete submittingValue.confirmPassword
+  delete submittingValue.newPassword
+  const rows = Object.keys(submittingValue)
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader title="Review & Submit Changes" />
+        <CardHeader title={
+          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+            Review & Submit Changes
+          </Typography>
+        } />
         <Divider />
         <CardContent>
           <div>
@@ -52,7 +68,7 @@ const Verify = (props: any) => {
             </TableHead>
             <TableBody>
               {rows.map((row) => (
-                props.destinationById[row] === props.value[row]
+                existingValue[row] === submittingValue[row]
                   ?
                   <TableRow
                     key={row}
@@ -62,9 +78,9 @@ const Verify = (props: any) => {
                       {row.toUpperCase()}
                     </StyledCategoryCell>
                     <TableCell align="left">
-                      {props.destinationById[row]}
+                      {existingValue[row]}
                     </TableCell>
-                    <TableCell align="left">{props.value[row]}</TableCell>
+                    <TableCell align="left">{submittingValue[row]}</TableCell>
                   </TableRow>
                   :
                   <TableRow
@@ -75,9 +91,9 @@ const Verify = (props: any) => {
                       {row.toUpperCase()}
                     </StyledCategoryCell>
                     <StyledDifferenceTableCell align="left">
-                      {props.destinationById[row]}
+                      {existingValue[row]}
                     </StyledDifferenceTableCell>
-                    <StyledDifferenceTableCell align="left">{props.value[row]}</StyledDifferenceTableCell>
+                    <StyledDifferenceTableCell align="left">{submittingValue[row]}</StyledDifferenceTableCell>
                   </TableRow>
               ))}
             </TableBody>
