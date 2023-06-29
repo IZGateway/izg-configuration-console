@@ -105,7 +105,5 @@ jobs:
     needs: [build-and-push-ui-image]
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Deploy to Staging
-        run: echo "Deploy to STAGING code here"
+      - name: Deploy to Dev AWS
+        run: aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console-ui --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
