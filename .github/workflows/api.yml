@@ -78,8 +78,8 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.IMAGE_NAME }},enable=${{ github.ref != 'refs/heads/main' }}
-            ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }},enable=${{ github.ref == 'refs/heads/main' }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-api,enable=${{ github.ref != 'refs/heads/main' }}
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-api,enable=${{ github.ref == 'refs/heads/main' }}
           tags: |
             type=raw,value={{date 'YYYYMMDD'}}
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' }}
