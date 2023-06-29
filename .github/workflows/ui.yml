@@ -85,6 +85,8 @@ jobs:
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=rc,enable=${{ github.ref == 'refs/heads/staging' }}
+          flavor: |
+            latest=true
 
       - name: Build and push Docker Config Console ui image
         id: docker_build
