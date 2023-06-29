@@ -8,7 +8,7 @@ import {
   Divider,
   FormControlLabel,
   FormControl,
-  Typography
+  Typography,
 } from '@mui/material'
 
 interface PolicyProps {
@@ -19,11 +19,13 @@ interface PolicyProps {
 const ServiceAgreement = (props: PolicyProps) => {
   return (
     <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-      <CardHeader title={
-        <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-          Authorization Attestation
-        </Typography>
-      } />
+      <CardHeader
+        title={
+          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+            Authorization Attestation
+          </Typography>
+        }
+      />
       <Divider />
       <CardContent>
         <div>

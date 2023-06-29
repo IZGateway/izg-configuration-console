@@ -6,7 +6,7 @@ import {
   DialogContentText,
   IconButton,
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon from '@mui/icons-material/Close'
 
 interface alertDialogProps {
   open: boolean
@@ -24,7 +24,10 @@ const AlertDialog = (props: alertDialogProps) => {
       >
         <DialogTitle id="alert-dialog-title" sx={{ color: 'red' }}>
           {'It looks like a value that you entered is incorrect'}
-          <IconButton onClick={props.close} sx={{ float: 'right', color: 'grey' }} >
+          <IconButton
+            onClick={props.close}
+            sx={{ float: 'right', color: 'grey' }}
+          >
             <CloseIcon sx={{ float: 'right', color: 'grey' }} />
           </IconButton>
         </DialogTitle>

@@ -10,25 +10,29 @@ import {
   Box,
   InputAdornment,
   Tooltip,
-  IconButton
+  IconButton,
 } from '@mui/material'
 import ModeEditIcon from '@mui/icons-material/ModeEdit'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
+import CombinedContext from '../../contexts/app'
+import { useContext } from 'react'
 
 const Identify = (props: any) => {
-  const [isChangePasswordClicked, setIsChangePasswordClicked] = React.useState(false)
-  const [showNewPassword, setShowNewPassword] = React.useState(false);
-  const [showConfirmNewPassword, setConfirmShowNewPassword] = React.useState(false);
+  const { isChangePasswordClicked, setIsChangePasswordClicked } =
+    useContext(CombinedContext)!
+  const [showNewPassword, setShowNewPassword] = React.useState(false)
+  const [showConfirmNewPassword, setConfirmShowNewPassword] =
+    React.useState(false)
 
   const toggleNewPasswordVisibility = () => {
-    setShowNewPassword(!showNewPassword);
-  };
+    setShowNewPassword(!showNewPassword)
+  }
 
   const toggleConfirmNewPasswordVisibility = () => {
-    setConfirmShowNewPassword(!showConfirmNewPassword);
-  };
+    setConfirmShowNewPassword(!showConfirmNewPassword)
+  }
 
   const handleChange = (e) => {
     props.handleChange(e.target.name, e.target.value)
@@ -59,8 +63,8 @@ const Identify = (props: any) => {
           </Tooltip>
         </InputAdornment>
       ),
-    };
-  };
+    }
+  }
   const formFields = [
     {
       id: 'facilityId',
@@ -68,7 +72,8 @@ const Identify = (props: any) => {
       label: 'Facility ID',
       value: props.value.facility_id,
       group: 1,
-      title: 'The facility id is assigned by the IIS for each facility that connects to it through IZ Gateway for some use case (i.e., IIS SHARE, PATIENT ACCESS or PROVIDER CONNECT). If this value is not correct, the responding IIS will often fail with a security fault because the sender (as identified by facilityId) is not authorized to send messages to the IIS, even though the username and password may be correct.  IZ Gateway cannot distinguish between these security faults and those caused by an incorrect username or password.'
+      title:
+        'The facility id is assigned by the IIS for each facility that connects to it through IZ Gateway for some use case (i.e., IIS SHARE, PATIENT ACCESS or PROVIDER CONNECT). If this value is not correct, the responding IIS will often fail with a security fault because the sender (as identified by facilityId) is not authorized to send messages to the IIS, even though the username and password may be correct.  IZ Gateway cannot distinguish between these security faults and those caused by an incorrect username or password.',
     },
     {
       id: 'msh4',
@@ -76,7 +81,8 @@ const Identify = (props: any) => {
       label: 'MSH-4',
       value: props.value.MSH4,
       group: 2,
-      title: 'Sending Facility: MSH.4 specifically represents the receiving application or system that is intended to receive and process.'
+      title:
+        'Sending Facility: MSH.4 specifically represents the receiving application or system that is intended to receive and process.',
     },
     {
       id: 'msh6',
@@ -84,7 +90,8 @@ const Identify = (props: any) => {
       label: 'MSH-6',
       value: props.value.MSH6,
       group: 3,
-      title: 'Receiving Facility: MSH.6 is the receiving application among multiple identical instances of the application running on behalf of different organizations.'
+      title:
+        'Receiving Facility: MSH.6 is the receiving application among multiple identical instances of the application running on behalf of different organizations.',
     },
     {
       id: 'msh3',
@@ -92,7 +99,8 @@ const Identify = (props: any) => {
       label: 'MSH-3',
       value: props.value.MSH3,
       group: 1,
-      title: 'Sending Application: The MSH.3 field serves as a unique identifier for the sending application within a network enterprise & encompassing.'
+      title:
+        'Sending Application: The MSH.3 field serves as a unique identifier for the sending application within a network enterprise & encompassing.',
     },
     {
       id: 'msh5',
@@ -100,7 +108,8 @@ const Identify = (props: any) => {
       label: 'MSH-5',
       value: props.value.MSH5,
       group: 2,
-      title: 'Receiving application: MSH.5 is the receiving application among all other applications within the network enterprise'
+      title:
+        'Receiving application: MSH.5 is the receiving application among all other applications within the network enterprise',
     },
     {
       id: 'msh22',
@@ -108,7 +117,7 @@ const Identify = (props: any) => {
       label: 'MSH-22',
       value: props.value.MSH22,
       group: 3,
-      title: 'Version: MSH.22 represents the HL7 version being used.'
+      title: 'Version: MSH.22 represents the HL7 version being used.',
     },
     {
       id: 'rxa11',
@@ -116,7 +125,8 @@ const Identify = (props: any) => {
       label: 'RXA-11',
       value: props.value.RXA11,
       group: 4,
-      title: 'Administered-at Location: RXA-11 represents the facility where the vaccination is administered, and is an alternate way of identifying the sender.'
+      title:
+        'Administered-at Location: RXA-11 represents the facility where the vaccination is administered, and is an alternate way of identifying the sender.',
     },
     {
       id: 'new-password',
@@ -124,7 +134,8 @@ const Identify = (props: any) => {
       label: 'New Password',
       value: props.value.newPassword,
       group: 5,
-      title: 'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)'
+      title:
+        'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
     },
     {
       id: 'confirm-new-password',
@@ -132,7 +143,8 @@ const Identify = (props: any) => {
       label: 'Confirm New Password',
       value: props.value.confirmPassword,
       group: 5,
-      title: 'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)'
+      title:
+        'Passwords must have a length of 15 characters. Passwords must include at least 2 of each the following: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
     },
   ]
 
@@ -151,14 +163,32 @@ const Identify = (props: any) => {
             <TextField
               key={field.id}
               name={field.name}
-              type={field.name === "newPassword" ? (showNewPassword ? 'text' : 'password') : (showConfirmNewPassword ? 'text' : 'password')}
+              type={
+                field.name === 'newPassword'
+                  ? showNewPassword
+                    ? 'text'
+                    : 'password'
+                  : showConfirmNewPassword
+                  ? 'text'
+                  : 'password'
+              }
               label={field.label}
               variant="outlined"
               fullWidth
               sx={{ marginTop: 2 }}
               value={field.value}
               onChange={handleChange}
-              InputProps={field.name === "newPassword" ? getPasswordInputProps(showNewPassword, toggleNewPasswordVisibility) : getPasswordInputProps(showConfirmNewPassword, toggleConfirmNewPasswordVisibility)}
+              InputProps={
+                field.name === 'newPassword'
+                  ? getPasswordInputProps(
+                      showNewPassword,
+                      toggleNewPasswordVisibility,
+                    )
+                  : getPasswordInputProps(
+                      showConfirmNewPassword,
+                      toggleConfirmNewPasswordVisibility,
+                    )
+              }
               error={
                 props.isNextButtonClicked && !!props.formErrors[field.name]
               }
@@ -174,11 +204,13 @@ const Identify = (props: any) => {
   return (
     <form>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader title={
-          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-            Configure Credentials
-          </Typography>
-        } />
+        <CardHeader
+          title={
+            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+              Configure Credentials
+            </Typography>
+          }
+        />
         <Divider />
         <CardContent>
           <div>
@@ -187,7 +219,7 @@ const Identify = (props: any) => {
             sensitive information, which can be detrimental to individuals or
             organizations
           </div>
-          <Box display="flex" flexDirection="column" gap="1rem" >
+          <Box display="flex" flexDirection="column" gap="1rem">
             <TextField
               id="endpointURL"
               label="Endpoint URL"
@@ -199,7 +231,13 @@ const Identify = (props: any) => {
                 readOnly: true,
                 endAdornment: (
                   <InputAdornment position="start">
-                    <Tooltip placement="top" arrow title={'A specific URL or URI  that represents a particular resource or functionality provided by an API'}>
+                    <Tooltip
+                      placement="top"
+                      arrow
+                      title={
+                        'A specific URL or URI  that represents a particular resource or functionality provided by an API'
+                      }
+                    >
                       <InfoOutlinedIcon />
                     </Tooltip>
                   </InputAdornment>
@@ -255,11 +293,13 @@ const Identify = (props: any) => {
       <Card
         sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px', marginTop: 5 }}
       >
-        <CardHeader title={
-          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-            View Additional Data Configurations
-          </Typography>
-        } />
+        <CardHeader
+          title={
+            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+              View Additional Data Configurations
+            </Typography>
+          }
+        />
         <Divider />
         <CardContent>
           <div>
@@ -364,7 +404,7 @@ const Identify = (props: any) => {
           </Box>
         </CardContent>
       </Card>
-    </form >
+    </form>
   )
 }
 

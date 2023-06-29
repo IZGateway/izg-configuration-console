@@ -5,7 +5,7 @@ import {
   CardContent,
   Divider,
   TextField,
-  Typography
+  Typography,
 } from '@mui/material'
 
 interface jurisdictionProps {
@@ -35,11 +35,13 @@ const Jurisdiction = ({ destinationById }: jurisdictionProps) => {
   return (
     <>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader title={
-          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-            Review the Jurisdiction to get started
-          </Typography>
-        } />
+        <CardHeader
+          title={
+            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+              Review the Jurisdiction to get started
+            </Typography>
+          }
+        />
         <Divider />
         <CardContent>
           <div>
@@ -65,11 +67,13 @@ const Jurisdiction = ({ destinationById }: jurisdictionProps) => {
       <Card
         sx={{ minWidth: 275, marginTop: 5, borderRadius: '0px 0px 30px 30px' }}
       >
-        <CardHeader title={
-          <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-            Review the type of connection
-          </Typography>
-        } />
+        <CardHeader
+          title={
+            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
+              Review the type of connection
+            </Typography>
+          }
+        />
         <Divider />
         <CardContent>
           <div>

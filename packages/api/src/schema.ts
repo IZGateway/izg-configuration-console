@@ -101,6 +101,7 @@ export const typeDefs = [
       updateDestination(
         data: DestinationUpdateInput!
         dest_id: String!
+        password: String
       ): Destination!
     }
   `,
@@ -202,7 +203,7 @@ export const resolvers = {
     updateDestination: async (_parent: any, _args: any, context: Context) => {
       const destination = await context.prisma.destinations.update({
         where: { dest_id: _args.dest_id },
-        data: _args.data,
+        data: { ..._args.data, password: _args.password },
       })
       return destination
     },

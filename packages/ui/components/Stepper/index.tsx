@@ -43,7 +43,7 @@ const StepperComponent = (props: stepperProps) => {
       alternativeLabel
       connector={<StepperLine />}
     >
-      {props.steps.map((label, index) => {
+      {props.steps.map((label) => {
         const stepProps: { completed?: boolean } = {}
         const labelProps: {
           optional?: React.ReactNode
@@ -51,7 +51,9 @@ const StepperComponent = (props: stepperProps) => {
 
         return (
           <Step key={label} {...stepProps}>
-            <StepLabel data-testid="step-label" {...labelProps}>{label}</StepLabel>
+            <StepLabel data-testid="step-label" {...labelProps}>
+              {label}
+            </StepLabel>
           </Step>
         )
       })}

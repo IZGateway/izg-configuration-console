@@ -12,16 +12,21 @@ import AlertDialog from './alertDialog'
 import Loader from '../Loader'
 import { validate as uuidValidate } from 'uuid'
 import StepperComponent from '../Stepper'
+import CombinedContext from '../../contexts/app'
+import Close from '../Close'
 
 interface editConnectionProps {
   destId: string
 }
 
 export const UPDATE_CONNECTION = gql`
-  mutation Mutation($data: DestinationUpdateInput!, $destId: String!) {
-    updateDestination(data: $data, dest_id: $destId) {
+  mutation Mutation(
+    $data: DestinationUpdateInput!
+    $destId: String!
+    $password: String
+  ) {
+    updateDestination(data: $data, dest_id: $destId, password: $password) {
       username
-      password
       facility_id
       MSH3
       MSH4
@@ -37,7 +42,7 @@ const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
 
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
-
+  const { clearValue } = React.useContext(CombinedContext)
   const [updateConnection, { loading: mutationLoading, error: mutationError }] =
     useMutation(UPDATE_CONNECTION)
   const {
@@ -67,7 +72,7 @@ const EditConnection = (props: editConnectionProps) => {
     MSH22: '',
     RXA11: '',
   }
-  let testResult;
+  let testResult
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
@@ -116,6 +121,7 @@ const EditConnection = (props: editConnectionProps) => {
           }
         })
         .catch((err) => {
+          clearValue()
           throw new Error(err.message)
         })
     }
@@ -126,6 +132,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   if (mutationError || queryError) {
+    clearValue()
     throw new Error(mutationError?.message || queryError?.message)
   }
 
@@ -249,12 +256,25 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleSubmit = async () => {
-    const response = await updateConnection({
-      variables: {
-        data: formValues,
-        destId: data.destinationById.dest_id,
-      },
-    })
+    let response
+    const { newPassword, confirmPassword, ...submittingValue } = formValues
+    if (formValues.newPassword === '' && formValues.confirmPassword === '') {
+      response = await updateConnection({
+        variables: {
+          data: submittingValue,
+          destId: data.destinationById.dest_id,
+        },
+      })
+    } else {
+      response = await updateConnection({
+        variables: {
+          data: submittingValue,
+          destId: data.destinationById.dest_id,
+          password: formValues.newPassword,
+        },
+      })
+    }
+    clearValue()
     if (response && response.data) {
       router.push('/manage')
     } else {
@@ -279,7 +299,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleNext = (e) => {
-    formValidation(e);
+    formValidation(e)
   }
 
   const actionButtons = () => (
@@ -365,56 +385,64 @@ const EditConnection = (props: editConnectionProps) => {
   )
 
   return (
-    <Container maxWidth="sm">
-      <div>
-        <Box sx={{ marginTop: 4 }}>
-          <Typography
-            align="center"
-            variant="h1"
-            fontWeight={700}
-            fontSize="32px"
-            id="add-connecton"
-          >
-            Editing {data.destinationById.jurisdiction.description}{' '}
-            {data.destinationById.dest_type.type}
-          </Typography>
-          <Typography gutterBottom align="center" variant="body1">
-            Use the stepper to edit & manage sections of your connection
-          </Typography>
-        </Box>
-        <Box mt={4} mb={4}>
-          <StepperComponent activeStep={activeStep} steps={steps} />
-        </Box>
+    <div>
+      <Close />
+      <Container maxWidth="sm">
+        <div>
+          <Box sx={{ marginTop: 4 }}>
+            <Typography
+              align="center"
+              variant="h1"
+              fontWeight={700}
+              fontSize="32px"
+              id="add-connecton"
+            >
+              Editing {data.destinationById.jurisdiction.description}{' '}
+              {data.destinationById.dest_type.type}
+            </Typography>
+            <Typography gutterBottom align="center" variant="body1">
+              Use the stepper to edit & manage sections of your connection
+            </Typography>
+          </Box>
+          <Box mt={4} mb={4}>
+            <StepperComponent activeStep={activeStep} steps={steps} />
+          </Box>
 
-        {activeStep === 0 && (
-          <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />
-        )}
-        {activeStep === 1 && <Jurisdiction {...data} />}
-        {activeStep === 2 &&
-          (!isTestRunning ? (
-            <Identify
-              {...data}
-              handleChange={handleFormFieldChange}
-              value={formValues}
-              formErrors={formErrors}
-              isNextButtonClicked={isNextButtonClicked}
+          {activeStep === 0 && (
+            <ServiceAgreement
+              clickOnAgree={handleIAgreeButton}
+              agreed={agreed}
             />
-          ) : (
-            <Loader open={true} />
-          ))}
-        {openAlert && <AlertDialog open={openAlert} close={handleCloseAlert} />}
-        {activeStep === 3 && <Verify {...data} value={formValues} />}
+          )}
+          {activeStep === 1 && <Jurisdiction {...data} />}
+          {activeStep === 2 &&
+            (!isTestRunning ? (
+              <Identify
+                {...data}
+                handleChange={handleFormFieldChange}
+                value={formValues}
+                formErrors={formErrors}
+                isNextButtonClicked={isNextButtonClicked}
+              />
+            ) : (
+              <Loader open={true} />
+            ))}
+          {openAlert && (
+            <AlertDialog open={openAlert} close={handleCloseAlert} />
+          )}
+          {activeStep === 3 && <Verify {...data} value={formValues} />}
 
-        <Container
-          maxWidth="sm"
-          sx={{
-            marginTop: 4,
-          }}
-        >
-          {activeStep === 0 ? acceptButton() : actionButtons()}
-        </Container>
-      </div>
-    </Container>
+          <Container
+            maxWidth="sm"
+            sx={{
+              marginTop: 4,
+            }}
+          >
+            {activeStep === 0 ? acceptButton() : actionButtons()}
+          </Container>
+        </div>
+      </Container>
+    </div>
   )
 }
 
