@@ -54,7 +54,7 @@ const fetchEndpointStatus = async () => {
       statuses.length = 0
     }
   } catch (error) {
-    console.log('ERROR ---> ' + error)
+    console.error('ERROR ---> ' + error)
   }
 }
 

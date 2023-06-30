@@ -23,8 +23,6 @@ jobs:
     name: Test and Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Dynamically set BUILD_RUN_DATETIME environment variable
-        run: echo "BUILD_DATETIME=$(date +%Y%m%d%H%M)" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v3
       - name: Use Node.js
@@ -81,7 +79,7 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console-ui,enable=${{ github.ref != 'refs/heads/main' }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console-ui,enable=${{ github.ref == 'refs/heads/main' }}
           tags: |
-            type=raw,value={{date 'YYYYMMDD'}}
+            type=raw,value={{date 'YYYYMMDD-hhmmss'}}
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=rc,enable=${{ github.ref == 'refs/heads/staging' }}
