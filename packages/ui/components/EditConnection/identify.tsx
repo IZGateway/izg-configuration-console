@@ -21,7 +21,7 @@ import { useContext } from 'react'
 
 const Identify = (props: any) => {
   const { isChangePasswordClicked, setIsChangePasswordClicked } =
-    useContext(CombinedContext)!
+    useContext(CombinedContext)
   const [showNewPassword, setShowNewPassword] = React.useState(false)
   const [showConfirmNewPassword, setConfirmShowNewPassword] =
     React.useState(false)
@@ -305,7 +305,7 @@ const Identify = (props: any) => {
           <div>
             All MSH and facility ID values should be between 0-25 characters and
             Should contain only A-Z, a-z, 0-9, _, -, and space characters. It
-            should not contain |^&~"/ characters. If you think a value is
+            should not contain |^&~&quot;/ characters. If you think a value is
             incorrect, please contact your administrator
           </div>
           <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>

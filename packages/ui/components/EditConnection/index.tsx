@@ -72,7 +72,6 @@ const EditConnection = (props: editConnectionProps) => {
     MSH22: '',
     RXA11: '',
   }
-  let testResult
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
@@ -88,6 +87,7 @@ const EditConnection = (props: editConnectionProps) => {
     MSH22: '',
     RXA11: '',
   })
+  const testResult = React.useRef('')
   const [openAlert, setOpenAlert] = React.useState(false)
   const [isTestRunning, setIsTestRunning] = useState(false)
   const [isFormDirty, setIsFormDirty] = useState(false)
@@ -107,17 +107,19 @@ const EditConnection = (props: editConnectionProps) => {
         .then((res) => {
           if (!res.ok) {
             setOpenAlert(true)
+            setFormErrors(emptyErrors)
           }
           return res.json()
         })
         .then((data) => {
-          testResult = data.testResults[0].status
+          testResult.current = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          if (testResult !== 'PASS') {
+          if (testResult.current === 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
+            setFormErrors(emptyErrors)
           }
         })
         .catch((err) => {
@@ -125,7 +127,7 @@ const EditConnection = (props: editConnectionProps) => {
           throw new Error(err.message)
         })
     }
-  }, [isFormDirty])
+  }, [isFormDirty, activeStep, clearValue, id, router.isReady])
 
   if (mutationLoading || queryLoading) {
     return <div>Loading...</div>
@@ -180,10 +182,11 @@ const EditConnection = (props: editConnectionProps) => {
       e.preventDefault()
       setIsNextButtonClicked(true)
       let hasErrors = false
-      for (const field in formValues) {
-        if (formValues[field] !== initialValues[field]) {
+      Object.keys(formValues).forEach((key) => {
+        const value = formValues[key]
+        if (value !== initialValues[key]) {
           // Added this so that it wont perform validation on existing values
-          if (formValues[field] === '') {
+          if (value === '') {
             if (formValues.username === '') {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -203,11 +206,11 @@ const EditConnection = (props: editConnectionProps) => {
               }))
               hasErrors = true
             }
-          } else if (formValues[field] !== '') {
-            if (!validationRules[field].test(formValues[field])) {
+          } else if (value !== '') {
+            if (!validationRules[key].test(value)) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
-                [field]: `${errorMessages[field]}`,
+                [key]: `${errorMessages[key]}`,
               }))
               hasErrors = true
             } else if (uuidValidate(formValues.newPassword)) {
@@ -223,7 +226,7 @@ const EditConnection = (props: editConnectionProps) => {
               }))
               hasErrors = true
             } else if (
-              formValues[field] !== null &&
+              formValues[key] !== null &&
               formValues.confirmPassword === formValues.facility_id
             ) {
               setFormErrors((prevErrors) => ({
@@ -234,7 +237,7 @@ const EditConnection = (props: editConnectionProps) => {
             }
           }
         }
-      }
+      })
       if (!hasErrors) {
         setIsFormDirty(true)
       }

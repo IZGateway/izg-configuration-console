@@ -5,12 +5,26 @@ import AlertDialog from './alertDialog'
 describe('Alert Dialog component', () => {
   it('renders without throwing any errors', () => {
     expect(() => {
-      render(<AlertDialog open={true} close={() => {}} />)
+      render(
+        <AlertDialog
+          open={true}
+          close={() => {
+            return null
+          }}
+        />,
+      )
     }).not.toThrow()
   })
 
   it('should not render dialog when open is false ', () => {
-    render(<AlertDialog open={false} close={() => {}} />)
+    render(
+      <AlertDialog
+        open={false}
+        close={() => {
+          return null
+        }}
+      />,
+    )
     expect(screen.queryByText('It looks like')).not.toBeInTheDocument()
   })
 

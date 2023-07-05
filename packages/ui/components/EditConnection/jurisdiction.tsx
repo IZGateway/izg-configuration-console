@@ -46,7 +46,7 @@ const Jurisdiction = ({ destinationById }: jurisdictionProps) => {
         <CardContent>
           <div>
             Within this section, you can review the Jurisdiction of your
-            selected connection. It's important to make sure that the
+            selected connection. It&apos;s important to make sure that the
             Jurisdiction is correct, as any changes made will impact the
             selected connection.
           </div>

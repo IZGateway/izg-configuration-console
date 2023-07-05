@@ -49,16 +49,17 @@ const Verify = (props: any) => {
         <Divider />
         <CardContent>
           <div>
-            Before you submit your edits, it's important to double-check that
-            you've made all the changes you intended to make. Once you hit the
-            "submit" button, your changes will be saved and it may not be
-            possible to undo them. Take a moment to review your edits and make
-            sure they accurately reflect your intended changes. If you're unsure
-            about any of the edits, you may want to consult with a colleague or
-            supervisor before submitting them. Remember, the changes you make
-            can have a significant impact on the content, so it's essential to
-            ensure that they are correct and appropriate. Thank you for taking
-            the time to review your edits before submitting.
+            Before you submit your edits, it&apos;s important to double-check
+            that you&apos;ve made all the changes you intended to make. Once you
+            hit the &quot;submit&quot; button, your changes will be saved and it
+            may not be possible to undo them. Take a moment to review your edits
+            and make sure they accurately reflect your intended changes. If
+            you&apos;re unsure about any of the edits, you may want to consult
+            with a colleague or supervisor before submitting them. Remember, the
+            changes you make can have a significant impact on the content, so
+            it&apos;s essential to ensure that they are correct and appropriate.
+            Thank you for taking the time to review your edits before
+            submitting.
           </div>
           <Table sx={{ minWidth: 400 }} aria-label="simple table">
             <TableHead>
