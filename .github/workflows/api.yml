@@ -6,10 +6,20 @@ on:
     branches:
       - main
       - staging
-      - production
     paths:
       - 'packages/api/**'
       - '!packages/ui/**'
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Log level'
+        required: true
+        default: 'warning'
+        type: choice
+        options:
+          - info
+          - warning
+          - debug
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
