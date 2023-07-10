@@ -1,14 +1,13 @@
 import NextAuth from 'next-auth'
-import KeycloakProvider from 'next-auth/providers/keycloak'
+import OktaProvider from 'next-auth/providers/okta'
 export const authOptions = {
   debug: true,
   // Configure one or more authentication providers
   providers: [
-    KeycloakProvider({
-      clientId: process.env.KEYCLOAK_CLIENT_ID,
-      clientSecret: 'client-credentials-mock-client-secret',
-      issuer: process.env.KEYCLOAK_ISSUER,
-      idToken: true,
+    OktaProvider({
+      clientId: process.env.OKTA_CLIENT_ID,
+      clientSecret: 'something',
+      issuer: process.env.OKTA_ISSUER,
     }),
   ],
   callbacks: {
