@@ -4,7 +4,7 @@ import IZGLogo from './Branding'
 import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import {
   Collapse,
   styled,
@@ -92,6 +92,8 @@ const MiniDrawer = () => {
     await signOut({ callbackUrl: `/api/auth/logout` })
   }
 
+  const { data: session, status } = useSession()
+
   const list = () => (
     <>
       <List
@@ -172,6 +174,7 @@ const MiniDrawer = () => {
       </div>
       <Divider color="#00D998" />
       {list()}
+      {status === 'authenticated' && <p>Signed in as {session.user.email}</p>}
       <Button
         variant="text"
         onClick={handleSignOut}
