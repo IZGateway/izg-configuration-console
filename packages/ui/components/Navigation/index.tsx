@@ -174,7 +174,7 @@ const MiniDrawer = () => {
       </div>
       <Divider color="#00D998" />
       {list()}
-      {status === 'authenticated' && <p>Signed in as {session.user.email}</p>}
+      {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
       <Button
         variant="text"
         onClick={handleSignOut}
