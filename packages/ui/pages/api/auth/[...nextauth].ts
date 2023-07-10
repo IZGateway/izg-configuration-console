@@ -6,7 +6,7 @@ export const authOptions = {
   providers: [
     OktaProvider({
       clientId: process.env.OKTA_CLIENT_ID,
-      clientSecret: 'something',
+      clientSecret: process.env.OKTA_CLIENT_SECRET,
       issuer: process.env.OKTA_ISSUER,
     }),
   ],
