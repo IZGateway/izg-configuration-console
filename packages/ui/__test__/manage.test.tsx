@@ -4,6 +4,15 @@ import "@testing-library/jest-dom";
 import Manage from "../pages/manage/index";
 import { MockedProvider } from "@apollo/react-testing";
 import { FETCH_ALL_DESTINATIONS } from "../lib/queries/fetch";
+import CombinedContext, { CombinedContextType } from '../contexts/app';
+
+const mockContextValue: CombinedContextType = {
+  pageSize: 5,
+  setPageSize: jest.fn(),
+  isChangePasswordClicked: true,
+  setIsChangePasswordClicked: jest.fn(),
+  clearValue: () => jest.fn(),
+};
 
 const mocks = [
   {
@@ -39,20 +48,28 @@ const mocks = [
   },
 ];
 
+
 describe("Manage page", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
   it("should render properly in a loading state", () => {
     render(
-      <MockedProvider mocks={mocks}>
-        <Manage />
-      </MockedProvider>
+      <CombinedContext.Provider value={mockContextValue}>
+        <MockedProvider mocks={mocks}>
+          <Manage />
+        </MockedProvider>
+      </CombinedContext.Provider>
     );
     expect(screen.getByText("Loading your connections...")).toBeInTheDocument();
   });
   it("should render properly after loading state", async () => {
     const { getByText, queryByText, getByRole, getAllByRole } = render(
-      <MockedProvider mocks={mocks}>
-        <Manage />
-      </MockedProvider>
+      <CombinedContext.Provider value={mockContextValue}>
+        <MockedProvider mocks={mocks}>
+          <Manage />
+        </MockedProvider>
+      </CombinedContext.Provider>
     );
     expect(getByText("Loading your connections...")).toBeInTheDocument();
     await waitFor(() => {

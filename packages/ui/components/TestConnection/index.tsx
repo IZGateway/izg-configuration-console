@@ -29,7 +29,7 @@ const TestConnection = () => {
       'connectivity',
       'qbp',
     ]
-    fetch(`/api/tests/connectiontest/${id}`, {
+    fetch(`/api/tests/connectiontest/` + String(id), {
       method: 'POST',
       body: JSON.stringify({ testSuite }),
     })

@@ -11,7 +11,7 @@ export type EditConnectionContextType = {
   clearValue: () => void
 }
 
-type CombinedContextType = AppContextType & EditConnectionContextType;
+export type CombinedContextType = AppContextType & EditConnectionContextType;
 
 const CombinedContext = createContext<CombinedContextType | undefined>(undefined);
 

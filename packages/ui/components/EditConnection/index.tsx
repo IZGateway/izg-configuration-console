@@ -100,7 +100,7 @@ const EditConnection = (props: editConnectionProps) => {
     if (activeStep === 2 && isFormDirty) {
       setIsTestRunning(true)
       const testSuite = ['qbp']
-      fetch(`/api/tests/connectiontest/${id}`, {
+      fetch(`/api/tests/connectiontest/` + String(id), {
         method: 'POST',
         body: JSON.stringify({ testSuite }),
       })

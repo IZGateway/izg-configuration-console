@@ -126,6 +126,7 @@ const TestsList = ({
           color="primary"
           variant="outlined"
           onClick={handleReload}
+          data-testid="RerunIcon"
           sx={{
             borderRadius: '30px',
           }}
