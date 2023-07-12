@@ -1,21 +1,6 @@
-version: "3"
+version: '3'
 services:
   mysql:
     build: ./database
     ports:
       - 3306:3306
-  keycloak:
-    image: quay.io/keycloak/keycloak:latest
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_PROXY: edge
-    command: 
-      - start-dev
-      - --import-realm
-    ports:
-      - 8080:8080
-    volumes:
-      - ./auth/realm-export.json:/opt/keycloak/data/import/real-export.json:ro
-      - ./:/usr/src/app/my-app
-       - /usr/src/app/my-app/node_modules
