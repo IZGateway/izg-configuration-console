@@ -14,6 +14,7 @@ import { validate as uuidValidate } from 'uuid'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
+import { isEmpty } from 'underscore';
 
 interface editConnectionProps {
   destId: string
@@ -181,53 +182,55 @@ const EditConnection = (props: editConnectionProps) => {
     if (isFormChanged && activeStep === 2) {
       e.preventDefault()
       setIsNextButtonClicked(true)
+      setFormErrors(emptyErrors)
       let hasErrors = false
       Object.keys(formValues).forEach((key) => {
-        const value = formValues[key]
+        const value = formValues[key].trim()
+        // Added this so that it wont perform validation on existing values
         if (value !== initialValues[key]) {
-          // Added this so that it wont perform validation on existing values
-          if (value === '') {
-            if (formValues.username === '') {
+          if (isEmpty(value)) {
+            if (isEmpty(formValues.username)) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 username: `Username cannot be empty`,
               }))
               hasErrors = true
-            } else if (formValues.MSH3 === '' && formValues.MSH4 === '') {
+            }
+            if (isEmpty(formValues.MSH3) && isEmpty(formValues.MSH4)) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 MSH3: `At least one of MSH-3 and MSH-4 must be provided`,
               }))
               hasErrors = true
-            } else if (formValues.MSH5 === '' && formValues.MSH6 === '') {
+            }
+            if (isEmpty(formValues.MSH5) && isEmpty(formValues.MSH6)) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 MSH5: `At least one of MSH-5 and MSH-6 must be provided`,
               }))
               hasErrors = true
             }
-          } else if (value !== '') {
+          } else if (!isEmpty(value)) {
             if (!validationRules[key].test(value)) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 [key]: `${errorMessages[key]}`,
               }))
               hasErrors = true
-            } else if (uuidValidate(formValues.newPassword)) {
+            } else if (uuidValidate(formValues.newPassword.trim())) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 newPassword: `Password can not be in the form of UUID`,
               }))
               hasErrors = true
-            } else if (formValues.newPassword !== formValues.confirmPassword) {
+            } else if (formValues.newPassword.trim() !== formValues.confirmPassword.trim()) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 confirmPassword: `Both New Password and Confirm New Password should match`,
               }))
               hasErrors = true
-            } else if (
-              formValues[key] !== null &&
-              formValues.confirmPassword === formValues.facility_id
+            } else if (!isEmpty(value) &&
+              formValues.confirmPassword.trim() === formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
