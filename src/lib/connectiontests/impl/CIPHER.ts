@@ -35,11 +35,11 @@ export default class CIPHER extends ConnectionTest {
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`,
+        `utf-8`
       ),
       key: fs.readFileSync(
         path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8',
+        'utf-8'
       ),
       passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
@@ -60,7 +60,7 @@ export default class CIPHER extends ConnectionTest {
             ...cipherConnectionTestResult,
             detail: (res.socket as any).getCipher(),
             status: this.isAcceptableCipher(
-              (res.socket as any).getCipher().standardName,
+              (res.socket as any).getCipher().standardName
             )
               ? TestStatus.PASS
               : TestStatus.FAIL,

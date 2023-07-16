@@ -89,7 +89,7 @@ const timeline = (data) => (
 const ChangeHistory = (props: ChangeHistoryProps) => {
   const { data: session } = useSession()
   const { data, error, isLoading } = useSWR(
-    `/api/destinationaudit/${props.destId}`,
+    `/api/destinationaudit/${props.destId}`
   )
   if (error) return <div>failed to load</div>
   if (isLoading) return <div>loading...</div>

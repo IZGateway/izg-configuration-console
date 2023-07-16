@@ -22,11 +22,11 @@ export default class WSDL extends ConnectionTest {
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`,
+        `utf-8`
       ),
       key: fs.readFileSync(
         path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8',
+        'utf-8'
       ),
       passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
@@ -58,7 +58,7 @@ export default class WSDL extends ConnectionTest {
                     ...wsdlConnectionTestResult,
                     detail: err?.message,
                     message: TestResponseMessages.UNKNOWN_ERROR(
-                      options.hostname,
+                      options.hostname
                     ),
                     status: TestStatus.FAIL,
                   },
@@ -84,7 +84,7 @@ export default class WSDL extends ConnectionTest {
                       detail: targetNameSpace,
                       message:
                         TestResponseMessages.WSDL_NOT_SUPPORTED(
-                          targetNameSpace,
+                          targetNameSpace
                         ),
                       status: TestStatus.FAIL,
                     },
@@ -98,7 +98,7 @@ export default class WSDL extends ConnectionTest {
             {
               ...wsdlConnectionTestResult,
               message: TestResponseMessages.WSDL_NOT_ACCESSED(
-                options.hostname + options.port + options.path,
+                options.hostname + options.port + options.path
               ),
               status: TestStatus.FAIL,
             },

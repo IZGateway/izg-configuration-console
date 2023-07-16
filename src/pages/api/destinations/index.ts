@@ -4,7 +4,7 @@ import { prismacontext } from '../../../lib/prismacontext'
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse,
+  res: NextApiResponse
 ) {
   const session = await getSession({ req })
 
@@ -22,7 +22,7 @@ export default async function handler(
     }
   } else {
     throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`,
+      `The HTTP ${req.method} method is not supported at this route.`
     )
   }
 }

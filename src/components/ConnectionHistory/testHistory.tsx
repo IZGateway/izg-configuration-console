@@ -86,7 +86,7 @@ const timeline = (data) => (
 
 const TestHistory = (props: TestHistoryProps) => {
   const { data, error, isLoading } = useSWR(
-    props.destId ? `/api/statushistory/${props.destId}` : null,
+    props.destId ? `/api/statushistory/${props.destId}` : null
   )
 
   if (error) {

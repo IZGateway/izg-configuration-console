@@ -23,11 +23,11 @@ export default class TLS extends ConnectionTest {
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`,
+        `utf-8`
       ),
       key: fs.readFileSync(
         path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8',
+        'utf-8'
       ),
       passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
@@ -51,7 +51,7 @@ export default class TLS extends ConnectionTest {
               ? ''
               : TestResponseMessages.TLS_VERSION_FAIL(
                   options.hostname,
-                  (res.socket as any).getProtocol(),
+                  (res.socket as any).getProtocol()
                 ),
             status: this.isGoodTLSVersion((res.socket as any).getProtocol())
               ? TestStatus.PASS

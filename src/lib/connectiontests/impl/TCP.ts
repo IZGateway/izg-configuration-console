@@ -30,7 +30,7 @@ export default class TCP extends ConnectionTest {
               status: TestStatus.PASS,
             },
           ])
-        },
+        }
       )
 
       client.on('error', (error: any) => {
@@ -41,7 +41,7 @@ export default class TCP extends ConnectionTest {
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
                 ? TestResponseMessages.TCP_TIMEOUT(
-                    this.connectionTestRequest.ip,
+                    this.connectionTestRequest.ip
                   )
                 : TestResponseMessages.TCP_REJECT(this.connectionTestRequest.ip)
               : '',

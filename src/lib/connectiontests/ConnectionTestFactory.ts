@@ -11,7 +11,7 @@ import QBP from './impl/QBP'
 export default class ConnectionTestFactory {
   static getConnectionTest(
     testName: string,
-    connectionTestRequest: ConnectionTestRequest,
+    connectionTestRequest: ConnectionTestRequest
   ): Testable {
     if (testName === 'dns') {
       return new DNS(connectionTestRequest)

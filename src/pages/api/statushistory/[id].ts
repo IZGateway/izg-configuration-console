@@ -4,7 +4,7 @@ import { prismacontext } from '../../../lib/prismacontext'
 
 export default async function handle(
   req: NextApiRequest,
-  res: NextApiResponse,
+  res: NextApiResponse
 ) {
   const MAX_STATUS_HISTORY_RETURNED =
     parseInt(process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 20
@@ -24,7 +24,7 @@ export default async function handle(
     }
   } else {
     throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`,
+      `The HTTP ${req.method} method is not supported at this route.`
     )
   }
 }

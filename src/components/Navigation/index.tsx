@@ -83,7 +83,7 @@ const MiniDrawer = () => {
 
   const handleListItemClick = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    index: number,
+    index: number
   ) => {
     setSelectedIndex(index)
   }

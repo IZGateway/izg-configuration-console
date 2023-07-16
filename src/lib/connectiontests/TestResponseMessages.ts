@@ -13,7 +13,7 @@ export class TestResponseMessages {
 
   public static readonly TLS_VERSION_FAIL = (
     url: string,
-    protocolVersion: string,
+    protocolVersion: string
   ) =>
     `IZ Gateway requires TLS 1.2 or 1.3. The endpoint at ${url} connected using ${protocolVersion} which is insecure.`
 
@@ -34,7 +34,7 @@ export class TestResponseMessages {
 
   public static readonly CONNECTIVITY_WARNING = (
     testEchoback: string,
-    responseEchoback: string,
+    responseEchoback: string
   ) => `IZ Gateway expected ${testEchoback} but got back ${responseEchoback}.`
 
   public static readonly SERVER_ERROR = `We cannot connect right now. Please try again later`

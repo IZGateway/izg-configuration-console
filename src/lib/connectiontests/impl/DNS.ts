@@ -27,13 +27,13 @@ export default class DNS extends ConnectionTest {
               detail: error?.message || address,
               message: error
                 ? TestResponseMessages.DNS_LOOKUP_FAIL(
-                    this.connectionTestRequest.hostname,
+                    this.connectionTestRequest.hostname
                   )
                 : '',
               status: error ? TestStatus.FAIL : TestStatus.PASS,
             },
           ])
-        },
+        }
       )
     })
   }

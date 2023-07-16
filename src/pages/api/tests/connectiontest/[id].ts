@@ -9,7 +9,7 @@ import { prismacontext } from '../../../../lib/prismacontext'
 
 export default async function handler(
   request: NextApiRequest,
-  response: NextApiResponse<APIResponse>,
+  response: NextApiResponse<APIResponse>
 ) {
   const DEFAULT_PORT = 443
   const {
@@ -89,7 +89,7 @@ export default async function handler(
       ' USING URL: ' +
       connectionTestRequest.hostname +
       ' ON PORT: ' +
-      connectionTestRequest.port,
+      connectionTestRequest.port
   )
 
   let testCounter = 0
@@ -99,7 +99,7 @@ export default async function handler(
     connectionTestRequest.order = ++testCounter
     const T = ConnectionTestFactory.getConnectionTest(
       test,
-      connectionTestRequest,
+      connectionTestRequest
     )
     const result = await T.run()
     testResults.push(...result)

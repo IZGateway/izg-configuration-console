@@ -1,6 +1,5 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import '@testing-library/jest-dom'
 import Status from './index'
 
 describe('Status of a connection', () => {
@@ -11,7 +10,7 @@ describe('Status of a connection', () => {
           status: 'Connected',
         }}
         color={true}
-      />,
+      />
     )
     expect(screen.getByText('Connected')).toBeInTheDocument()
   })
@@ -23,7 +22,7 @@ describe('Status of a connection', () => {
           status: '',
         }}
         color={true}
-      />,
+      />
     )
     expect(screen.getByText('Not Connected')).toBeInTheDocument()
   })
@@ -35,7 +34,7 @@ describe('Status of a connection', () => {
           status: 'XYZ',
         }}
         color={true}
-      />,
+      />
     )
     expect(screen.getByText('Not Connected')).toBeInTheDocument()
   })

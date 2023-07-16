@@ -48,11 +48,11 @@ export default class CONNECTIVITY extends ConnectionTest {
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`,
+        `utf-8`
       ),
       key: fs.readFileSync(
         path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8',
+        'utf-8'
       ),
       passphrase: this.connectionTestRequest.passphrase,
       rejectUnauthorized: false,
@@ -114,7 +114,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                   detail: responseEchoback,
                   message: TestResponseMessages.CONNECTIVITY_WARNING(
                     requestEchoback,
-                    responseEchoback,
+                    responseEchoback
                   ),
                   status: TestStatus.WARNING,
                 },
@@ -166,7 +166,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       method: string
       agent: https.Agent
       headers: { Host: string; 'Content-Type': string }
-    },
+    }
   ): ConnectionTestResult {
     return {
       ...connectivityTestResult,
