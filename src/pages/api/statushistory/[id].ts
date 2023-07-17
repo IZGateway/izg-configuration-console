@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from 'next-auth/react'
 import { prismacontext } from '../../../lib/prismacontext'
 
 export default async function handle(

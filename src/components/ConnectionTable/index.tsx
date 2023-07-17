@@ -255,7 +255,7 @@ const ConnectionsTable = () => {
         rows={data.map((x: any) => {
           return {
             ...x,
-            dest_type: x.dest_type.type,
+            dest_type: x.destination_type.type,
             jurisdiction: x.jurisdiction?.description || 'N/A',
           }
         })}

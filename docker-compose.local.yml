@@ -7,7 +7,6 @@ services:
     ports:
       - 80:80
   config-console:
-    container_name: config-console
     build:
       context: ./
       dockerfile: Dockerfile
@@ -26,6 +25,7 @@ services:
       - OKTA_CLIENT_ID=<the client ID from Okta>
       - OKTA_ISSUER=<URL to call to initiate login>
       - OKTA_CLIENT_SECRET=<client secret from Okta>
+      - NEXTAUTH_DEBUG=false
     volumes:
       - c:/cert/directory/path/on/your/local/system:/usr/src/app/certs
   mysql:
