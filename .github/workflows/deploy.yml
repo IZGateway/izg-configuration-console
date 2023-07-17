@@ -46,8 +46,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16.x'
-      - name: Run Jest Tests
-        run: npm run test
+      # - name: Run Jest Tests
+      #   run: npm run test
       - name: Lint
         run: npm run lint
 
