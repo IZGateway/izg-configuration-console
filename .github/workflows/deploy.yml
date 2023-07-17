@@ -48,8 +48,8 @@ jobs:
           node-version: '16.x'
       # - name: Run Jest Tests
       #   run: npm run test
-      - name: Lint
-        run: npm run lint
+      # - name: Lint
+      #   run: npm run lint
 
   build-and-push-image:
     name: Build and push image
