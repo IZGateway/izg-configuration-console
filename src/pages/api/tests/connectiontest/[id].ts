@@ -6,116 +6,132 @@ import { ConnectionTestResult } from '../../../../lib/connectiontests/types/Conn
 import ConnectionTestFactory from '../../../../lib/connectiontests/ConnectionTestFactory'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
 import { prismacontext } from '../../../../lib/prismacontext'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../../auth/[...nextauth]'
+import hasAccessToDestId from '../../../../lib/accesshelper'
 
 export default async function handler(
-  request: NextApiRequest,
-  response: NextApiResponse<APIResponse>
+  req: NextApiRequest,
+  res: NextApiResponse<APIResponse>
 ) {
-  const DEFAULT_PORT = 443
-  const {
-    query: { id },
-  } = request
-  const testSuite: string[] = [
-    'dns',
-    'tcp',
-    'tls',
-    'cipher',
-    'wsdl',
-    'connectivity',
-    'qbp',
-  ]
-  const testResults: ConnectionTestResult[] = []
-  const destination = await lookupDestination(id?.toString())
-  const jurisdiction = await lookupJurisdiction(id?.toString())
+  const destId = req.query.id.toString()
+  const session = await getServerSession(req, res, authOptions)
 
-  if (!destination) {
-    response.status(constants.HTTP_STATUS_NOT_FOUND).json({
-      destId: id,
-      destUrl: 'unknown',
-      destType: '',
-      jurisdictionDescription: '',
-      testResults: [
-        {
-          name: '',
-          detail:
-            'No tests were run because the requested destination was not found.',
-          status: null,
-          order: -1,
-          message: `The requested destination ${id} was not found in our records.`,
-        },
-      ],
-    })
-  }
-  if (destination && !isValidUrl(destination.dest_uri)) {
-    response.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
-      destId: id as string,
-      destUrl: destination.dest_uri,
-      destType: destination.destination_type.type,
-      jurisdictionDescription: jurisdiction?.description,
-      testResults: [
-        {
-          name: '',
-          detail:
-            "No tests were run because the requested destination's URL is malformed.",
-          status: null,
-          order: -1,
-          message: `The URL retrieved for ${id} is malformed`,
-        },
-      ],
-    })
-  }
+  if (hasAccessToDestId(destId, session)) {
+    if (req.method === 'GET') {
+      const DEFAULT_PORT = 443
+      const testSuite: string[] = [
+        'dns',
+        'tcp',
+        'tls',
+        'cipher',
+        'wsdl',
+        'connectivity',
+        'qbp',
+      ]
+      const testResults: ConnectionTestResult[] = []
+      const destination = await lookupDestination(destId?.toString())
+      const jurisdiction = await lookupJurisdiction(destId?.toString())
 
-  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
-  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
-  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
+      if (!destination) {
+        res.status(constants.HTTP_STATUS_NOT_FOUND).json({
+          destId: destId,
+          destUrl: 'unknown',
+          destType: '',
+          jurisdictionDescription: '',
+          testResults: [
+            {
+              name: '',
+              detail:
+                'No tests were run because the requested destination was not found.',
+              status: null,
+              order: -1,
+              message: `The requested destination ${destId} was not found in our records.`,
+            },
+          ],
+        })
+      }
+      if (destination && !isValidUrl(destination.dest_uri)) {
+        res.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
+          destId: destId as string,
+          destUrl: destination.dest_uri,
+          destType: destination.destination_type.type,
+          jurisdictionDescription: jurisdiction?.description,
+          testResults: [
+            {
+              name: '',
+              detail:
+                "No tests were run because the requested destination's URL is malformed.",
+              status: null,
+              order: -1,
+              message: `The URL retrieved for ${destId} is malformed`,
+            },
+          ],
+        })
+      }
 
-  const destIdURL = convertUrlStringToUrlObject(destination?.dest_uri)
+      const IZG_ENDPOINT_CRT_PATH =
+        process.env.IZG_ENDPOINT_CRT_PATH || undefined
+      const IZG_ENDPOINT_KEY_PATH =
+        process.env.IZG_ENDPOINT_KEY_PATH || undefined
+      const IZG_ENDPOINT_PASSCODE =
+        process.env.IZG_ENDPOINT_PASSCODE || undefined
 
-  const connectionTestRequest: ConnectionTestRequest = {
-    ip: '',
-    port: +destIdURL.port || DEFAULT_PORT,
-    hostname: destIdURL.hostname,
-    path: destIdURL.pathname,
-    id: id as string,
-    order: 0,
-    certPath: IZG_ENDPOINT_CRT_PATH,
-    keyPath: IZG_ENDPOINT_KEY_PATH,
-    passphrase: IZG_ENDPOINT_PASSCODE,
-  }
+      const destIdURL = convertUrlStringToUrlObject(destination?.dest_uri)
 
-  console.info(
-    'STARTING TESTS ON DEST ID: ' +
-      id +
-      ' USING URL: ' +
-      connectionTestRequest.hostname +
-      ' ON PORT: ' +
-      connectionTestRequest.port
-  )
+      const connectionTestRequest: ConnectionTestRequest = {
+        ip: '',
+        port: +destIdURL.port || DEFAULT_PORT,
+        hostname: destIdURL.hostname,
+        path: destIdURL.pathname,
+        id: destId as string,
+        order: 0,
+        certPath: IZG_ENDPOINT_CRT_PATH,
+        keyPath: IZG_ENDPOINT_KEY_PATH,
+        passphrase: IZG_ENDPOINT_PASSCODE,
+      }
 
-  let testCounter = 0
-  // eslint-disable-next-line no-loops/no-loops
-  for (const test of testSuite) {
-    console.info('running test: ' + test)
-    connectionTestRequest.order = ++testCounter
-    const T = ConnectionTestFactory.getConnectionTest(
-      test,
-      connectionTestRequest
-    )
-    const result = await T.run()
-    testResults.push(...result)
-    if (test === 'dns') {
-      console.info('Resolved IP address is: ' + result[0]?.detail)
-      connectionTestRequest.ip = result[0]?.detail
+      console.info(
+        'STARTING TESTS ON DEST ID: ' +
+          destId +
+          ' USING URL: ' +
+          connectionTestRequest.hostname +
+          ' ON PORT: ' +
+          connectionTestRequest.port
+      )
+
+      let testCounter = 0
+      // eslint-disable-next-line no-loops/no-loops
+      for (const test of testSuite) {
+        console.info('running test: ' + test)
+        connectionTestRequest.order = ++testCounter
+        const T = ConnectionTestFactory.getConnectionTest(
+          test,
+          connectionTestRequest
+        )
+        const result = await T.run()
+        testResults.push(...result)
+        if (test === 'dns') {
+          console.info('Resolved IP address is: ' + result[0]?.detail)
+          connectionTestRequest.ip = result[0]?.detail
+        }
+      }
+
+      res.status(200).json({
+        destId: destId || 'unknown',
+        destUrl: destIdURL.hostname || 'unknown',
+        destType: destination?.destination_type.type || 'unknown',
+        jurisdictionDescription: jurisdiction?.description || 'unknown',
+        testResults,
+      })
+    } else {
+      throw new Error(
+        `The HTTP ${req.method} method is not supported at this route.`
+      )
     }
+  } else {
+    res.status(401)
   }
-
-  response.status(200).json({
-    destId: id || 'unknown',
-    destUrl: destIdURL.hostname || 'unknown',
-    destType: destination?.destination_type.type || 'unknown',
-    jurisdictionDescription: jurisdiction?.description || 'unknown',
-    testResults,
-  })
 }
 
 async function lookupDestination(destId: string) {
