@@ -8,17 +8,11 @@ export default async function handle(
 ) {
   const destId = req.query.id.toString()
 
-  const session = await getSession({ req })
-
   if (req.method === 'GET') {
-    if (session) {
-      const post = await prismacontext.prisma.jurisdiction.findFirst({
-        where: { dest_id: destId },
-      })
-      res.json(post)
-    } else {
-      res.status(401).send({ message: 'Unauthorized' })
-    }
+    const post = await prismacontext.prisma.jurisdiction.findFirst({
+      where: { dest_id: destId },
+    })
+    res.json(post)
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`

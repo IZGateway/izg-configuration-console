@@ -38,20 +38,16 @@ export default class QBP extends ConnectionTest {
         requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
       <soap:Body>
       <ns3:submitSingleMessage xmlns:ns3="urn:cdc:iisb:2011">
-      <ns3:username>${destination.data?.destinationById.username}</ns3:username>
-      <ns3:password>${destination.data?.destinationById.password}</ns3:password>
-      <ns3:facilityID>${
-        destination.data?.destinationById.facility_id
-      }</ns3:facilityID>
-      <ns3:hl7Message>MSH|^~\&amp;|${destination.data?.destinationById.MSH3}|${
-          destination.data?.destinationById.MSH4
-        }|${destination.data?.destinationById.MSH5}|${
-          destination.data?.destinationById.MSH6
-        }|${
+      <ns3:username>${destination?.username}</ns3:username>
+      <ns3:password>${destination?.password}</ns3:password>
+      <ns3:facilityID>${destination?.facility_id}</ns3:facilityID>
+      <ns3:hl7Message>MSH|^~\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
+          destination?.MSH5
+        }|${destination?.MSH6}|${
           moment().format('YYYYMMDDHHmmss').concat('.000') +
           date.getTimezoneOffset()
         }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
-          destination.data?.destinationById.MSH22
+          destination?.MSH22
         }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</ns3:hl7Message>
       </ns3:submitSingleMessage>
       </soap:Body>
@@ -64,24 +60,16 @@ export default class QBP extends ConnectionTest {
         </soap:Header>
         <soap:Body>
           <urn1:SubmitSingleMessageRequest>
-          <urn1:Username>${
-            destination.data?.destinationById.username
-          }</urn1:Username>
-      <urn1:Password>${
-        destination.data?.destinationById.password
-      }</urn1:Password>
-            <urn1:FacilityID>${
-              destination.data?.destinationById.facility_id
-            }</urn1:FacilityID>
-            <urn1:Hl7Message>MSH|^~\&amp;|${
-              destination.data?.destinationById.MSH3
-            }|${destination.data?.destinationById.MSH4}|${
-          destination.data?.destinationById.MSH5
-        }|${destination.data?.destinationById.MSH6}|${
+          <urn1:Username>${destination?.username}</urn1:Username>
+      <urn1:Password>${destination?.password}</urn1:Password>
+            <urn1:FacilityID>${destination?.facility_id}</urn1:FacilityID>
+            <urn1:Hl7Message>MSH|^~\&amp;|${destination?.MSH3}|${
+          destination?.MSH4
+        }|${destination?.MSH5}|${destination?.MSH6}|${
           moment().format('YYYYMMDDHHmmss').concat('.000') +
           date.getTimezoneOffset()
         }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
-          destination.data?.destinationById.MSH22
+          destination?.MSH22
         }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</urn1:Hl7Message>
             </urn1:SubmitSingleMessageRequest>
         </soap:Body>
@@ -135,7 +123,7 @@ export default class QBP extends ConnectionTest {
     }
 
     const isHl7MessagePresent = (message) => {
-      if (destination.data?.destinationById.dest_version === '2011') {
+      if (destination?.dest_version === '2011') {
         if (message.hasOwnProperty('ns3:return')) {
           hl7Message = message['ns3:return']
           return true
@@ -175,7 +163,7 @@ export default class QBP extends ConnectionTest {
                 console.log('An error has occurred: ' + err)
                 return
               }
-              if (destination.data?.destinationById.dest_version === '2011') {
+              if (destination?.dest_version === '2011') {
                 responseMessage =
                   result['soap:Envelope']['soap:Body'][0][
                     'ns3:submitSingleMessageResponse'
@@ -304,7 +292,7 @@ export default class QBP extends ConnectionTest {
           },
         ])
       })
-      req.write(setRequestBody(destination.data?.destinationById.dest_version))
+      req.write(setRequestBody(destination?.dest_version))
       req.end()
     })
   }

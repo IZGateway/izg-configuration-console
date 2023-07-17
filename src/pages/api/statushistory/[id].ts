@@ -9,19 +9,14 @@ export default async function handle(
   const MAX_STATUS_HISTORY_RETURNED =
     parseInt(process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 20
   const destId = req.query.id.toString()
-  const session = await getSession({ req })
 
   if (req.method === 'GET') {
-    if (session) {
-      const post = await prismacontext.prisma.endpointstatus.findMany({
-        take: MAX_STATUS_HISTORY_RETURNED,
-        where: { dest_id: destId },
-        orderBy: { ran_at: 'desc' },
-      })
-      res.json(post)
-    } else {
-      res.status(401).send({ message: 'Unauthorized' })
-    }
+    const post = await prismacontext.prisma.endpointstatus.findMany({
+      take: MAX_STATUS_HISTORY_RETURNED,
+      where: { dest_id: destId },
+      orderBy: { ran_at: 'desc' },
+    })
+    res.json(post)
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`

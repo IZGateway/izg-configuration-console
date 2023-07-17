@@ -11,7 +11,6 @@ interface statusProps {
 }
 
 const Status = (props: statusProps) => {
-  const status = props.status === null ? 'N/A' : props.status
   if (props.color) {
     return (
       <Typography
@@ -20,7 +19,7 @@ const Status = (props: statusProps) => {
         sx={{ color: '#757575' }}
         component="div"
       >
-        {status === 'N/A' || status !== 'Connected' ? (
+        {!props.status ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography component="div">Not Connected</Typography>
             <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -36,7 +35,7 @@ const Status = (props: statusProps) => {
   } else {
     return (
       <Typography gutterBottom variant="body1" component="div">
-        {status === 'N/A' || status !== 'Connected' ? (
+        {!props.status ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography>Not Connected</Typography>
             <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
