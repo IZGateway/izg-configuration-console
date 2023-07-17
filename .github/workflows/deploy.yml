@@ -117,4 +117,4 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' ||  github.event.inputs.deploy-to-staging == 'true' }}
     steps:
       - name: Deploy to Dev AWS
-        run: aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console-api --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
+        run: aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console-ui --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
