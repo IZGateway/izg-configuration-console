@@ -5,10 +5,11 @@ import { ConnectionTestRequest } from '../../../../lib/connectiontests/types/Con
 import { ConnectionTestResult } from '../../../../lib/connectiontests/types/ConnectionTestResult'
 import ConnectionTestFactory from '../../../../lib/connectiontests/ConnectionTestFactory'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
-import { prismacontext } from '../../../../lib/prismacontext'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import hasAccessToDestId from '../../../../lib/accesshelper'
+import destination from '../../../../lib/queries/fetch/destination'
+import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,10 +31,10 @@ export default async function handler(
         'qbp',
       ]
       const testResults: ConnectionTestResult[] = []
-      const destination = await lookupDestination(destId?.toString())
-      const jurisdiction = await lookupJurisdiction(destId?.toString())
+      const fetchedDestination = await destination(destId?.toString())
+      const fetchedJurisdiction = await jurisdiction(destId?.toString())
 
-      if (!destination) {
+      if (!fetchedDestination) {
         res.status(constants.HTTP_STATUS_NOT_FOUND).json({
           destId: destId,
           destUrl: 'unknown',
@@ -51,12 +52,12 @@ export default async function handler(
           ],
         })
       }
-      if (destination && !isValidUrl(destination.dest_uri)) {
+      if (fetchedDestination && !isValidUrl(fetchedDestination.dest_uri)) {
         res.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
           destId: destId as string,
-          destUrl: destination.dest_uri,
-          destType: destination.destination_type.type,
-          jurisdictionDescription: jurisdiction?.description,
+          destUrl: fetchedDestination.dest_uri,
+          destType: fetchedDestination.destination_type.type,
+          jurisdictionDescription: fetchedJurisdiction?.description,
           testResults: [
             {
               name: '',
@@ -77,7 +78,9 @@ export default async function handler(
       const IZG_ENDPOINT_PASSCODE =
         process.env.IZG_ENDPOINT_PASSCODE || undefined
 
-      const destIdURL = convertUrlStringToUrlObject(destination?.dest_uri)
+      const destIdURL = convertUrlStringToUrlObject(
+        fetchedDestination?.dest_uri
+      )
 
       const connectionTestRequest: ConnectionTestRequest = {
         ip: '',
@@ -120,8 +123,8 @@ export default async function handler(
       res.status(200).json({
         destId: destId || 'unknown',
         destUrl: destIdURL.hostname || 'unknown',
-        destType: destination?.destination_type.type || 'unknown',
-        jurisdictionDescription: jurisdiction?.description || 'unknown',
+        destType: fetchedDestination?.destination_type.type || 'unknown',
+        jurisdictionDescription: fetchedJurisdiction?.description || 'unknown',
         testResults,
       })
     } else {
@@ -132,19 +135,6 @@ export default async function handler(
   } else {
     res.status(401)
   }
-}
-
-async function lookupDestination(destId: string) {
-  return await prismacontext.prisma.destinations.findUnique({
-    include: { destination_type: true },
-    where: { dest_id: destId.toString() },
-  })
-}
-
-async function lookupJurisdiction(destId: string) {
-  return await prismacontext.prisma.jurisdiction.findFirst({
-    where: { dest_id: destId.toString() },
-  })
 }
 
 const convertUrlStringToUrlObject = (urlString: string) => {

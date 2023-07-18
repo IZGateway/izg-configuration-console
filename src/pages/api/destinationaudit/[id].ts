@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { prismacontext } from '../../../lib/prismacontext'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
+import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,18 +13,8 @@ export default async function handler(
 
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const auditHistory = await prismacontext.prisma.audit_history.findMany({
-        where: {
-          tableName: 'destinations',
-          // userName: _args.user,
-          oldValues: {
-            path: '$.dest_id',
-            equals: destId,
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      })
-      res.json(auditHistory)
+      const result = await destinationaudithistory(destId)
+      res.json(result)
     } else {
       throw new Error(
         `The HTTP ${req.method} method is not supported at this route.`
