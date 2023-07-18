@@ -6,28 +6,6 @@ services:
       dockerfile: ./nginx/Dockerfile
     ports:
       - 80:80
-  config-console:
-    build:
-      context: ./
-      dockerfile: Dockerfile
-    environment:
-      - IZG_ENDPOINT_CERT_DIR_PATH=/certs
-      - DATABASE_PROVIDER=mysql
-      - DATABASE_URL=<CONNECTION PATH>
-      - IZG_STATUS_UPDATE_POLL_RATE=300000
-      - IZG_MAX_STATUS_HISTORY_RETURNED=20
-      - IZG_STATUS_ENDPOINT_URL=<status endpoint to call>
-      - IZG_ENDPOINT_CRT_PATH=/usr/src/app/certs/<your cert>.crt
-      - IZG_ENDPOINT_KEY_PATH=/usr/src/app/certs/<your key>.key
-      - IZG_ENDPOINT_PASSCODE=<your pass>
-      - NEXTAUTH_URL=http://localhost/
-      - NEXTAUTH_SECRET=<next auth secret you created>
-      - OKTA_CLIENT_ID=<the client ID from Okta>
-      - OKTA_ISSUER=<URL to call to initiate login>
-      - OKTA_CLIENT_SECRET=<client secret from Okta>
-      - NEXTAUTH_DEBUG=false
-    volumes:
-      - c:/cert/directory/path/on/your/local/system:/usr/src/app/certs
   mysql:
     build: ./database
     ports:
