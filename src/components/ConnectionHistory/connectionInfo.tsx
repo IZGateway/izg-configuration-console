@@ -82,8 +82,8 @@ const ConnectionInfo = (props) => {
                   ENDPOINT URL
                 </Typography>
                 <Typography>
-                  <Link href={destData.dest_uri.toString()} target="_blank">
-                    {destData.dest_uri.toString()}
+                  <Link href={destData?.dest_uri.toString()} target="_blank">
+                    {destData?.dest_uri.toString()}
                   </Link>
                 </Typography>
               </Box>
@@ -101,7 +101,7 @@ const ConnectionInfo = (props) => {
                 <Typography variant="subtitle1" component="div">
                   STATUS
                 </Typography>
-                <Status status={destData.status} color={false} />
+                <Status status={destData?.status} color={false} />
               </Box>
             </Box>
           </Box>
