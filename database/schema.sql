@@ -9,50 +9,8 @@ commit;
 USE phiz;
 
 commit;
---
--- DROP TABLE destinations if exists;
---
-DROP TABLE IF EXISTS destinations;
 
---
--- CREATE TABLE destinations;
---
-
--- destinations stores the information needed to make SOAP Requests to an IIS
-CREATE TABLE destinations (
-	-- The destination id, usually the FIPS STATE Code, but may also have a value for other jurisdictions (e.g., Philadelphia, New York City)
-    dest_id character varying(128) NOT NULL,
-    -- The endpoint URI for SOAP calls to the jurisdiction
-    dest_uri character varying(1024) NOT NULL,
-    -- The username for IZGateway for this destination
-    username character varying(50),
-    -- The password for IZGateway for this destination
-    password character varying(50),
-    -- The WSDL Version to use for this destination
-    facility_id character varying(50),
-    -- The facility Id to use for this destination
-    MSH3 character varying(50),
-    -- The MSH-3 for this destination
-    MSH4 character varying(50),
-    -- The MSH-4 for this destination
-    MSH5 character varying(50),
-    -- The MSH-5 for this destination
-    MSH6 character varying(50),
-    -- The MSH-6 for this destination
-    MSH22 character varying(50),
-    -- The MSH-22 for this destination
-    RXA11 character varying(50),
-    -- The RXA-11 for this destination
-    dest_version character varying(50),
-    -- True if the MOU with the IIS has been signed between APHL and the destination jurisdiction
-    signed_mou boolean DEFAULT false NOT NULL,
-    -- Password expiry date
-    pass_expiry date,
-    -- Destination type 
-    dest_type int NOT NULL,
-    PRIMARY KEY (dest_id),
-    KEY `FK_DEST_TYPE_idx` (dest_type)
-);
+SET FOREIGN_KEY_CHECKS = 0;
 
 --
 -- DROP TABLE destination_type if exists;
@@ -70,21 +28,99 @@ CREATE TABLE destination_type (
 );
 
 --
+-- DROP TABLE destinations if exists;
+--
+DROP TABLE IF EXISTS destinations;
+
+--
+-- CREATE TABLE destinations;
+--
+
+-- destinations stores the information needed to make SOAP Requests to an IIS
+-- CREATE TABLE destinations (
+-- 	-- The destination id, usually the FIPS STATE Code, but may also have a value for other jurisdictions (e.g., Philadelphia, New York City)
+--     dest_id character varying(128) NOT NULL,
+--     -- The endpoint URI for SOAP calls to the jurisdiction
+--     dest_uri character varying(1024) NOT NULL,
+--     -- The username for IZGateway for this destination
+--     username character varying(50),
+--     -- The password for IZGateway for this destination
+--     password character varying(50),
+--     -- The WSDL Version to use for this destination
+--     facility_id character varying(50),
+--     -- The facility Id to use for this destination
+--     MSH3 character varying(50),
+--     -- The MSH-3 for this destination
+--     MSH4 character varying(50),
+--     -- The MSH-4 for this destination
+--     MSH5 character varying(50),
+--     -- The MSH-5 for this destination
+--     MSH6 character varying(50),
+--     -- The MSH-6 for this destination
+--     MSH22 character varying(50),
+--     -- The MSH-22 for this destination
+--     RXA11 character varying(50),
+--     -- The RXA-11 for this destination
+--     dest_version character varying(50),
+--     -- True if the MOU with the IIS has been signed between APHL and the destination jurisdiction
+--     signed_mou boolean DEFAULT false NOT NULL,
+--     -- Password expiry date
+--     pass_expiry date,
+--     -- Destination type 
+--     dest_type int NOT NULL,
+--     PRIMARY KEY (dest_id),
+--     KEY `FK_DEST_TYPE_idx` (dest_type)
+-- );
+
+CREATE TABLE `destinations` (
+  `dest_id` varchar(128) NOT NULL,
+  `dest_uri` varchar(1024) NOT NULL,
+  `username` varchar(50) DEFAULT NULL,
+  `password` varchar(50) DEFAULT NULL,
+  `facility_id` varchar(50) DEFAULT NULL,
+  `MSH3` varchar(50) DEFAULT NULL,
+  `MSH4` varchar(50) DEFAULT NULL,
+  `MSH5` varchar(50) DEFAULT NULL,
+  `MSH6` varchar(50) DEFAULT NULL,
+  `MSH22` varchar(50) DEFAULT NULL,
+  `RXA11` varchar(50) DEFAULT NULL,
+  `dest_version` varchar(50) DEFAULT NULL,
+  `signed_mou` tinyint(1) NOT NULL DEFAULT '0',
+  `pass_expiry` date DEFAULT NULL,
+  `dest_type` int(11) NOT NULL,
+  PRIMARY KEY (`dest_id`),
+  KEY `FK_DEST_TYPE_idx` (`dest_type`),
+  CONSTRAINT `FK_DEST_TYPE` FOREIGN KEY (`dest_type`) REFERENCES `destination_type` (`type_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+);
+
+--
 -- DROP TABLE endpointstatus if exists;
 --
 DROP TABLE IF EXISTS endpointstatus;
 --
 -- CREATE TABLE endpointstatus;
 --
-CREATE TABLE endpointstatus (
-  id int NOT NULL AUTO_INCREMENT,
-  status character varying(45) DEFAULT NULL,
-  detail character varying(500) DEFAULT NULL,
-  retry_strategy character varying(500) DEFAULT NULL,
-  diagnostics character varying(500) DEFAULT NULL,
-  dest_id character varying(128) DEFAULT NULL,
-  ran_at datetime NOT NULL,
-  PRIMARY KEY (id)
+-- CREATE TABLE endpointstatus (
+--   id int NOT NULL AUTO_INCREMENT,
+--   status character varying(45) DEFAULT NULL,
+--   detail character varying(500) DEFAULT NULL,
+--   retry_strategy character varying(500) DEFAULT NULL,
+--   diagnostics character varying(500) DEFAULT NULL,
+--   dest_id character varying(128) DEFAULT NULL,
+--   ran_at datetime NOT NULL,
+--   PRIMARY KEY (id)
+-- );
+CREATE TABLE `endpointstatus` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `status` varchar(45) DEFAULT NULL,
+  `detail` varchar(500) DEFAULT NULL,
+  `retry_strategy` varchar(500) DEFAULT NULL,
+  `diagnostics` varchar(500) DEFAULT NULL,
+  `dest_id` varchar(128) DEFAULT NULL,
+  `ran_at` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `FK_DEST_ID_idx` (`dest_id`),
+  CONSTRAINT `FK_DEST_ID` FOREIGN KEY (`dest_id`) REFERENCES `destinations` (`dest_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
 
 --
@@ -94,12 +130,20 @@ DROP TABLE IF EXISTS jurisdiction;
 --
 -- CREATE TABLE jurisdiction;
 --
-CREATE TABLE jurisdiction (
-  name character varying(64) NOT NULL,
-  description character varying(48) NOT NULL,
-  dest_id character varying(128) DEFAULT NULL,
-  PRIMARY KEY (name)
-);
+-- CREATE TABLE jurisdiction (
+--   name character varying(64) NOT NULL,
+--   description character varying(48) NOT NULL,
+--   dest_id character varying(128) DEFAULT NULL,
+--   PRIMARY KEY (name)
+-- );
+CREATE TABLE `jurisdiction` (
+  `name` varchar(64) NOT NULL,
+  `description` varchar(48) NOT NULL,
+  `dest_id` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`name`),
+  KEY `FK_JURISDICTION_DEST_ID_idx` (`dest_id`),
+  CONSTRAINT `FK_JURISDICTION_DEST_ID` FOREIGN KEY (`dest_id`) REFERENCES `destinations` (`dest_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ;
 
 --
 -- DROP TABLE messageheaderinfo if exists;
@@ -173,6 +217,16 @@ CREATE TRIGGER pass_expiry_update
     END$$
 
 DELIMITER ;
+
+--
+-- TRUNCATE DATA FROM TABLE destination_type
+--
+TRUNCATE destination_type;
+
+--
+-- INSERT INTO TABLE destination_type;
+--
+INSERT INTO `destination_type` VALUES (1,'PRODUCTION'),(2,'TEST');
 
 --
 -- TRUNCATE DATA FROM TABLE destinations;
@@ -326,13 +380,3 @@ INSERT INTO jurisdiction VALUES
                              ('WI WIR','Wisconsin','wi'),
                              ('WV WVSIIS','West Virginia','wv'),
                              ('WY WyIR','Wyoming','wy');
-
---
--- TRUNCATE DATA FROM TABLE destination_type
---
-TRUNCATE destination_type;
-
---
--- INSERT INTO TABLE destination_type;
---
-INSERT INTO `destination_type` VALUES (1,'PRODUCTION'),(2,'TEST');

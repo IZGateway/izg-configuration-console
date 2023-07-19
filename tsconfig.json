@@ -1,15 +1,25 @@
 {
-    "compilerOptions": {
-      "noImplicitThis": true,
-      "noUnusedLocals": true,
-    },
-    "exclude": ["node_modules", "dist", "*.d.ts", "build", ".next"],
-    "references": [
-      {
-        "path": "./packages/ui"
-      },
-      {
-        "path": "./packages/api"
-      }
-    ]
-  }
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve"
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "./jest-setup.ts"],
+  "exclude": [
+    "node_modules",
+    "./cypress.config.ts",
+    "cypress",
+    "**/*.cy.tsx",
+    ".next"
+  ]
+}

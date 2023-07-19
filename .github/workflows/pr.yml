@@ -1,16 +1,9 @@
 ---
-name: Test, Build and Publish API and UI Images
+name: Config Console PR Code Quality Flow
 
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-
-env:
-  GITHUB_REGISTRY_PREFIX: ghcr.io
-  GITHUB_REGISTRY_NAME: izgateway
-  API_IMAGE_NAME: ${{ github.repository }}-api
-  UI_IMAGE_NAME: ${{ github.repository }}-ui
-  BUILD_ID: ${{github.run_number}}
 
 jobs:
   code-quality-check:
@@ -23,13 +16,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16.x'
-      - name: 📥 Monorepo install
-        uses: ./.github/actions/yarn-nm-install
-        with:
-          cache-node-modules: true
       - name: Run UI Jest Tests
-        run: yarn workspace @monorepo/ui test
-      #   - name: Run API Jest Tests
-      #     run: yarn workspace @monorepo/api test
-      - name: Lint UI and API
-        run: yarn lint
+        run: npm run test
+      - name: Lint
+        run: npm run lint
