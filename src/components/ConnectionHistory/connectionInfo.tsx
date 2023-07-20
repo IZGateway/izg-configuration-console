@@ -29,6 +29,8 @@ const ConnectionInfo = (props) => {
   } = useSWR(`/api/jurisdictions/${props.destId}`)
   if (destError && jurisdictionError) return <div>failed to load</div>
   if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
+  if (!jurisdictionData) return <div>no jurisdiction data found</div>
+  if (!destData) return <div>no destination data found</div>
 
   const toggleDrawer = () => {
     setOpen(!open)

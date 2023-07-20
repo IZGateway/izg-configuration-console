@@ -14,7 +14,6 @@ import TimelineConnector from '@mui/lab/TimelineConnector'
 import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
-import { useSession } from 'next-auth/react'
 import useSWR from 'swr'
 
 interface ChangeHistoryProps {
@@ -87,15 +86,14 @@ const timeline = (data) => (
 )
 
 const ChangeHistory = (props: ChangeHistoryProps) => {
-  const { data: session } = useSession()
   const { data, error, isLoading } = useSWR(
     `/api/destinationaudit/${props.destId}`
   )
   if (error) return <div>failed to load</div>
   if (isLoading) return <div>loading...</div>
-  if (!session) {
-    throw new Error('Can not find session information')
-  }
+
+  if (!data) return <div>no data</div>
+
   const historyDataLength = data.auditBydestIdByUser?.length
   const defaultChangeHistoryView = data.auditBydestIdByUser?.slice(0, 5)
 
