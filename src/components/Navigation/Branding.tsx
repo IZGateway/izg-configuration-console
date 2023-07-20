@@ -15,7 +15,7 @@ const IZGLogo = () => {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
         <Avatar alt="IZ Gateway Logo" sx={{ width: 50, height: 50 }}>
-          <Image src={izgLogo} alt="izg logo" />
+          <Image src={izgLogo} alt="izg logo" width={50} />
         </Avatar>
       </Box>
       <Box

@@ -16,6 +16,7 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Box,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 
@@ -88,10 +89,6 @@ const MiniDrawer = () => {
     setSelectedIndex(index)
   }
 
-  const handleSignOut = async () => {
-    await signOut()
-  }
-
   const { data: session, status } = useSession()
 
   const list = () => (
@@ -121,7 +118,12 @@ const MiniDrawer = () => {
         }}
       >
         {menuItems.map((item: MenuItem, index) => (
-          <NextLink key={item.label} href={item.path} passHref>
+          <NextLink
+            key={item.label}
+            href={item.path}
+            style={{ textDecoration: 'none', color: 'white' }}
+            passHref
+          >
             <ListItem
               key={item.label}
               sx={{
@@ -174,7 +176,17 @@ const MiniDrawer = () => {
       </div>
       <Divider color="#00D998" />
       {list()}
-      {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
+      <Box
+        component="span"
+        sx={{
+          p: 2,
+          position: 'absolute',
+          bottom: '30px',
+        }}
+      >
+        {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
+      </Box>
+
       <Button
         variant="text"
         onClick={() => signOut({})}
