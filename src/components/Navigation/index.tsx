@@ -89,7 +89,7 @@ const MiniDrawer = () => {
   }
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: `/api/auth/logout` })
+    await signOut()
   }
 
   const { data: session, status } = useSession()
@@ -177,7 +177,7 @@ const MiniDrawer = () => {
       {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
       <Button
         variant="text"
-        onClick={handleSignOut}
+        onClick={() => signOut({})}
         sx={{
           color: '#FFFFFF',
           textDecoration: 'underline',
