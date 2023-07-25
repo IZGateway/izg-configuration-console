@@ -9,7 +9,7 @@ const TestConnection = (props) => {
   const { data, error, isLoading } = useSWR(
     props.destId ? `/api/tests/connectiontest/${props.destId}` : null
   )
-
+  console.log(data)
   if (error) {
     throw new Error(error)
   }

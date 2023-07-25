@@ -141,8 +141,7 @@ CREATE TABLE `jurisdiction` (
   `description` varchar(48) NOT NULL,
   `dest_id` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`name`),
-  KEY `FK_JURISDICTION_DEST_ID_idx` (`dest_id`),
-  CONSTRAINT `FK_JURISDICTION_DEST_ID` FOREIGN KEY (`dest_id`) REFERENCES `destinations` (`dest_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  KEY `FK_DEST_ID_idx` (`dest_id`)
 ) ;
 
 --

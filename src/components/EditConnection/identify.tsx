@@ -169,8 +169,8 @@ const Identify = (props: any) => {
                     ? 'text'
                     : 'password'
                   : showConfirmNewPassword
-                  ? 'text'
-                  : 'password'
+                    ? 'text'
+                    : 'password'
               }
               label={field.label}
               variant="outlined"
@@ -181,13 +181,13 @@ const Identify = (props: any) => {
               InputProps={
                 field.name === 'newPassword'
                   ? getPasswordInputProps(
-                      showNewPassword,
-                      toggleNewPasswordVisibility,
-                    )
+                    showNewPassword,
+                    toggleNewPasswordVisibility,
+                  )
                   : getPasswordInputProps(
-                      showConfirmNewPassword,
-                      toggleConfirmNewPasswordVisibility,
-                    )
+                    showConfirmNewPassword,
+                    toggleConfirmNewPasswordVisibility,
+                  )
               }
               error={
                 props.isNextButtonClicked && !!props.formErrors[field.name]
@@ -226,7 +226,7 @@ const Identify = (props: any) => {
               variant="filled"
               fullWidth
               disabled
-              defaultValue={props.destinationById.dest_uri}
+              defaultValue={props.dest_uri}
               InputProps={{
                 readOnly: true,
                 endAdornment: (

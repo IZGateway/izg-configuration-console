@@ -32,11 +32,6 @@ const destinations = async (isAdmin: boolean, jurisdictions: any) =>
           retry_strategy: true,
         },
       },
-      jurisdiction: {
-        select: {
-          description: true,
-        },
-      },
     },
   })
 

@@ -27,10 +27,10 @@ const Verify = (props: any) => {
 
   if (props.value.newPassword === '' && props.value.confirmPassword === '') {
     submittingValue = { ...props.value, password: '.........' }
-    existingValue = { ...props.destinationById, password: '.........' }
+    existingValue = { ...props, password: '.........' }
   } else {
     submittingValue = { ...props.value, password: props.value.newPassword }
-    existingValue = { ...props.destinationById, password: '.........' }
+    existingValue = { ...props, password: '.........' }
   }
 
   delete submittingValue.confirmPassword

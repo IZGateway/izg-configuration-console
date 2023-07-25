@@ -29,11 +29,6 @@ const destination = async (destId: string) =>
           retry_strategy: true,
         },
       },
-      jurisdiction: {
-        select: {
-          description: true,
-        },
-      },
     },
   })
 

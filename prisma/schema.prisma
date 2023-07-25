@@ -33,7 +33,6 @@ model destinations {
   dest_type        Int
   destination_type destination_type @relation(fields: [dest_type], references: [type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_DEST_TYPE")
   endpointstatus   endpointstatus[]
-  jurisdiction     jurisdiction[]
 
   @@index([dest_type], map: "FK_DEST_TYPE_idx")
 }
@@ -55,9 +54,6 @@ model jurisdiction {
   name        String  @id @db.VarChar(64)
   description String  @db.VarChar(48)
   dest_id     String? @db.VarChar(128)
-  destinations   destinations? @relation(fields: [dest_id], references: [dest_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_JURISDICTION_DEST_ID")
-
-  @@index([dest_id], map: "FK_JURISDICTION_DEST_ID_idx")
 }
 
 model endpointstatus {

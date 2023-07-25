@@ -1,19 +1,20 @@
 import { URL } from 'url'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
-import { ConnectionTestRequest } from '../../../../lib/connectiontests/types/ConnectionTestRequest'
-import { ConnectionTestResult } from '../../../../lib/connectiontests/types/ConnectionTestResult'
-import ConnectionTestFactory from '../../../../lib/connectiontests/ConnectionTestFactory'
-import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
+import { ConnectionTestRequest } from '../../../lib/connectiontests/types/ConnectionTestRequest'
+import { ConnectionTestResult } from '../../../lib/connectiontests/types/ConnectionTestResult'
+import ConnectionTestFactory from '../../../lib/connectiontests/ConnectionTestFactory'
+import { APIResponse } from '../../../lib/connectiontests/types/APIResponse'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]'
-import hasAccessToDestId from '../../../../lib/accesshelper'
-import destination from '../../../../lib/queries/fetch/destination'
-import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
+import { authOptions } from '../auth/[...nextauth]'
+import hasAccessToDestId from '../../../lib/accesshelper'
+import destination from '../../../lib/queries/fetch/destination'
+import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<APIResponse>
+  res: NextApiResponse<APIResponse>,
+  body
 ) {
   const destId = req.query.id.toString()
   const session = await getServerSession(req, res, authOptions)
@@ -21,15 +22,7 @@ export default async function handler(
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
       const DEFAULT_PORT = 443
-      const testSuite: string[] = [
-        // 'dns',
-        // 'tcp',
-        // 'tls',
-        // 'cipher',
-        // 'wsdl',
-        // 'connectivity',
-        'qbp',
-      ]
+      const { testSuite }: { testSuite: string[] } = JSON.parse(body)
       const testResults: ConnectionTestResult[] = []
       const fetchedDestination = await destination(destId?.toString())
       const fetchedJurisdiction = await jurisdiction(destId?.toString())
