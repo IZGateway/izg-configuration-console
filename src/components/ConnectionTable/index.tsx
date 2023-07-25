@@ -13,7 +13,8 @@ import {
 } from '@mui/material'
 import HistoryIcon from '@mui/icons-material/History'
 import Link from 'next/link'
-import Status from '../Status'
+import CheckIcon from '@mui/icons-material/Check'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 import SessionContext from '../../contexts/app'
 
@@ -105,21 +106,24 @@ const ConnectionsTable = () => {
       width: 550,
     },
     {
-      field: 'status',
+      field: 'endpointstatus',
       headerName: 'STATUS',
       width: 200,
       filterable: false,
       valueFormatter: ({ value }) =>
-        value?.status === 'Connected' ? 'Connected' : 'Not Connected',
+        value?.status?.toLowerCase() === 'connected'
+          ? 'Connected'
+          : 'Not Connected',
       renderCell: ({ value }) => {
-        const isConnected = value?.status === 'Connected'
+        const isConnected =
+          value?.status?.toLowerCase() === 'connected' ? true : false
         const asOfDate = value?.ran_at
           ? new Date(value.ran_at).toLocaleString()
           : 'Unknown'
         return (
           <Tooltip
             arrow
-            placement="bottom"
+            placement="top"
             componentsProps={{
               tooltip: {
                 sx: {
@@ -138,7 +142,7 @@ const ConnectionsTable = () => {
                   <CardHeader
                     title={
                       <Typography sx={{ fontWeight: 'bold' }} color="#212121">
-                        {value?.status}
+                        {value?.status.toUpperCase()}
                       </Typography>
                     }
                     subheader={
@@ -173,7 +177,19 @@ const ConnectionsTable = () => {
               </React.Fragment>
             }
           >
-            <Status status={value} color={false} />
+            <Typography gutterBottom variant="body1" component="div">
+              {!isConnected ? (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography>Not Connected</Typography>
+                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography>Connected</Typography>
+                  <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                </Box>
+              )}
+            </Typography>
           </Tooltip>
         )
       },
@@ -257,6 +273,7 @@ const ConnectionsTable = () => {
             ...x,
             dest_type: x.destination_type.type,
             jurisdiction: x.jurisdiction?.description || 'N/A',
+            endpointstatus: x.endpointstatus[0],
           }
         })}
         columns={columns}
@@ -284,7 +301,12 @@ const ConnectionsTable = () => {
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: ['dest_type', 'jurisdiction', 'dest_uri', 'status'],
+              fields: [
+                'dest_type',
+                'jurisdiction',
+                'dest_uri',
+                'endpointstatus',
+              ],
             },
           },
           panel: {
