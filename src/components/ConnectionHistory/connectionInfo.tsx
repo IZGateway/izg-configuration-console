@@ -103,7 +103,13 @@ const ConnectionInfo = (props) => {
                 <Typography variant="subtitle1" component="div">
                   STATUS
                 </Typography>
-                <Status status={destData?.status} color={false} />
+                <Status
+                  isConnected={
+                    destData?.endpointstatus[0]?.status?.toLowerCase() ===
+                    'connected'
+                  }
+                  color={false}
+                />
               </Box>
             </Box>
           </Box>

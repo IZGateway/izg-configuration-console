@@ -30,6 +30,9 @@ const destination = async (destId: string) =>
           ran_at: true,
           status: true,
         },
+        orderBy: {
+          ran_at: 'desc',
+        },
       },
     },
   })
