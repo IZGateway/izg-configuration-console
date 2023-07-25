@@ -294,7 +294,7 @@ const ConnectionsTable = () => {
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
-        componentsProps={{
+        slotProps={{
           toolbar: {
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
