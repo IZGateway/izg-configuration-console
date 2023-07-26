@@ -14,7 +14,7 @@ import CombinedContext from '../../contexts/app'
 import Close from '../Close'
 import { isEmpty } from 'underscore';
 import useSWR from 'swr'
-
+import { mutate } from 'swr'
 interface editConnectionProps {
   destId: string
 }
@@ -109,7 +109,7 @@ const EditConnection = (props: editConnectionProps) => {
     (url) => fetcher(url),
     { revalidateOnMount: false }
   );
-  if (isLoading) return <div>loading...</div>
+  if (isLoading) { setIsTestRunning(true) }
   if (error) {
     throw new Error(error.message)
   }
@@ -149,10 +149,9 @@ const EditConnection = (props: editConnectionProps) => {
   // }, [isFormDirty, activeStep, clearValue, id, router.isReady])
   useEffect(() => {
     if (status && activeStep === 2 && isFormDirty) {
-      setIsTestRunning(true);
       setIsTestRunning(false);
       setIsFormDirty(false);
-      if (status === 'PASS') {
+      if (status !== 'PASS') {
         setActiveStep((prevActiveStep) => prevActiveStep + 1);
       } else {
         setOpenAlert(true);
@@ -275,30 +274,20 @@ const EditConnection = (props: editConnectionProps) => {
     let response
     const { newPassword, confirmPassword, ...submittingValue } = formValues
     if (isEmpty(formValues.newPassword) && isEmpty(formValues.confirmPassword)) {
-      response = await fetch(`/api/updateDestination/${props.destId}`, {
+      response = await fetch(`/api/update/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify(submittingValue),
-        headers: {
-          'Content-Type': 'application/json',
-        },
       });
-      // updateConnection({
-      //   variables: {
-      //     data: submittingValue,
-      //     destId: data.destinationById.dest_id,
-      //   },
-      // })
     } else {
-      // response = await updateConnection({
-      //   variables: {
-      //     data: submittingValue,
-      //     destId: data.destinationById.dest_id,
-      //     password: formValues.newPassword,
-      //   },
-      // })
+      response = await fetch(`/api/update/${props.destId}`, {
+        method: 'POST',
+        body: JSON.stringify(formValues),
+      });
     }
     clearValue()
-    if (response && response.data) {
+    if (response.ok) {
+      // manually trigger revalidation to fetch the latest data from the server without refresh
+      mutate(`/api/destinations/${props.destId}`);
       router.push('/manage')
     } else {
       throw new Error('Update was not successful. Please try again later')

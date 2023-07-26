@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 
 const Jurisdiction = (props) => {
-  console.log(props)
+
   return (
     <>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
