@@ -8,8 +8,12 @@ import {
   Typography,
 } from '@mui/material'
 
-const Jurisdiction = (props) => {
+interface jurisdictionProps {
+  jurisdictionName: string
+  destType: string
+}
 
+const Jurisdiction = (props: jurisdictionProps) => {
   return (
     <>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
@@ -34,7 +38,7 @@ const Jurisdiction = (props) => {
             variant="filled"
             fullWidth
             disabled
-            defaultValue={props.description}
+            defaultValue={props.jurisdictionName}
             InputProps={{
               readOnly: true,
             }}
@@ -64,7 +68,7 @@ const Jurisdiction = (props) => {
             variant="filled"
             fullWidth
             disabled
-            defaultValue={props.destination_type.type}
+            defaultValue={props.destType}
             InputProps={{
               readOnly: true,
             }}

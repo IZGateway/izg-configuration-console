@@ -12,7 +12,7 @@ import { validate as uuidValidate } from 'uuid'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
-import { isEmpty } from 'underscore';
+import { isEmpty } from 'underscore'
 import useSWR from 'swr'
 import { mutate } from 'swr'
 interface editConnectionProps {
@@ -21,57 +21,54 @@ interface editConnectionProps {
 
 const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
 
+const emptyErrors = {
+  username: '',
+  newPassword: '',
+  confirmPassword: '',
+  facility_id: '',
+  MSH3: '',
+  MSH4: '',
+  MSH5: '',
+  MSH6: '',
+  MSH22: '',
+  RXA11: '',
+}
+
+const validationRules = {
+  username: /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/,
+  newPassword:
+    /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+  confirmPassword:
+    /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+  facility_id: /^[A-Za-z0-9_-]{0,25}$/,
+  MSH3: /^[A-Za-z0-9_-]{0,25}$/,
+  MSH4: /^[A-Za-z0-9_-]{0,25}$/,
+  MSH5: /^[A-Za-z0-9_-]{0,25}$/,
+  MSH6: /^[A-Za-z0-9_-]{0,25}$/,
+  MSH22: /^[A-Za-z0-9_-]{0,25}$/,
+  RXA11: /^[A-Za-z0-9_-]{0,25}$/,
+}
+const errorMessages = {
+  username: 'Username value should meet requirement as below',
+  newPassword: 'Password value should meet requirement as above',
+  confirmPassword: 'Password value should meet requirement as above',
+  facility_id: `Facility ID value should meet requirement as above`,
+  MSH3: `MSH-3 value should meet requirement as above`,
+  MSH4: `MSH-4 value should meet requirement as above`,
+  MSH5: `MSH-5 value should meet requirement as above`,
+  MSH6: `MSH-6 value should meet requirement as above`,
+  MSH22: `MSH-22 value should meet requirement as above`,
+  RXA11: `RXA-11 value should meet requirement as above`,
+}
+
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { clearValue } = useContext(CombinedContext)
-  const { data: destData, error: destError, isLoading: isDestLoading } = useSWR(
-    `/api/destinations/${props.destId}`
-  )
-  const initialValues = {
-    username: destData?.username,
-    newPassword: '',
-    confirmPassword: '',
-    facility_id: destData?.facility_id,
-    MSH3: destData?.MSH3,
-    MSH4: destData?.MSH4,
-    MSH5: destData?.MSH5,
-    MSH6: destData?.MSH6,
-    MSH22: destData?.MSH22,
-    RXA11: destData?.RXA11,
-  }
-  useEffect(() => {
-    if (!isDestLoading) {
-      setFormValues(initialValues)
-    }
-  }, [isDestLoading])
-  const {
-    data: jurisdictionData,
-    error: jurisdictionError,
-    isLoading: isJurisdictionLoading,
-  } = useSWR(`/api/jurisdictions/${props.destId}`)
-  if (destError && jurisdictionError) return <div>failed to load</div>
-  if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
-  const destinationData = { ...destData, ...jurisdictionData }
-
-  // const { data: updateConnection, error: mutationError, isLoading: mutationLoading } = useSWR(
-  //   `/api/updateDestination/${props.destId}`
-  // )
-  // fetchPolicy: 'no-cache',
-  // const [updateConnection, { loading: mutationLoading, error: mutationError }] =
-  //   useMutation(UPDATE_CONNECTION)
-
-  const emptyErrors = {
-    username: '',
-    newPassword: '',
-    confirmPassword: '',
-    facility_id: '',
-    MSH3: '',
-    MSH4: '',
-    MSH5: '',
-    MSH6: '',
-    MSH22: '',
-    RXA11: '',
-  }
+  const [openAlert, setOpenAlert] = useState(false)
+  const [isTestRunning, setIsTestRunning] = useState(false)
+  const [isFormDirty, setIsFormDirty] = useState(false)
+  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false)
+  const [formErrors, setFormErrors] = useState(emptyErrors)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
@@ -87,105 +84,38 @@ const EditConnection = (props: editConnectionProps) => {
     MSH22: '',
     RXA11: '',
   })
-  const [openAlert, setOpenAlert] = useState(false)
-  const [isTestRunning, setIsTestRunning] = useState(false)
-  const [isFormDirty, setIsFormDirty] = useState(false)
-  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false)
-  const [formErrors, setFormErrors] = useState(emptyErrors)
-  const fetcher = async (url: string) => {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.testResults[0].status;
-  };
-  // const fetcher = (url, body) =>
-  //   fetch(url,
-  //   {
-  //   method: 'POST',
-  //   body: JSON.stringify(body),
-  // }
-  // ).then((res) => res.json());
-  const { data: status, isLoading, error } = useSWR(
-    activeStep === 2 && isFormDirty ? `/api/tests/connectiontest/${props.destId}` : null,
-    (url) => fetcher(url),
-    { revalidateOnMount: false }
-  );
-  if (isLoading) { setIsTestRunning(true) }
-  if (error) {
-    throw new Error(error.message)
-  }
 
-  // useEffect(() => {
-  //   if (!router.isReady) return
-  //   if (activeStep === 2 && isFormDirty) {
-  //     setIsTestRunning(true)
-  //     const testSuite = ['qbp']
-  //     fetch(`/api/tests/connectiontest/${props.destId}`, {
-  //       method: 'POST',
-  //       body: JSON.stringify({ testSuite }),
-  //     })
-  //       .then((res) => {
-  //         if (!res.ok) {
-  //           setOpenAlert(true)
-  //           setFormErrors(emptyErrors)
-  //         }
-  //         return res.json()
-  //       })
-  //       .then((data) => {
-  //         testResult.current = data.testResults[0].status
-  //         setIsTestRunning(false)
-  //         setIsFormDirty(false)
-  //         if (testResult.current !== 'PASS') {
-  //           setActiveStep((prevActiveStep) => prevActiveStep + 1)
-  //         } else {
-  //           setOpenAlert(true)
-  //           setFormErrors(emptyErrors)
-  //         }
-  //       })
-  //       .catch((err) => {
-  //         clearValue()
-  //         throw new Error(err.message)
-  //       })
-  //   }
-  // }, [isFormDirty, activeStep, clearValue, id, router.isReady])
+  const {
+    data: destData,
+    error: destError,
+    isLoading: isDestLoading,
+  } = useSWR(`/api/destinations/${props.destId}`)
+
+  const {
+    data: jurisdictionData,
+    error: jurisdictionError,
+    isLoading: isJurisdictionLoading,
+  } = useSWR(`/api/jurisdictions/${props.destId}`)
+
   useEffect(() => {
-    if (status && activeStep === 2 && isFormDirty) {
-      setIsTestRunning(false);
-      setIsFormDirty(false);
-      if (status !== 'PASS') {
-        setActiveStep((prevActiveStep) => prevActiveStep + 1);
-      } else {
-        setOpenAlert(true);
-        setFormErrors(emptyErrors);
-      }
+    if (destData) {
+      setFormValues({
+        username: destData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: destData?.facility_id,
+        MSH3: destData?.MSH3,
+        MSH4: destData?.MSH4,
+        MSH5: destData?.MSH5,
+        MSH6: destData?.MSH6,
+        MSH22: destData?.MSH22,
+        RXA11: destData?.RXA11,
+      })
     }
-  }, [status, isFormDirty, activeStep]);
+  }, [destData])
 
-  const validationRules = {
-    username: /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/,
-    newPassword:
-      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
-    confirmPassword:
-      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
-    facility_id: /^[A-Za-z0-9_-]{0,25}$/,
-    MSH3: /^[A-Za-z0-9_-]{0,25}$/,
-    MSH4: /^[A-Za-z0-9_-]{0,25}$/,
-    MSH5: /^[A-Za-z0-9_-]{0,25}$/,
-    MSH6: /^[A-Za-z0-9_-]{0,25}$/,
-    MSH22: /^[A-Za-z0-9_-]{0,25}$/,
-    RXA11: /^[A-Za-z0-9_-]{0,25}$/,
-  }
-  const errorMessages = {
-    username: 'Username value should meet requirement as below',
-    newPassword: 'Password value should meet requirement as above',
-    confirmPassword: 'Password value should meet requirement as above',
-    facility_id: `Facility ID value should meet requirement as above`,
-    MSH3: `MSH-3 value should meet requirement as above`,
-    MSH4: `MSH-4 value should meet requirement as above`,
-    MSH5: `MSH-5 value should meet requirement as above`,
-    MSH6: `MSH-6 value should meet requirement as above`,
-    MSH22: `MSH-22 value should meet requirement as above`,
-    RXA11: `RXA-11 value should meet requirement as above`,
-  }
+  if (destError && jurisdictionError) return <div>failed to load</div>
+  if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
 
   const formValidation = (e) => {
     if (isFormChanged && activeStep === 2) {
@@ -196,7 +126,7 @@ const EditConnection = (props: editConnectionProps) => {
       Object.keys(formValues).forEach((key) => {
         const value = formValues[key].trim()
         // Added this so that it wont perform validation on existing values
-        if (value !== initialValues[key]) {
+        if (value !== destData[key]) {
           if (isEmpty(value)) {
             if (isEmpty(formValues.username)) {
               setFormErrors((prevErrors) => ({
@@ -232,14 +162,19 @@ const EditConnection = (props: editConnectionProps) => {
                 newPassword: `Password can not be in the form of UUID`,
               }))
               hasErrors = true
-            } else if (formValues.newPassword.trim() !== formValues.confirmPassword.trim()) {
+            } else if (
+              formValues.newPassword.trim() !==
+              formValues.confirmPassword.trim()
+            ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
                 confirmPassword: `Both New Password and Confirm New Password should match`,
               }))
               hasErrors = true
-            } else if (!isEmpty(value) &&
-              formValues.confirmPassword.trim() === formValues.facility_id.trim()
+            } else if (
+              !isEmpty(value) &&
+              formValues.confirmPassword.trim() ===
+                formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -258,8 +193,7 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }
 
-  const isFormChanged =
-    JSON.stringify(formValues) !== JSON.stringify(initialValues)
+  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(destData)
 
   const handleCloseAlert = () => {
     setOpenAlert(false)
@@ -273,26 +207,30 @@ const EditConnection = (props: editConnectionProps) => {
   const handleSubmit = async () => {
     let response
     const { newPassword, confirmPassword, ...submittingValue } = formValues
-    if (isEmpty(formValues.newPassword) && isEmpty(formValues.confirmPassword)) {
+    if (
+      isEmpty(formValues.newPassword) &&
+      isEmpty(formValues.confirmPassword)
+    ) {
       response = await fetch(`/api/update/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify(submittingValue),
-      });
+      })
     } else {
       response = await fetch(`/api/update/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify(formValues),
-      });
+      })
     }
     clearValue()
     if (response.ok) {
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}`);
+      mutate(`/api/destinations/${props.destId}`)
       router.push('/manage')
     } else {
       throw new Error('Update was not successful. Please try again later')
     }
   }
+
   const handleAccept = () => {
     setAccepted(true)
     setActiveStep((prevActiveStep) => prevActiveStep + 1)
@@ -409,8 +347,8 @@ const EditConnection = (props: editConnectionProps) => {
               fontSize="32px"
               id="add-connecton"
             >
-              Editing {jurisdictionData.description}{' '}
-              {destData.destination_type.type}
+              Editing {jurisdictionData?.description}{' '}
+              {destData?.destination_type.type}
             </Typography>
             <Typography gutterBottom align="center" variant="body1">
               Use the stepper to edit & manage sections of your connection
@@ -426,7 +364,12 @@ const EditConnection = (props: editConnectionProps) => {
               agreed={agreed}
             />
           )}
-          {activeStep === 1 && <Jurisdiction {...destinationData} />}
+          {activeStep === 1 && (
+            <Jurisdiction
+              jurisdictionName={jurisdictionData?.description}
+              destType={destData?.destination_type.type}
+            />
+          )}
           {activeStep === 2 &&
             (!isTestRunning ? (
               <Identify
