@@ -13,19 +13,21 @@ import {
 } from '@mui/material'
 import HistoryIcon from '@mui/icons-material/History'
 import Link from 'next/link'
-import Status from '../Status'
 import EditIcon from '@mui/icons-material/Edit'
+import CheckIcon from '@mui/icons-material/Check'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+
 
 import SessionContext from '../../contexts/app'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
-    {
-      marginTop: '-8px',
-      zIndex: 1,
-      paddingTop: '1em',
-      border: 'none',
-    },
+  {
+    marginTop: '-8px',
+    zIndex: 1,
+    paddingTop: '1em',
+    border: 'none',
+  },
   '& .MuiDataGrid-main': {
     marginTop: '-8px',
     backgroundColor: '#FFF',
@@ -35,9 +37,9 @@ const dataGridCustom = {
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
-    {
-      width: '32vw',
-    },
+  {
+    width: '32vw',
+  },
   '& .MuiDataGrid-columnHeaders': {
     backgroundColor: '#FFF',
   },
@@ -51,9 +53,9 @@ const dataGridCustom = {
     marginBottom: '8px',
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
-    {
-      color: '#00D998',
-    },
+  {
+    color: '#00D998',
+  },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
     width: '28em',
     borderRadius: '60px',
@@ -67,9 +69,9 @@ const dataGridCustom = {
     color: '#015A2F',
   },
   '& .MuiTablePagination-selectIcon.MuiSelect-icon.MuiSelect-iconStandard.css-pqjvzy-MuiSvgIcon-root-MuiSelect-icon':
-    {
-      color: '#015A2F',
-    },
+  {
+    color: '#015A2F',
+  },
 }
 
 const actionButtonStyle = {
@@ -106,21 +108,24 @@ const ConnectionsTable = () => {
       width: 550,
     },
     {
-      field: 'status',
+      field: 'endpointstatus',
       headerName: 'STATUS',
       width: 200,
       filterable: false,
       valueFormatter: ({ value }) =>
-        value?.status === 'Connected' ? 'Connected' : 'Not Connected',
+        value?.status?.toLowerCase() === 'connected'
+          ? 'Connected'
+          : 'Not Connected',
       renderCell: ({ value }) => {
-        const isConnected = value?.status === 'Connected'
+        const isConnected =
+          value?.status?.toLowerCase() === 'connected' ? true : false
         const asOfDate = value?.ran_at
           ? new Date(value.ran_at).toLocaleString()
           : 'Unknown'
         return (
           <Tooltip
             arrow
-            placement="bottom"
+            placement="top"
             componentsProps={{
               tooltip: {
                 sx: {
@@ -139,7 +144,7 @@ const ConnectionsTable = () => {
                   <CardHeader
                     title={
                       <Typography sx={{ fontWeight: 'bold' }} color="#212121">
-                        {value?.status}
+                        {value?.status.toUpperCase()}
                       </Typography>
                     }
                     subheader={
@@ -174,7 +179,19 @@ const ConnectionsTable = () => {
               </React.Fragment>
             }
           >
-            <Status status={value} color={false} />
+            <Typography gutterBottom variant="body1" component="div">
+              {!isConnected ? (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography>Not Connected</Typography>
+                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography>Connected</Typography>
+                  <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                </Box>
+              )}
+            </Typography>
           </Tooltip>
         )
       },
@@ -260,6 +277,7 @@ const ConnectionsTable = () => {
             ...x,
             dest_type: x.destination_type.type,
             jurisdiction: x.jurisdiction?.description || 'N/A',
+            endpointstatus: x.endpointstatus[0],
           }
         })}
         columns={columns}
@@ -280,14 +298,19 @@ const ConnectionsTable = () => {
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
-        componentsProps={{
+        slotProps={{
           toolbar: {
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: ['dest_type', 'jurisdiction', 'dest_uri', 'status'],
+              fields: [
+                'dest_type',
+                'jurisdiction',
+                'dest_uri',
+                'endpointstatus',
+              ],
             },
           },
           panel: {

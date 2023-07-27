@@ -4,12 +4,11 @@ import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 interface statusProps {
-  status: {
-    status: string
-  }
+  isConnected: boolean
   color: boolean
 }
 
+// eslint-disable-next-line react/display-name
 const Status = (props: statusProps) => {
   if (props.color) {
     return (
@@ -19,7 +18,7 @@ const Status = (props: statusProps) => {
         sx={{ color: '#757575' }}
         component="div"
       >
-        {!props.status ? (
+        {!props.isConnected ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography component="div">Not Connected</Typography>
             <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -35,7 +34,7 @@ const Status = (props: statusProps) => {
   } else {
     return (
       <Typography gutterBottom variant="body1" component="div">
-        {!props.status ? (
+        {!props.isConnected ? (
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography>Not Connected</Typography>
             <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />

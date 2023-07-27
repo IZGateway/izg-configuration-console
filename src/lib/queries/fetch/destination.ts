@@ -27,6 +27,11 @@ const destination = async (destId: string) =>
           detail: true,
           diagnostics: true,
           retry_strategy: true,
+          ran_at: true,
+          status: true,
+        },
+        orderBy: {
+          ran_at: 'desc',
         },
       },
     },

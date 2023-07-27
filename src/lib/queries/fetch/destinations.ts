@@ -30,7 +30,13 @@ const destinations = async (isAdmin: boolean, jurisdictions: any) =>
           detail: true,
           diagnostics: true,
           retry_strategy: true,
+          status: true,
+          ran_at: true,
         },
+        orderBy: {
+          ran_at: 'desc',
+        },
+        take: 1,
       },
     },
   })

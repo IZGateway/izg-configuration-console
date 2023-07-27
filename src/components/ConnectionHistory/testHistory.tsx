@@ -72,9 +72,15 @@ const timeline = (data) => (
             </Typography>
           </TimelineContent>
           {index === 0 ? (
-            <Status status={item} color={false} />
+            <Status
+              isConnected={item?.status.toLowerCase() === 'connected'}
+              color={false}
+            />
           ) : (
-            <Status status={item} color={true} />
+            <Status
+              isConnected={item?.status.toLowerCase() === 'connected'}
+              color={true}
+            />
           )}
         </TimelineItem>
       ))}
