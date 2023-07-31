@@ -1,20 +1,19 @@
 import { URL } from 'url'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
-import { ConnectionTestRequest } from '../../../lib/connectiontests/types/ConnectionTestRequest'
-import { ConnectionTestResult } from '../../../lib/connectiontests/types/ConnectionTestResult'
-import ConnectionTestFactory from '../../../lib/connectiontests/ConnectionTestFactory'
-import { APIResponse } from '../../../lib/connectiontests/types/APIResponse'
+import { ConnectionTestRequest } from '../../../../lib/connectiontests/types/ConnectionTestRequest'
+import { ConnectionTestResult } from '../../../../lib/connectiontests/types/ConnectionTestResult'
+import ConnectionTestFactory from '../../../../lib/connectiontests/ConnectionTestFactory'
+import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../auth/[...nextauth]'
-import hasAccessToDestId from '../../../lib/accesshelper'
-import destination from '../../../lib/queries/fetch/destination'
-import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
+import { authOptions } from '../../auth/[...nextauth]'
+import hasAccessToDestId from '../../../../lib/accesshelper'
+import destination from '../../../../lib/queries/fetch/destination'
+import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<APIResponse>,
-  body
+  res: NextApiResponse<APIResponse>
 ) {
   const destId = req.query.id.toString()
   const session = await getServerSession(req, res, authOptions)
@@ -22,7 +21,7 @@ export default async function handler(
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
       const DEFAULT_PORT = 443
-      const { testSuite }: { testSuite: string[] } = JSON.parse(body)
+      const testSuite = 'qbp'
       const testResults: ConnectionTestResult[] = []
       const fetchedDestination = await destination(destId?.toString())
       const fetchedJurisdiction = await jurisdiction(destId?.toString())
@@ -97,21 +96,14 @@ export default async function handler(
       )
 
       let testCounter = 0
-      // eslint-disable-next-line no-loops/no-loops
-      for (const test of testSuite) {
-        console.info('running test: ' + test)
-        connectionTestRequest.order = ++testCounter
-        const T = ConnectionTestFactory.getConnectionTest(
-          test,
-          connectionTestRequest
-        )
-        const result = await T.run()
-        testResults.push(...result)
-        if (test === 'dns') {
-          console.info('Resolved IP address is: ' + result[0]?.detail)
-          connectionTestRequest.ip = result[0]?.detail
-        }
-      }
+
+      connectionTestRequest.order = ++testCounter
+      const T = ConnectionTestFactory.getConnectionTest(
+        testSuite,
+        connectionTestRequest
+      )
+      const result = await T.run()
+      testResults.push(...result)
 
       res.status(200).json({
         destId: destId || 'unknown',

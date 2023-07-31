@@ -96,7 +96,7 @@ const EditConnection = (props: editConnectionProps) => {
     error: jurisdictionError,
     isLoading: isJurisdictionLoading,
   } = useSWR(`/api/jurisdictions/${props.destId}`)
-
+  let testResult = React.useRef('')
   useEffect(() => {
     if (destData) {
       setFormValues({
@@ -114,10 +114,54 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [destData])
 
+  useEffect(() => {
+    if (activeStep === 2 && isFormDirty) {
+      setIsTestRunning(true)
+      fetch(`/api/edit/queryTest/${props.destId}`, {
+        method: 'GET',
+      })
+        .then((res) => {
+          if (!res.ok) {
+            setOpenAlert(true)
+            setFormErrors(emptyErrors)
+          }
+          return res.json()
+        })
+        .then((data) => {
+          testResult.current = data.testResults[0].status
+          setIsTestRunning(false)
+          setIsFormDirty(false)
+          console.log(testResult.current)
+          if (testResult.current === 'PASS') {
+            setActiveStep((prevActiveStep) => prevActiveStep + 1)
+          } else {
+            setOpenAlert(true)
+            setFormErrors(emptyErrors)
+          }
+        })
+        .catch((err) => {
+          clearValue()
+          throw new Error(err.message)
+        })
+    }
+  }, [isFormDirty, activeStep, clearValue])
+
   if (destError && jurisdictionError) return <div>failed to load</div>
   if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
-
+  let initialValue = {
+    username: destData?.username,
+    newPassword: '',
+    confirmPassword: '',
+    facility_id: destData?.facility_id,
+    MSH3: destData?.MSH3,
+    MSH4: destData?.MSH4,
+    MSH5: destData?.MSH5,
+    MSH6: destData?.MSH6,
+    MSH22: destData?.MSH22,
+    RXA11: destData?.RXA11,
+  }
   const formValidation = (e) => {
+    console.log(isFormChanged)
     if (isFormChanged && activeStep === 2) {
       e.preventDefault()
       setIsNextButtonClicked(true)
@@ -174,7 +218,7 @@ const EditConnection = (props: editConnectionProps) => {
             } else if (
               !isEmpty(value) &&
               formValues.confirmPassword.trim() ===
-                formValues.facility_id.trim()
+              formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -192,8 +236,7 @@ const EditConnection = (props: editConnectionProps) => {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
   }
-
-  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(destData)
+  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValue)
 
   const handleCloseAlert = () => {
     setOpenAlert(false)

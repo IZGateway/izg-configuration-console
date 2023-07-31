@@ -22,12 +22,12 @@ export default async function handler(
     if (req.method === 'GET') {
       const DEFAULT_PORT = 443
       const testSuite: string[] = [
-        // 'dns',
-        // 'tcp',
-        // 'tls',
-        // 'cipher',
-        // 'wsdl',
-        // 'connectivity',
+        'dns',
+        'tcp',
+        'tls',
+        'cipher',
+        'wsdl',
+        'connectivity',
         'qbp',
       ]
       const testResults: ConnectionTestResult[] = []
