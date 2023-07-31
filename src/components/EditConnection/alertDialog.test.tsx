@@ -11,7 +11,7 @@ describe('Alert Dialog component', () => {
           close={() => {
             return null
           }}
-        />,
+        />
       )
     }).not.toThrow()
   })
@@ -23,7 +23,7 @@ describe('Alert Dialog component', () => {
         close={() => {
           return null
         }}
-      />,
+      />
     )
     expect(screen.queryByText('It looks like')).not.toBeInTheDocument()
   })

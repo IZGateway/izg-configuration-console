@@ -17,17 +17,16 @@ import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
-
 import SessionContext from '../../contexts/app'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
-  {
-    marginTop: '-8px',
-    zIndex: 1,
-    paddingTop: '1em',
-    border: 'none',
-  },
+    {
+      marginTop: '-8px',
+      zIndex: 1,
+      paddingTop: '1em',
+      border: 'none',
+    },
   '& .MuiDataGrid-main': {
     marginTop: '-8px',
     backgroundColor: '#FFF',
@@ -37,9 +36,9 @@ const dataGridCustom = {
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
-  {
-    width: '32vw',
-  },
+    {
+      width: '32vw',
+    },
   '& .MuiDataGrid-columnHeaders': {
     backgroundColor: '#FFF',
   },
@@ -53,9 +52,9 @@ const dataGridCustom = {
     marginBottom: '8px',
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
-  {
-    color: '#00D998',
-  },
+    {
+      color: '#00D998',
+    },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
     width: '28em',
     borderRadius: '60px',
@@ -69,9 +68,9 @@ const dataGridCustom = {
     color: '#015A2F',
   },
   '& .MuiTablePagination-selectIcon.MuiSelect-icon.MuiSelect-iconStandard.css-pqjvzy-MuiSvgIcon-root-MuiSelect-icon':
-  {
-    color: '#015A2F',
-  },
+    {
+      color: '#015A2F',
+    },
 }
 
 const actionButtonStyle = {

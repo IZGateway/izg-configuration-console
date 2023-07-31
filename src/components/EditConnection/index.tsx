@@ -96,7 +96,7 @@ const EditConnection = (props: editConnectionProps) => {
     error: jurisdictionError,
     isLoading: isJurisdictionLoading,
   } = useSWR(`/api/jurisdictions/${props.destId}`)
-  let testResult = React.useRef('')
+  const testResult = React.useRef('')
   useEffect(() => {
     if (destData) {
       setFormValues({
@@ -148,7 +148,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   if (destError && jurisdictionError) return <div>failed to load</div>
   if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
-  let initialValue = {
+  const initialValue = {
     username: destData?.username,
     newPassword: '',
     confirmPassword: '',
@@ -218,7 +218,7 @@ const EditConnection = (props: editConnectionProps) => {
             } else if (
               !isEmpty(value) &&
               formValues.confirmPassword.trim() ===
-              formValues.facility_id.trim()
+                formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -236,7 +236,8 @@ const EditConnection = (props: editConnectionProps) => {
       setActiveStep((prevActiveStep) => prevActiveStep + 1)
     }
   }
-  const isFormChanged = JSON.stringify(formValues) !== JSON.stringify(initialValue)
+  const isFormChanged =
+    JSON.stringify(formValues) !== JSON.stringify(initialValue)
 
   const handleCloseAlert = () => {
     setOpenAlert(false)

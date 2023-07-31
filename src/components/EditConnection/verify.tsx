@@ -101,7 +101,7 @@ const Verify = (props: any) => {
                       {submittingValue[row]}
                     </StyledDifferenceTableCell>
                   </TableRow>
-                ),
+                )
               )}
             </TableBody>
           </Table>

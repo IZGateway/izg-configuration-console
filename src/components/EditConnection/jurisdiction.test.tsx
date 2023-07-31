@@ -4,10 +4,13 @@ import Jurisdiction from './jurisdiction'
 
 describe('Jurisdiction component', () => {
   it('renders without throwing any errors', () => {
-
     expect(() => {
-      render(<Jurisdiction jurisdictionName={"Test Jurisdiction"}
-        destType={"TEST"} />)
+      render(
+        <Jurisdiction
+          jurisdictionName={'Test Jurisdiction'}
+          destType={'TEST'}
+        />
+      )
     }).not.toThrow()
   })
 })
