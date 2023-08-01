@@ -8,7 +8,7 @@ export default function hasAccessToDestId(destId: string, session: any) {
       }
     })
   } else {
-    throw new Error(`User does not have assigned jurisdiction(s)`)
+    throw new Error(`Non-admin users must be assigned at least 1 jurisdiction`)
   }
 
   return isFound
