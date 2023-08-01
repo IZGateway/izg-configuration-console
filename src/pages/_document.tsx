@@ -3,11 +3,31 @@ import Document, { Html, Head, Main, NextScript } from 'next/document'
 import createEmotionServer from '@emotion/server/create-instance'
 import createEmotionCache from '../utility/createEmotionCache'
 
+const gtag = `https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`
+const isProd = process.env.NODE_ENV === 'production'
 export default class MyDocument extends Document {
   render() {
     return (
       <Html lang="en">
         <Head>
+          {isProd && (
+            <>
+              <script async src={gtag} />
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                  page_path: window.location.pathname
+                });
+              `,
+                }}
+              />
+            </>
+          )}
+
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700&display=swap"
@@ -59,7 +79,7 @@ MyDocument.getInitialProps = async (ctx) => {
     originalRenderPage({
       enhanceApp: (App: any) => (props) =>
         <App emotionCache={cache} {...props} />,
-    });
+    })
   /* eslint-enable */
 
   const initialProps = await Document.getInitialProps(ctx)
