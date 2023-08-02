@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model accesscontrol {
+  souceid String? @db.VarChar(16)
+  destid  String? @db.VarChar(16)
+
+  @@ignore
+}
+
+model destinations {
+  dest_id          String           @id @db.VarChar(128)
+  dest_uri         String           @db.VarChar(1024)
+  username         String?          @db.VarChar(50)
+  password         String?          @db.VarChar(50)
+  facility_id      String?          @db.VarChar(50)
+  MSH3             String?          @db.VarChar(50)
+  MSH4             String?          @db.VarChar(50)
+  MSH5             String?          @db.VarChar(50)
+  MSH6             String?          @db.VarChar(50)
+  MSH22            String?          @db.VarChar(50)
+  RXA11            String?          @db.VarChar(50)
+  dest_version     String?          @db.VarChar(50)
+  signed_mou       Boolean          @default(false)
+  pass_expiry      DateTime?        @db.Date
+  dest_type        Int
+  destination_type destination_type @relation(fields: [dest_type], references: [type_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_DEST_TYPE")
+  endpointstatus   endpointstatus[]
+
+  @@index([dest_type], map: "FK_DEST_TYPE_idx")
+}
+
+model messageheaderinfo {
+  msh        String  @id @db.VarChar(128)
+  dest_id    String? @db.VarChar(128)
+  iis        String? @db.VarChar(128)
+  sourceType String? @db.VarChar(128)
+}
+
+model destination_type {
+  type_id      Int            @id
+  type         String?        @db.VarChar(45)
+  destinations destinations[]
+}
+
+model jurisdiction {
+  name        String  @id @db.VarChar(64)
+  description String  @db.VarChar(48)
+  dest_id     String? @db.VarChar(128)
+}
+
+model endpointstatus {
+  id             Int           @id @default(autoincrement())
+  status         String?       @db.VarChar(45)
+  detail         String?       @db.VarChar(500)
+  retry_strategy String?       @db.VarChar(500)
+  diagnostics    String?       @db.VarChar(500)
+  dest_id        String?       @db.VarChar(128)
+  ran_at         DateTime      @db.DateTime(0)
+  destinations   destinations? @relation(fields: [dest_id], references: [dest_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ENDPOINT_STATUS_DEST_ID")
+
+  @@index([dest_id], map: "FK_ENDPOINT_STATUS_DEST_ID_idx")
+}
+
+model audit_history {
+  id         Int                      @id @default(autoincrement())
+  tableName  String                   @db.VarChar(50)
+  userName   String                   @db.VarChar(50)
+  changeType audit_history_changeType
+  oldValues  Json?                  
+  newValues  Json?                  
+  createdAt  DateTime                 @default(now()) @db.DateTime(0)
+}
+
+enum audit_history_changeType {
+  Insert
+  Update
+  Delete
+}

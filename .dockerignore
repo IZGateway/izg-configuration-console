@@ -5,6 +5,8 @@ node_modules
 # All secrets
 **/.env.local
 **/.env.*.local
+.env
+.env.local
 
 # By default all git files
 .git

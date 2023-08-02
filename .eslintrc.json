@@ -4,10 +4,8 @@
     // "project": "./tsconfig.json"
   },
   "extends": [
-    "eslint:recommended",
-    "standard",
-    "plugin:@typescript-eslint/recommended",
     "next/core-web-vitals",
+    "plugin:@typescript-eslint/recommended",
     "prettier"
   ],
   "plugins": ["@typescript-eslint", "no-loops", "prettier"],
