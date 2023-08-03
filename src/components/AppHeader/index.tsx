@@ -1,15 +1,8 @@
 import * as React from 'react'
-import IconButton from '@mui/material/IconButton'
-import CloseIcon from '@mui/icons-material/Close'
 import { Avatar, Typography, Toolbar, AppBar } from '@mui/material'
 import Image from 'next/image'
-import userImage from '../../../../../../../../../../public/userImage.png'
-
-interface AppHeaderProps {
-  loggedInUserName: string
-  open: boolean
-  display: (isOpened: boolean) => void
-}
+import userImage from '../../public/userImage.png'
+import { useSession } from 'next-auth/react'
 
 const headerStyle = {
   display: 'flex',
@@ -20,7 +13,8 @@ const headerStyle = {
   borderRadius: '0px 0px 30px 0px',
 }
 
-const AppHeaderBar = (props: AppHeaderProps) => {
+const AppHeaderBar = () => {
+  const { data: session, status } = useSession()
   return (
     <AppBar sx={headerStyle} position={'sticky'}>
       <Toolbar id="app-header">
@@ -31,7 +25,7 @@ const AppHeaderBar = (props: AppHeaderProps) => {
             marginLeft: 45,
           }}
         >
-          <Image src={userImage} alt="user image" />
+          <Image src={userImage} alt="user image" height={'70'} />
         </Avatar>
         <Typography
           flexGrow={1}
@@ -41,18 +35,12 @@ const AppHeaderBar = (props: AppHeaderProps) => {
           align="center"
           lineHeight={'18px'}
         >
-          | Welcome {props.loggedInUserName} to IZ Gateway
+          | Welcome {status === 'authenticated' && session.user.name} to IZ
+          Gateway
         </Typography>
-        <IconButton onClick={() => props.display(props.open)}>
-          <CloseIcon sx={{ color: '#212121' }} />
-        </IconButton>
       </Toolbar>
     </AppBar>
   )
-}
-
-AppHeaderBar.defaultProps = {
-  loggedInUserName: 'IZ Gateway User',
 }
 
 export default AppHeaderBar

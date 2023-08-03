@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import Box from '@mui/material/Box'
 import Navigation from './Navigation'
+import AppHeaderBar from './AppHeader'
 
 const container = {
   display: 'flex',
@@ -27,6 +28,7 @@ interface DashboardLayoutProps {
 const Layout = ({ children }: DashboardLayoutProps) => {
   return (
     <Box sx={container}>
+      <AppHeaderBar />
       <Box sx={content}>
         <Navigation />
         <Box sx={pageContainer}>{children}</Box>

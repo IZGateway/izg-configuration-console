@@ -4,7 +4,7 @@ import IZGLogo from './Branding'
 import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 import {
   Collapse,
   styled,
@@ -16,7 +16,6 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
-  Box,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 
@@ -88,8 +87,6 @@ const MiniDrawer = () => {
   ) => {
     setSelectedIndex(index)
   }
-
-  const { data: session, status } = useSession()
 
   const list = () => (
     <>
@@ -176,17 +173,6 @@ const MiniDrawer = () => {
       </div>
       <Divider color="#00D998" />
       {list()}
-      <Box
-        component="span"
-        sx={{
-          p: 2,
-          position: 'absolute',
-          bottom: '30px',
-        }}
-      >
-        {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
-      </Box>
-
       <Button
         variant="text"
         onClick={() => signOut({})}
