@@ -59,6 +59,10 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d_%H:%M:%S')"
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -84,6 +88,17 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Create tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{steps.date.outputs.date}}',
+              sha: context.sha
+            })
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
@@ -92,7 +107,7 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ github.ref != 'refs/heads/main' }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console,enable=${{ github.ref == 'refs/heads/main' }}
           tags: |
-            type=raw,value={{date 'YYYYMMDD-hhmmss'}}
+            type=raw,value={{steps.date.outputs.date}}
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' && github.event.inputs.is-release == 'true' }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=rc,enable=${{ github.ref == 'refs/heads/staging' }}
