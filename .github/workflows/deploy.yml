@@ -89,6 +89,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Create tag
+        if: ${{ github.ref != 'refs/heads/main' && github.event.inputs.is-release == 'true' }}
         uses: actions/github-script@v5
         with:
           script: |
