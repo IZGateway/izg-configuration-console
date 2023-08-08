@@ -15,28 +15,18 @@ import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import useSWR from 'swr'
-import { isEmpty } from 'underscore'
-const _ = require('underscore');
-
 
 interface ChangeHistoryProps {
   destId: string
 }
 
 const updatedFields = (data) => {
-  let fields;
-
-  if (data.newValues.newPassword && data.newValues.confirmPassword) {
-    const obj = _.omit(data.newValues, 'confirmPassword');
-    fields = Object.keys(obj).join(' , ')
-  } else {
-    fields = Object.keys(_.pick(data.newValues, (value) => value !== '')).join(' , ')
-  }
+  let fields = Object.keys(data.newValues).join(' , ')
   const correction = {
-    username: 'Username',
-    facility_id: 'Facility ID',
-    newPassword: 'Password',
+    username: 'user name',
+    facility_id: 'facility ID',
   }
+
   Object.keys(correction).forEach((key) => {
     fields = fields.replaceAll(key, correction[key])
   })
@@ -101,10 +91,11 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   )
   if (error) return <div>failed to load</div>
   if (isLoading) return <div>loading...</div>
+
   if (!data) return <div>no data</div>
 
-  const historyDataLength = data.length
-  const defaultChangeHistoryView = data.slice(0, 5)
+  const historyDataLength = data.auditBydestIdByUser?.length
+  const defaultChangeHistoryView = data.auditBydestIdByUser?.slice(0, 5)
 
   return (
     <div>
@@ -135,7 +126,3 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   )
 }
 export default ChangeHistory
-function typeOf(fields: any): any {
-  throw new Error('Function not implemented.')
-}
-
