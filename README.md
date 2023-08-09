@@ -1,90 +1,120 @@
 # izg-configuration-console
 
-This project contains the api and ui for the IZ Gateway Configuration Console. This is written using the following technologies:
+This project contains source code for the IZ Gateway Configuration Console. This is written using the following technologies:
 
-- NodeJS 
-- NextJS 
+- NodeJS
+- NextJS
+- NextAuthJS
 - Material UI
-- GraphQL using Apollo
-- Yarn 3 (monorepo)
 - Docker Compose
 - MySQL image
-- Keycloak image
-
 
 ## Usage for local development
+
 The following prerequisites must be met for the first-time install and run the application on a local environment
-- Yarn 3 installed and active
-- Docker compose installed
 
-A certificate for connecting to an instance of IZ Gateway is not necessary, however the connection status feature will not function without a certificate. You will see errors in the console but they do not prevent the application from running.
+- NodeJS installed and active
+- Dokcer & Docker compose installed
+- Okta account for the localhost client
 
-### **Step 1: start docker**
+NOTE: A certificate for connecting to an instance of IZ Gateway is not necessary, however the connection status feature will not function without a certificate. You will see errors in the console but they do not prevent the application from running.
+
+### **Step 1: Create .env and .env.local text files in project root directory**
+
+NextJS will use values found in the .env.local file. Below is an example of the keys that require values custom to your environment
+
+```
+NEXTAUTH_URL=http://localhost
+NEXTAUTH_URL_INTERNAL=http://localhost
+NEXTAUTH_SECRET=<enter generated secret>
+OKTA_CLIENT_ID=<enter client id>
+OKTA_ISSUER=<the URL for the Okta service>
+OKTA_CLIENT_SECRET=<Okta secret>
+SHOW_SQL_IN_CONSOLE=true
+DATABASE_URL="mysql://<url to your database>"
+IZG_MAX_STATUS_HISTORY_RETURNED=20
+IZG_ENDPOINT_CRT_PATH=<path/to/your/certificate.crt>
+IZG_ENDPOINT_KEY_PATH=<path/to/your/key.key>
+IZG_ENDPOINT_PASSCODE=<your certificate passcode>
+NEXTAUTH_DEBUG=true
+```
+
+the .env file is needed for Prisma to connect and inspect the database schema in order to generate a prisma.schema and prisma client. The .env file only needs to contain the database url connection string.
+
+```
+DATABASE_URL="mysql:<database connection URL>"
+```
+
+### **Step 2: Install Dependencies**
+
+Install dependencies by running
+
+```
+npm install
+```
+
+### **Step 3: Connect Prisma**
+
+Create a Prisma client by running the following
+
+```
+npx prisma generate
+```
+
+YES - npX and not npM  
+This will create the Prisma client using the connection info in the .env file.
+
+### **Step 4: Start local application**
+
 Prerequisite: Existing services running on port 3306, such as another database instance, must be stopped. Or, you can modify the port by creating a docker-compose.override.yml and setting a port value.
 
-In a terminal window at the root of the project directory, start the MySQL and Keycloak containers by running
+In a terminal window at the root of the project directory, run
 
 ```
-yarn docker-dev:up
-```
-MySQL and Keycloak are configured to start with default test data and configurations.   
-NOTE: MySQL container must be running before the next steps can be completed
-
-### **Step 2: install dependencies**
-With the MySQL and Keycloak images running, install the project's dependencies by running the following at the root of the project directory
-```
-yarn install
+npm run start:local-dev
 ```
 
-### **Step 3: create .env files**
-NOTE: DO NOT MODIFY EXISTING .ENV FILES AS THESE ARE MEANT TO BE TEMPLATES
-
-In the packages/ui directory, create a file named '.env.local'.
-This .env.local file is ignored by git and will have all your configuration details for the ui project. Copy from the .env template and input the key values for your environment.      
-Follow these steps to configure the next-auth values: https://next-auth.js.org/configuration/options#secret     
-
-In the packages/api directory, create a file named '.env'.      
-This .env file is ignored by git and will have all your configuration details for the api project. Copy the keys from the .env.template file and fill in the appropriate values.
-### **Step 4: connect Prisma**
-Change directory to the api project
+This script executes the following:
 
 ```
-cd packages/api
-```
-and run the following
-```
-yarn prisma generate
-```
-This will create the Prisma client using the connection info in the api's .env file.
-
-### **Step 5: starting config console**
-With the containers running and completing the prior steps, at the root of the project run
-
-```
-yarn dev
+"docker-compose -f docker-compose.local.yml up -d && npm run dev",
 ```
 
-This will start the config console api and ui services. To open the application, go to the following URL in a browser:
+- Create and start an Nginx image configured to listen to port 80 and route incoming requests to the application running on port 3000
+- Create and start a MySQL image loaded with dummy test data
+- Runs 'npm run dev' to start the node application on port 3000
 
-`http://localhost:3000`
+### **Step 5 (OPTIONAL): Create docker-compose.override.yml**
 
-Running in development mode uses the concurrently package to start both the api graphql server and the ui nextjs server in development mode. Use the following credentials to log into the application when prompted:
-
-Username: brian     
-Password: test
-
-### **After setup**
-Now that the above steps are completed, the entire project can be started by running the following command at the root of the project
+This step is needed if you want to run the config console application in a docker container along with the mysql and nginx containers..
+The docker-compose.override.yml file must be created at the root of the project and configured with the following values:
 
 ```
-yarn docker-development:up
+version: '3'
+services:
+  config-console:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      - NEXTAUTH_URL=http://localhost
+      - NEXTAUTH_URL_INTERNAL=http://localhost
+      - NEXTAUTH_SECRET=<enter generated secret>
+      - OKTA_CLIENT_ID=<enter client id>
+      - OKTA_ISSUER=<the URL for the Okta service>
+      - OKTA_CLIENT_SECRET=<Okta secret>
+      - SHOW_SQL_IN_CONSOLE=true
+      - DATABASE_URL="mysql://<url to your database>"
+      - IZG_MAX_STATUS_HISTORY_RETURNED=20
+      - IZG_ENDPOINT_CRT_PATH=<path/to/your/certificate.crt>
+      - IZG_ENDPOINT_KEY_PATH=<path/to/your/key.key>
+      - IZG_ENDPOINT_PASSCODE=<your certificate passcode>
+      - NEXTAUTH_DEBUG=true
+    volumes:
+      - <full path to your certificate and key directory>:/usr/src/app/certs
+
 ```
 
-This command will start the docker containers and then start the config console project.
+### **After start**
 
-### **Stopping the application**
-Use ctrl+c to stop the config console's api and ui services. Run the following command to stop the docker containers
-
-```
-yarn docker:down
-```
+Navigate to http://localhost in a browser and you should see the application prompt you for a keycloak login

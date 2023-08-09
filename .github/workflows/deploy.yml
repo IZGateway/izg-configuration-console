@@ -59,6 +59,10 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Get current date
+        id: date
+        run: echo "RELEASE_DATE=$(date +'%d%b%Y%H%M%S')" >> "$GITHUB_ENV"
+
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -92,7 +96,7 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ github.ref != 'refs/heads/main' }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console,enable=${{ github.ref == 'refs/heads/main' }}
           tags: |
-            type=raw,value={{date 'YYYYMMDD-hhmmss'}}
+            type=raw,value=${{env.RELEASE_DATE}}
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' && github.event.inputs.is-release == 'true' }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
             type=raw,value=rc,enable=${{ github.ref == 'refs/heads/staging' }}
@@ -109,6 +113,18 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create tag
+        if: ${{ github.ref != 'refs/heads/main' && github.event.inputs.is-release == 'true' }}
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{env.RELEASE_DATE}}',
+              sha: context.sha
+            })
 
   deploy-staging:
     name: Deploy to Staging
