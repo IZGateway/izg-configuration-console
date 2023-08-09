@@ -82,7 +82,7 @@ describe('Test History', () => {
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
     expect(screen.getByText('N/A')).toBeInTheDocument()
     expect(
-      screen.getByText('Cannot test Further on failure')
+      screen.getByText('Cannot test further on failure')
     ).toBeInTheDocument()
     expect(screen.queryByText('error message')).not.toBeInTheDocument()
   })
