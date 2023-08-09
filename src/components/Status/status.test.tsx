@@ -3,39 +3,24 @@ import { render, screen } from '@testing-library/react'
 import Status from './index'
 
 describe('Status of a connection', () => {
-  it('should show Connected if it is passed as Connected', () => {
+  it('should show Connected if it is passed as true', () => {
     render(
       <Status
-        status={{
-          status: 'Connected',
-        }}
+        isConnected={true}
         color={true}
       />
     )
     expect(screen.getByText('Connected')).toBeInTheDocument()
   })
 
-  it('should show Not Connected if it is passed as null', () => {
+  it('should show Not Connected if it is passed as false', () => {
     render(
       <Status
-        status={{
-          status: '',
-        }}
+        isConnected={false}
         color={true}
       />
     )
     expect(screen.getByText('Not Connected')).toBeInTheDocument()
   })
 
-  it('should show Not Connected if it is passed as anything other than Connected', () => {
-    render(
-      <Status
-        status={{
-          status: 'XYZ',
-        }}
-        color={true}
-      />
-    )
-    expect(screen.getByText('Not Connected')).toBeInTheDocument()
-  })
 })
