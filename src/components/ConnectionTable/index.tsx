@@ -13,6 +13,7 @@ import {
 } from '@mui/material'
 import HistoryIcon from '@mui/icons-material/History'
 import Link from 'next/link'
+import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
@@ -203,16 +204,18 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            {/* <Tooltip arrow placement="bottom" title="Edit">
-              <IconButton
-                id="edit"
-                aria-label="edit"
-                color="primary"
-                sx={actionButtonStyle}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip> */}
+            <Link href={`/edit/${params.id}`}>
+              <Tooltip arrow placement="bottom" title="Edit">
+                <IconButton
+                  id="edit"
+                  aria-label="edit"
+                  color="primary"
+                  sx={actionButtonStyle}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Link>
             <Link href={`/test/${params.id}`}>
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton

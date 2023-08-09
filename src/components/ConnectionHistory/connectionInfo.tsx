@@ -84,7 +84,11 @@ const ConnectionInfo = (props) => {
                   ENDPOINT URL
                 </Typography>
                 <Typography>
-                  <Link href={destData?.dest_uri.toString()} target="_blank">
+                  <Link
+                    href={destData?.dest_uri.toString()}
+                    target="_blank"
+                    style={{ color: '#015A2F', overflowWrap: 'anywhere' }}
+                  >
                     {destData?.dest_uri.toString()}
                   </Link>
                 </Typography>
