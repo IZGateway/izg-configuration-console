@@ -131,7 +131,6 @@ const EditConnection = (props: editConnectionProps) => {
           testResult.current = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          console.log(testResult.current)
           if (testResult.current === 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
@@ -161,7 +160,6 @@ const EditConnection = (props: editConnectionProps) => {
     RXA11: destData?.RXA11,
   }
   const formValidation = (e) => {
-    console.log(isFormChanged)
     if (isFormChanged && activeStep === 2) {
       e.preventDefault()
       setIsNextButtonClicked(true)
@@ -207,8 +205,7 @@ const EditConnection = (props: editConnectionProps) => {
               }))
               hasErrors = true
             } else if (
-              formValues.newPassword.trim() !==
-              formValues.confirmPassword.trim()
+              formValues.newPassword.trim() !== formValues.confirmPassword.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -218,7 +215,7 @@ const EditConnection = (props: editConnectionProps) => {
             } else if (
               !isEmpty(value) &&
               formValues.confirmPassword.trim() ===
-                formValues.facility_id.trim()
+              formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,

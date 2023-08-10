@@ -82,11 +82,8 @@ const TestsList = ({
               label={item.status === 'SKIPPED' ? 'N/A' : item.status}
               variant="outlined"
               color={
-                item.status === 'PASS'
-                  ? 'primary'
-                  : item.status === 'SKIPPED'
-                    ? 'default'
-                    : 'secondary'
+                item.status === 'PASS' ? 'primary'
+                  : item.status === 'SKIPPED' ? 'default' : 'secondary'
               }
               sx={{
                 borderRadius: '4px',
@@ -98,7 +95,7 @@ const TestsList = ({
         </React.Fragment>
       ))}
     </List>
-  );
+  )
 
   const buttonGroup = () => (
     <Container
