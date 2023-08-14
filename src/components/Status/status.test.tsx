@@ -12,5 +12,4 @@ describe('Status of a connection', () => {
     render(<Status isConnected={false} color={true} />)
     expect(screen.getByText('Not Connected')).toBeInTheDocument()
   })
-
 })

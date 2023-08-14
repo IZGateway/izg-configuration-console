@@ -205,7 +205,8 @@ const EditConnection = (props: editConnectionProps) => {
               }))
               hasErrors = true
             } else if (
-              formValues.newPassword.trim() !== formValues.confirmPassword.trim()
+              formValues.newPassword.trim() !==
+              formValues.confirmPassword.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -215,7 +216,7 @@ const EditConnection = (props: editConnectionProps) => {
             } else if (
               !isEmpty(value) &&
               formValues.confirmPassword.trim() ===
-              formValues.facility_id.trim()
+                formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
