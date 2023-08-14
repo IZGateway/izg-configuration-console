@@ -4,7 +4,7 @@ module.exports = {
   env: {
     OPERATIONS_GROUP: 'IZG Operations',
     USER_GROUP: 'IZG User',
-    NEXT_PUBLIC_GA_ID: 'G-SE3E339T7E',
+    GA_ID: 'G-SE3E339T7E',
   },
   async redirects() {
     return [

@@ -64,7 +64,7 @@ const errorMessages = {
 
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
-  const { data: session } = useSession();
+  const { data: session } = useSession()
   const { clearValue } = useContext(CombinedContext)
   const [openAlert, setOpenAlert] = useState(false)
   const [isTestRunning, setIsTestRunning] = useState(false)
@@ -133,7 +133,7 @@ const EditConnection = (props: editConnectionProps) => {
           testResult.current = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          if (testResult.current !== 'PASS') {
+          if (testResult.current === 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
@@ -218,7 +218,7 @@ const EditConnection = (props: editConnectionProps) => {
             } else if (
               !isEmpty(value) &&
               formValues.confirmPassword.trim() ===
-              formValues.facility_id.trim()
+                formValues.facility_id.trim()
             ) {
               setFormErrors((prevErrors) => ({
                 ...prevErrors,
@@ -256,16 +256,24 @@ const EditConnection = (props: editConnectionProps) => {
       isEmpty(formValues.confirmPassword)
     ) {
       const dataToSend = {
-        updatedData: submittingValue, user: session.user.name, oldValues: destData, newValues: formValues, tableName: 'destinations'
-      };
+        updatedData: submittingValue,
+        user: session.user.name,
+        oldValues: destData,
+        newValues: formValues,
+        tableName: 'destinations',
+      }
       response = await fetch(`/api/update/destination/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify(dataToSend),
       })
     } else {
       const dataToSend = {
-        updatedData: formValues, user: session.user.name, oldValues: destData, newValues: formValues, tableName: 'destinations'
-      };
+        updatedData: formValues,
+        user: session.user.name,
+        oldValues: destData,
+        newValues: formValues,
+        tableName: 'destinations',
+      }
       response = await fetch(`/api/update/destination/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify(dataToSend),
