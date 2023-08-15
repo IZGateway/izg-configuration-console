@@ -1,3 +1,4 @@
+/* eslint-disable no-loops/no-loops */
 import * as React from 'react'
 import {
   Typography,
@@ -16,31 +17,30 @@ import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import useSWR from 'swr'
 import { isEmpty } from 'underscore'
-const _ = require('underscore');
-
+import _ from 'underscore'
 
 interface ChangeHistoryProps {
   destId: string
 }
 
-const updatedFields = (data) => {
-  let fields;
+const findDifferentKeysAndValues = (obj1, obj2) => {
+  const allKeys = _.intersection(Object.keys(obj1), Object.keys(obj2))
 
-  if (data.newValues.newPassword && data.newValues.confirmPassword) {
-    const obj = _.omit(data.newValues, 'confirmPassword');
-    fields = Object.keys(obj).join(' , ')
-  } else {
-    fields = Object.keys(_.pick(data.newValues, (value) => value !== '')).join(' , ')
-  }
-  const correction = {
-    username: 'Username',
-    facility_id: 'Facility ID',
-    newPassword: 'Password',
-  }
-  Object.keys(correction).forEach((key) => {
-    fields = fields.replaceAll(key, correction[key])
+  const differentKeys = []
+
+  _.each(allKeys, (key) => {
+    if (!_.isEqual(obj1[key], obj2[key])) {
+      differentKeys.push(key)
+    }
   })
-  return fields
+  if (!(isEmpty(obj1.newPassword) && isEmpty(obj2.confirmPassword))) {
+    differentKeys.push('Password')
+  }
+  return differentKeys.join(' , ')
+}
+
+const updatedFields = (data) => {
+  return findDifferentKeysAndValues(data.newValues, data.oldValues)
 }
 
 const timeline = (data) => (
@@ -135,7 +135,3 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   )
 }
 export default ChangeHistory
-function typeOf(fields: any): any {
-  throw new Error('Function not implemented.')
-}
-

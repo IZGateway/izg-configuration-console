@@ -133,7 +133,7 @@ const EditConnection = (props: editConnectionProps) => {
           testResult.current = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          if (testResult.current === 'PASS') {
+          if (testResult.current !== 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
