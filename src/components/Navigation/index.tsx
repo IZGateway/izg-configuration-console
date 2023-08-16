@@ -4,7 +4,7 @@ import IZGLogo from './Branding'
 import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 import {
   Collapse,
   styled,
@@ -16,9 +16,9 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
-  Box,
 } from '@mui/material'
 import { menuItems } from './menuItems'
+import AppHeaderBar from '../AppHeader'
 
 const drawerWidthOpen = '20em'
 const drawerWidthClosed = '5em'
@@ -88,8 +88,6 @@ const MiniDrawer = () => {
   ) => {
     setSelectedIndex(index)
   }
-
-  const { data: session, status } = useSession()
 
   const list = () => (
     <>
@@ -161,49 +159,40 @@ const MiniDrawer = () => {
   )
 
   return (
-    <Drawer variant="permanent" open={open} id="navigation">
-      <DrawerHeader>
-        <IconButton onClick={handleClick}>
-          {!open ? (
-            <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
-          ) : (
-            <ChevronLeftIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
-          )}
-        </IconButton>
-      </DrawerHeader>
-      <div>
-        <IZGLogo />
-      </div>
-      <Divider color="#00D998" />
-      {list()}
-      <Box
-        component="span"
-        sx={{
-          p: 2,
-          position: 'absolute',
-          bottom: '30px',
-        }}
-      >
-        {status === 'authenticated' && <p>Welcome, {session.user.email}</p>}
-      </Box>
-
-      <Button
-        variant="text"
-        onClick={() => signOut({})}
-        sx={{
-          color: '#FFFFFF',
-          textDecoration: 'underline',
-          position: 'absolute',
-          left: '10px',
-          bottom: '20px',
-          textTransform: 'capitalize',
-        }}
-      >
-        Log Out
-      </Button>
-      <Collapse in={!open} timeout="auto" />
-      {/* Commenting this code as it is not part of any user story right now */}
-      {/* <Button
+    <>
+      <AppHeaderBar open={open} />
+      <Drawer variant="permanent" open={open} id="navigation">
+        <DrawerHeader>
+          <IconButton onClick={handleClick}>
+            {!open ? (
+              <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+            ) : (
+              <ChevronLeftIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+            )}
+          </IconButton>
+        </DrawerHeader>
+        <div>
+          <IZGLogo />
+        </div>
+        <Divider color="#00D998" />
+        {list()}
+        <Button
+          variant="text"
+          onClick={() => signOut({})}
+          sx={{
+            color: '#FFFFFF',
+            textDecoration: 'underline',
+            position: 'absolute',
+            left: '10px',
+            bottom: '20px',
+            textTransform: 'capitalize',
+          }}
+        >
+          Log Out
+        </Button>
+        <Collapse in={!open} timeout="auto" />
+        {/* Commenting this code as it is not part of any user story right now */}
+        {/* <Button
         variant="contained"
         size="large"
         sx={{
@@ -216,7 +205,8 @@ const MiniDrawer = () => {
       >
         Need Help?
       </Button> */}
-    </Drawer>
+      </Drawer>
+    </>
   )
 }
 
