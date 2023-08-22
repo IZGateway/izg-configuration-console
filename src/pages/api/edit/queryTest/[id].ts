@@ -10,7 +10,22 @@ import { authOptions } from '../../auth/[...nextauth]'
 import hasAccessToDestId from '../../../../lib/accesshelper'
 import destination from '../../../../lib/queries/fetch/destination'
 import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
-
+/**
+ * @swagger
+ * /api/edit/queryTest/{id}:
+ *   get:
+ *     summary: Get query test result for destination by ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<APIResponse>
