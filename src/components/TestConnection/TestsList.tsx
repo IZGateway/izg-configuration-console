@@ -44,64 +44,62 @@ const TestsList = ({
   const progressPct = Number(((passeddata / totaldata) * 100).toFixed())
 
   const list = () => (
-    <>
-      <List>
-        {testResults.map((item) => (
-          <>
-            <ListItem key={item.name} id={item.name}>
-              <ListItemIcon>
-                {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
-                {item.status === 'FAIL' && <ErrorIcon color="secondary" />}
-                {item.status === 'WARNING' && (
-                  <ReportProblemIcon color="warning" />
-                )}
-                {item.status === 'SKIPPED' && (
-                  <ErrorOutlineIcon sx={{ color: '#424242' }} />
-                )}
-              </ListItemIcon>
-
-              {item.status === 'PASS' ? (
-                <ListItemText primary={item.name} />
-              ) : item.status === 'SKIPPED' ? (
-                <ListItemText
-                  primary={item.name}
-                  secondary={
-                    <Typography variant="body2" color="default">
-                      Cannot test Further on failure
-                    </Typography>
-                  }
-                />
-              ) : (
-                <ListItemText
-                  primary={item.name}
-                  secondary={
-                    <Typography variant="body2" color="secondary">
-                      {item.message}
-                    </Typography>
-                  }
-                />
+    <List>
+      {testResults.map((item) => (
+        <React.Fragment key={item.name}>
+          <ListItem id={item.name}>
+            <ListItemIcon>
+              {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
+              {item.status === 'FAIL' && <ErrorIcon color="secondary" />}
+              {item.status === 'WARNING' && (
+                <ReportProblemIcon color="warning" />
               )}
-              <Chip
-                label={item.status === 'SKIPPED' ? 'N/A' : item.status}
-                variant="outlined"
-                color={
-                  item.status === 'PASS'
-                    ? 'primary'
-                    : item.status === 'SKIPPED'
-                    ? 'default'
-                    : 'secondary'
+              {item.status === 'SKIPPED' && (
+                <ErrorOutlineIcon sx={{ color: '#424242' }} />
+              )}
+            </ListItemIcon>
+
+            {item.status === 'PASS' ? (
+              <ListItemText primary={item.name} />
+            ) : item.status === 'SKIPPED' ? (
+              <ListItemText
+                primary={item.name}
+                secondary={
+                  <Typography variant="body2" color="default">
+                    Cannot test further on failure
+                  </Typography>
                 }
-                sx={{
-                  borderRadius: '4px',
-                  marginTop: '8px',
-                }}
               />
-            </ListItem>
-            <Divider />
-          </>
-        ))}
-      </List>
-    </>
+            ) : (
+              <ListItemText
+                primary={item.name}
+                secondary={
+                  <Typography variant="body2" color="secondary">
+                    {item.message}
+                  </Typography>
+                }
+              />
+            )}
+            <Chip
+              label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+              variant="outlined"
+              color={
+                item.status === 'PASS'
+                  ? 'primary'
+                  : item.status === 'SKIPPED'
+                  ? 'default'
+                  : 'secondary'
+              }
+              sx={{
+                borderRadius: '4px',
+                marginTop: '8px',
+              }}
+            />
+          </ListItem>
+          <Divider />
+        </React.Fragment>
+      ))}
+    </List>
   )
 
   const buttonGroup = () => (
