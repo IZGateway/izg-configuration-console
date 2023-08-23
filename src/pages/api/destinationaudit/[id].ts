@@ -28,7 +28,7 @@ export default async function handler(
 
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const result = await destinationaudithistory(destId)
+      const result = await destinationaudithistory(destId, session.user.name)
       res.json(result)
     } else {
       throw new Error(
