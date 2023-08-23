@@ -3,7 +3,22 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
-
+/**
+ * @swagger
+ * /api/destinationaudit/{id}:
+ *   get:
+ *     summary: Get audit in change in destination by ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse

@@ -15,14 +15,14 @@ describe('Verify component', () => {
       RXA11: '',
     }
     expect(() => {
-      render(<Verify destinationById={data} value={data} />)
+      render(<Verify {...data} value={data} />)
     }).not.toThrow()
   })
 
   it('renders without throwing any errors when empty data is passed', () => {
     const data = {}
     expect(() => {
-      render(<Verify destinationById={data} value={data} />)
+      render(<Verify {...data} value={data} />)
     }).not.toThrow()
   })
 
@@ -37,7 +37,7 @@ describe('Verify component', () => {
       MSH22: '',
       RXA11: '',
     }
-    render(<Verify destinationById={data} value={data} />)
+    render(<Verify {...data} value={data} />)
     expect(screen.getAllByText('existingUsername').length).toBe(2)
   })
 })

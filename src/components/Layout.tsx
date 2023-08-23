@@ -18,6 +18,7 @@ const pageContainer = {
   padding: 3,
   width: '80vw',
   flexGrow: 1,
+  paddingTop: '7em',
 }
 
 interface DashboardLayoutProps {

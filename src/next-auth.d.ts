@@ -9,5 +9,6 @@ declare module 'next-auth' {
       /** The user's postal address. */
       address: string
     } & DefaultSession['user']
+    isAdmin: boolean
   }
 }
