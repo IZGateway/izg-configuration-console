@@ -3,7 +3,22 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
-
+/**
+ * @swagger
+ * /api/jurisdictions/{id}:
+ *   get:
+ *     summary: Get destination's juridiction data by ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse

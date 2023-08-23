@@ -5,6 +5,8 @@ import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import {
   Collapse,
   styled,
@@ -75,6 +77,7 @@ export type MenuItem = {
 // }
 
 const MiniDrawer = () => {
+  const { data: session } = useSession()
   const [open, setOpen] = React.useState(true)
   const [selectedIndex, setSelectedIndex] = React.useState(1)
 
@@ -157,7 +160,6 @@ const MiniDrawer = () => {
       </List>
     </>
   )
-
   return (
     <>
       <AppHeaderBar open={open} />
@@ -176,6 +178,23 @@ const MiniDrawer = () => {
         </div>
         <Divider color="#00D998" />
         {list()}
+        {session?.isAdmin && (
+          <Link href="/api-doc">
+            <Button
+              variant="text"
+              sx={{
+                color: '#FFFFFF',
+                textDecoration: 'underline',
+                position: 'absolute',
+                left: '5px',
+                bottom: '50px',
+                textTransform: 'capitalize',
+              }}
+            >
+              Swagger API
+            </Button>
+          </Link>
+        )}
         <Button
           variant="text"
           onClick={() => signOut({})}
@@ -209,5 +228,4 @@ const MiniDrawer = () => {
     </>
   )
 }
-
 export default MiniDrawer
