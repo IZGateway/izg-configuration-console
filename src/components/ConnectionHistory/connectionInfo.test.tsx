@@ -6,10 +6,7 @@ import ConnectionInfo from './connectionInfo'
 describe('Connection info component', () => {
   it('renders without throwing any errors', () => {
     expect(() => {
-      render(
-        <ConnectionInfo destId={'ak'} />
-      )
+      render(<ConnectionInfo destId={'ak'} />)
     }).not.toThrow()
   })
-
 })

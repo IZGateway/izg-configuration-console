@@ -51,7 +51,9 @@ const TestsList = ({
             <ListItemIcon>
               {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
               {item.status === 'FAIL' && <ErrorIcon color="secondary" />}
-              {item.status === 'WARNING' && <ReportProblemIcon color="warning" />}
+              {item.status === 'WARNING' && (
+                <ReportProblemIcon color="warning" />
+              )}
               {item.status === 'SKIPPED' && (
                 <ErrorOutlineIcon sx={{ color: '#424242' }} />
               )}
@@ -85,8 +87,8 @@ const TestsList = ({
                 item.status === 'PASS'
                   ? 'primary'
                   : item.status === 'SKIPPED'
-                    ? 'default'
-                    : 'secondary'
+                  ? 'default'
+                  : 'secondary'
               }
               sx={{
                 borderRadius: '4px',
@@ -98,7 +100,7 @@ const TestsList = ({
         </React.Fragment>
       ))}
     </List>
-  );
+  )
 
   const buttonGroup = () => (
     <Container

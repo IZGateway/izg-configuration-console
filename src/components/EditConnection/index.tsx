@@ -131,7 +131,6 @@ const EditConnection = (props: editConnectionProps) => {
           testResult.current = data.testResults[0].status
           setIsTestRunning(false)
           setIsFormDirty(false)
-          console.log(testResult.current)
           if (testResult.current === 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
@@ -161,7 +160,6 @@ const EditConnection = (props: editConnectionProps) => {
     RXA11: destData?.RXA11,
   }
   const formValidation = (e) => {
-    console.log(isFormChanged)
     if (isFormChanged && activeStep === 2) {
       e.preventDefault()
       setIsNextButtonClicked(true)
