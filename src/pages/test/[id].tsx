@@ -15,7 +15,10 @@ const Test = () => {
   return (
     <Container title="Test Connection">
       <ErrorBoundary>
-        <TestConnection destId={router.query?.id as string} />
+        <TestConnection
+          destId={router.query?.id as string}
+          destType={router.query?.destType as string}
+        />
       </ErrorBoundary>
     </Container>
   )

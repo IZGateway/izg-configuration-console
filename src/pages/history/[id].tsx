@@ -15,7 +15,11 @@ const HistoryPage = () => {
   return (
     <Container title="Connection History">
       <ErrorBoundary>
-        <ConnectionHistory destId={router.query?.id as string} />
+        <ConnectionHistory
+          destId={router.query?.id as string}
+          destType={router.query?.destType as string}
+          status={router.query?.status as string}
+        />
       </ErrorBoundary>
     </Container>
   )

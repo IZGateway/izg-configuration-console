@@ -15,8 +15,10 @@ import Close from '../Close'
 import { isEmpty } from 'underscore'
 import useSWR from 'swr'
 import { mutate } from 'swr'
+import desttypehelper from '../../lib/desttypehelper'
 interface editConnectionProps {
   destId: string
+  destType: string
 }
 
 const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
@@ -89,13 +91,13 @@ const EditConnection = (props: editConnectionProps) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}`)
+  } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
 
-  const {
+  /* const {
     data: jurisdictionData,
     error: jurisdictionError,
     isLoading: isJurisdictionLoading,
-  } = useSWR(`/api/jurisdictions/${props.destId}`)
+  } = useSWR(`/api/jurisdictions/${props.destId}`) */
   const testResult = React.useRef('')
   useEffect(() => {
     if (destData) {
@@ -117,7 +119,7 @@ const EditConnection = (props: editConnectionProps) => {
   useEffect(() => {
     if (activeStep === 2 && isFormDirty) {
       setIsTestRunning(true)
-      fetch(`/api/edit/queryTest/${props.destId}`, {
+      fetch(`/api/edit/queryTest/${props.destId}?destType=${props.destType}`, {
         method: 'GET',
       })
         .then((res) => {
@@ -146,8 +148,8 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [isFormDirty, activeStep, clearValue])
 
-  if (destError && jurisdictionError) return <div>failed to load</div>
-  if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
+  if (destError) return <div>failed to load</div>
+  if (isDestLoading) return <div>loading...</div>
   const initialValue = {
     username: destData?.username,
     newPassword: '',
@@ -255,20 +257,26 @@ const EditConnection = (props: editConnectionProps) => {
       isEmpty(formValues.newPassword) &&
       isEmpty(formValues.confirmPassword)
     ) {
-      response = await fetch(`/api/update/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify(submittingValue),
-      })
+      response = await fetch(
+        `/api/update/${props.destId}?destType=${props.destType}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(submittingValue),
+        }
+      )
     } else {
-      response = await fetch(`/api/update/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify(formValues),
-      })
+      response = await fetch(
+        `/api/update/${props.destId}?destType=${props.destType}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(formValues),
+        }
+      )
     }
     clearValue()
     if (response.ok) {
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}`)
+      mutate(`/api/destinations/${props.destId}?destType=${props.destType}`)
       router.push('/manage')
     } else {
       throw new Error('Update was not successful. Please try again later')
@@ -391,8 +399,10 @@ const EditConnection = (props: editConnectionProps) => {
               fontSize="32px"
               id="add-connecton"
             >
-              Editing {jurisdictionData?.description}{' '}
-              {destData?.destination_type.type}
+              Editing {destData?.jurisdiction.description}{' '}
+              {desttypehelper.destTypeFormattedToSyncWithApi(
+                destData?.destination_type.type
+              )}
             </Typography>
             <Typography gutterBottom align="center" variant="body1">
               Use the stepper to edit & manage sections of your connection
@@ -410,8 +420,10 @@ const EditConnection = (props: editConnectionProps) => {
           )}
           {activeStep === 1 && (
             <Jurisdiction
-              jurisdictionName={jurisdictionData?.description}
-              destType={destData?.destination_type.type}
+              jurisdictionName={destData?.jurisdiction.description}
+              destType={desttypehelper.destTypeFormattedToSyncWithApi(
+                destData?.destination_type.type
+              )}
             />
           )}
           {activeStep === 2 &&

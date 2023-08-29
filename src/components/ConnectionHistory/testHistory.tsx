@@ -58,8 +58,8 @@ const timeline = (data) => (
           <TimelineContent sx={{ fontWeight: '700', padding: '8px 16px' }}>
             Connection Tested
             <Typography variant="body2">
-              {item.ran_at
-                ? new Date(item.ran_at).toLocaleString('en-US', {
+              {item.statusAt
+                ? new Date(item.statusAt).toLocaleString('en-US', {
                     timeZone: 'America/New_York',
                     year: 'numeric',
                     month: '2-digit',

@@ -25,19 +25,6 @@ const destinations = async (isAdmin: boolean, jurisdictions: any) =>
           type: true,
         },
       },
-      endpointstatus: {
-        select: {
-          detail: true,
-          diagnostics: true,
-          retry_strategy: true,
-          status: true,
-          ran_at: true,
-        },
-        orderBy: {
-          ran_at: 'desc',
-        },
-        take: 1,
-      },
     },
   })
 

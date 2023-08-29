@@ -33,7 +33,12 @@ const auditMiddleware = async (params, next) => {
   if (params.action === 'update') {
     // @ts-ignore
     const record = await prisma.destinations.findUnique({
-      where: { dest_id: params.args.where.dest_id },
+      where: {
+        dest_id_dest_type: {
+          dest_id: params.args.where.dest_id_dest_type.dest_id,
+          dest_type: params.args.where.dest_id_dest_type.dest_type,
+        },
+      },
     })
 
     const auditTrailData = {
@@ -50,7 +55,12 @@ const auditMiddleware = async (params, next) => {
   } else if (params.action === 'delete') {
     // @ts-ignore
     const record = await prisma.destinations.findUnique({
-      where: { dest_id: params.args.where.dest_id },
+      where: {
+        dest_id_dest_type: {
+          dest_id: params.args.where.dest_id_dest_type.dest_id,
+          dest_type: params.args.where.dest_id_dest_type.dest_type,
+        },
+      },
     })
     const auditTrailData = {
       tableName: params.model,

@@ -91,35 +91,33 @@ const ConnectionsTable = () => {
 
   const columns: GridColDef[] = [
     {
-      field: 'destination_type',
+      field: 'destType',
       valueFormatter: ({ value }) => value?.type,
       headerName: 'ENVIRONMENT',
       width: 150,
     },
     {
-      field: 'dest_id',
+      field: 'destId',
       headerName: 'JURISDICTION',
       width: 200,
     },
     {
-      field: 'dest_uri',
+      field: 'destUri',
       headerName: 'ENDPOINT URL',
       width: 550,
     },
     {
-      field: 'endpointstatus',
+      field: 'status',
       headerName: 'STATUS',
       width: 200,
       filterable: false,
       valueFormatter: ({ value }) =>
-        value?.status?.toLowerCase() === 'connected'
-          ? 'Connected'
-          : 'Not Connected',
-      renderCell: ({ value }) => {
+        value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
+      renderCell: (params) => {
         const isConnected =
-          value?.status?.toLowerCase() === 'connected' ? true : false
-        const asOfDate = value?.ran_at
-          ? new Date(value.ran_at).toLocaleString()
+          params.row.status?.toLowerCase() === 'connected' ? true : false
+        const asOfDate = params.row.statusAt
+          ? new Date(params.row.statusAt).toLocaleString()
           : 'Unknown'
         return (
           <Tooltip
@@ -143,7 +141,7 @@ const ConnectionsTable = () => {
                   <CardHeader
                     title={
                       <Typography sx={{ fontWeight: 'bold' }} color="#212121">
-                        {value?.status.toUpperCase()}
+                        {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
@@ -162,15 +160,15 @@ const ConnectionsTable = () => {
                         Details:
                       </Box>
                       <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {value?.detail}
+                        {params.row.detail}
                       </Box>
                       <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
                       <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {value?.diagnostics}
+                        {params.row.diagnostics}
                       </Box>
                       <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
                       <Box sx={{ fontWeight: 'regular' }}>
-                        {value?.retry_strategy}
+                        {params.row.retry_strategy}
                       </Box>
                     </CardContent>
                   )}
@@ -204,7 +202,12 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            <Link href={`/edit/${params.id}`}>
+            <Link
+              href={{
+                pathname: `/edit/${params.id}`,
+                query: { destType: params.row.destType },
+              }}
+            >
               <Tooltip arrow placement="bottom" title="Edit">
                 <IconButton
                   id="edit"
@@ -216,7 +219,12 @@ const ConnectionsTable = () => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link href={`/test/${params.id}`}>
+            <Link
+              href={{
+                pathname: `/test/${params.id}`,
+                query: { destType: params.row.destType },
+              }}
+            >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
                   id="test"
@@ -228,7 +236,15 @@ const ConnectionsTable = () => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link href={`/history/${params.id}`}>
+            <Link
+              href={{
+                pathname: `/history/${params.id}`,
+                query: {
+                  destType: params.row.destType,
+                  status: params.row.status,
+                },
+              }}
+            >
               <Tooltip arrow placement="bottom" title="History">
                 <IconButton
                   id="history"
@@ -269,14 +285,12 @@ const ConnectionsTable = () => {
           </Typography>
         </Card>
       </Box>
+
       <DataGrid
         sx={dataGridCustom}
-        rows={data.map((x: any) => {
+        rows={Object.entries(data).map(([, x]: [any, any]) => {
           return {
-            ...x,
-            dest_type: x.destination_type.type,
-            jurisdiction: x.jurisdiction?.description || 'N/A',
-            endpointstatus: x.endpointstatus[0],
+            ...x[0],
           }
         })}
         columns={columns}
@@ -293,7 +307,7 @@ const ConnectionsTable = () => {
         disableColumnSelector
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-        getRowId={(row) => row.dest_id}
+        getRowId={(row) => row.destId}
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
@@ -304,12 +318,7 @@ const ConnectionsTable = () => {
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: [
-                'dest_type',
-                'jurisdiction',
-                'dest_uri',
-                'endpointstatus',
-              ],
+              fields: ['destType', 'jurisdiction', 'destUri', 'status'],
             },
           },
           panel: {

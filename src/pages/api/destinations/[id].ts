@@ -3,6 +3,8 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/fetch/destination'
+import destinationType from '../../../lib/queries/fetch/destinationtype'
+import desttypehelper from '../../../lib/desttypehelper'
 
 export default async function handle(
   req: NextApiRequest,
@@ -12,9 +14,14 @@ export default async function handle(
 
   const session = await getServerSession(req, res, authOptions)
 
+  const destType = desttypehelper.destTypeFormattedToSyncWithDB(
+    req.query.destType.toString()
+  )
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const result = await destination(destId)
+      const destination_type = await destinationType(destType)
+
+      const result = await destination(destId, destination_type.type_id)
       res.json(result)
     } else {
       throw new Error(

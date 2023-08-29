@@ -7,17 +7,16 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import desttypehelper from '../../lib/desttypehelper'
 
 interface ConnectionDetailProps {
   destination: any
-  jurisdiction: any
   open: boolean
   display: (isOpen: boolean) => void
 }
 
 const ConnectionInfoDetail = ({
   destination,
-  jurisdiction,
   open,
   display,
 }: ConnectionDetailProps) => {
@@ -67,7 +66,7 @@ const ConnectionInfoDetail = ({
                     label="Jurisdiction"
                     variant="filled"
                     disabled
-                    defaultValue={jurisdiction.description}
+                    defaultValue={destination.jurisdiction.name}
                     InputProps={{
                       readOnly: true,
                     }}
@@ -78,7 +77,9 @@ const ConnectionInfoDetail = ({
                     label="Type of Connection"
                     variant="filled"
                     disabled
-                    defaultValue={destination.destination_type.type}
+                    defaultValue={desttypehelper.destTypeFormattedToSyncWithApi(
+                      destination.destination_type.type
+                    )}
                     InputProps={{
                       readOnly: true,
                     }}
