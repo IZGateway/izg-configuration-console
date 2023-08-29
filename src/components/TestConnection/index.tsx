@@ -11,11 +11,9 @@ const TestConnection = (props) => {
       ? `/api/tests/connectiontest/${props.destId}?destType=${props.destType}`
       : null
   )
-
   if (error) {
     throw new Error(error)
   }
-
   if (isLoading) return <div>loading...</div>
 
   return (

@@ -6,7 +6,22 @@ import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
-
+/**
+ * @swagger
+ * /api/statushistory/{id}:
+ *   get:
+ *     summary: Get status of destination by ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse

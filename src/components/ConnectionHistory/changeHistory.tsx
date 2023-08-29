@@ -1,3 +1,4 @@
+/* eslint-disable no-loops/no-loops */
 import * as React from 'react'
 import {
   Typography,
@@ -15,22 +16,31 @@ import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import useSWR from 'swr'
+import { isEmpty } from 'underscore'
+import _ from 'underscore'
 
 interface ChangeHistoryProps {
   destId: string
 }
 
-const updatedFields = (data) => {
-  let fields = Object.keys(data.newValues).join(' , ')
-  const correction = {
-    username: 'user name',
-    facility_id: 'facility ID',
-  }
+const findDifferentKeysAndValues = (obj1, obj2) => {
+  const allKeys = _.intersection(Object.keys(obj1), Object.keys(obj2))
 
-  Object.keys(correction).forEach((key) => {
-    fields = fields.replaceAll(key, correction[key])
+  const differentKeys = []
+
+  _.each(allKeys, (key) => {
+    if (!_.isEqual(obj1[key], obj2[key])) {
+      differentKeys.push(key)
+    }
   })
-  return fields
+  if (!(isEmpty(obj1.newPassword) && isEmpty(obj2.confirmPassword))) {
+    differentKeys.push('Password')
+  }
+  return differentKeys.join(' , ')
+}
+
+const updatedFields = (data) => {
+  return findDifferentKeysAndValues(data.newValues, data.oldValues)
 }
 
 const timeline = (data) => (
@@ -91,11 +101,10 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   )
   if (error) return <div>failed to load</div>
   if (isLoading) return <div>loading...</div>
-
   if (!data) return <div>no data</div>
 
-  const historyDataLength = data.auditBydestIdByUser?.length
-  const defaultChangeHistoryView = data.auditBydestIdByUser?.slice(0, 5)
+  const historyDataLength = data.length
+  const defaultChangeHistoryView = data.slice(0, 5)
 
   return (
     <div>

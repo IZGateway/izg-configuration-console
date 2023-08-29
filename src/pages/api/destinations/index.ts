@@ -7,6 +7,15 @@ import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
+/**
+ * @swagger
+ * /api/destinations:
+ *   get:
+ *     summary: Get all destinations information.
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
