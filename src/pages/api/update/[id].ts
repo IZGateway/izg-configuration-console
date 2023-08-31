@@ -1,43 +1,10 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+/* import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/update/destination'
 import desttypehelper from '../../../lib/desttypehelper'
 import destinationType from '../../../lib/queries/fetch/destinationtype'
-/**
- * @swagger
- * /api/update/{id}:
- *   post:
- *     summary: Update destination information by ID.
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the destination.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           example:
- *             username: string
- *             facility_id: string
- *             MSH3: string
- *             MSH4: string
- *             MSH5: string
- *             MSH6: string
- *             MSH22: string
- *             RXA11: string
- *     responses:
- *       200:
- *         description: destination successfully updated.
- *         content:
- *           application/json:
- *       400:
- *         description: Bad request.
- */
 
 export default async function handle(
   req: NextApiRequest,
@@ -66,3 +33,4 @@ export default async function handle(
     res.status(401)
   }
 }
+ */

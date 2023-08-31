@@ -24,6 +24,12 @@ import destinationType from '../../../../lib/queries/fetch/destinationtype'
  *         schema:
  *           type: string
  *         description: The ID of the destination.
+ *       - name: destType
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
  *     responses:
  *       200:
  *         description: OK.

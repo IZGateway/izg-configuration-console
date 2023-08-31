@@ -46,7 +46,7 @@ export default async function handler(
         return response.data
       })
       .catch((error) => {
-        console.log(error)
+        console.log(error.message)
       })
     return responseData
   }

@@ -103,7 +103,7 @@ const TestHistory = (props: TestHistoryProps) => {
 
   const historyDataLength = data.length
   const defaultTestHistoryView = data.slice(0, 5)
-  const frequency = data.historyInterval
+  //const frequency = data.historyInterval
 
   return (
     <div>
@@ -123,7 +123,7 @@ const TestHistory = (props: TestHistoryProps) => {
           subheader={
             <Typography variant="caption">
               <ErrorOutlineIcon sx={{ fontSize: '1rem', mt: '8px' }} />
-              Automated test run every {msToTime(frequency)}
+              Automated test run every 15 mins
             </Typography>
           }
         ></CardHeader>

@@ -39,6 +39,7 @@ const auditDestination = async (
 
 const updatedAuditedDestination = async (
   destId: string,
+  destType: number,
   updatedData: object,
   user: string,
   oldValues: object,
@@ -46,7 +47,7 @@ const updatedAuditedDestination = async (
   tableName: string
 ) => {
   await prismacontext.prisma.$transaction(async () => {
-    await updateDestination(destId, updatedData)
+    await updateDestination(destId, destType, updatedData)
     await auditDestination(user, oldValues, newValues, tableName)
   })
 }

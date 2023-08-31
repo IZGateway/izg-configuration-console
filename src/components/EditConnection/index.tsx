@@ -95,11 +95,6 @@ const EditConnection = (props: editConnectionProps) => {
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
 
-  /* const {
-    data: jurisdictionData,
-    error: jurisdictionError,
-    isLoading: isJurisdictionLoading,
-  } = useSWR(`/api/jurisdictions/${props.destId}`) */
   const testResult = React.useRef('')
   useEffect(() => {
     if (destData) {
@@ -265,10 +260,13 @@ const EditConnection = (props: editConnectionProps) => {
         newValues: formValues,
         tableName: 'destinations',
       }
-      response = await fetch(`/api/update/destination/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify(dataToSend),
-      })
+      response = await fetch(
+        `/api/update/destination/${props.destId}?destType=${props.destType}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dataToSend),
+        }
+      )
     } else {
       const dataToSend = {
         updatedData: formValues,
@@ -277,16 +275,19 @@ const EditConnection = (props: editConnectionProps) => {
         newValues: formValues,
         tableName: 'destinations',
       }
-      response = await fetch(`/api/update/destination/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify(dataToSend),
-      })
+      response = await fetch(
+        `/api/update/destination/${props.destId}?destType=${props.destType}`,
+        {
+          method: 'POST',
+          body: JSON.stringify(dataToSend),
+        }
+      )
     }
     clearValue()
     if (response.ok) {
       router.push('/manage')
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}`)
+      mutate(`/api/destinations/${props.destId}?destType=${props.destType}`)
     } else {
       throw new Error('Update was not successful. Please try again later')
     }

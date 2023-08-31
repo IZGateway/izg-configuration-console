@@ -92,7 +92,6 @@ const ConnectionsTable = () => {
   const columns: GridColDef[] = [
     {
       field: 'destType',
-      valueFormatter: ({ value }) => value?.type,
       headerName: 'ENVIRONMENT',
       width: 150,
     },
@@ -318,7 +317,7 @@ const ConnectionsTable = () => {
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: ['destType', 'jurisdiction', 'destUri', 'status'],
+              fields: ['destType', 'destId', 'destUri', 'status'],
             },
           },
           panel: {
