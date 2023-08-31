@@ -36,7 +36,7 @@ export default async function handler(
   const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
     const endpoint = isAdmin
       ? IZG_STATUS_ENDPOINT_URL
-      : IZG_STATUS_ENDPOINT_URL + '/?include=' + { jurisdictions }
+      : IZG_STATUS_ENDPOINT_URL + '?include=' + `${jurisdictions.join(',')}`
     const responseData = await axios
       .get(endpoint, {
         httpsAgent: new https.Agent(httpsAgentOptions),
