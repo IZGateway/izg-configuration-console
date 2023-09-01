@@ -37,6 +37,23 @@ model destinations {
   @@index([dest_type], map: "FK_DEST_TYPE_idx")
 }
 
+model destinations_changelog {
+  id               Int              @id @default(autoincrement())
+  dest_id          String           @db.VarChar(128)
+  username         String?          @db.VarChar(50)
+  password         String?          @db.VarChar(50)
+  facility_id      String?          @db.VarChar(50)
+  MSH3             String?          @db.VarChar(50)
+  MSH4             String?          @db.VarChar(50)
+  MSH5             String?          @db.VarChar(50)
+  MSH6             String?          @db.VarChar(50)
+  MSH22            String?          @db.VarChar(50)
+  RXA11            String?          @db.VarChar(50)
+  dest_type        Int
+  jira_id          String          @db.VarChar(50)
+  scheduledAt      DateTime        @default(now()) @db.DateTime(0)
+}
+
 model messageheaderinfo {
   msh        String  @id @db.VarChar(128)
   dest_id    String? @db.VarChar(128)

@@ -16,11 +16,19 @@ import { isEmpty } from 'underscore'
 import useSWR from 'swr'
 import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
+import Schedule from './schedule'
+import moment from 'moment'
 interface editConnectionProps {
   destId: string
 }
 
-const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
+const steps = [
+  'SERVICE AGREEMENT',
+  'JURISDICTION',
+  'IDENTIFY',
+  'VERIFY',
+  'SCHEDULE',
+]
 
 const emptyErrors = {
   username: '',
@@ -74,6 +82,9 @@ const EditConnection = (props: editConnectionProps) => {
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedTime, setSelectedTime] = useState(null)
+  const [asapSelected, setAsapSelected] = useState(false)
   const [formValues, setFormValues] = useState({
     username: '',
     newPassword: '',
@@ -134,7 +145,7 @@ const EditConnection = (props: editConnectionProps) => {
           setIsTestRunning(false)
           setIsFormDirty(false)
 
-          if (testResult.current === 'PASS') {
+          if (testResult.current !== 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
@@ -248,36 +259,55 @@ const EditConnection = (props: editConnectionProps) => {
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
-
+  console.log(destData)
   const handleSubmit = async () => {
     let response
-    const { newPassword, confirmPassword, ...submittingValue } = formValues
+    const scheduleAt = asapSelected
+      ? moment(new Date())
+      : moment(
+          moment(selectedDate) + '' + moment(selectedTime),
+          'YYYY-MM-DD HH:mm:ss'
+        ).format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
     if (
       isEmpty(formValues.newPassword) &&
       isEmpty(formValues.confirmPassword)
     ) {
-      const dataToSend = {
-        updatedData: submittingValue,
-        user: session.user.name,
-        oldValues: destData,
-        newValues: formValues,
-        tableName: 'destinations',
-      }
-      response = await fetch(`/api/update/destination/${props.destId}`, {
+      response = await fetch(`/api/schedule/destination`, {
         method: 'POST',
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify({
+          username: formValues.username,
+          password: '',
+          facility_id: formValues.facility_id,
+          MSH3: formValues.MSH3,
+          MSH4: formValues.MSH4,
+          MSH5: formValues.MSH5,
+          MSH6: formValues.MSH6,
+          MSH22: formValues.MSH22,
+          RXA11: formValues.RXA11,
+          dest_id: destData.dest_id,
+          dest_type: 1,
+          jira_id: 'ADD HERE',
+          scheduledAt: scheduleAt,
+        }),
       })
     } else {
-      const dataToSend = {
-        updatedData: formValues,
-        user: session.user.name,
-        oldValues: destData,
-        newValues: formValues,
-        tableName: 'destinations',
-      }
-      response = await fetch(`/api/update/destination/${props.destId}`, {
+      response = await fetch(`/api/schedule/destination`, {
         method: 'POST',
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify({
+          username: formValues.username,
+          password: formValues.newPassword,
+          facility_id: formValues.facility_id,
+          MSH3: formValues.MSH3,
+          MSH4: formValues.MSH4,
+          MSH5: formValues.MSH5,
+          MSH6: formValues.MSH6,
+          MSH22: formValues.MSH22,
+          RXA11: formValues.RXA11,
+          dest_id: destData.dest_id,
+          dest_type: 1,
+          jira_id: 'ADD HERE',
+          scheduledAt: scheduleAt,
+        }),
       })
     }
     clearValue()
@@ -305,8 +335,11 @@ const EditConnection = (props: editConnectionProps) => {
   const handlePrevious = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(emptyErrors)
+    setAsapSelected(false)
+    setSelectedDate(null)
+    setSelectedTime(null)
   }
-
+  console.log(moment(selectedDate).format('DD/MM/YYYY'))
   const handleNext = (e) => {
     formValidation(e)
   }
@@ -341,16 +374,19 @@ const EditConnection = (props: editConnectionProps) => {
         </Button>
         {activeStep === steps.length - 1 ? (
           <Button
-            id="submit"
+            id="schedule"
             type="submit"
             color="primary"
             variant="contained"
+            disabled={
+              asapSelected ? !asapSelected : !(selectedDate && selectedTime)
+            }
             onClick={handleSubmit}
             sx={{
               borderRadius: '30px',
             }}
           >
-            SUBMIT
+            SCHEDULE
           </Button>
         ) : (
           <Button
@@ -445,6 +481,13 @@ const EditConnection = (props: editConnectionProps) => {
             <AlertDialog open={openAlert} close={handleCloseAlert} />
           )}
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
+          {activeStep === 4 && (
+            <Schedule
+              setSelectedDate={setSelectedDate}
+              setSelectedTime={setSelectedTime}
+              setAsapSelected={setAsapSelected}
+            />
+          )}
 
           <Container
             maxWidth="sm"
