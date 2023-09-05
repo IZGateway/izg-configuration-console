@@ -1,5 +1,12 @@
 import * as React from 'react'
-import { Container, Typography, Box, ButtonGroup, Button } from '@mui/material'
+import {
+  Container,
+  Typography,
+  Box,
+  ButtonGroup,
+  Button,
+  Tooltip,
+} from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
 import Verify from './verify'
@@ -17,7 +24,6 @@ import useSWR from 'swr'
 import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
-import moment from 'moment'
 interface editConnectionProps {
   destId: string
 }
@@ -380,21 +386,32 @@ const EditConnection = (props: editConnectionProps) => {
           PREVIOUS
         </Button>
         {activeStep === steps.length - 1 ? (
-          <Button
-            id="schedule"
-            type="submit"
-            color="primary"
-            variant="contained"
-            disabled={
-              asapSelected ? !asapSelected : !(selectedDate && selectedTime)
+          <Tooltip
+            arrow
+            placement="bottom"
+            title="Please select date and time"
+            open={
+              (asapSelected ? !asapSelected : !(selectedDate && selectedTime))
+                ? true
+                : false
             }
-            onClick={handleSubmit}
-            sx={{
-              borderRadius: '30px',
-            }}
           >
-            SCHEDULE
-          </Button>
+            <Button
+              id="schedule"
+              type="submit"
+              color="primary"
+              variant="contained"
+              disabled={
+                asapSelected ? !asapSelected : !(selectedDate && selectedTime)
+              }
+              onClick={handleSubmit}
+              sx={{
+                borderRadius: '30px',
+              }}
+            >
+              SCHEDULE
+            </Button>
+          </Tooltip>
         ) : (
           <Button
             id="next"
