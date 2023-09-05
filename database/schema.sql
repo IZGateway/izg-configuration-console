@@ -66,7 +66,7 @@ DROP TABLE IF EXISTS destinations_changelog;
 --
 CREATE TABLE `destinations_changelog` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `dest_id` varchar(128) NOT NULL,
+  `dest_id` varchar(128) NOT NULL UNIQUE,
   `username` varchar(50) DEFAULT NULL,
   `password` varchar(50) DEFAULT NULL,
   `facility_id` varchar(50) DEFAULT NULL,
@@ -76,9 +76,11 @@ CREATE TABLE `destinations_changelog` (
   `MSH6` varchar(50) DEFAULT NULL,
   `MSH22` varchar(50) DEFAULT NULL,
   `RXA11` varchar(50) DEFAULT NULL,
-  `dest_type` int(11) NOT NULL,
+  `dest_type` varchar(50) DEFAULT NULL,
   `jira_id` varchar(50) DEFAULT NULL,
   `scheduledAt` DATETIME    NOT NULL DEFAULT NOW(),
+  `requestedAt` DATETIME    NOT NULL DEFAULT NOW(),
+  `requestedBy` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
 );
 

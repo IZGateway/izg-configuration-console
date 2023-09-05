@@ -8,26 +8,22 @@ import {
   Typography,
   FormControlLabel,
   RadioGroup,
-  TextField,
-  Stack,
 } from '@mui/material'
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { TimePicker } from '@mui/x-date-pickers/TimePicker'
-import InfoIcon from '@mui/icons-material/Info'
-import { styled } from '@mui/material/styles'
 
 const Schedule = (props: any) => {
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = React.useState(false)
 
-  const handleASAPPicker = (event) => {
+  const handleASAPPicker = () => {
     props.setAsapSelected(true)
     props.setSelectedDate(null)
     props.setSelectedTime(null)
     setIsDateTimePickerOpen(false)
   }
-  const handleDateTimePicker = (event) => {
+  const handleDateTimePicker = () => {
     props.setAsapSelected(false)
     setIsDateTimePickerOpen(true)
   }

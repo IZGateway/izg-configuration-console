@@ -39,7 +39,7 @@ model destinations {
 
 model destinations_changelog {
   id               Int              @id @default(autoincrement())
-  dest_id          String           @db.VarChar(128)
+  dest_id          String           @db.VarChar(128) @unique
   username         String?          @db.VarChar(50)
   password         String?          @db.VarChar(50)
   facility_id      String?          @db.VarChar(50)
@@ -49,9 +49,11 @@ model destinations_changelog {
   MSH6             String?          @db.VarChar(50)
   MSH22            String?          @db.VarChar(50)
   RXA11            String?          @db.VarChar(50)
-  dest_type        Int
-  jira_id          String          @db.VarChar(50)
-  scheduledAt      DateTime        @default(now()) @db.DateTime(0)
+  dest_type        String           @db.VarChar(50)
+  jira_id          String           @db.VarChar(50)
+  scheduledAt      DateTime         @default(now()) @db.DateTime(0)
+  requestedAt      DateTime         @default(now()) @db.DateTime(0)
+  requestedBy      String           @db.VarChar(50)
 }
 
 model messageheaderinfo {

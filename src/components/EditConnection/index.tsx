@@ -145,7 +145,7 @@ const EditConnection = (props: editConnectionProps) => {
           setIsTestRunning(false)
           setIsFormDirty(false)
 
-          if (testResult.current !== 'PASS') {
+          if (testResult.current === 'PASS') {
             setActiveStep((prevActiveStep) => prevActiveStep + 1)
           } else {
             setOpenAlert(true)
@@ -259,24 +259,29 @@ const EditConnection = (props: editConnectionProps) => {
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
-  console.log(destData)
+
   const handleSubmit = async () => {
     let response
     const scheduleAt = asapSelected
-      ? moment(new Date())
-      : moment(
-          moment(selectedDate) + '' + moment(selectedTime),
-          'YYYY-MM-DD HH:mm:ss'
-        ).format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
+      ? new Date()
+      : selectedDate
+          .clone()
+          .set({
+            hour: selectedTime.hour(),
+            minute: selectedTime.minute(),
+            second: selectedTime.second(),
+            millisecond: selectedTime.millisecond(),
+          })
+          .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
+
     if (
       isEmpty(formValues.newPassword) &&
       isEmpty(formValues.confirmPassword)
     ) {
-      response = await fetch(`/api/schedule/destination`, {
+      response = await fetch(`/api/change/destination/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify({
           username: formValues.username,
-          password: '',
           facility_id: formValues.facility_id,
           MSH3: formValues.MSH3,
           MSH4: formValues.MSH4,
@@ -285,13 +290,14 @@ const EditConnection = (props: editConnectionProps) => {
           MSH22: formValues.MSH22,
           RXA11: formValues.RXA11,
           dest_id: destData.dest_id,
-          dest_type: 1,
+          dest_type: props.destType,
           jira_id: 'ADD HERE',
           scheduledAt: scheduleAt,
+          requestedBy: session.user.name,
         }),
       })
     } else {
-      response = await fetch(`/api/schedule/destination`, {
+      response = await fetch(`/api/change/destination/${props.destId}`, {
         method: 'POST',
         body: JSON.stringify({
           username: formValues.username,
@@ -304,9 +310,10 @@ const EditConnection = (props: editConnectionProps) => {
           MSH22: formValues.MSH22,
           RXA11: formValues.RXA11,
           dest_id: destData.dest_id,
-          dest_type: 1,
+          dest_type: props.destType,
           jira_id: 'ADD HERE',
           scheduledAt: scheduleAt,
+          requestedBy: session.user.name,
         }),
       })
     }
@@ -339,7 +346,7 @@ const EditConnection = (props: editConnectionProps) => {
     setSelectedDate(null)
     setSelectedTime(null)
   }
-  console.log(moment(selectedDate).format('DD/MM/YYYY'))
+
   const handleNext = (e) => {
     formValidation(e)
   }
