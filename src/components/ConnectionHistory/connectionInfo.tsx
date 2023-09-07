@@ -21,15 +21,9 @@ const ConnectionInfo = (props) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}`)
-  const {
-    data: jurisdictionData,
-    error: jurisdictionError,
-    isLoading: isJurisdictionLoading,
-  } = useSWR(`/api/jurisdictions/${props.destId}`)
-  if (destError && jurisdictionError) return <div>failed to load</div>
-  if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
-  if (!jurisdictionData) return <div>no jurisdiction data found</div>
+  } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
+  if (destError) return <div>failed to load</div>
+  if (isDestLoading) return <div>loading...</div>
   if (!destData) return <div>no destination data found</div>
 
   const toggleDrawer = () => {
@@ -62,7 +56,6 @@ const ConnectionInfo = (props) => {
         {open && (
           <ConnectionInfoDetail
             destination={destData}
-            jurisdiction={jurisdictionData}
             open={open}
             display={toggleDrawer}
           />
@@ -76,7 +69,7 @@ const ConnectionInfo = (props) => {
                   ENVIRONMENT
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {/* {destData.destination_type.type} */}
+                  {props.destType}
                 </Typography>
               </Box>
               <Box>
@@ -100,7 +93,7 @@ const ConnectionInfo = (props) => {
                   JURISDICTION
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {jurisdictionData ? jurisdictionData.description : 'N/A'}
+                  {destData ? destData.jurisdiction.name : 'N/A'}
                 </Typography>
               </Box>
               <Box>
@@ -108,10 +101,7 @@ const ConnectionInfo = (props) => {
                   STATUS
                 </Typography>
                 <Status
-                  isConnected={
-                    destData?.endpointstatus[0]?.status?.toLowerCase() ===
-                    'connected'
-                  }
+                  isConnected={props.status?.toLowerCase() === 'connected'}
                   color={false}
                 />
               </Box>

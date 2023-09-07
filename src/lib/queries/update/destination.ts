@@ -1,6 +1,10 @@
 import { prismacontext } from '../../prismacontext'
 
-const updateDestination = async (destId: string, updatedData) => {
+const updateDestination = async (
+  destId: string,
+  destType: number,
+  updatedData
+) => {
   let updatedDestination = updatedData
   if (updatedDestination.hasOwnProperty('newPassword')) {
     const { newPassword, confirmPassword, ...submittingValue } = updatedData
@@ -11,7 +15,7 @@ const updateDestination = async (destId: string, updatedData) => {
   }
 
   await prismacontext.prisma.destinations.update({
-    where: { dest_id: destId },
+    where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
     data: updatedDestination,
   })
 }
@@ -35,6 +39,7 @@ const auditDestination = async (
 
 const updatedAuditedDestination = async (
   destId: string,
+  destType: number,
   updatedData: object,
   user: string,
   oldValues: object,
@@ -42,7 +47,7 @@ const updatedAuditedDestination = async (
   tableName: string
 ) => {
   await prismacontext.prisma.$transaction(async () => {
-    await updateDestination(destId, updatedData)
+    await updateDestination(destId, destType, updatedData)
     await auditDestination(user, oldValues, newValues, tableName)
   })
 }

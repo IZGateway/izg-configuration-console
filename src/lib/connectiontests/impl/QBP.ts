@@ -22,7 +22,8 @@ let responseMessage: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = await lookupDestinationInfo(
-      this.connectionTestRequest.id
+      this.connectionTestRequest.id,
+      this.connectionTestRequest.desttypeid
     )
 
     const hl7QueryTestResult: ConnectionTestResult = {
@@ -298,8 +299,8 @@ export default class QBP extends ConnectionTest {
   }
 }
 
-async function lookupDestinationInfo(destId: any) {
+async function lookupDestinationInfo(destId: any, destType: any) {
   return await prismacontext.prisma.destinations.findUnique({
-    where: { dest_id: destId },
+    where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
   })
 }

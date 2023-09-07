@@ -21,10 +21,11 @@ DROP TABLE IF EXISTS destination_type;
 -- CREATE TABLE destination_type;
 --
 
-CREATE TABLE destination_type (
-  type_id int NOT NULL,
-  type varchar(45) DEFAULT NULL,
-  PRIMARY KEY (type_id)
+CREATE TABLE IF NOT EXISTS destination_type (
+    type_id int NOT NULL,
+    type varchar(45) DEFAULT NULL,
+    PRIMARY KEY (type_id),
+    INDEX IDX_destination_type (type_id)
 );
 
 --
@@ -35,26 +36,41 @@ DROP TABLE IF EXISTS destinations;
 --
 -- CREATE TABLE destinations;
 --
-CREATE TABLE `destinations` (
-  `dest_id` varchar(128) NOT NULL,
-  `dest_uri` varchar(1024) NOT NULL,
-  `username` varchar(50) DEFAULT NULL,
-  `password` varchar(50) DEFAULT NULL,
-  `facility_id` varchar(50) DEFAULT NULL,
-  `MSH3` varchar(50) DEFAULT NULL,
-  `MSH4` varchar(50) DEFAULT NULL,
-  `MSH5` varchar(50) DEFAULT NULL,
-  `MSH6` varchar(50) DEFAULT NULL,
-  `MSH22` varchar(50) DEFAULT NULL,
-  `RXA11` varchar(50) DEFAULT NULL,
-  `dest_version` varchar(50) DEFAULT NULL,
-  `signed_mou` tinyint(1) NOT NULL DEFAULT '0',
-  `pass_expiry` date DEFAULT NULL,
-  `dest_type` int(11) NOT NULL,
-  PRIMARY KEY (`dest_id`),
-  KEY `FK_DEST_TYPE_idx` (`dest_type`),
-  CONSTRAINT `FK_DEST_TYPE` FOREIGN KEY (`dest_type`) REFERENCES `destination_type` (`type_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+CREATE TABLE destinations (
+    -- The destination id, usually the FIPS STATE Code, but may also have a value for other jurisdictions (e.g., Philadelphia, New York City)
+    dest_id character varying(128) NOT NULL,
+    -- Destination type
+    dest_type int NOT NULL,
+    -- The endpoint URI for SOAP calls to the jurisdiction
+    dest_uri character varying(1024) NOT NULL,
+    -- The username for IZGateway for this destination
+    username character varying(50),
+    -- The password for IZGateway for this destination
+    password character varying(256),
+    -- The facility Id to use for this destination
+    facility_id character varying(50),
+    -- The MSH-3 for this destination
+    MSH3 character varying(50),
+    -- The MSH-4 for this destination
+    MSH4 character varying(50),
+    -- The MSH-5 for this destination
+    MSH5 character varying(50),
+    -- The MSH-6 for this destination
+    MSH6 character varying(50),
+    -- The MSH-22 for this destination
+    MSH22 character varying(50),
+    -- The RXA-11 for this destination
+    RXA11 character varying(50),
+    -- The WSDL Version to use for this destination
+    dest_version character varying(50),
+    -- Password expiry date
+    pass_expiry date,
+    jurisdiction_id int NOT NULL,
+    PRIMARY KEY (dest_id, dest_type),
+    FOREIGN KEY (dest_type) REFERENCES destination_type (type_id) ON DELETE RESTRICT,
+    FOREIGN KEY (jurisdiction_id) REFERENCES jurisdiction (jurisdiction_id) ON DELETE RESTRICT ON UPDATE CASCADE 
 );
+
 
 --
 -- DROP TABLE destinations_changelog if exists;
@@ -91,7 +107,7 @@ DROP TABLE IF EXISTS endpointstatus;
 --
 -- CREATE TABLE endpointstatus;
 --
-CREATE TABLE `endpointstatus` (
+/* CREATE TABLE `endpointstatus` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `status` varchar(45) DEFAULT NULL,
   `detail` varchar(500) DEFAULT NULL,
@@ -103,7 +119,7 @@ CREATE TABLE `endpointstatus` (
   KEY `FK_DEST_ID_idx` (`dest_id`),
   CONSTRAINT `FK_DEST_ID` FOREIGN KEY (`dest_id`) REFERENCES `destinations` (`dest_id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 );
-
+ */
 --
 -- DROP TABLE jurisdiction if exists;
 --
@@ -111,13 +127,13 @@ DROP TABLE IF EXISTS jurisdiction;
 --
 -- CREATE TABLE jurisdiction;
 --
-CREATE TABLE `jurisdiction` (
-  `name` varchar(64) NOT NULL,
-  `description` varchar(48) NOT NULL,
-  `dest_id` varchar(128) DEFAULT NULL,
-  PRIMARY KEY (`name`),
-  KEY `FK_DEST_ID_idx` (`dest_id`)
-) ;
+CREATE TABLE jurisdiction (
+    jurisdiction_id int PRIMARY KEY AUTO_INCREMENT,
+    name character varying(48) NOT NULL,
+    description character varying(128) NOT NULL,
+    dest_prefix character varying(10)
+);
+
 
 --
 -- DROP TABLE messageheaderinfo if exists;
@@ -147,15 +163,14 @@ DROP TABLE IF EXISTS audit_history;
 -- CREATE TABLE audit_history;
 --
 
-CREATE TABLE audit_history (
-  id          INT         NOT NULL AUTO_INCREMENT,
-  tableName   VARCHAR(50) NOT NULL,
-  userName    VARCHAR(50) NOT NULL,
-  changeType  ENUM('Insert', 'Update', 'Delete') NOT NULL,
-  oldValues   VARCHAR(1024)        NULL,
-  newValues   VARCHAR(1024)        NULL,
-  createdAt   DATETIME    NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (id)
+CREATE TABLE `audit_history` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tableName` VARCHAR(50) NOT NULL,
+  `userName` VARCHAR(50) NOT NULL,
+  `changeType` ENUM('Insert', 'Update', 'Delete') NOT NULL,
+  `oldValues` VARCHAR(1024) NULL DEFAULT NULL,
+  `newValues` VARCHAR(1024) NULL DEFAULT NULL,
+  `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --
 -- DROP TABLE accesscontrol if exists;
@@ -166,11 +181,13 @@ DROP TABLE IF EXISTS accesscontrol;
 -- CREATE TABLE accesscontrol;
 --
 
--- A table indicating the access allowed between a source and
--- destination.
+-- A table which stores available end-points by category and member level access
 CREATE TABLE accesscontrol (
-    souceid character varying(16),
-    destid character varying(16)
+    category varchar(16),
+    name varchar(256),
+    member varchar(256),
+    allow boolean,
+    primary key (category, name, member)
 );
 
 -- Trigger to insert expiry date 
@@ -200,7 +217,13 @@ TRUNCATE destination_type;
 --
 -- INSERT INTO TABLE destination_type;
 --
-INSERT INTO `destination_type` VALUES (1,'PRODUCTION'),(2,'TEST');
+INSERT IGNORE INTO destination_type VALUES 
+    (1, 'PRODUCTION'),  -- APHL Production
+    (2, 'TEST'),        -- Audacious Test Environment
+    (3, 'ONBOARD'),     -- APHL Onboarding Environment
+    (4, 'STAGE'),       -- APHL Staging Environment
+    (5, 'DEV'),         -- Audacious Development Environment
+    (6, 'UNKNOWN');     -- Unknown, used a default for migrations
 
 --
 -- TRUNCATE DATA FROM TABLE destinations;
@@ -211,77 +234,79 @@ TRUNCATE destinations;
 -- INSERT INTO TABLE destinations;
 --
 
-INSERT INTO destinations(dest_id, dest_uri, username, password, facility_id, MSH3, MSH4, MSH5, MSH6, MSH22, RXA11, dest_version, signed_mou, pass_expiry, dest_type) VALUES
-	('aira','https://florence.immregistries.org/iis-sandbox/soappp','IZgtwy','IZgtwy','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,'2023-07-12',1),
-	('404','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/NotFound','NOT_FOUND_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',2),
-	('devwup','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',2),
-	('dev','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','user','pass','IZGW','IZGW','IZGW','TEST','TC_04','','','2014',0,'2023-07-12',1),
-	('dev2011','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/client_Service','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,'2023-07-12',1),
-	('down','https://192.0.2.0/dev/IISService','NON_RESPONDING_IP_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
-	('invalid','https://iis.invalid','NON_DNS_RESOLVABLE_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
-	('reject','https://localhost:12345/dev/IISService','REJECTING_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','',0,'2023-07-12',1),
-	('ak','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','AK_IZ_GATEWAY_TEST_HL7','Pass','SIISCLIENT10704','VacTrAK','AKIIS','AK','VacTrAK','AKIIS','SIIS10543','2011',0,NULL,2),
-	('ar','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('as','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('az','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATEWAY_69002_HL7','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ca','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('casd','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','sdirgateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('casj','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('co','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ct','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('dc','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','Immzgateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('de','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('fl','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HNK14066','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('fm','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ga','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','GAIZUser','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('gu','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','n',0,NULL,2),
-	('ia','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','cdc.gov','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('id','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','izgatewaytest','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('il','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','TESTICAREX2','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('in','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','INIZGATEWAYHL7','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('ks','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ky','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('la','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','ONCHUB-LA','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2014',0,NULL,2),
-	('ma','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','ccghlsevenqa','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('md','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','ImmuNet-IZ-Gateway-TST','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('me','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','izgateway.dex','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('mh','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','=B.4-Q%u',0,NULL,2),
-	('mn','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','iMmrj1sTR385gAeTz','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('mo','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('mp','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('ms','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','ONCHUB-MS','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2014',0,NULL,2),
-	('mt','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('nc','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','C1489C154617B06C','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('nd','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','BDC00076','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ne','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','DHHSC','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('nh','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('nj','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','EIN883314708','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('nm','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('nv','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ny_qbp','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('ny_test','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('ny_vxu','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('nyc','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATEWAYTEST','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('oh','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZ.GATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('or_dev','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','onchub',NULL,'IZGW','IZGW','IZGW','IZGW','IZGW','','','onchub',0,NULL,1),
-	('or_trn','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','onchub',NULL,'IZGW','IZGW','IZGW','IZGW','IZGW','','','onchub',0,NULL,1),
-	('or_uat','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','onchub',NULL,'IZGW','IZGW','IZGW','IZGW','IZGW','','','onchub',0,NULL,1),
-	('ph','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('pr','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','Covpan','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('pw','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('ri','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HXRT4Z53','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('sc','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7_IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','^8:MvEP',0,NULL,2),
-	('test','https://98.22.184.181:4444','IZGateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('tn','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATEWAY','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('tx','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATE','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('tx_uat','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGATE','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('ut','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','izgateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('va','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','izgatewayuser','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,1),
-	('wa','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZGWATESTHL7','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2014',0,NULL,2),
-	('wi','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','IZG','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011',0,NULL,2),
-	('wv','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','ONCHUB-WV','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2014',0,NULL,2),
-	('wy','https://izgateway-dev-nlb-e9941b47428f1e12.elb.us-east-1.amazonaws.com:443/dev/IISService','HL7-AARTtestIZGateway','Pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2014',0,NULL,1);
-
+INSERT INTO destinations(dest_id,dest_type,dest_uri,username,password,facility_id,MSH3,MSH4,MSH5,MSH6,MSH22,RXA11,dest_version,pass_expiry,jurisdiction_id)
+VALUES
+   ('404',5,'/dev/NotFound','NOT_FOUND_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('ak',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',3),
+('al',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',4),
+('ar',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',5),
+('as',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',6),
+('az',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',1),
+('azurite',5,'https://localhost:10000/devstoreaccount1/izgw','IZGW','sv=2018-03-28&st=2022-09-16T19%3A32%3A55Z&se=2023-09-07T19%3A32%3A00Z&sr=c&sp=racwdl&sig=SzCq1AFTf2kADcqb16gAb7b6lL0sm1QuHFXV8JEPCGE%3D','IZGW','IZGW','IZGW','IZGW','IZGW','','','V2022-12-31','2024-07-12',1),
+('ca',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',7),
+('co',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',8),
+('ct',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',9),
+('dc',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',10),
+('de',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',11),
+('dev',5,'/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('dev2011',5,'/dev/client_Service','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011','2024-07-12',1),
+('devwup',5,'/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('dex-dev',5,'https://localhost/rest/upload/dex','dex-dev','dex-dev','IZGW','IZGW','IZGW','IZGW','IZGW','','','DEX1.0','2024-07-12',1),
+('down',5,'https://192.0.2.0/dev/IISService','NON_RESPONDING_IP_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('fl',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',12),
+('fm',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',12),
+('ga',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',13),
+('gu',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',13),
+('ha',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',14),
+('ia',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',15),
+('il',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',17),
+('in',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',18),
+('invalid',5,'https://iis.invalid','NON_DNS_RESOLVABLE_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('io',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',16),
+('ks',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',19),
+('ky',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',20),
+('la',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',21),
+('ma',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',22),
+('md',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',23),
+('me',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',24),
+('mh',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',25),
+('mi',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',27),
+('mn',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',26),
+('mo',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',1),
+('mp',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',1),
+('ms',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',28),
+('mt',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',29),
+('nb',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',32),
+('nc',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',30),
+('nd',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',31),
+('nh',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',33),
+('nj',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',34),
+('nm',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',35),
+('nv',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',36),
+('ny',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',37),
+('nyc',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',38),
+('oh',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',39),
+('ok',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',40),
+('or',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',41),
+('pa',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',43),
+('ph',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',42),
+('pr',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',50),
+('pw',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',46),
+('reject',5,'https://localhost:12345/dev/IISService','REJECTING_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('ri',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',51),
+('sc',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',52),
+('sd',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',53),
+('tn',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',54),
+('tx',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',55),
+('ut',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',57),
+('va',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',58),
+('vi',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',56),
+('vt',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',59),
+('wa',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',60),
+('wi',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',61),
+('wv',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',62),
+('wy',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',63)
+;
 --
 -- TRUNCATE DATA FROM TABLE jurisdiction;
 --
@@ -290,77 +315,158 @@ TRUNCATE jurisdiction;
 --
 -- INSERT INTO TABLE jurisdiction;
 --
-INSERT INTO jurisdiction VALUES
-                             ('AK VacTrAK','Alaska','ak'),
-                             ('AL ImmPRINT','Alabama','al'),
-                             ('AR WebIZ','Arkansas','ar'),
-                             ('AZ ASIIS','Arizona','az'),
-                             ('CA CAIR','California','ca'),
-                             ('CA RIDE','California - San Joaquin','ca'),
-                             ('CA SDIR','California - San Diego','casd'),
-                             ('CO CIIS','Colorado','co'),
-                             ('CT WiZ','Connecticut','ct'),
-                             ('DC DOCIIS','District of Columbia','dc'),
-                             ('DE DelVAX','Delaware','de'),
-                             ('FL SHOTS','Florida','fl'),
-                             ('GA GRITS','Georgia','ga'),
-                             ('HI HIR','Hawaii','hi'),
-                             ('IA IRIS','Iowa','ia'),
-                             ('ID IRIS','Idaho','id'),
-                             ('IL I-CARE','Illinois','il'),
-                             ('IN CHIRP','Indiana','in'),
-                             ('KS WebIZ','Kansas','ks'),
-                             ('KY KYIR','Kentucky','ky'),
-                             ('LA LINKS','Louisiana','la'),
-                             ('MA MIIS','Massachusetts','ma'),
-                             ('MD IMMUNET','Maryland','md'),
-                             ('ME ImmPact2','Maine','me'),
-                             ('MI MCIR','Michigan','mi'),
-                             ('MN MIIC','Minnesota','mn'),
-                             ('MO ShowMeVax','Missouri','mo'),
-                             ('MS MIIX','Mississippi','ms'),
-                             ('MT imMTrax','Montana','mt'),
-                             ('NCIR','North Carolina','nc'),
-                             ('ND SIIS','North Dakota','nd'),
-                             ('NE NESIIS','Nebraska','ne'),
-                             ('NH VaxNH','New Hampshire','nh'),
-                             ('NJ NJIIS','New Jersey','nj'),
-                             ('NM NMSIIS','New Mexico','nm'),
-                             ('NV WebIZ','Nevada','nv'),
-                             ('NY NYSIIS','New York State','ny_qbp'),
-                             ('NYC CIR','New York State - New York City','nyc'),
-                             ('OH Impact SIIS','Ohio','oh'),
-                             ('OK OSIIS','Oklahoma','ok'),
-                             ('OR ALERT','Oregon','or'),
-                             ('PA PHIL','Pennsylvania - Philadelphia','ph'),
-                             ('PA SIIS','Pennsylvania','pa'),
-                             ('PI - American Samoa','PI - American Samoa','as'),
-                             ('PI - Federated States of Micronesia','PI - Federated States of Micronesia','fm'),
-                             ('PI - Palau','PI - Palau','pw'),
-                             ('PI - PI Guam','PI - Guam','gu'),
-                             ('PI - PI N Mariana Islands','PI - Commonwealth of the Mariana Islands','mp'),
-                             ('PI - Republic of the Marshall Islands','PI - Republic of the Marshall Islands','mh'),
-                             ('PR PRIR','Puerto Rico','pr'),
-                             ('Rhode Island Child and Adult Immunization Registry (RICAIR)','Rhode Island','ri'),
-                             ('SC SCI','South Carolina','sc'),
-                             ('SD SDIIS','South Dakota','sd'),
-                             ('TN TennIIS','Tennessee','tn'),
-                             ('TX ImmTrac','Texas','tx'),
-                             ('U.S. Virgin Islands','U.S. Virgin Islands','vi'),
-                             ('UT USIIS','Utah','ut'),
-                             ('VA VIIS','Virginia','va'),
-                             ('VT IMR','Vermont','vt'),
-                             ('WA WAIIS','Washington','wa'),
-                             ('WI WIR','Wisconsin','wi'),
-                             ('WV WVSIIS','West Virginia','wv'),
-                             ('WY WyIR','Wyoming','wy'),
-                             ('404', 'For Testing HTTP 404 Not Found responses', '404'),
-                             ('aira', 'Can probably go away', 'aira'),
-                             ('azurite', 'ADS API Testing', 'azurite'),
-                             ('dev', 'Mock IIS using IZGW WSDL', 'dev'),
-                             ('dev2011', 'Mock IIS using CDC WSDL', 'dev2011'),
-                             ('devwup', 'Can probably go away', 'devwup'),
-                             ('dex-dev', 'endpoint for ADS API Testing', 'dex-dev'),
-                             ('down ', 'unresponsive IIS', 'down '),
-                             ('invalid', 'no DNS entry', 'invalid'),
-                             ('reject', 'actively rejecting connections', 'reject');
+INSERT INTO jurisdiction (name, description, dest_prefix) VALUES
+     ('DEVELOPMENT', 'Development Testing', 'dev'), 
+     ('CDC', 'Centers for Disease Control', null),
+     ('AK VacTrAK','Alaska', 'ak'),
+     ('AL ImmPRINT','Alabama', 'al'),
+     ('AR WebIZ','Arkansas', 'ar'),
+     ('AZ ASIIS','Arizona', 'az'),
+     ('CA CAIR','California', 'ca'),
+     ('CO CIIS','Colorado', 'co'),
+     ('CT WiZ','Connecticut', 'ct'),
+     ('DC DOCIIS','District of Columbia', 'dc'),
+     ('DE DelVAX','Delaware', 'de'),
+     ('FL SHOTS','Florida', 'fl'),
+     ('GA GRITS','Georgia', 'ga'),
+     ('HI HIR','Hawaii', 'ha'),
+     ('IA IRIS','Iowa', 'ia'),
+     ('ID IRIS','Idaho', 'io'),
+     ('IL I-CARE','Illinois', 'il'),
+     ('IN CHIRP','Indiana', 'in'),
+     ('KS WebIZ','Kansas', 'ks'),
+     ('KY KYIR','Kentucky', 'ky'),
+     ('LA LINKS','Louisiana', 'la'),
+     ('MA MIIS','Massachusetts', 'ma'),
+     ('MD IMMUNET','Maryland', 'md'),
+     ('ME ImmPact2','Maine', 'me'),
+     ('MI MCIR','Michigan', 'mi'),
+     ('MN MIIC','Minnesota', 'mn'),
+     ('MO ShowMeVax','Missouri', 'mi'),
+     ('MS MIIX','Mississippi', 'ms'),
+     ('MT imMTrax','Montana', 'mt'),
+     ('NCIR','North Carolina', 'nc'),
+     ('ND SIIS','North Dakota', 'nd'),
+     ('NE NESIIS','Nebraska', 'nb'),
+     ('NH VaxNH','New Hampshire', 'nh'),
+     ('NJ NJIIS','New Jersey', 'nj'),
+     ('NM NMSIIS','New Mexico', 'nm'),
+     ('NV WebIZ','Nevada', 'nv'),
+     ('NY NYSIIS','New York State', 'ny'),
+     ('NYC CIR','New York City', 'nyc'),
+     ('OH Impact SIIS','Ohio', 'oh'),
+     ('OK OSIIS','Oklahoma', 'ok'),
+     ('OR ALERT','Oregon', 'or'),
+     ('PA PHIL','Pennsylvania - Philadelphia', 'ph'),
+     ('PA SIIS','Pennsylvania', 'pa'),
+     ('PI - American Samoa','PI - American Samoa', 'as'),
+     ('PI - Federated States of Micronesia','PI - Federated States of Micronesia', 'fm'),
+     ('PI - Palau','PI - Palau', 'pw'),
+     ('PI - PI Guam','PI - Guam', 'gu'),
+     ('PI - PI N Mariana Islands','PI - Commonwealth of the Mariana Islands', 'mp'),
+     ('PI - Republic of the Marshall Islands','PI - Republic of the Marshall Islands', 'mh'),
+     ('PR PRIR','Puerto Rico', 'pr'),
+     ('RI CAIR','Rhode Island', 'ri'),
+     ('SC SCI','South Carolina', 'sc'),
+     ('SD SDIIS','South Dakota', 'sd'),
+     ('TN TennIIS','Tennessee', 'tn'),
+     ('TX ImmTrac','Texas', 'tx'),
+     ('U.S. Virgin Islands','U.S. Virgin Islands', 'vi'),
+     ('UT USIIS','Utah', 'ut'),
+     ('VA VIIS','Virginia', 'va'),
+     ('VT IMR','Vermont', 'vt'),
+     ('WA WAIIS','Washington', 'wa'),
+     ('WI WIR','Wisconsin', 'wi'),
+     ('WV WVSIIS','West Virginia', 'wv'),
+     ('WY WyIR','Wyoming', 'wy');
+
+--
+-- TRUNCATE DATA FROM TABLE messageheaderinfo;
+--
+TRUNCATE messageheaderinfo;
+--
+-- INSERT INTO TABLE messageheaderinfo;
+--
+
+INSERT IGNORE INTO messageheaderinfo (msh, dest_id, iis, sourceType)
+VALUES
+    ( 'Docket-1_0_0', null, null, 'Patient Access' ),
+    ( '99990', 'dev', 'ma', 'IIS Share' ),
+    ( '161143928', 'dev', 'md', 'IIS Share' ),
+    ( '161147173', 'dev', 'md', 'IIS Share' ),
+    ( 'AL9997', 'dev', 'or', 'IIS Share' ),
+    ( 'ALERT', 'dev', 'or', 'IIS Share' ),
+    ( 'AS0000', 'dev', 'as', 'IIS Share' ),
+    ( 'ASIIS', 'dev', 'az', 'IIS Share' ),
+    ( 'CDPHE', 'dev', 'co', 'IIS Share' ),
+    ( 'CHIRPPRD', 'dev', 'in', 'IIS Share' ),
+    ( 'CIIS', 'dev', 'co', 'IIS Share' ),
+    ( 'CT0000', 'dev', 'ct', 'IIS Share' ),
+    ( 'CT0000_UI', 'dev', 'ct', 'IIS Share' ),
+    ( 'DCIIS', 'dev', 'dc', 'IIS Share' ),
+    ( 'DE0000', 'dev', 'de', 'IIS Share' ),
+    ( 'DE0000_UI', 'dev', 'de', 'IIS Share' ),
+    ( 'dn1fro00', 'dev', 'wa', 'IIS Share' ),
+    ( 'FLSHOTS', 'dev', 'fl', 'IIS Share' ),
+    ( 'FM0000', 'dev', 'fm', 'IIS Share' ),
+    ( 'GRITS', 'dev', 'ga', 'IIS Share' ),
+    ( 'GU0000', 'dev', 'gu', 'IIS Share' ),
+    ( 'ICARE', 'dev', 'il', 'IIS Share' ),
+    ( 'IMMPACT', 'dev', 'me', 'IIS Share' ),
+    ( 'IMMTRAX', 'dev', 'mt', 'IIS Share' ),
+    ( 'IMMUNET', 'dev', 'md', 'IIS Share' ),
+    ( 'IMMUNETS', 'dev', 'md', 'IIS Share' ),
+    ( 'ImpactSIIS', 'dev', 'oh', 'IIS Share' ),
+    ( 'IRIS', 'dev', 'id', 'IIS Share' ),
+    ( 'IRISIA', 'dev', 'ia', 'IIS Share' ),
+    ( 'IRISID', 'dev', 'id', 'IIS Share' ),
+    ( 'KS0000', 'dev', 'ks', 'IIS Share' ),
+    ( 'KY0000_UI', 'dev', 'ky', 'IIS Share' ),
+    ( 'LA0000', 'dev', 'la', 'IIS Share' ),
+    ( 'LA0000_UI', 'dev', 'la', 'IIS Share' ),
+    ( 'LALinks', 'dev', 'la', 'IIS Share' ),
+    ( 'MCIR', 'dev', 'mi', 'IIS Share' ),
+    ( 'MH0000', 'dev', 'mh', 'IIS Share' ),
+    ( 'MICHIGAN', 'dev', 'mi', 'IIS Share' ),
+    ( 'MIIC', 'dev', 'mn', 'IIS Share' ),
+    ( 'MIIS', 'dev', 'ma', 'IIS Share' ),
+    ( 'MIIX', 'dev', 'ms', 'IIS Share' ),
+    ( 'MIIXHL7', 'dev', 'ms', 'IIS Share' ),
+    ( 'MODHSS', 'dev', 'mo', 'IIS Share' ),
+    ( 'MP0000', 'dev', 'mp', 'IIS Share' ),
+    ( 'NCIR', 'dev', 'nc', 'IIS Share' ),
+    ( 'NESIIS', 'dev', 'ne', 'IIS Share' ),
+    ( 'NHIIS', 'dev', 'nh', 'IIS Share' ),
+    ( 'NJDOH', 'dev', 'nj', 'IIS Share' ),
+    ( 'NJIIS', 'dev', 'nj', 'IIS Share' ),
+    ( 'NMSIIS', 'dev', 'nm', 'IIS Share' ),
+    ( 'NMSIIS_UI', 'dev', 'nm', 'IIS Share' ),
+    ( 'NV0000', 'dev', 'nv', 'IIS Share' ),
+    ( 'NV0000_UI', 'dev', 'nv', 'IIS Share' ),
+    ( 'NYCDOHMH', 'dev', 'nyc', 'IIS Share' ),
+    ( 'NYSIIS', 'dev', 'ny', 'IIS Share' ),
+    ( 'OHSIIS', 'dev', 'oh', 'IIS Share' ),
+    ( 'OK0000', 'dev', 'ok', 'IIS Share' ),
+    ( 'OK0000_UI', 'dev', 'ok', 'IIS Share' ),
+    ( 'PH0000', 'dev', 'ph', 'IIS Share' ),
+    ( 'PH0000_UI', 'dev', 'ph', 'IIS Share' ),
+    ( 'PREIS', 'dev', 'pr', 'IIS Share' ),
+    ( 'PRIIS', 'dev', 'pr', 'IIS Share' ),
+    ( 'PU0000', 'dev', 'pu', 'IIS Share' ),
+    ( 'RIA', 'dev', 'ri', 'IIS Share' ),
+    ( 'SDIIS', 'dev', 'sd', 'IIS Share' ),
+    ( 'SHOWMEVAX', 'dev', 'mo', 'IIS Share' ),
+    ( 'SIMON', 'dev', 'sc', 'IIS Share' ),
+    ( 'TENNIIS', 'dev', 'tn', 'IIS Share' ),
+    ( 'TNIIS', 'dev', 'tn', 'IIS Share' ),
+    ( 'TxDSHS', 'dev', 'tx', 'IIS Share' ),
+    ( 'TxImmTrac', 'dev', 'tx', 'IIS Share' ),
+    ( 'USVIIIS', 'dev', 'vi', 'IIS Share' ),
+    ( 'VIIS', 'dev', 'va', 'IIS Share' ),
+    ( 'WADOHIIS', 'dev', 'wa', 'IIS Share' ),
+    ( 'WAIIS', 'dev', 'wa', 'IIS Share' ),
+    ( 'WIA', 'dev', 'wi', 'IIS Share' ),
+    ( 'WIR', 'dev', 'wi', 'IIS Share' ),
+    ( 'WVIIS', 'dev', 'wv', 'IIS Share' ),
+    ( 'WVSIIS', 'dev', 'wv', 'IIS Share' ),
+    ( 'WYIR', 'dev', 'wy', 'IIS Share' );

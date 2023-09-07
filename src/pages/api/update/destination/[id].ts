@@ -3,20 +3,64 @@ import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../../lib/accesshelper'
 import updatedAuditedDestination from '../../../../lib/queries/update/destination'
-
+import desttypehelper from '../../../../lib/desttypehelper'
+import destinationType from '../../../../lib/queries/fetch/destinationtype'
+/**
+ * @swagger
+ * /api/update/destination/{id}:
+ *   post:
+ *     summary: Update destination information by ID.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
+ *       - name: destType
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             username: string
+ *             facility_id: string
+ *             MSH3: string
+ *             MSH4: string
+ *             MSH5: string
+ *             MSH6: string
+ *             MSH22: string
+ *             RXA11: string
+ *     responses:
+ *       200:
+ *         description: destination successfully updated.
+ *         content:
+ *           application/json:
+ *       400:
+ *         description: Bad request.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   const destId = req.query.id.toString()
-
+  const destType = desttypehelper.destTypeFormattedToSyncWithDB(
+    req.query.destType.toString()
+  )
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {
+    const destination_type = await destinationType(destType)
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
       const result = await updatedAuditedDestination(
         destId,
+        destination_type?.type_id,
         data.updatedData,
         data.user,
         data.oldValues,

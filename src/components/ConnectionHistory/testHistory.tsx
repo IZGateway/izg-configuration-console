@@ -58,8 +58,8 @@ const timeline = (data) => (
           <TimelineContent sx={{ fontWeight: '700', padding: '8px 16px' }}>
             Connection Tested
             <Typography variant="body2">
-              {item.ran_at
-                ? new Date(item.ran_at).toLocaleString('en-US', {
+              {item.statusAt
+                ? new Date(item.statusAt).toLocaleString('en-US', {
                     timeZone: 'America/New_York',
                     year: 'numeric',
                     month: '2-digit',
@@ -103,7 +103,7 @@ const TestHistory = (props: TestHistoryProps) => {
 
   const historyDataLength = data.length
   const defaultTestHistoryView = data.slice(0, 5)
-  const frequency = data.historyInterval
+  const frequency = process.env.AUTOMATED_TEST_RUN_DURATION || 900000
 
   return (
     <div>
