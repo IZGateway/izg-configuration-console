@@ -1,5 +1,12 @@
 import * as React from 'react'
-import { Container, Typography, Box, ButtonGroup, Button } from '@mui/material'
+import {
+  Container,
+  Typography,
+  Box,
+  ButtonGroup,
+  Button,
+  Tooltip,
+} from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
 import Verify from './verify'
@@ -16,13 +23,20 @@ import { isEmpty } from 'underscore'
 import useSWR from 'swr'
 import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
+import Schedule from './schedule'
 import desttypehelper from '../../lib/desttypehelper'
 interface editConnectionProps {
   destId: string
   destType: string
 }
 
-const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
+const steps = [
+  'SERVICE AGREEMENT',
+  'JURISDICTION',
+  'IDENTIFY',
+  'VERIFY',
+  'SCHEDULE',
+]
 
 const emptyErrors = {
   username: '',
@@ -76,6 +90,9 @@ const EditConnection = (props: editConnectionProps) => {
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedTime, setSelectedTime] = useState(null)
+  const [asapSelected, setAsapSelected] = useState(false)
   const [formValues, setFormValues] = useState({
     username: '',
     newPassword: '',
@@ -248,40 +265,60 @@ const EditConnection = (props: editConnectionProps) => {
 
   const handleSubmit = async () => {
     let response
-    const { newPassword, confirmPassword, ...submittingValue } = formValues
+    const scheduleAt = asapSelected
+      ? new Date()
+      : selectedDate
+          .clone()
+          .set({
+            hour: selectedTime.hour(),
+            minute: selectedTime.minute(),
+            second: selectedTime.second(),
+            millisecond: selectedTime.millisecond(),
+          })
+          .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
+
     if (
       isEmpty(formValues.newPassword) &&
       isEmpty(formValues.confirmPassword)
     ) {
-      const dataToSend = {
-        updatedData: submittingValue,
-        user: session.user.name,
-        oldValues: destData,
-        newValues: formValues,
-        tableName: 'destinations',
-      }
-      response = await fetch(
-        `/api/update/destination/${props.destId}?destType=${props.destType}`,
-        {
-          method: 'POST',
-          body: JSON.stringify(dataToSend),
-        }
-      )
+      response = await fetch(`/api/change/destination/${props.destId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          username: formValues.username,
+          facility_id: formValues.facility_id,
+          MSH3: formValues.MSH3,
+          MSH4: formValues.MSH4,
+          MSH5: formValues.MSH5,
+          MSH6: formValues.MSH6,
+          MSH22: formValues.MSH22,
+          RXA11: formValues.RXA11,
+          dest_id: destData.dest_id,
+          dest_type: props.destType,
+          jira_id: 'ADD HERE',
+          scheduledAt: scheduleAt,
+          requestedBy: session.user.name,
+        }),
+      })
     } else {
-      const dataToSend = {
-        updatedData: formValues,
-        user: session.user.name,
-        oldValues: destData,
-        newValues: formValues,
-        tableName: 'destinations',
-      }
-      response = await fetch(
-        `/api/update/destination/${props.destId}?destType=${props.destType}`,
-        {
-          method: 'POST',
-          body: JSON.stringify(dataToSend),
-        }
-      )
+      response = await fetch(`/api/change/destination/${props.destId}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          username: formValues.username,
+          password: formValues.newPassword,
+          facility_id: formValues.facility_id,
+          MSH3: formValues.MSH3,
+          MSH4: formValues.MSH4,
+          MSH5: formValues.MSH5,
+          MSH6: formValues.MSH6,
+          MSH22: formValues.MSH22,
+          RXA11: formValues.RXA11,
+          dest_id: destData.dest_id,
+          dest_type: props.destType,
+          jira_id: 'ADD HERE',
+          scheduledAt: scheduleAt,
+          requestedBy: session.user.name,
+        }),
+      })
     }
     clearValue()
     if (response.ok) {
@@ -308,6 +345,9 @@ const EditConnection = (props: editConnectionProps) => {
   const handlePrevious = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(emptyErrors)
+    setAsapSelected(false)
+    setSelectedDate(null)
+    setSelectedTime(null)
   }
 
   const handleNext = (e) => {
@@ -343,18 +383,32 @@ const EditConnection = (props: editConnectionProps) => {
           PREVIOUS
         </Button>
         {activeStep === steps.length - 1 ? (
-          <Button
-            id="submit"
-            type="submit"
-            color="primary"
-            variant="contained"
-            onClick={handleSubmit}
-            sx={{
-              borderRadius: '30px',
-            }}
+          <Tooltip
+            arrow
+            placement="bottom"
+            title="Please select date and time"
+            open={
+              (asapSelected ? !asapSelected : !(selectedDate && selectedTime))
+                ? true
+                : false
+            }
           >
-            SUBMIT
-          </Button>
+            <Button
+              id="schedule"
+              type="submit"
+              color="primary"
+              variant="contained"
+              disabled={
+                asapSelected ? !asapSelected : !(selectedDate && selectedTime)
+              }
+              onClick={handleSubmit}
+              sx={{
+                borderRadius: '30px',
+              }}
+            >
+              SCHEDULE
+            </Button>
+          </Tooltip>
         ) : (
           <Button
             id="next"
@@ -452,6 +506,13 @@ const EditConnection = (props: editConnectionProps) => {
             <AlertDialog open={openAlert} close={handleCloseAlert} />
           )}
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
+          {activeStep === 4 && (
+            <Schedule
+              setSelectedDate={setSelectedDate}
+              setSelectedTime={setSelectedTime}
+              setAsapSelected={setAsapSelected}
+            />
+          )}
 
           <Container
             maxWidth="sm"
