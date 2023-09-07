@@ -66,7 +66,7 @@ const ConnectionInfoDetail = ({
                     label="Jurisdiction"
                     variant="filled"
                     disabled
-                    defaultValue={destination.jurisdiction.name}
+                    defaultValue={destination.jurisdiction.description}
                     InputProps={{
                       readOnly: true,
                     }}
