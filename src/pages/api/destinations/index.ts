@@ -3,6 +3,10 @@ import { getToken } from 'next-auth/jwt'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import destinations from '../../../lib/queries/fetch/destinations'
+import * as fs from 'fs'
+import path from 'path'
+import https from 'https'
+import axios from 'axios'
 /**
  * @swagger
  * /api/destinations:
@@ -16,12 +20,47 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const IZG_STATUS_ENDPOINT_URL =
+    process.env.IZG_STATUS_ENDPOINT_URL || 'unknown'
+  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
+  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
+  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
+  const httpsAgentOptions = {
+    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
+    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
+    passphrase: IZG_ENDPOINT_PASSCODE,
+    rejectUnauthorized: false,
+    keepAlive: true,
+  }
+
+  const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
+    const endpoint = isAdmin
+      ? IZG_STATUS_ENDPOINT_URL
+      : IZG_STATUS_ENDPOINT_URL + '?include=' + `${jurisdictions?.join(',')}`
+    const responseData = await axios
+      .get(endpoint, {
+        httpsAgent: new https.Agent(httpsAgentOptions),
+        timeout: 30000,
+      })
+      .then((response) => {
+        return response.data
+      })
+      .catch((error) => {
+        console.log(error.message)
+      })
+    return responseData
+  }
   const token = await getToken({ req })
   const session = await getServerSession(req, res, authOptions)
 
   if (token) {
     if (req.method === 'GET') {
-      const result = await destinations(session.isAdmin, session.jurisdictions)
+      const result = await fetchEndpointStatus(
+        session.isAdmin,
+        session.jurisdictions
+      )
+
+      //   const result = await destinations(session.isAdmin, session.jurisdictions)
       res.json(result)
     } else {
       throw new Error(

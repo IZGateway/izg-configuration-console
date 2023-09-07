@@ -36,7 +36,11 @@ const ConnectionHistory = (props: any) => {
       </Box>
       <Box sx={{ display: 'flex', gap: 4 }}>
         <Item sx={{ width: '40%' }}>
-          <ConnectionInfo destId={props.destId} />
+          <ConnectionInfo
+            destId={props.destId}
+            destType={props.destType}
+            status={props.status}
+          />
         </Item>
         <Item sx={{ flexGrow: 1 }}>
           <TestHistory destId={props.destId} />

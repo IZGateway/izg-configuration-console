@@ -10,6 +10,8 @@ import { authOptions } from '../../auth/[...nextauth]'
 import hasAccessToDestId from '../../../../lib/accesshelper'
 import destination from '../../../../lib/queries/fetch/destination'
 import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
+import desttypehelper from '../../../../lib/desttypehelper'
+import destinationType from '../../../../lib/queries/fetch/destinationtype'
 /**
  * @swagger
  * /api/tests/connectiontest/{id}:
@@ -22,6 +24,12 @@ import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
  *         schema:
  *           type: string
  *         description: The ID of the destination.
+ *       - name: destType
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
  *     responses:
  *       200:
  *         description: OK.
@@ -47,8 +55,17 @@ export default async function handler(
         'qbp',
       ]
       const testResults: ConnectionTestResult[] = []
-      const fetchedDestination = await destination(destId?.toString())
-      const fetchedJurisdiction = await jurisdiction(destId?.toString())
+
+      const destType = desttypehelper.destTypeFormattedToSyncWithDB(
+        req.query.destType?.toString()
+      )
+      const destination_type = await destinationType(destType)
+
+      const fetchedDestination = await destination(
+        destId?.toString(),
+        destination_type.type_id
+      )
+      // const fetchedJurisdiction = await jurisdiction(destId?.toString())
 
       if (!fetchedDestination) {
         res.status(constants.HTTP_STATUS_NOT_FOUND).json({
@@ -73,7 +90,7 @@ export default async function handler(
           destId: destId as string,
           destUrl: fetchedDestination.dest_uri,
           destType: fetchedDestination.destination_type.type,
-          jurisdictionDescription: fetchedJurisdiction?.description,
+          jurisdictionDescription: fetchedDestination.jurisdiction?.description,
           testResults: [
             {
               name: '',
@@ -104,6 +121,7 @@ export default async function handler(
         hostname: destIdURL.hostname,
         path: destIdURL.pathname,
         id: destId as string,
+        desttypeid: destination_type.type_id,
         order: 0,
         certPath: IZG_ENDPOINT_CRT_PATH,
         keyPath: IZG_ENDPOINT_KEY_PATH,
@@ -140,7 +158,8 @@ export default async function handler(
         destId: destId || 'unknown',
         destUrl: destIdURL.hostname || 'unknown',
         destType: fetchedDestination?.destination_type.type || 'unknown',
-        jurisdictionDescription: fetchedJurisdiction?.description || 'unknown',
+        jurisdictionDescription:
+          fetchedDestination?.jurisdiction.description || 'unknown',
         testResults,
       })
     } else {

@@ -13,7 +13,10 @@ const Edit = () => {
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
-            <EditConnection destId={router.query?.id as string} />
+            <EditConnection
+              destId={router.query?.id as string}
+              destType={router.query?.destType as string}
+            />
           </div>
         </Box>
       </ErrorBoundary>

@@ -1,41 +1,10 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+/* import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/update/destination'
-/**
- * @swagger
- * /api/update/{id}:
- *   post:
- *     summary: Update destination information by ID.
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the destination.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           example:
- *             username: string
- *             facility_id: string
- *             MSH3: string
- *             MSH4: string
- *             MSH5: string
- *             MSH6: string
- *             MSH22: string
- *             RXA11: string
- *     responses:
- *       200:
- *         description: destination successfully updated.
- *         content:
- *           application/json:
- *       400:
- *         description: Bad request.
- */
+import desttypehelper from '../../../lib/desttypehelper'
+import destinationType from '../../../lib/queries/fetch/destinationtype'
 
 export default async function handle(
   req: NextApiRequest,
@@ -43,14 +12,18 @@ export default async function handle(
 ) {
   const destId = req.query.id.toString()
   const session = await getServerSession(req, res, authOptions)
-
+  const destType = desttypehelper.destTypeFormattedToSyncWithDB(
+    req.query.destType.toString()
+  )
   if (hasAccessToDestId(destId, session)) {
+    const destination_type = await destinationType(destType)
     if (req.method === 'POST') {
       try {
         const body = req.body
-        const result = await destination(destId, body)
+        const result = await destination(destId, destination_type.type_id, body)
         res.status(200).json(result)
       } catch (error) {
+        console.log(error)
         throw new Error(`Failed to update data`)
       }
     } else {
@@ -60,3 +33,4 @@ export default async function handle(
     res.status(401)
   }
 }
+ */

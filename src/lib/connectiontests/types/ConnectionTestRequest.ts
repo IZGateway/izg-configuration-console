@@ -3,6 +3,7 @@ export type ConnectionTestRequest = {
   path: string
   ip: string
   id: string
+  desttypeid: number
   port: number
   order: number
   keyPath?: string
