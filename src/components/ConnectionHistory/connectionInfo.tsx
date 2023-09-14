@@ -93,7 +93,7 @@ const ConnectionInfo = (props) => {
                   JURISDICTION
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {destData ? destData.jurisdiction.name : 'N/A'}
+                  {destData ? destData.jurisdiction.description : 'N/A'}
                 </Typography>
               </Box>
               <Box>
