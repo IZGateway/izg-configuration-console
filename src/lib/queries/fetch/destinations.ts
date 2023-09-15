@@ -23,6 +23,7 @@ const destinations = async (isAdmin: boolean, jurisdictions: any) =>
       destination_type: {
         select: {
           type: true,
+          type_id: true,
         },
       },
     },

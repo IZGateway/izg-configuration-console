@@ -14,7 +14,6 @@ import Jurisdiction from './jurisdiction'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useContext } from 'react'
 import AlertDialog from './alertDialog'
-import Loader from '../Loader'
 import { validate as uuidValidate } from 'uuid'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
@@ -83,7 +82,6 @@ const EditConnection = (props: editConnectionProps) => {
   const { data: session } = useSession()
   const { clearValue } = useContext(CombinedContext)
   const [openAlert, setOpenAlert] = useState(false)
-  const [isTestRunning, setIsTestRunning] = useState(false)
   const [isFormDirty, setIsFormDirty] = useState(false)
   const [isNextButtonClicked, setIsNextButtonClicked] = useState(false)
   const [formErrors, setFormErrors] = useState(emptyErrors)
@@ -112,7 +110,6 @@ const EditConnection = (props: editConnectionProps) => {
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
 
-  const testResult = React.useRef('')
   useEffect(() => {
     if (destData) {
       setFormValues({
@@ -129,38 +126,6 @@ const EditConnection = (props: editConnectionProps) => {
       })
     }
   }, [destData])
-
-  useEffect(() => {
-    if (activeStep === 2 && isFormDirty) {
-      setIsTestRunning(true)
-      fetch(`/api/edit/queryTest/${props.destId}?destType=${props.destType}`, {
-        method: 'GET',
-      })
-        .then((res) => {
-          if (!res.ok) {
-            setOpenAlert(true)
-            setFormErrors(emptyErrors)
-          }
-          return res.json()
-        })
-        .then((data) => {
-          testResult.current = data.testResults[0].status
-          setIsTestRunning(false)
-          setIsFormDirty(false)
-
-          if (testResult.current === 'PASS') {
-            setActiveStep((prevActiveStep) => prevActiveStep + 1)
-          } else {
-            setOpenAlert(true)
-            setFormErrors(emptyErrors)
-          }
-        })
-        .catch((err) => {
-          clearValue()
-          throw new Error(err.message)
-        })
-    }
-  }, [isFormDirty, activeStep, clearValue])
 
   if (destError) return <div>failed to load</div>
   if (isDestLoading) return <div>loading...</div>
@@ -246,9 +211,10 @@ const EditConnection = (props: editConnectionProps) => {
       })
       if (!hasErrors) {
         setIsFormDirty(true)
+        advanceStepper(1)
       }
     } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1)
+      advanceStepper(1)
     }
   }
   const isFormChanged =
@@ -293,10 +259,10 @@ const EditConnection = (props: editConnectionProps) => {
           MSH22: formValues.MSH22,
           RXA11: formValues.RXA11,
           dest_id: destData.dest_id,
-          dest_type: props.destType,
+          dest_type: destData.destination_type.type_id,
           jira_id: 'ADD HERE',
           scheduledAt: scheduleAt,
-          requestedBy: session.user.name,
+          requestedBy: session.user.email,
         }),
       })
     } else {
@@ -313,10 +279,10 @@ const EditConnection = (props: editConnectionProps) => {
           MSH22: formValues.MSH22,
           RXA11: formValues.RXA11,
           dest_id: destData.dest_id,
-          dest_type: props.destType,
+          dest_type: destData.destination_type.type_id,
           jira_id: 'ADD HERE',
           scheduledAt: scheduleAt,
-          requestedBy: session.user.name,
+          requestedBy: session.user.email,
         }),
       })
     }
@@ -332,7 +298,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   const handleAccept = () => {
     setAccepted(true)
-    setActiveStep((prevActiveStep) => prevActiveStep + 1)
+    advanceStepper(1)
   }
 
   const handleFormFieldChange = (fieldName: string, value: string) => {
@@ -352,6 +318,10 @@ const EditConnection = (props: editConnectionProps) => {
 
   const handleNext = (e) => {
     formValidation(e)
+  }
+
+  const advanceStepper = (advanceBy: number) => {
+    setActiveStep((prevActiveStep) => prevActiveStep + advanceBy)
   }
 
   const actionButtons = () => (
@@ -490,18 +460,15 @@ const EditConnection = (props: editConnectionProps) => {
               )}
             />
           )}
-          {activeStep === 2 &&
-            (!isTestRunning ? (
-              <Identify
-                {...destData}
-                handleChange={handleFormFieldChange}
-                value={formValues}
-                formErrors={formErrors}
-                isNextButtonClicked={isNextButtonClicked}
-              />
-            ) : (
-              <Loader open={true} />
-            ))}
+          {activeStep === 2 && (
+            <Identify
+              {...destData}
+              handleChange={handleFormFieldChange}
+              value={formValues}
+              formErrors={formErrors}
+              isNextButtonClicked={isNextButtonClicked}
+            />
+          )}
           {openAlert && (
             <AlertDialog open={openAlert} close={handleCloseAlert} />
           )}

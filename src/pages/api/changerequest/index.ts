@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../../lib/accesshelper'
-import destinationChangeLog from '../../../../lib/queries/change/destination'
+import destinationChangeLog from '../../../../lib/queries/mutate/destinationchangerequest'
 /**
  * @swagger
  * /api/change/destination/{id}:

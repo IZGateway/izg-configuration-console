@@ -203,8 +203,8 @@ const ConnectionsTable = () => {
           <div>
             <Link
               href={{
-                pathname: `/edit/${params.id}`,
-                query: { destType: params.row.destType },
+                //pathname: `/edit/${params.row.destType}/${params.id}`,
+                pathname: `/edit/${params.row.destType}/${params.id}`,
               }}
             >
               <Tooltip arrow placement="bottom" title="Edit">
