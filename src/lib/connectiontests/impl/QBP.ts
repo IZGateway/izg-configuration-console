@@ -11,6 +11,7 @@ import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import { prismacontext } from '../../prismacontext'
+import logger from '../../../../logger'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -161,7 +162,7 @@ export default class QBP extends ConnectionTest {
           res.on('end', function () {
             xml2js.parseString(data, (err, result) => {
               if (err) {
-                console.log('An error has occurred: ' + err)
+                logger.error('An error has occurred: ' + err)
                 return
               }
               if (destination?.dest_version === '2011') {

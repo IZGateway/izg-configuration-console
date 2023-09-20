@@ -12,6 +12,7 @@ import destination from '../../../../lib/queries/fetch/destination'
 import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
 import desttypehelper from '../../../../lib/desttypehelper'
 import destinationType from '../../../../lib/queries/fetch/destinationtype'
+import logger from '../../../../../logger'
 /**
  * @swagger
  * /api/tests/connectiontest/{id}:
@@ -128,7 +129,7 @@ export default async function handler(
         passphrase: IZG_ENDPOINT_PASSCODE,
       }
 
-      console.info(
+      logger.info(
         'STARTING TESTS ON DEST ID: ' +
           destId +
           ' USING URL: ' +
@@ -140,7 +141,7 @@ export default async function handler(
       let testCounter = 0
       // eslint-disable-next-line no-loops/no-loops
       for (const test of testSuite) {
-        console.info('running test: ' + test)
+        logger.info('running test: ' + test + 'for destination' + destId)
         connectionTestRequest.order = ++testCounter
         const T = ConnectionTestFactory.getConnectionTest(
           test,
@@ -149,7 +150,7 @@ export default async function handler(
         const result = await T.run()
         testResults.push(...result)
         if (test === 'dns') {
-          console.info('Resolved IP address is: ' + result[0]?.detail)
+          logger.info('Resolved IP address is: ' + result[0]?.detail)
           connectionTestRequest.ip = result[0]?.detail
         }
       }

@@ -12,6 +12,7 @@ import destination from '../../../../lib/queries/fetch/destination'
 import jurisdiction from '../../../../lib/queries/fetch/jurisdiction'
 import desttypehelper from '../../../../lib/desttypehelper'
 import destinationType from '../../../../lib/queries/fetch/destinationtype'
+import logger from '../../../../../logger'
 /**
  * @swagger
  * /api/edit/queryTest/{id}:
@@ -116,7 +117,7 @@ export default async function handler(
         passphrase: IZG_ENDPOINT_PASSCODE,
       }
 
-      console.info(
+      logger.info(
         'STARTING TESTS ON DEST ID: ' +
           destId +
           ' USING URL: ' +

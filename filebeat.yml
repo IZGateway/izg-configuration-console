@@ -3,10 +3,10 @@
 
 filebeat.inputs:
   - type: 'filestream'
-    id: izgw-cc-filestream
+    id: izgw-config-console-filestream
     enabled: true
     paths:
-      -
+      - /app/logs/log.json
     json.message_key: message
     parsers:
       - ndjson:
@@ -19,12 +19,6 @@ filebeat.inputs:
     processors:
       - add_host_metadata: ~
       - add_cloud_metadata: ~
-      - copy_fields:
-          fields:
-            - from: host.hostname.keyword
-              to: host.keyword
-          fail_on_error: false
-          ignore_missing: true
 
     # change tag to dev/onboard/prod for selected environment
     tags: ['${ELASTIC_ENV_TAG:dev}'] # https://www.elastic.co/guide/en/beats/filebeat/7.14/configuration-general-options.html#_tags_21
@@ -43,6 +37,7 @@ output.elasticsearch:
       '${ELASTIC_HOST:https://audacioussearchtest.es.us-east-1.aws.found.io:9243}',
     ] # Set ELASTIC_HOST in environment
   # Set index to izgw-{tag}-logstash datastream for selected environment
-  index: '${ELASTIC_INDEX:izgw-cc-dev-logstash}' # Use izgw-prod12-logstash for production
+  index: '${ELASTIC_INDEX:izgw-config-console-dev}' # Use izgw-prod12-logstash for production
   api_key: '${ELASTIC_API_KEY}' # Set ELASTIC_API_KEY in environment
   worker: 2
+  allow_older_versions: true

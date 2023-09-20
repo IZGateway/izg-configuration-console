@@ -22,11 +22,13 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+RUN apk add bash
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
+COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 
 # Install filebeat
 
@@ -41,10 +43,10 @@ RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBE
     rm -rf /filebeat/filebeat.yml && \
     cp ../filebeat.yml ./filebeat.yml
 
-USER nextjs
-
+#USER nextjs
+RUN chmod a+x start-app.sh
 EXPOSE 3000
 
 ENV PORT 3000
 
-CMD ["npm", "start"]
+ENTRYPOINT ["bash", "start-app.sh"]
