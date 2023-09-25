@@ -6,6 +6,7 @@ import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
+import logger from '../../../../logger'
 /**
  * @swagger
  * /api/statushistory/{id}:
@@ -54,7 +55,7 @@ export default async function handle(
         return response.data
       })
       .catch((error) => {
-        console.log(error.message)
+        logger.error(error.message)
       })
     return responseData
   }

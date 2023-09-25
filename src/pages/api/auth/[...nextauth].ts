@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth'
 import OktaProvider from 'next-auth/providers/okta'
+import logger from '../../../../logger'
 
 const userInfoEndpoint = `${process.env.OKTA_ISSUER}/oauth2/v1/userinfo`
 const isDebugging =
@@ -39,7 +40,7 @@ export const authOptions = {
           const data = await response.json()
           token.jurisdictions = data?.jurisdictions
         } catch (err) {
-          console.error('ERROR FETCHING USER INFO FROM OKTA: ' + err)
+          logger.error('ERROR FETCHING USER INFO FROM OKTA: ' + err)
         }
       }
       return token
