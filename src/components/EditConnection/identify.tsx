@@ -18,6 +18,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import CombinedContext from '../../contexts/app'
 import { useContext } from 'react'
+import _ from 'lodash'
 
 const Identify = (props: any) => {
   const { isChangePasswordClicked, setIsChangePasswordClicked } =
@@ -189,12 +190,8 @@ const Identify = (props: any) => {
                       toggleConfirmNewPasswordVisibility
                     )
               }
-              error={
-                props.isNextButtonClicked && !!props.formErrors[field.name]
-              }
-              helperText={
-                props.isNextButtonClicked && props.formErrors[field.name]
-              }
+              error={_.get(props.formErrors, field.name, null)}
+              helperText={_.get(props.formErrors, field.name, null)}
             />
           ))}
       </div>
@@ -245,6 +242,10 @@ const Identify = (props: any) => {
               }}
               sx={{ marginTop: 1 }}
             />
+            <Typography fontSize={'12px'}>
+              Username must be at least 8 characters, and contain one uppercase
+              letter and one number.
+            </Typography>
             <TextField
               id="username"
               name="username"
@@ -253,16 +254,10 @@ const Identify = (props: any) => {
               fullWidth
               value={props.value.username}
               onChange={handleChange}
-              error={props.isNextButtonClicked && !!props.formErrors.username}
-              helperText={
-                props.isNextButtonClicked && props.formErrors.username
-              }
+              error={_.get(props.formErrors, 'username', null)}
+              helperText={_.get(props.formErrors, 'username', null)}
               sx={{ marginTop: 1 }}
             />
-            <Typography fontSize={'12px'}>
-              Username must contain one uppercase letter, at least 8 characters
-              and one number
-            </Typography>
 
             {isChangePasswordClicked ? (
               newPasswordFields()
@@ -321,13 +316,8 @@ const Identify = (props: any) => {
                     value={field.value}
                     onChange={handleChange}
                     InputProps={getInputProps(field.title)}
-                    error={
-                      props.isNextButtonClicked &&
-                      !!props.formErrors[field.name]
-                    }
-                    helperText={
-                      props.isNextButtonClicked && props.formErrors[field.name]
-                    }
+                    error={_.get(props.formErrors, field.name, null)}
+                    helperText={_.get(props.formErrors, field.name, null)}
                   />
                 ))}
             </Box>
@@ -345,13 +335,8 @@ const Identify = (props: any) => {
                     value={field.value}
                     onChange={handleChange}
                     InputProps={getInputProps(field.title)}
-                    error={
-                      props.isNextButtonClicked &&
-                      !!props.formErrors[field.name]
-                    }
-                    helperText={
-                      props.isNextButtonClicked && props.formErrors[field.name]
-                    }
+                    error={_.get(props.formErrors, field.name, null)}
+                    helperText={_.get(props.formErrors, field.name, null)}
                   />
                 ))}
             </Box>
@@ -369,13 +354,8 @@ const Identify = (props: any) => {
                     value={field.value}
                     onChange={handleChange}
                     InputProps={getInputProps(field.title)}
-                    error={
-                      props.isNextButtonClicked &&
-                      !!props.formErrors[field.name]
-                    }
-                    helperText={
-                      props.isNextButtonClicked && props.formErrors[field.name]
-                    }
+                    error={_.get(props.formErrors, field.name, null)}
+                    helperText={_.get(props.formErrors, field.name, null)}
                   />
                 ))}
             </Box>
@@ -393,12 +373,8 @@ const Identify = (props: any) => {
                   value={field.value}
                   onChange={handleChange}
                   InputProps={getInputProps(field.title)}
-                  error={
-                    props.isNextButtonClicked && !!props.formErrors[field.name]
-                  }
-                  helperText={
-                    props.isNextButtonClicked && props.formErrors[field.name]
-                  }
+                  error={_.get(props.formErrors, field.name, null)}
+                  helperText={_.get(props.formErrors, field.name, null)}
                 />
               ))}
           </Box>

@@ -13,20 +13,19 @@ import Verify from './verify'
 import Jurisdiction from './jurisdiction'
 import { useRouter } from 'next/router'
 import { useState, useEffect, useContext } from 'react'
-import AlertDialog from './alertDialog'
-import { validate as uuidValidate } from 'uuid'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
-import { isEmpty } from 'underscore'
 import useSWR from 'swr'
 import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import desttypehelper from '../../lib/desttypehelper'
+import changeRequestValidation from '../../lib/changerequestvalidation'
+import * as _ from 'lodash'
 interface editConnectionProps {
   destId: string
-  destType: string
+  destTypeId: string
 }
 
 const steps = [
@@ -37,78 +36,33 @@ const steps = [
   'SCHEDULE',
 ]
 
-const emptyErrors = {
-  username: '',
-  newPassword: '',
-  confirmPassword: '',
-  facility_id: '',
-  MSH3: '',
-  MSH4: '',
-  MSH5: '',
-  MSH6: '',
-  MSH22: '',
-  RXA11: '',
-}
-
-const validationRules = {
-  username: /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/,
-  newPassword:
-    /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
-  confirmPassword:
-    /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
-  facility_id: /^[A-Za-z0-9_-]{0,25}$/,
-  MSH3: /^[A-Za-z0-9_-]{0,25}$/,
-  MSH4: /^[A-Za-z0-9_-]{0,25}$/,
-  MSH5: /^[A-Za-z0-9_-]{0,25}$/,
-  MSH6: /^[A-Za-z0-9_-]{0,25}$/,
-  MSH22: /^[A-Za-z0-9_-]{0,25}$/,
-  RXA11: /^[A-Za-z0-9_-]{0,25}$/,
-}
-const errorMessages = {
-  username: 'Username value should meet requirement as below',
-  newPassword: 'Password value should meet requirement as above',
-  confirmPassword: 'Password value should meet requirement as above',
-  facility_id: `Facility ID value should meet requirement as above`,
-  MSH3: `MSH-3 value should meet requirement as above`,
-  MSH4: `MSH-4 value should meet requirement as above`,
-  MSH5: `MSH-5 value should meet requirement as above`,
-  MSH6: `MSH-6 value should meet requirement as above`,
-  MSH22: `MSH-22 value should meet requirement as above`,
-  RXA11: `RXA-11 value should meet requirement as above`,
-}
+const getDelta = (a, b) =>
+  Object.fromEntries(
+    Object.entries(b).filter(([key, val]) => key in a && a[key] !== val)
+  )
 
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { data: session } = useSession()
   const { clearValue } = useContext(CombinedContext)
-  const [openAlert, setOpenAlert] = useState(false)
-  const [isFormDirty, setIsFormDirty] = useState(false)
-  const [isNextButtonClicked, setIsNextButtonClicked] = useState(false)
-  const [formErrors, setFormErrors] = useState(emptyErrors)
+  const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
   const [selectedDate, setSelectedDate] = useState(null)
   const [selectedTime, setSelectedTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
-  const [formValues, setFormValues] = useState({
-    username: '',
-    newPassword: '',
-    confirmPassword: '',
-    facility_id: '',
-    MSH3: '',
-    MSH4: '',
-    MSH5: '',
-    MSH6: '',
-    MSH22: '',
-    RXA11: '',
-  })
+  const [formValues, setFormValues] = useState(null)
+  const [formValuesDelta, setFormValuesDelta] = useState(null)
+  const [defaultFormValues, setDefaultFormValues] = useState(null)
 
   const {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
+  } = useSWR(`/api/destinations/${props.destId}?destTypeId=${props.destTypeId}`)
+
+  const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
     if (destData) {
@@ -124,113 +78,44 @@ const EditConnection = (props: editConnectionProps) => {
         MSH22: destData?.MSH22,
         RXA11: destData?.RXA11,
       })
+      setDefaultFormValues({
+        username: destData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: destData?.facility_id,
+        MSH3: destData?.MSH3,
+        MSH4: destData?.MSH4,
+        MSH5: destData?.MSH5,
+        MSH6: destData?.MSH6,
+        MSH22: destData?.MSH22,
+        RXA11: destData?.RXA11,
+      })
     }
   }, [destData])
 
+  useEffect(() => {
+    if (activeStep === 2) {
+      setFormErrors(null)
+      setFormValuesDelta(null)
+      const changedValues = getDelta(defaultFormValues, formValues)
+      setFormValuesDelta(changedValues)
+      const validationErrors = changeRequestValidation(
+        changedValues,
+        changedValues.facility_id || defaultFormValues.facility_id
+      ).errors
+      setFormErrors(validationErrors)
+    }
+  }, [activeStep, defaultFormValues, formValues, formErrors])
+
   if (destError) return <div>failed to load</div>
   if (isDestLoading) return <div>loading...</div>
-  const initialValue = {
-    username: destData?.username,
-    newPassword: '',
-    confirmPassword: '',
-    facility_id: destData?.facility_id,
-    MSH3: destData?.MSH3,
-    MSH4: destData?.MSH4,
-    MSH5: destData?.MSH5,
-    MSH6: destData?.MSH6,
-    MSH22: destData?.MSH22,
-    RXA11: destData?.RXA11,
-  }
-  const formValidation = (e) => {
-    if (isFormChanged && activeStep === 2) {
-      e.preventDefault()
-      setIsNextButtonClicked(true)
-      setFormErrors(emptyErrors)
-      let hasErrors = false
-      Object.keys(formValues).forEach((key) => {
-        const value = formValues[key].trim()
-        // Added this so that it wont perform validation on existing values
-        if (value !== destData[key]) {
-          if (isEmpty(value)) {
-            if (isEmpty(formValues.username)) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                username: `Username cannot be empty`,
-              }))
-              hasErrors = true
-            }
-            if (isEmpty(formValues.MSH3) && isEmpty(formValues.MSH4)) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                MSH3: `At least one of MSH-3 and MSH-4 must be provided`,
-              }))
-              hasErrors = true
-            }
-            if (isEmpty(formValues.MSH5) && isEmpty(formValues.MSH6)) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                MSH5: `At least one of MSH-5 and MSH-6 must be provided`,
-              }))
-              hasErrors = true
-            }
-          } else if (!isEmpty(value)) {
-            if (!validationRules[key].test(value)) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                [key]: `${errorMessages[key]}`,
-              }))
-              hasErrors = true
-            } else if (uuidValidate(formValues.newPassword.trim())) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                newPassword: `Password can not be in the form of UUID`,
-              }))
-              hasErrors = true
-            } else if (
-              formValues.newPassword.trim() !==
-              formValues.confirmPassword.trim()
-            ) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                confirmPassword: `Both New Password and Confirm New Password should match`,
-              }))
-              hasErrors = true
-            } else if (
-              !isEmpty(value) &&
-              formValues.confirmPassword.trim() ===
-                formValues.facility_id.trim()
-            ) {
-              setFormErrors((prevErrors) => ({
-                ...prevErrors,
-                confirmPassword: `Password can not be same as Facility ID`,
-              }))
-              hasErrors = true
-            }
-          }
-        }
-      })
-      if (!hasErrors) {
-        setIsFormDirty(true)
-        advanceStepper(1)
-      }
-    } else {
-      advanceStepper(1)
-    }
-  }
-  const isFormChanged =
-    JSON.stringify(formValues) !== JSON.stringify(initialValue)
-
-  const handleCloseAlert = () => {
-    setOpenAlert(false)
-    setIsFormDirty(false)
-  }
 
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
 
   const handleSubmit = async () => {
-    let response
+    //let response
     const scheduleAt = asapSelected
       ? new Date()
       : selectedDate
@@ -243,54 +128,29 @@ const EditConnection = (props: editConnectionProps) => {
           })
           .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
 
-    if (
-      isEmpty(formValues.newPassword) &&
-      isEmpty(formValues.confirmPassword)
-    ) {
-      response = await fetch(`/api/change/destination/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          username: formValues.username,
-          facility_id: formValues.facility_id,
-          MSH3: formValues.MSH3,
-          MSH4: formValues.MSH4,
-          MSH5: formValues.MSH5,
-          MSH6: formValues.MSH6,
-          MSH22: formValues.MSH22,
-          RXA11: formValues.RXA11,
-          dest_id: destData.dest_id,
-          dest_type: destData.destination_type.type_id,
-          jira_id: 'ADD HERE',
-          scheduledAt: scheduleAt,
-          requestedBy: session.user.email,
-        }),
-      })
-    } else {
-      response = await fetch(`/api/change/destination/${props.destId}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          username: formValues.username,
-          password: formValues.newPassword,
-          facility_id: formValues.facility_id,
-          MSH3: formValues.MSH3,
-          MSH4: formValues.MSH4,
-          MSH5: formValues.MSH5,
-          MSH6: formValues.MSH6,
-          MSH22: formValues.MSH22,
-          RXA11: formValues.RXA11,
-          dest_id: destData.dest_id,
-          dest_type: destData.destination_type.type_id,
-          jira_id: 'ADD HERE',
-          scheduledAt: scheduleAt,
-          requestedBy: session.user.email,
-        }),
-      })
-    }
+    const response = await fetch(`/api/changerequest`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requested: {
+          ...formValues,
+        },
+        current: {
+          ...defaultFormValues,
+        },
+        dest_id: destData.dest_id,
+        dest_type_id: destData.destination_type.type_id,
+        dest_type: destData.destination_type.type,
+        jira_id: 'ADD HERE',
+        scheduledAt: scheduleAt,
+        requestedBy: session.user.email,
+      }),
+    })
+    //}
     clearValue()
     if (response.ok) {
       router.push('/manage')
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}?destType=${props.destType}`)
+      mutate(`/api/destinations/${props.destId}?destType=${props.destTypeId}`)
     } else {
       throw new Error('Update was not successful. Please try again later')
     }
@@ -308,16 +168,18 @@ const EditConnection = (props: editConnectionProps) => {
     }))
   }
 
-  const handlePrevious = () => {
+  const handlePrevious = (e) => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
-    setFormErrors(emptyErrors)
+    setFormErrors(null)
     setAsapSelected(false)
     setSelectedDate(null)
     setSelectedTime(null)
   }
 
   const handleNext = (e) => {
-    formValidation(e)
+    if (_.isEmpty(formErrors)) {
+      advanceStepper(1)
+    }
   }
 
   const advanceStepper = (advanceBy: number) => {
@@ -386,7 +248,9 @@ const EditConnection = (props: editConnectionProps) => {
             color="primary"
             variant="contained"
             onClick={handleNext}
-            disabled={activeStep === 2 && !isFormChanged}
+            disabled={
+              (activeStep === 2 && !isFormChanged) || !_.isEmpty(formErrors)
+            }
             sx={{
               borderRadius: '30px',
             }}
@@ -466,11 +330,7 @@ const EditConnection = (props: editConnectionProps) => {
               handleChange={handleFormFieldChange}
               value={formValues}
               formErrors={formErrors}
-              isNextButtonClicked={isNextButtonClicked}
             />
-          )}
-          {openAlert && (
-            <AlertDialog open={openAlert} close={handleCloseAlert} />
           )}
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
           {activeStep === 4 && (

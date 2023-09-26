@@ -66,6 +66,7 @@ const Schedule = (props: any) => {
             {isDateTimePickerOpen && (
               <LocalizationProvider dateAdapter={AdapterMoment}>
                 <DatePicker
+                  disablePast
                   label="Date For Change *"
                   sx={{ marginBottom: 2, marginTop: 2 }}
                   onChange={(date) => {

@@ -1,4 +1,4 @@
-function destTypeFormattedToSyncWithDB(dest) {
+function destTypeFormattedToSyncWithDB(dest: string) {
   switch (dest) {
     case 'Development':
       return 'DEV'
@@ -17,7 +17,7 @@ function destTypeFormattedToSyncWithDB(dest) {
   }
 }
 
-function destTypeFormattedToSyncWithApi(dest) {
+function destTypeFormattedToSyncWithApi(dest: string) {
   switch (dest) {
     case 'DEV':
       return 'Development'
