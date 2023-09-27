@@ -156,10 +156,6 @@ export default async function handler(
               'Error creating Jira ticket. Jira returned HTTP status: ' +
                 jiraResponse.status
             )
-            // throw new Error(
-            //   'There was a problem creating the Jira ticket. HTTP Status: ' +
-            //     jiraResponse.status
-            // )
           } else {
             const jiraResult = await jiraResponse.json()
             await destinationchangerequest({

@@ -18,6 +18,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 import SessionContext from '../../contexts/app'
+import EditButton from './editButton'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -201,7 +202,7 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            <Link
+            {/* <Link
               href={{
                 pathname: `/edit/${params.row.destTypeId}/${params.id}`,
               }}
@@ -216,7 +217,9 @@ const ConnectionsTable = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-            </Link>
+            </Link> */}
+
+            <EditButton destId={params.id} destTypeId={params.row.destTypeId} />
             <Link
               href={{
                 pathname: `/test/${params.id}`,
