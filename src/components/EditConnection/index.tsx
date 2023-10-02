@@ -140,7 +140,7 @@ const EditConnection = (props: editConnectionProps) => {
         dest_id: destData.dest_id,
         dest_type_id: destData.destination_type.type_id,
         dest_type: destData.destination_type.type,
-        jira_id: 'ADD HERE',
+        jira_id: null,
         scheduledAt: scheduleAt,
         requestedBy: session.user.email,
       }),
