@@ -2,13 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import destination from '../../../lib/queries/fetch/destination'
 import _ from 'lodash'
+import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 /**
  * @swagger
- * /api/destinations/{id}:
+ * /api/changerequest/{destTypeId}/{destId}:
  *   get:
- *     summary: Get destination information by ID.
+ *     summary: Get destination change request for destination type and destination id.
  *     parameters:
  *       - name: id
  *         in: path
@@ -30,13 +30,14 @@ export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const destId = req.query.id.toString()
-  const destTypeId = _.toNumber(req.query.destTypeId)
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const result = await destination(destId, destTypeId)
+      const result = await destinationChangeRequest(destId, destTypeId)
       res.json(result)
     } else {
       throw new Error(

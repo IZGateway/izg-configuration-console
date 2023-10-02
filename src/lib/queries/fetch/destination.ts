@@ -19,6 +19,7 @@ const destination = async (destId: string, destType: number) =>
       destination_type: {
         select: {
           type: true,
+          type_id: true,
         },
       },
       jurisdiction: {
