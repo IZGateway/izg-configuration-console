@@ -5,6 +5,7 @@ import hasAccessToDestId from '../../../lib/accesshelper'
 import destinationchangerequest from '../../../lib/queries/mutate/destinationchangerequest'
 import fetchDestinationchangerequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
+import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 /**
  * @swagger
  * /api/changerequest:
@@ -42,9 +43,6 @@ const JIRA_API_URL = process.env.JIRA_API_URL || undefined
 const JIRA_API_ISSUE_TYPE = process.env.JIRA_API_ISSUE_TYPE || undefined
 const JIRA_API_PROJECT_ID = process.env.JIRA_API_PROJECT_ID || undefined
 const JIRA_API_AUTH_BASE64 = process.env.JIRA_API_AUTH_BASE64 || undefined
-const CHANGE_REQUESTED_EMPTY_VALUE = '<OLD VALUE REMOVED>'
-const CURRENT_EMPTY_VALUE = ' '
-const CHANGE_REQUEST_UNCHANGED_VALUE = 'UNCHANGED'
 
 const isJiraConfigured = () => {
   if (
@@ -57,22 +55,10 @@ const isJiraConfigured = () => {
   return false
 }
 
-const getRequestedValue = (
-  requestedFields: any,
-  fieldToGetValueFrom: string
-) => {
-  return _.has(requestedFields, fieldToGetValueFrom)
-    ? _.isEmpty(requestedFields[fieldToGetValueFrom])
-      ? CHANGE_REQUESTED_EMPTY_VALUE
-      : requestedFields[fieldToGetValueFrom]
-    : CHANGE_REQUEST_UNCHANGED_VALUE
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const jiraBasicAuthHeader = 'Basic ' + JIRA_API_AUTH_BASE64
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
 
@@ -82,100 +68,21 @@ export default async function handler(
     )
   }
   if (hasAccessToDestId(requestBody.dest_id, session)) {
-    const {
-      current,
-      requested,
-      dest_id,
-      dest_type,
-      dest_type_id,
-      requestedBy,
-      scheduledAt,
-    } = requestBody
+    const { dest_id, dest_type_id } = requestBody
     if (req.method === 'POST') {
-      const exists = await fetchDestinationchangerequest(dest_id, dest_type_id)
-      if (!_.isEmpty(exists)) {
-        res.status(409)
-        res.json(
-          'Conflict creating the requested resource. The resource already exist.'
-        )
-      } else {
-        const humanReadableScheduledTime = new Date(scheduledAt)
-        const changeRequestSummaryTemplate = `Destination ${dest_id} on ${dest_type} to be updated on ${humanReadableScheduledTime.toLocaleString()}`
-        const changeRequestDetailsTemplate = `*Destination Id*: ${dest_id}\r\n*Environment*: ${dest_type}\r\n*Requested By*: ${requestedBy}\r\n|| ||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Username*|${
-          _.isEmpty(current.username)
-            ? CHANGE_REQUESTED_EMPTY_VALUE
-            : current.username
-        }|${getRequestedValue(
-          requested,
-          'username'
-        )}|\r\n|*Password*|REDACTED |${
-          !_.isEmpty(requested.newPassword) ? '<UPDATED>' : 'REDACTED'
-        } |\r\n|*Facility id*|${
-          _.isEmpty(current.facility_id)
-            ? CURRENT_EMPTY_VALUE
-            : current.facility_id
-        }|${getRequestedValue(requested, 'facility_id')}|\r\n|*MSH3*|${
-          _.isEmpty(current.MSH3) ? CURRENT_EMPTY_VALUE : current.MSH3
-        }|${getRequestedValue(requested, 'MSH3')}|\r\n|*MSH4*|${
-          _.isEmpty(current.MSH4) ? CURRENT_EMPTY_VALUE : current.MSH4
-        }|${getRequestedValue(requested, 'MSH4')}|\r\n|*MSH5*|${
-          _.isEmpty(current.MSH5) ? CURRENT_EMPTY_VALUE : current.MSH5
-        }|${getRequestedValue(requested, 'MSH5')}|\r\n|*MSH6*|${
-          _.isEmpty(current.MSH6) ? CURRENT_EMPTY_VALUE : current.MSH6
-        }|${getRequestedValue(requested, 'MSH6')}|\r\n|*MSH22*|${
-          _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH22
-        }|${getRequestedValue(requested, 'MSH22')}|\r\n|*RXA11*|${
-          _.isEmpty(current.RXA11) ? CURRENT_EMPTY_VALUE : current.RXA11
-        }|${getRequestedValue(
-          requested,
-          'RXA11'
-        )}|\r\n*Deploy Datetime*: ${humanReadableScheduledTime.toLocaleString()}\r\n\r\n*Config Console Links*\r\n\*Test Change Request*: https://dev.console.izgateway.org/cc/test/1234\r\n*Deploy Change Request*: https://dev.console.izgateway.org/cc/deploy/1234`
-        try {
-          const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
-            method: 'POST',
-            headers: new Headers({
-              Authorization: jiraBasicAuthHeader,
-              'Content-Type': 'application/json',
-            }),
-            body: JSON.stringify({
-              fields: {
-                project: {
-                  id: JIRA_API_PROJECT_ID,
-                },
-                summary: changeRequestSummaryTemplate,
-                description: changeRequestDetailsTemplate,
-                issuetype: {
-                  id: JIRA_API_ISSUE_TYPE,
-                },
-              },
-            }),
-          })
-          if (jiraResponse.status !== 201) {
-            res.status(500)
-            res.json(
-              'Error creating Jira ticket. Jira returned HTTP status: ' +
-                jiraResponse.status
-            )
-          } else {
-            const jiraResult = await jiraResponse.json()
-            await destinationchangerequest({
-              ..._.omit(requestBody.requested, [
-                'newPassword',
-                'confirmPassword',
-              ]),
-              password: requestBody.requested.newPassword,
-              jira_id: jiraResult.id,
-              dest_id: requestBody.dest_id,
-              dest_type: requestBody.dest_type_id,
-              scheduledAt: requestBody.scheduledAt,
-              requestedBy: requestBody.requestedBy,
-            })
-          }
+      try {
+        if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
+          res.status(409)
+          res.json(
+            'Conflict creating the requested resource because it already exists.'
+          )
+        } else {
+          await createChangeRequest(requestBody)
           res.status(200)
           res.json('The change request was created.')
-        } catch (error) {
-          throw new Error(`Error creating change request: ${error}`)
         }
+      } catch (error) {
+        throw new Error(`Error creating change request: ${error}`)
       }
     } else {
       throw new Error(
@@ -184,5 +91,36 @@ export default async function handler(
     }
   } else {
     res.status(401)
+  }
+}
+
+const hasActiveChangeRequest = async (
+  dest_id: string,
+  dest_type_id: number
+) => {
+  const changeRequest = await fetchDestinationchangerequest(
+    dest_id,
+    dest_type_id
+  )
+  return !_.isEmpty(changeRequest)
+}
+
+const createChangeRequest = async (changeRequestDetails: any) => {
+  const changeRequestTicket = await createChangeRequestTicket(
+    changeRequestDetails
+  )
+  if (!_.isEmpty(changeRequestTicket.id)) {
+    await destinationchangerequest({
+      ..._.omit(changeRequestDetails.requested, [
+        'newPassword',
+        'confirmPassword',
+      ]),
+      password: changeRequestDetails.requested.newPassword,
+      jira_id: changeRequestTicket.id,
+      dest_id: changeRequestDetails.dest_id,
+      dest_type: changeRequestDetails.dest_type_id,
+      scheduledAt: changeRequestDetails.scheduledAt,
+      requestedBy: changeRequestDetails.requestedBy,
+    })
   }
 }
