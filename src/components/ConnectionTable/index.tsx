@@ -13,11 +13,11 @@ import {
 } from '@mui/material'
 import HistoryIcon from '@mui/icons-material/History'
 import Link from 'next/link'
-import EditIcon from '@mui/icons-material/Edit'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 import SessionContext from '../../contexts/app'
+import EditButton from './EditButton'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -201,23 +201,7 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            <Link
-              href={{
-                pathname: `/edit/${params.id}`,
-                query: { destType: params.row.destType },
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="Edit">
-                <IconButton
-                  id="edit"
-                  aria-label="edit"
-                  color="primary"
-                  sx={actionButtonStyle}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            <EditButton destId={params.id} destTypeId={params.row.destTypeId} />
             <Link
               href={{
                 pathname: `/test/${params.id}`,

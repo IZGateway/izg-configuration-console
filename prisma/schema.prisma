@@ -35,23 +35,24 @@ model destination_type {
 }
 
 model destinations {
-  dest_id          String           @db.VarChar(128)
-  dest_type        Int
-  dest_uri         String           @db.VarChar(1024)
-  username         String?          @db.VarChar(50)
-  password         String?          @db.VarChar(256)
-  facility_id      String?          @db.VarChar(50)
-  MSH3             String?          @db.VarChar(50)
-  MSH4             String?          @db.VarChar(50)
-  MSH5             String?          @db.VarChar(50)
-  MSH6             String?          @db.VarChar(50)
-  MSH22            String?          @db.VarChar(50)
-  RXA11            String?          @db.VarChar(50)
-  dest_version     String?          @db.VarChar(50)
-  pass_expiry      DateTime?        @db.Date
-  jurisdiction_id  Int
-  destination_type destination_type @relation(fields: [dest_type], references: [type_id], onUpdate: Restrict, map: "destinations_ibfk_1")
-  jurisdiction     jurisdiction     @relation(fields: [jurisdiction_id], references: [jurisdiction_id], map: "destinations_ibfk_2")
+  dest_id                    String                       @db.VarChar(128)
+  dest_type                  Int
+  dest_uri                   String                       @db.VarChar(1024)
+  username                   String?                      @db.VarChar(50)
+  password                   String?                      @db.VarChar(256)
+  facility_id                String?                      @db.VarChar(50)
+  MSH3                       String?                      @db.VarChar(50)
+  MSH4                       String?                      @db.VarChar(50)
+  MSH5                       String?                      @db.VarChar(50)
+  MSH6                       String?                      @db.VarChar(50)
+  MSH22                      String?                      @db.VarChar(50)
+  RXA11                      String?                      @db.VarChar(50)
+  dest_version               String?                      @db.VarChar(50)
+  pass_expiry                DateTime?                    @db.Date
+  jurisdiction_id            Int
+  destination_change_request destination_change_request[]
+  destination_type           destination_type             @relation(fields: [dest_type], references: [type_id], onUpdate: Restrict, map: "destinations_ibfk_1")
+  jurisdiction               jurisdiction                 @relation(fields: [jurisdiction_id], references: [jurisdiction_id], map: "destinations_ibfk_2")
 
   @@id([dest_id, dest_type])
   @@index([dest_type], map: "dest_type")
@@ -73,23 +74,26 @@ model messageheaderinfo {
   sourceType String? @db.VarChar(128)
 }
 
-model destinations_changelog {
-  id          Int      @id @default(autoincrement())
-  dest_id     String   @unique(map: "dest_id") @db.VarChar(128)
-  username    String?  @db.VarChar(50)
-  password    String?  @db.VarChar(50)
-  facility_id String?  @db.VarChar(50)
-  MSH3        String?  @db.VarChar(50)
-  MSH4        String?  @db.VarChar(50)
-  MSH5        String?  @db.VarChar(50)
-  MSH6        String?  @db.VarChar(50)
-  MSH22       String?  @db.VarChar(50)
-  RXA11       String?  @db.VarChar(50)
-  dest_type   String?  @db.VarChar(50)
-  jira_id     String?  @db.VarChar(50)
-  scheduledAt DateTime @default(now()) @db.DateTime(0)
-  requestedAt DateTime @default(now()) @db.DateTime(0)
-  requestedBy String?  @db.VarChar(50)
+model destination_change_request {
+  id           Int           @id @default(autoincrement())
+  username     String?       @db.VarChar(50)
+  password     String?       @db.VarChar(50)
+  facility_id  String?       @db.VarChar(50)
+  MSH3         String?       @db.VarChar(50)
+  MSH4         String?       @db.VarChar(50)
+  MSH5         String?       @db.VarChar(50)
+  MSH6         String?       @db.VarChar(50)
+  MSH22        String?       @db.VarChar(50)
+  RXA11        String?       @db.VarChar(50)
+  jira_id      String?       @db.VarChar(50)
+  dest_id      String?       @db.VarChar(128)
+  dest_type    Int?
+  scheduledAt  DateTime      @default(now()) @db.DateTime(0)
+  requestedAt  DateTime      @default(now()) @db.DateTime(0)
+  requestedBy  String?       @db.VarChar(50)
+  destinations destinations? @relation(fields: [dest_id, dest_type], references: [dest_id, dest_type], onDelete: NoAction, onUpdate: NoAction, map: "destination_change_request_ibfk_1")
+
+  @@index([dest_id, dest_type], map: "dest_id")
 }
 
 enum audit_history_changeType {
