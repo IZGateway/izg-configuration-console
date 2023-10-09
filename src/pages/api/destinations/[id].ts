@@ -5,6 +5,7 @@ import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/fetch/destination'
 import destinationType from '../../../lib/queries/fetch/destinationtype'
 import desttypehelper from '../../../lib/desttypehelper'
+import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
  * /api/destinations/{id}:
@@ -27,29 +28,27 @@ import desttypehelper from '../../../lib/desttypehelper'
  *       200:
  *         description: OK.
  */
-export default async function handle(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
 
-  const session = await getServerSession(req, res, authOptions)
+  // const session = await getServerSession(req, res, authOptions)
 
   const destType = desttypehelper.destTypeFormattedToSyncWithDB(
     req.query.destType.toString()
   )
-  if (hasAccessToDestId(destId, session)) {
-    if (req.method === 'GET') {
-      const destination_type = await destinationType(destType)
+  //if (hasAccessToDestId(destId, session)) {
+  if (req.method === 'GET') {
+    const destination_type = await destinationType(destType)
 
-      const result = await destination(destId, destination_type.type_id)
-      res.json(result)
-    } else {
-      throw new Error(
-        `The HTTP ${req.method} method is not supported at this route.`
-      )
-    }
+    const result = await destination(destId, destination_type.type_id)
+    res.json(result)
   } else {
-    res.status(401)
+    throw new Error(
+      `The HTTP ${req.method} method is not supported at this route.`
+    )
   }
+  //  } else {
+  //  res.status(401)
+  // }
 }
+export default withMiddleware('checkAccessToDestId')(handler)

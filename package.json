@@ -40,6 +40,7 @@
     "jest-environment-jsdom": "^29.5.0",
     "moment": "^2.29.4",
     "next": "13.4.1",
+    "next-api-middleware": "^2.0.1",
     "next-auth": "^4.22.1",
     "next-swagger-doc": "^0.4.0",
     "pino": "^8.15.1",
@@ -50,7 +51,7 @@
     "saml2-js": "^4.0.2",
     "swagger-ui-react": "^5.4.1",
     "swr": "^2.2.0",
-    "uuid": "^9.0.0",
+    "uuid": "^9.0.1",
     "waait": "^1.0.5",
     "winston": "^3.10.0",
     "xml2js": "^0.6.0"

@@ -5,6 +5,7 @@ import hasAccessToDestId from '../../../../lib/accesshelper'
 import updatedAuditedDestination from '../../../../lib/queries/update/destination'
 import desttypehelper from '../../../../lib/desttypehelper'
 import destinationType from '../../../../lib/queries/fetch/destinationtype'
+import withMiddleware from '../../api-middleware-helper'
 /**
  * @swagger
  * /api/update/destination/{id}:
@@ -44,36 +45,35 @@ import destinationType from '../../../../lib/queries/fetch/destinationtype'
  *       400:
  *         description: Bad request.
  */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
   const destType = desttypehelper.destTypeFormattedToSyncWithDB(
     req.query.destType.toString()
   )
-  const session = await getServerSession(req, res, authOptions)
+  //const session = await getServerSession(req, res, authOptions)
 
-  if (hasAccessToDestId(destId, session)) {
-    const destination_type = await destinationType(destType)
-    if (req.method === 'POST') {
-      const data = JSON.parse(req.body)
-      const result = await updatedAuditedDestination(
-        destId,
-        destination_type?.type_id,
-        data.updatedData,
-        data.user,
-        data.oldValues,
-        data.newValues,
-        data.tableName
-      )
-      res.json(result)
-    } else {
-      throw new Error(
-        `The HTTP ${req.method} method is not supported at this route.`
-      )
-    }
+  // if (hasAccessToDestId(destId, session)) {
+  const destination_type = await destinationType(destType)
+  if (req.method === 'POST') {
+    const data = JSON.parse(req.body)
+    const result = await updatedAuditedDestination(
+      destId,
+      destination_type?.type_id,
+      data.updatedData,
+      data.user,
+      data.oldValues,
+      data.newValues,
+      data.tableName
+    )
+    res.json(result)
   } else {
-    res.status(401)
+    throw new Error(
+      `The HTTP ${req.method} method is not supported at this route.`
+    )
   }
+  //} else {
+  //res.status(401)
+  //}
 }
+
+export default withMiddleware('checkAccessToDestId')(handler)
