@@ -60,7 +60,7 @@ const EditConnection = (props: editConnectionProps) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}?destTypeId=${props.destTypeId}`)
+  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
 
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
@@ -150,7 +150,7 @@ const EditConnection = (props: editConnectionProps) => {
     if (response.ok) {
       router.push('/manage')
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}?destType=${props.destTypeId}`)
+      mutate(`/api/destinations/${props.destTypeId}/${props.destId}`)
     } else {
       throw new Error('Update was not successful. Please try again later')
     }

@@ -7,6 +7,7 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import logger from '../../../../logger'
+import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
  * /api/destinations:
@@ -16,10 +17,7 @@ import logger from '../../../../logger'
  *       200:
  *         description: OK.
  */
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const IZG_STATUS_ENDPOINT_URL =
     process.env.IZG_STATUS_ENDPOINT_URL || 'unknown'
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
@@ -46,7 +44,7 @@ export default async function handler(
         return response.data
       })
       .catch((error) => {
-        logger.error(error.message)
+        logger.error('Something went wrong ' + endpoint, { err: error })
       })
     return responseData
   }
@@ -71,3 +69,4 @@ export default async function handler(
     res.status(401)
   }
 }
+export default withMiddleware()(handler)

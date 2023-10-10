@@ -103,7 +103,6 @@ const TestHistory = (props: TestHistoryProps) => {
 
   const historyDataLength = data?.length
   const defaultTestHistoryView = data?.slice(0, 5)
-  const frequency = process.env.AUTOMATED_TEST_RUN_DURATION || 900000
 
   return (
     <div>
@@ -120,12 +119,6 @@ const TestHistory = (props: TestHistoryProps) => {
             },
           }}
           title="Test History"
-          subheader={
-            <Typography variant="caption">
-              <ErrorOutlineIcon sx={{ fontSize: '1rem', mt: '8px' }} />
-              Automated test run every {msToTime(frequency)}
-            </Typography>
-          }
         ></CardHeader>
         <Divider />
         <CardContent>
