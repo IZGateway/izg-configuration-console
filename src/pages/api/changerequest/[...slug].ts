@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import _ from 'lodash'
 import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
+import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
  * /api/changerequest/{destTypeId}/{destId}:
@@ -26,10 +27,7 @@ import destinationChangeRequest from '../../../lib/queries/fetch/destinationchan
  *       200:
  *         description: OK.
  */
-export default async function handle(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
@@ -48,3 +46,4 @@ export default async function handle(
     res.status(401)
   }
 }
+export default withMiddleware()(handler)

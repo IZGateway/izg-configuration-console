@@ -41,11 +41,10 @@ const handler = async (
   res: NextApiResponse<APIResponse>
 ) => {
   const destId = req.query.id.toString()
-  // const session = await getServerSession(req, res, authOptions)
   const destType = desttypehelper.destTypeFormattedToSyncWithDB(
     req.query.destType.toString()
   )
-  //if (hasAccessToDestId(destId, session)) {
+
   if (req.method === 'GET') {
     const DEFAULT_PORT = 443
     const testSuite = 'qbp'
@@ -55,7 +54,6 @@ const handler = async (
       destId?.toString(),
       destination_type.type_id
     )
-    //const fetchedJurisdiction = await jurisdiction(destId?.toString())
 
     if (!fetchedDestination) {
       res.status(constants.HTTP_STATUS_NOT_FOUND).json({
@@ -145,9 +143,6 @@ const handler = async (
       `The HTTP ${req.method} method is not supported at this route.`
     )
   }
-  //} else {
-  //  res.status(401)
-  // }
 }
 
 const convertUrlStringToUrlObject = (urlString: string) => {

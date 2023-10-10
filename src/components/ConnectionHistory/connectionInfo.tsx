@@ -14,6 +14,7 @@ import Link from 'next/link'
 import Status from '../Status'
 import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
+import desttypehelper from '../../lib/desttypehelper'
 
 const ConnectionInfo = (props) => {
   const [open, setOpen] = React.useState(false)
@@ -69,7 +70,9 @@ const ConnectionInfo = (props) => {
                   ENVIRONMENT
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {props.destType}
+                  {desttypehelper.destTypeFormattedToSyncWithApi(
+                    destData.destination_type.type
+                  )}
                 </Typography>
               </Box>
               <Box>

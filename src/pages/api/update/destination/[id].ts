@@ -50,9 +50,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destType = desttypehelper.destTypeFormattedToSyncWithDB(
     req.query.destType.toString()
   )
-  //const session = await getServerSession(req, res, authOptions)
 
-  // if (hasAccessToDestId(destId, session)) {
   const destination_type = await destinationType(destType)
   if (req.method === 'POST') {
     const data = JSON.parse(req.body)
@@ -71,9 +69,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       `The HTTP ${req.method} method is not supported at this route.`
     )
   }
-  //} else {
-  //res.status(401)
-  //}
 }
 
 export default withMiddleware('checkAccessToDestId')(handler)

@@ -41,7 +41,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     parseInt(process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 4
 
   const destId = req.query.id.toString()
-  // const session = await getServerSession(req, res, authOptions)
   const fetchEndpointStatus = async (destId, count) => {
     const endpoint = `${IZG_STATUS_ENDPOINT_URL}/${destId}`
     const responseData = await axios
@@ -59,7 +58,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return responseData
   }
 
-  // if (hasAccessToDestId(destId, session)) {
   if (req.method === 'GET') {
     const result = await fetchEndpointStatus(destId, historyCount)
     res.json(result)
@@ -69,8 +67,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-//} else {
-//res.status(401)
-//}
 
 export default withMiddleware('checkAccessToDestId')(handler)

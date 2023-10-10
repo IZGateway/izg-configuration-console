@@ -22,9 +22,7 @@ import withMiddleware from '../api-middleware-helper'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
-  // const session = await getServerSession(req, res, authOptions)
 
-  // if (hasAccessToDestId(destId, session)) {
   if (req.method === 'GET') {
     const result = await jurisdiction(destId)
     res.json(result)
@@ -33,8 +31,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       `The HTTP ${req.method} method is not supported at this route.`
     )
   }
-  //} else {
-  //  res.status(401)
-  // }
 }
 export default withMiddleware('checkAccessToDestId')(handler)

@@ -38,9 +38,6 @@ import withMiddleware from '../../api-middleware-helper'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
-  // const session = await getServerSession(req, res, authOptions)
-
-  // if (hasAccessToDestId(destId, session)) {
   if (req.method === 'GET') {
     const DEFAULT_PORT = 443
     const testSuite: string[] = [
@@ -160,9 +157,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       `The HTTP ${req.method} method is not supported at this route.`
     )
   }
-  //} else {
-  //res.status(401)
-  //}
 }
 
 const convertUrlStringToUrlObject = (urlString: string) => {
