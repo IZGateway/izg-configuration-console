@@ -30,8 +30,9 @@ export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const destId = req.query.id.toString()
-  const destTypeId = _.toNumber(req.query.destTypeId)
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {

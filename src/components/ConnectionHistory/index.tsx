@@ -38,7 +38,7 @@ const ConnectionHistory = (props: any) => {
         <Item sx={{ width: '40%' }}>
           <ConnectionInfo
             destId={props.destId}
-            destType={props.destType}
+            destTypeId={props.destTypeId}
             status={props.status}
           />
         </Item>
