@@ -6,9 +6,9 @@ import destination from '../../../lib/queries/fetch/destination'
 import _ from 'lodash'
 /**
  * @swagger
- * /api/destinations/{id}:
+ * /api/destinations/{destTypeId}/{destId}:
  *   get:
- *     summary: Get destination information by ID.
+ *     summary: Get connection test results for destination by ID.
  *     parameters:
  *       - name: id
  *         in: path
@@ -16,12 +16,12 @@ import _ from 'lodash'
  *         schema:
  *           type: string
  *         description: The ID of the destination.
- *       - name: destType
- *         in: query
+ *       - name: destTypeId
+ *         in: path
  *         required: true
  *         schema:
- *           type: string
- *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
+ *           type: number
+ *         description: The If of destination type
  *     responses:
  *       200:
  *         description: OK.
@@ -30,8 +30,10 @@ export default async function handle(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const destId = req.query.id.toString()
-  const destTypeId = _.toNumber(req.query.destTypeId)
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
+
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {

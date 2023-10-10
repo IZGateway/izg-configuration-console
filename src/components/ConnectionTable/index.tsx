@@ -204,8 +204,7 @@ const ConnectionsTable = () => {
             <EditButton destId={params.id} destTypeId={params.row.destTypeId} />
             <Link
               href={{
-                pathname: `/test/${params.id}`,
-                query: { destType: params.row.destType },
+                pathname: `/test/${params.row.destTypeId}/${params.id}`,
               }}
             >
               <Tooltip arrow placement="bottom" title="Test">

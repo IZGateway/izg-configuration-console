@@ -21,7 +21,7 @@ const ConnectionInfo = (props) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}?destType=${props.destType}`)
+  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
   if (destError) return <div>failed to load</div>
   if (isDestLoading) return <div>loading...</div>
   if (!destData) return <div>no destination data found</div>

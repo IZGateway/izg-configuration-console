@@ -12,12 +12,17 @@ export async function getServerSideProps() {
 
 const Test = () => {
   const router = useRouter()
+  const { isReady, query } = router
+
+  React.useEffect(() => {
+    if (!isReady) return
+  }, [isReady, query])
   return (
     <Container title="Test Connection">
       <ErrorBoundary>
         <TestConnection
-          destId={router.query?.id as string}
-          destType={router.query?.destType as string}
+          destId={router?.query?.slug[1]}
+          destTypeId={router?.query?.slug[0]}
         />
       </ErrorBoundary>
     </Container>

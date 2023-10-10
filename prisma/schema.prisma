@@ -21,8 +21,8 @@ model audit_history {
   tableName  String                   @db.VarChar(50)
   userName   String                   @db.VarChar(50)
   changeType audit_history_changeType
-  oldValues  Json?
-  newValues  Json?
+  oldValues  String?                  @db.VarChar(1024)
+  newValues  String?                  @db.VarChar(1024)
   createdAt  DateTime                 @default(now()) @db.DateTime(0)
 }
 
@@ -76,6 +76,7 @@ model messageheaderinfo {
 
 model destination_change_request {
   id           Int           @id @default(autoincrement())
+  dest_uri     String?       @db.VarChar(1024)
   username     String?       @db.VarChar(50)
   password     String?       @db.VarChar(50)
   facility_id  String?       @db.VarChar(50)

@@ -82,6 +82,7 @@ DROP TABLE IF EXISTS destination_change_request;
 --
 CREATE TABLE destination_change_request (
   id int(11) NOT NULL AUTO_INCREMENT,
+  dest_uri character varying(1024) DEFAULT NULL,
   username varchar(50) DEFAULT NULL,
   password varchar(50) DEFAULT NULL,
   facility_id varchar(50) DEFAULT NULL,

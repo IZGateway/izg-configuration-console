@@ -5,6 +5,7 @@ const destinationChangeRequest = async (destId: string, dest_type: number) =>
     where: { dest_id: destId, dest_type: dest_type },
     select: {
       dest_id: true,
+      dest_uri: true,
       dest_type: true,
       jira_id: true,
       MSH22: true,
@@ -19,6 +20,22 @@ const destinationChangeRequest = async (destId: string, dest_type: number) =>
       username: true,
       facility_id: true,
       id: true,
+      destinations: {
+        select: {
+          destination_type: {
+            select: {
+              type: true,
+              type_id: true,
+            },
+          },
+          jurisdiction: {
+            select: {
+              name: true,
+              description: true,
+            },
+          },
+        },
+      },
     },
   })
 

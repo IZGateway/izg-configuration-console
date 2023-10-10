@@ -4,7 +4,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import useSWR from 'swr'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
-
+import { useSession } from 'next-auth/react'
+import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye'
 const actionButtonStyle = {
   borderRadius: 90,
   background: '#FFFFF',
@@ -15,6 +16,7 @@ const actionButtonStyle = {
 }
 
 const EditButton = (params: { destTypeId: any; destId: any }) => {
+  const { data: session } = useSession()
   const [canEdit, setCanEdit] = useState(false)
   const { data, error, isLoading } = useSWR(
     `/api/changerequest/${params.destTypeId}/${params.destId}`
@@ -43,6 +45,23 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
               sx={actionButtonStyle}
             >
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Link>
+      ) : session?.isAdmin ? (
+        <Link
+          href={{
+            pathname: `/deploy/${params.destTypeId}/${params.destId}`,
+          }}
+        >
+          <Tooltip arrow placement="bottom" title="Deploy">
+            <IconButton
+              id="deploy"
+              aria-label="deploy"
+              color="primary"
+              sx={actionButtonStyle}
+            >
+              <RemoveRedEyeIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Link>

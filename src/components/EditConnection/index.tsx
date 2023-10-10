@@ -60,8 +60,7 @@ const EditConnection = (props: editConnectionProps) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}?destTypeId=${props.destTypeId}`)
-
+  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
@@ -115,7 +114,6 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleSubmit = async () => {
-    //let response
     const scheduleAt = asapSelected
       ? new Date()
       : selectedDate
@@ -138,6 +136,7 @@ const EditConnection = (props: editConnectionProps) => {
           ...defaultFormValues,
         },
         dest_id: destData.dest_id,
+        dest_uri: destData.dest_uri,
         dest_type_id: destData.destination_type.type_id,
         dest_type: destData.destination_type.type,
         jira_id: null,
@@ -145,12 +144,11 @@ const EditConnection = (props: editConnectionProps) => {
         requestedBy: session.user.email,
       }),
     })
-    //}
     clearValue()
     if (response.ok) {
       router.push('/manage')
       // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destId}?destType=${props.destTypeId}`)
+      mutate(`/api/destinations/${props.destTypeId}/${props.destId}`)
     } else {
       throw new Error('Update was not successful. Please try again later')
     }
