@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/fetch/destination'
 import _ from 'lodash'
-import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
  * /api/destinations/{id}:
@@ -27,22 +26,25 @@ import withMiddleware from '../api-middleware-helper'
  *       200:
  *         description: OK.
  */
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const destId = req.query.id.toString()
-  const destTypeId = _.toNumber(req.query.destTypeId)
-  // const session = await getServerSession(req, res, authOptions)
+export default async function handle(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
+  const session = await getServerSession(req, res, authOptions)
 
-  //if (hasAccessToDestId(destId, session)) {
-  if (req.method === 'GET') {
-    const result = await destination(destId, destTypeId)
-    res.json(result)
+  if (hasAccessToDestId(destId, session)) {
+    if (req.method === 'GET') {
+      const result = await destination(destId, destTypeId)
+      res.json(result)
+    } else {
+      throw new Error(
+        `The HTTP ${req.method} method is not supported at this route.`
+      )
+    }
   } else {
-    throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`
-    )
+    res.status(401)
   }
-  //} else {
-  //  res.status(401)
-  // }
 }
-export default withMiddleware('checkAccessToDestId')(handler)

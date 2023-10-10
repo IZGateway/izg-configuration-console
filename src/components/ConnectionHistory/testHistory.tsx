@@ -101,8 +101,8 @@ const TestHistory = (props: TestHistoryProps) => {
 
   if (isLoading) return <div>loading...</div>
 
-  const historyDataLength = data.length
-  const defaultTestHistoryView = data.slice(0, 5)
+  const historyDataLength = data?.length
+  const defaultTestHistoryView = data?.slice(0, 5)
 
   return (
     <div>

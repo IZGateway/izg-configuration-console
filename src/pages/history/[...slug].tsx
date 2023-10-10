@@ -3,21 +3,24 @@ import Container from '../../components/Container'
 import ConnectionHistory from '../../components/ConnectionHistory/index'
 import { useRouter } from 'next/router'
 import ErrorBoundary from '../../components/ErrorBoundary'
+import { useEffect } from 'react'
 
-export async function getServerSideProps() {
-  return {
-    props: {},
-  }
-}
-
-const HistoryPage = () => {
+const HistoryPage = (props) => {
   const router = useRouter()
-  return (
+  const { isReady, query } = router
+
+  useEffect(() => {
+    if (!isReady) return
+  }, [isReady, query])
+
+  return !isReady ? (
+    <>Loading....</>
+  ) : (
     <Container title="Connection History">
       <ErrorBoundary>
         <ConnectionHistory
-          destId={router.query?.id as string}
-          destType={router.query?.destType as string}
+          destId={router?.query?.slug[1] as string}
+          destTypeId={router?.query?.slug[0] as string}
           status={router.query?.status as string}
         />
       </ErrorBoundary>
