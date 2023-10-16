@@ -6,6 +6,7 @@ import destinationchangerequest from '../../../lib/queries/mutate/destinationcha
 import fetchDestinationchangerequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
+import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
  * /api/changerequest:
@@ -55,10 +56,7 @@ const isJiraConfigured = () => {
   return false
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
 
@@ -125,3 +123,4 @@ const createChangeRequest = async (changeRequestDetails: any) => {
     })
   }
 }
+export default withMiddleware()(handler)

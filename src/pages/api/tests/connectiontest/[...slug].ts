@@ -12,6 +12,7 @@ import destination from '../../../../lib/queries/fetch/destination'
 import logger from '../../../../../logger'
 import _ from 'lodash'
 import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
+import withMiddleware from '../../api-middleware-helper'
 /**
  * @swagger
  * /api/tests/connectiontest/{destTypeId}/{destId}?configuration=test/deploy:
@@ -40,11 +41,10 @@ import destinationChangeRequest from '../../../../lib/queries/fetch/destinationc
  *       200:
  *         description: OK.
  */
-
-export default async function handler(
+const handler = async (
   req: NextApiRequest,
   res: NextApiResponse<APIResponse>
-) {
+) => {
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
@@ -213,3 +213,5 @@ const isValidUrl = (urlString: string) => {
     return false
   }
 }
+
+export default withMiddleware('checkAccessToDestId')(handler)

@@ -220,9 +220,8 @@ const ConnectionsTable = () => {
             </Link>
             <Link
               href={{
-                pathname: `/history/${params.id}`,
+                pathname: `/history/${params.row.destTypeId}/${params.id}`,
                 query: {
-                  destType: params.row.destType,
                   status: params.row.status,
                 },
               }}

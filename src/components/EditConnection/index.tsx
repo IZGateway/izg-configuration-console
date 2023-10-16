@@ -61,6 +61,7 @@ const EditConnection = (props: editConnectionProps) => {
     error: destError,
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
+
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
