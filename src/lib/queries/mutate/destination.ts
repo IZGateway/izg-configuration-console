@@ -5,50 +5,58 @@ const updateDestination = async (
   destType: number,
   updatedData
 ) => {
-  let updatedDestination = updatedData
-  if (updatedDestination.hasOwnProperty('newPassword')) {
-    const { newPassword, confirmPassword, ...submittingValue } = updatedData
-    updatedDestination = {
-      ...submittingValue,
-      password: updatedData.newPassword,
-    }
-  }
-
+  // let updatedDestination = updatedData
+  // if (updatedDestination.hasOwnProperty('newPassword')) {
+  //   const { newPassword, confirmPassword, ...submittingValue } = updatedData
+  //   updatedDestination = {
+  //     ...submittingValue,
+  //     password: updatedData.newPassword,
+  //   }
+  // }
   await prismacontext.prisma.destinations.update({
     where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
-    data: updatedDestination,
+    data: {
+      username: updatedData.username,
+      password: '',
+      MSH3: updatedData.MSH3,
+      MSH4: updatedData.MSH4,
+      MSH5: updatedData.MSH5,
+      MSH6: updatedData.MSH6,
+      MSH22: updatedData.MSH22,
+      RXA11: updatedData.RXA11,
+    },
   })
 }
 
-const auditDestination = async (
-  user: string,
-  oldValues: object,
-  newValues: object,
-  tableName: string
-) =>
-  await prismacontext.prisma.audit_history.create({
-    data: {
-      tableName: tableName,
-      userName: user,
-      changeType: 'Update',
-      oldValues: oldValues,
-      newValues: newValues,
-      createdAt: new Date(),
-    },
-  })
+// const auditDestination = async (
+//   user: string,
+//   oldValues: object,
+//   newValues: object,
+//   tableName: string
+// ) =>
+//   await prismacontext.prisma.audit_history.create({
+//     data: {
+//       tableName: tableName,
+//       userName: user,
+//       changeType: 'Update',
+//       oldValues: oldValues,
+//       newValues: newValues,
+//       createdAt: new Date(),
+//     },
+//   })
 
 const updatedAuditedDestination = async (
   destId: string,
   destType: number,
-  updatedData: object,
-  user: string,
-  oldValues: object,
-  newValues: object,
-  tableName: string
+  updatedData: object
+  // user: string,
+  // oldValues: object,
+  // newValues: object,
+  // tableName: string
 ) => {
   await prismacontext.prisma.$transaction(async () => {
     await updateDestination(destId, destType, updatedData)
-    await auditDestination(user, oldValues, newValues, tableName)
+    // await auditDestination(user, oldValues, newValues, tableName)
   })
 }
 export default updatedAuditedDestination

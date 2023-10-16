@@ -29,22 +29,34 @@ const ServiceAgreement = (props: PolicyProps) => {
       <Divider />
       <CardContent>
         <div>
-          Mauris in lacus quis leo vulputate laoreet id a mi. Fusce vitae
-          molestie tellus. Sed ut velit dignissim, imperdiet felis ut, rhoncus
-          orci. Integer tincidunt gravida interdum. Aenean quis sem non elit
-          sagittis maximus id non arcu. Suspendisse semper, lorem lobortis
-          iaculis rhoncus, lacus enim gravida purus, ac mattis magna nibh id
-          elit. Phasellus id ultrices eros, tempus convallis enim. Aenean
-          rutrum, mi id malesuada viverra, erat arcu laoreet odio, sit amet
-          pretium sapien neque nec erat. Vestibulum at tortor rutrum ex
-          scelerisque fringilla sit amet quis tortor. Ut eu tristique lorem, a
-          tincidunt magna. Mauris volutpat ullamcorper massa, eget posuere purus
-          pellentesque id. Nunc sed porttitor ex, ut maximus augue. Etiam risus
-          est, fermentum non dictum nec, tempor nec tellus. Curabitur interdum
-          nunc pellentesque mauris ultricies, vel ornare tortor cursus. Mauris
-          et massa turpis. Nam eget sapien vitae magna mollis semper ut vel
-          lorem. Aenean blandit molestie lorem, sed aliquet elit. Suspendisse
-          efficitur dapibus faucibus.
+          I hereby attest that I have been duly authorized by the jurisdiction
+          to make changes to the Immunization (IZ) Gateway configuration for my
+          jurisdiction. I understand the responsibility entrusted to me and
+          acknowledge that any alterations made shall comply with all applicable
+          laws, regulations, and policies governing system configurations within
+          the jurisdiction. I affirm that I have undergone the necessary
+          training and possess the technical competence required to carry out
+          system configuration changes effectively and responsibly. I am aware
+          of the potential risks associated with such modifications and commit
+          to implementing appropriate safeguards to ensure the integrity,
+          availability, and confidentiality of the system and its data.
+          Furthermore, I understand that my authorization is subject to any
+          limitations or conditions imposed by the jurisdiction, and I shall
+          adhere to all established procedures and protocols governing IZ
+          Gateway configuration changes for my jurisdiction. I will exercise due
+          diligence in evaluating the impact of any modifications and seek
+          necessary approvals before implementing them. I acknowledge that the
+          IZ Gateway may monitor and audit the changes made to the system
+          configuration as part of their oversight and compliance efforts. I
+          will cooperate fully with any such audits and provide any requested
+          information or documentation related to the changes made. I undertake
+          to prioritize the security and stability of the system during the
+          configuration process, taking into account the potential impact on
+          users, data, and overall exchange. By clicking Accept below, I declare
+          that the information attested is accurate to the best of my knowledge.
+          I understand that any misrepresentation or violation of the
+          jurisdiction’s or IZ Gateway&apos;s policies may result in the
+          revocation of my authorization and potential legal consequences.
         </div>
         <FormControl>
           <RadioGroup onChange={props.clickOnAgree}>

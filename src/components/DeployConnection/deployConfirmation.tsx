@@ -7,13 +7,31 @@ import {
   Divider,
   Button,
 } from '@mui/material'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 import Link from 'next/link'
 import LaunchIcon from '@mui/icons-material/Launch'
+import router from 'next/router'
 
 const JIRA_BROWSE_URL = process.env.JIRA_BROWSE_URL || undefined
 
-const deployConfirmation = (params: { destTypeId: any; destId: any }) => {
+const DeployConfirmation = (props) => {
+  const handleDeploy = async () => {
+    const response = await fetch(
+      `/api/update/destination/${props.destTypeId}/${props.destId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(props.submittingValue), ///ADD PASSWORD HERE
+      }
+    )
+    if (response.ok) {
+      // manually trigger revalidation to fetch the latest data from the server without refresh
+      mutate(`/api/destinations/${props.destId}`)
+      router.push('/manage')
+    } else {
+      throw new Error('Update was not successful. Please try again later')
+    }
+  }
+
   return (
     <Card
       sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
@@ -29,12 +47,12 @@ const deployConfirmation = (params: { destTypeId: any; destId: any }) => {
           adhere to our platform guidelines. Choose `Deploy` if the connection
           is ready.
         </Typography>
-
         <Button
           id="deploy"
           color="primary"
           variant="outlined"
           data-testid="deployIcon"
+          onClick={handleDeploy}
           sx={{
             borderRadius: '30px',
           }}
@@ -47,4 +65,4 @@ const deployConfirmation = (params: { destTypeId: any; destId: any }) => {
   )
 }
 
-export default deployConfirmation
+export default DeployConfirmation

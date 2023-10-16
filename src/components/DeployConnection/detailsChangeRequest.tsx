@@ -8,9 +8,8 @@ import {
 } from '@mui/material'
 import useSWR from 'swr'
 import Details from '../ChangeRequest/details'
+import _ from 'lodash'
 
-////destination_change_request -------submitting change
-////destination----existing change
 const DetailsChangeRequest = (params: {
   destTypeId: any
   destId: any
@@ -22,22 +21,20 @@ const DetailsChangeRequest = (params: {
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${params.destTypeId}/${params.destId}`)
 
-  if (destError) return <div>failed to load</div>
-  if (isDestLoading) return <div>loading...</div>
+  const {
+    data: passwordDiffData,
+    error: passwordDiffError,
+    isLoading: passwordDiffLoading,
+  } = useSWR(
+    `/api/changerequest/checkPasswordDifference/${params.destTypeId}/${params.destId}`
+  )
 
-  // let submittingValue
-  // let existingValue
+  if (destError || passwordDiffError)
+    throw new Error(destError.message || passwordDiffError.message)
+  if (isDestLoading || passwordDiffLoading) return <div>loading...</div>
 
-  // if (params.value.newPassword === '' && params.value.confirmPassword === '') {
-  //   submittingValue = { ...params.value, password: '.........' }
-  //   existingValue = { ...params, password: '.........' }
-  // } else {
-  //   submittingValue = { ...params.value, password: params.value.newPassword }
-  //   existingValue = { ...params, password: '.........' }
-  // }
+  console.log(passwordDiffData)
 
-  // delete submittingValue.confirmPassword
-  // delete submittingValue.newPassword
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
@@ -51,8 +48,13 @@ const DetailsChangeRequest = (params: {
         <Divider />
         <CardContent>
           <Details
-            existingValue={existingValue}
-            submittingValue={params.submittingValue}
+            existingValue={_.set(existingValue, 'password', '.........')}
+            submittingValue={_.set(
+              params.submittingValue,
+              'password',
+              '.........'
+            )}
+            isPasswordDifference={passwordDiffData}
           />
         </CardContent>
       </Card>

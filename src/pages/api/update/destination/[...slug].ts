@@ -6,6 +6,7 @@ import updatedAuditedDestination from '../../../../lib/queries/mutate/destinatio
 import desttypehelper from '../../../../lib/desttypehelper'
 import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import withMiddleware from '../../api-middleware-helper'
+import _ from 'lodash'
 /**
  * @swagger
  * /api/update/destination/{id}:
@@ -46,22 +47,20 @@ import withMiddleware from '../../api-middleware-helper'
  *         description: Bad request.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const destId = req.query.id.toString()
-  const destType = desttypehelper.destTypeFormattedToSyncWithDB(
-    req.query.destType.toString()
-  )
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
 
-  const destination_type = await destinationType(destType)
   if (req.method === 'POST') {
     const data = JSON.parse(req.body)
     const result = await updatedAuditedDestination(
       destId,
-      destination_type?.type_id,
-      data.updatedData,
-      data.user,
-      data.oldValues,
-      data.newValues,
-      data.tableName
+      destTypeId,
+      data
+      // data.user,
+      // data.oldValues,
+      // data.newValues,
+      // data.tableName
     )
     res.json(result)
   } else {

@@ -8,8 +8,9 @@ import {
   Button,
 } from '@mui/material'
 import Link from 'next/link'
+import useSWR from 'swr'
 
-const ChangeRequestTicket = (props: any) => {
+const ViewChangeRequestTicket = (props: any) => {
   return (
     <Card
       sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
@@ -24,17 +25,17 @@ const ChangeRequestTicket = (props: any) => {
           below. Something how Jira is the source of truth and you may need to
           login additional systems.
         </Typography>
+        <Link
+          href={'https://support.izgateway.org/browse/' + props.jira_id}
+          target="_blank"
+        >
+          <Button id="run" color="primary" data-testid="CRTicket">
+            Access Change Request Ticket
+          </Button>
+        </Link>
       </CardContent>
-      <Link
-        href={'https://support.izgateway.org/browse/' + props.jira_id}
-        target="_blank"
-      >
-        <Button id="run" color="primary" data-testid="CRTicket">
-          Access Change Request Ticket
-        </Button>
-      </Link>
     </Card>
   )
 }
 
-export default ChangeRequestTicket
+export default ViewChangeRequestTicket

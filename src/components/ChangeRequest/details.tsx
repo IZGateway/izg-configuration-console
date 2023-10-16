@@ -9,7 +9,11 @@ const StyledDifferenceTableCell = styled(TableCell)(() => ({
   backgroundColor: 'rgb(242, 208, 167, .2)',
 }))
 
-const Details = (params: { existingValue: any; submittingValue: any }) => {
+const Details = (params: {
+  existingValue: any
+  submittingValue: any
+  isPasswordDifference: any
+}) => {
   const fieldNames = [
     'username',
     'facility_id',
@@ -19,7 +23,7 @@ const Details = (params: { existingValue: any; submittingValue: any }) => {
     'MSH6',
     'MSH22',
     'RXA11',
-    'PASSWORD',
+    'password',
   ]
   return (
     <div>
