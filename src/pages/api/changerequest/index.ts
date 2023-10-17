@@ -2,10 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import destinationchangerequest from '../../../lib/queries/mutate/destinationchangerequest'
 import fetchDestinationchangerequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
+import {
+  upsertDestinationChangeRequest,
+  deleteDestinationChangeRequest,
+} from '../../../lib/queries/mutate/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
 /**
  * @swagger
@@ -80,7 +83,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           res.json('The change request was created.')
         }
       } catch (error) {
-        throw new Error(`Error creating change request: ${error}`)
+        throw new Error(`${error}`)
       }
     } else {
       throw new Error(
@@ -104,22 +107,53 @@ const hasActiveChangeRequest = async (
 }
 
 const createChangeRequest = async (changeRequestDetails: any) => {
-  const changeRequestTicket = await createChangeRequestTicket(
+  const changeRequestRecord = await insertChangeRequestRecord(
     changeRequestDetails
   )
-  if (!_.isEmpty(changeRequestTicket.id)) {
-    await destinationchangerequest({
-      ..._.omit(changeRequestDetails.requested, [
-        'newPassword',
-        'confirmPassword',
-      ]),
-      password: changeRequestDetails.requested.newPassword,
-      jira_id: changeRequestTicket.id,
-      dest_id: changeRequestDetails.dest_id,
-      dest_type: changeRequestDetails.dest_type_id,
-      scheduledAt: changeRequestDetails.scheduledAt,
-      requestedBy: changeRequestDetails.requestedBy,
-    })
+  if (!_.isEmpty(changeRequestRecord)) {
+    let changeRequestTicketResponse = null
+    try {
+      changeRequestTicketResponse = await createChangeRequestTicket({
+        ...changeRequestDetails,
+        changeRequestId: changeRequestRecord.id,
+      })
+      await updateChangeRequestRecord({
+        ...changeRequestRecord,
+        jira_id: changeRequestTicketResponse.id,
+      })
+    } catch (error) {
+      throw new Error(
+        `Error creating change request ticket for ${changeRequestDetails.dest_id} on environment ${changeRequestDetails.dest_type_id} : ${error}`
+      )
+    } finally {
+      if (_.isNull(changeRequestTicketResponse)) {
+        deleteChangeRequestRecord(changeRequestRecord.id)
+      }
+    }
   }
+}
+
+const insertChangeRequestRecord = async (changeRequestDetails: any) => {
+  const createdChangeRequestDBRecord = await upsertDestinationChangeRequest({
+    ..._.omit(changeRequestDetails.requested, [
+      'newPassword',
+      'confirmPassword',
+    ]),
+    password: changeRequestDetails.requested.newPassword,
+    jira_id: null,
+    dest_id: changeRequestDetails.dest_id,
+    dest_type: changeRequestDetails.dest_type_id,
+    scheduledAt: changeRequestDetails.scheduledAt,
+    requestedBy: changeRequestDetails.requestedBy,
+  })
+  return createdChangeRequestDBRecord
+}
+
+const updateChangeRequestRecord = async (changeRequestRecord: any) => {
+  await upsertDestinationChangeRequest(changeRequestRecord)
+}
+
+const deleteChangeRequestRecord = async (id: any) => {
+  await deleteDestinationChangeRequest(id)
 }
 export default withMiddleware('logRequest')(handler)

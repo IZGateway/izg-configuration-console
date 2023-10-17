@@ -11,16 +11,14 @@ import {
 } from '@mui/material'
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { TimePicker } from '@mui/x-date-pickers/TimePicker'
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 
 const Schedule = (props: any) => {
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = React.useState(false)
 
   const handleASAPPicker = () => {
     props.setAsapSelected(true)
-    props.setSelectedDate(null)
-    props.setSelectedTime(null)
+    props.setScheduledDateTime(null)
     setIsDateTimePickerOpen(false)
   }
   const handleDateTimePicker = () => {
@@ -43,13 +41,12 @@ const Schedule = (props: any) => {
           <div>
             Thank you for making the necessary changes! We are excited to help
             you implement them seamlessly. You have two options for scheduling
-            the implementation of your changes: submitting.
+            the implementation of your changes:
           </div>
 
           <RadioGroup
             aria-labelledby="demo-controlled-radio-buttons-group"
             name="controlled-radio-buttons-group"
-            // onChange={props.setSchedule}
           >
             <FormControlLabel
               value="ScheduleASAP"
@@ -61,24 +58,17 @@ const Schedule = (props: any) => {
               value="ScheduleFuture"
               control={<Radio />}
               onChange={handleDateTimePicker}
-              label="Schedule at a future date and time"
+              label="Schedule at a future date and time (Eastern Standard Time)"
             />
             {isDateTimePickerOpen && (
               <LocalizationProvider dateAdapter={AdapterMoment}>
-                <DatePicker
+                <DateTimePicker
+                  label="Deployment date and time"
                   disablePast
-                  label="Date For Change *"
-                  sx={{ marginBottom: 2, marginTop: 2 }}
+                  value={props.scheduledDateTime}
                   onChange={(date) => {
-                    props.setSelectedDate(date)
+                    props.setScheduledDateTime(date)
                   }}
-                />
-                <TimePicker
-                  label="Time *"
-                  onChange={(time) => {
-                    props.setSelectedTime(time)
-                  }}
-                  format="HH:mm"
                 />
               </LocalizationProvider>
             )}
