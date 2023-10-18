@@ -10,12 +10,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     uptime: process.uptime(),
   }
   try {
+    logger.info('HealthCheck', { req, res, healthcheck })
     res.status(200).json(healthcheck)
-    logger.info(JSON.stringify(healthcheck))
   } catch (error) {
     healthcheck.status = 'Unhealthy'
     healthcheck.reason = 'Something went wrong'
+    logger.info('HealthCheck', { req, res, healthcheck })
     res.status(503).json(healthcheck)
   }
 }
-export default withMiddleware()(handler)
+export default handler
