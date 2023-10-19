@@ -49,12 +49,15 @@ const EditConnection = (props: editConnectionProps) => {
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
   const [accepted, setAccepted] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(null)
-  const [selectedTime, setSelectedTime] = useState(null)
+  const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [formValues, setFormValues] = useState(null)
   const [formValuesDelta, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
+  const [
+    hasCreateChangeRequestTicketError,
+    setHasCreateChangeRequestTicketError,
+  ] = useState(false)
 
   const {
     data: destData,
@@ -63,6 +66,12 @@ const EditConnection = (props: editConnectionProps) => {
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
 
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
+
+  useEffect(() => {
+    if (hasCreateChangeRequestTicketError) {
+      throw new Error('Error creating change request ticket.')
+    }
+  }, [hasCreateChangeRequestTicketError])
 
   useEffect(() => {
     if (destData) {
@@ -115,44 +124,44 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleSubmit = async () => {
-    //let response
+    let response
     const scheduleAt = asapSelected
-      ? new Date()
-      : selectedDate
-          .clone()
-          .set({
-            hour: selectedTime.hour(),
-            minute: selectedTime.minute(),
-            second: selectedTime.second(),
-            millisecond: selectedTime.millisecond(),
-          })
-          .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]')
-
-    const response = await fetch(`/api/changerequest`, {
-      method: 'POST',
-      body: JSON.stringify({
-        requested: {
-          ...formValues,
-        },
-        current: {
-          ...defaultFormValues,
-        },
-        dest_id: destData.dest_id,
-        dest_type_id: destData.destination_type.type_id,
-        dest_type: destData.destination_type.type,
-        jira_id: null,
-        scheduledAt: scheduleAt,
-        requestedBy: session.user.email,
-      }),
-    })
-    //}
+      ? new Date().toISOString()
+      : scheduledDateTime
+    try {
+      response = await fetch(`/api/changerequest`, {
+        method: 'POST',
+        body: JSON.stringify({
+          requested: {
+            ...formValues,
+          },
+          current: {
+            ...defaultFormValues,
+          },
+          dest_id: destData.dest_id,
+          dest_type_id: destData.destination_type.type_id,
+          dest_type: destData.destination_type.type,
+          jira_id: null,
+          isAsap: asapSelected,
+          scheduledAt: scheduleAt,
+          requestedBy: session.user.email,
+        }),
+      })
+    } catch (error) {
+      console.error(`Error communicating with Jira: ${error}`)
+      clearValue()
+      setHasCreateChangeRequestTicketError(true)
+    }
     clearValue()
     if (response.ok) {
       router.push('/manage')
       // manually trigger revalidation to fetch the latest data from the server without refresh
       mutate(`/api/destinations/${props.destTypeId}/${props.destId}`)
     } else {
-      throw new Error('Update was not successful. Please try again later')
+      console.error(
+        `Error creating change request: status is ${response.status}, message: ${response.message}`
+      )
+      setHasCreateChangeRequestTicketError(true)
     }
   }
 
@@ -172,8 +181,7 @@ const EditConnection = (props: editConnectionProps) => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(null)
     setAsapSelected(false)
-    setSelectedDate(null)
-    setSelectedTime(null)
+    setScheduledDateTime(null)
   }
 
   const handleNext = (e) => {
@@ -220,9 +228,7 @@ const EditConnection = (props: editConnectionProps) => {
             placement="bottom"
             title="Please select date and time"
             open={
-              (asapSelected ? !asapSelected : !(selectedDate && selectedTime))
-                ? true
-                : false
+              (asapSelected ? !asapSelected : !scheduledDateTime) ? true : false
             }
           >
             <Button
@@ -230,9 +236,7 @@ const EditConnection = (props: editConnectionProps) => {
               type="submit"
               color="primary"
               variant="contained"
-              disabled={
-                asapSelected ? !asapSelected : !(selectedDate && selectedTime)
-              }
+              disabled={asapSelected ? !asapSelected : !scheduledDateTime}
               onClick={handleSubmit}
               sx={{
                 borderRadius: '30px',
@@ -335,8 +339,8 @@ const EditConnection = (props: editConnectionProps) => {
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
           {activeStep === 4 && (
             <Schedule
-              setSelectedDate={setSelectedDate}
-              setSelectedTime={setSelectedTime}
+              scheduledDateTime={scheduledDateTime}
+              setScheduledDateTime={setScheduledDateTime}
               setAsapSelected={setAsapSelected}
             />
           )}
