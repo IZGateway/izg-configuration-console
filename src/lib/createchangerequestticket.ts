@@ -21,10 +21,22 @@ const getRequestedValue = (
 
 const createChangeRequestTicket = async (changeRequestData) => {
   const jiraBasicAuthHeader = 'Basic ' + JIRA_API_AUTH_BASE64
-  const { current, requested, dest_id, dest_type, requestedBy, scheduledAt } =
-    changeRequestData
-  const humanReadableScheduledTime = new Date(scheduledAt)
-  const changeRequestSummaryTemplate = `Destination ${dest_id} on ${dest_type} to be updated on ${humanReadableScheduledTime.toLocaleString()}`
+  const {
+    current,
+    requested,
+    dest_id,
+    dest_type,
+    requestedBy,
+    scheduledAt,
+    isAsap,
+  } = changeRequestData
+  const scheduledDateTime = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeStyle: 'long',
+  }).format(new Date(scheduledAt))
+  const changeRequestSummaryTemplate = `Destination ${dest_id} on ${dest_type} to be updated ${
+    isAsap ? 'ASAP' : `on ${scheduledDateTime}`
+  }`
   const changeRequestDetailsTemplate = `*Destination Id*: ${dest_id}\r\n*Environment*: ${dest_type}\r\n*Requested By*: ${requestedBy}\r\n|| ||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Username*|${
     _.isEmpty(current.username)
       ? CHANGE_REQUESTED_EMPTY_VALUE
@@ -48,7 +60,7 @@ const createChangeRequestTicket = async (changeRequestData) => {
   }|${getRequestedValue(
     requested,
     'RXA11'
-  )}|\r\n*Deploy Datetime*: ${humanReadableScheduledTime.toLocaleString()}\r\n\r\n*Config Console Links*\r\n\*Test Change Request*: https://dev.console.izgateway.org/cc/test/1234\r\n*Deploy Change Request*: https://dev.console.izgateway.org/cc/deploy/1234`
+  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}}\r\n\r\n*Config Console Links*\r\n\*Test Change Request*: https://dev.console.izgateway.org/cc/test/1234\r\n*Deploy Change Request*: https://dev.console.izgateway.org/cc/deploy/1234`
   const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
     method: 'POST',
     headers: new Headers({
@@ -69,8 +81,7 @@ const createChangeRequestTicket = async (changeRequestData) => {
     }),
   })
   if (!jiraResponse.ok) {
-    const message = `An error has occured creating change request ticket: ${jiraResponse.status}`
-    throw new Error(message)
+    throw new Error(`Bad Jira response: ${jiraResponse.status}`)
   }
   const changerequest = await jiraResponse.json()
   return changerequest
