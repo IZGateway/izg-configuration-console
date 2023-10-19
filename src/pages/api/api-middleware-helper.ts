@@ -1,6 +1,7 @@
-import { label, Middleware } from 'next-api-middleware'
+import { label, Middleware, use } from 'next-api-middleware'
 import { authOptions } from './auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
+import { decode } from 'next-auth/jwt'
 import logger from '../../../logger'
 import hasAccessToDestId from '../../lib/accesshelper'
 
@@ -16,8 +17,13 @@ const captureErrors: Middleware = async (req, res, next) => {
 }
 
 // log the api requests and response code
-const addLogging: Middleware = async (req, res, next) => {
-  logger.info('Api request path ' + req.url, { req, res })
+const logRequest: Middleware = async (req, res, next) => {
+  const sessionToken = req.cookies['next-auth.session-token']
+  const decoded = await decode({
+    token: sessionToken,
+    secret: process.env.NEXTAUTH_SECRET,
+  })
+  logger.info('Api request ' + req.url, { req, res, user: decoded.email })
   await next()
 }
 
@@ -27,19 +33,51 @@ const checkAccessToDestId: Middleware = async (req, res, next) => {
   const session = await getServerSession(req, res, authOptions)
   const hasAccess = hasAccessToDestId(destId, session)
   if (hasAccess) {
+    logger.info('Api request ' + req.url, {
+      req,
+      res,
+      user: session.user.email,
+    })
     await next()
   } else {
     res.status(401).send('unauthorized')
+    logger.info('Api request ' + req.url, {
+      req,
+      res,
+      user: session.user.email,
+    })
+  }
+}
+const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
+  const { slug } = req.query
+  const destId = slug[1]
+  const session = await getServerSession(req, res, authOptions)
+  const hasAccess = hasAccessToDestId(destId, session)
+  if (hasAccess) {
+    logger.info('Api request ' + req.url, {
+      req,
+      res,
+      user: session.user.email,
+    })
+    await next()
+  } else {
+    res.status(401).send('unauthorized')
+    logger.info('Api request ' + req.url, {
+      req,
+      res,
+      user: session.user.email,
+    })
   }
 }
 
 const withMiddleware = label(
   {
-    addLogging,
+    logRequest,
     captureErrors,
     checkAccessToDestId,
+    checkAccessToDestIdSlug,
   },
-  ['addLogging', 'captureErrors'] //default functions
+  ['captureErrors'] //default functions
 )
 
 export default withMiddleware

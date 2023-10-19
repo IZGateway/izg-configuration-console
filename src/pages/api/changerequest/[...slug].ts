@@ -31,19 +31,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
-  const session = await getServerSession(req, res, authOptions)
-
-  if (hasAccessToDestId(destId, session)) {
-    if (req.method === 'GET') {
-      const result = await destinationChangeRequest(destId, destTypeId)
-      res.json(result)
-    } else {
-      throw new Error(
-        `The HTTP ${req.method} method is not supported at this route.`
-      )
-    }
+  if (req.method === 'GET') {
+    const result = await destinationChangeRequest(destId, destTypeId)
+    res.json(result)
   } else {
-    res.status(401)
+    throw new Error(
+      `The HTTP ${req.method} method is not supported at this route.`
+    )
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware('checkAccessToDestIdSlug')(handler)

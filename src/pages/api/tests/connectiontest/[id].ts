@@ -38,37 +38,52 @@ import withMiddleware from '../../api-middleware-helper'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
-  if (req.method === 'GET') {
-    const DEFAULT_PORT = 443
-    const testSuite: string[] = [
-      'dns',
-      'tcp',
-      'tls',
-      'cipher',
-      'wsdl',
-      'connectivity',
-      'qbp',
-    ]
-    const testResults: ConnectionTestResult[] = []
+  const session = await getServerSession(req, res, authOptions)
+  if (hasAccessToDestId(destId, session)) {
+    if (req.method === 'GET') {
+      const DEFAULT_PORT = 443
+      const testSuite: string[] = [
+        'dns',
+        'tcp',
+        'tls',
+        'cipher',
+        'wsdl',
+        'connectivity',
+        'qbp',
+      ]
+      const testResults: ConnectionTestResult[] = []
 
-    const destType = desttypehelper.destTypeFormattedToSyncWithDB(
-      req.query.destType?.toString()
-    )
-    const destination_type = await destinationType(destType)
+      const destType = desttypehelper.destTypeFormattedToSyncWithDB(
+        req.query.destType?.toString()
+      )
+      const destination_type = await destinationType(destType)
 
-    const fetchedDestination = await destination(
-      destId?.toString(),
-      destination_type.type_id
-    )
-    // const fetchedJurisdiction = await jurisdiction(destId?.toString())
+      const fetchedDestination = await destination(
+        destId?.toString(),
+        destination_type.type_id
+      )
 
-    if (!fetchedDestination) {
-      res.status(constants.HTTP_STATUS_NOT_FOUND).json({
+      const connectionTestResult = {
+        user: session.user.email,
+        timestamp: new Date(Date.now()).toISOString(),
         destId: destId,
-        destUrl: 'unknown',
+        destUrl: '',
         destType: '',
         jurisdictionDescription: '',
         testResults: [
+          {
+            name: '',
+            detail: '',
+            status: null,
+            order: -1,
+            message: ``,
+          },
+        ],
+      }
+      if (!fetchedDestination) {
+        connectionTestResult.destId = destId
+        connectionTestResult.destUrl = 'unknown'
+        connectionTestResult.testResults = [
           {
             name: '',
             detail:
@@ -77,16 +92,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             order: -1,
             message: `The requested destination ${destId} was not found in our records.`,
           },
-        ],
-      })
-    }
-    if (fetchedDestination && !isValidUrl(fetchedDestination.dest_uri)) {
-      res.status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR).json({
-        destId: destId as string,
-        destUrl: fetchedDestination.dest_uri,
-        destType: fetchedDestination.destination_type.type,
-        jurisdictionDescription: fetchedDestination.jurisdiction?.description,
-        testResults: [
+        ]
+        res.status(constants.HTTP_STATUS_NOT_FOUND).json(connectionTestResult)
+      } else if (
+        fetchedDestination &&
+        !isValidUrl(fetchedDestination.dest_uri)
+      ) {
+        connectionTestResult.destId = destId as string
+        connectionTestResult.destUrl = fetchedDestination.dest_uri
+        connectionTestResult.destType = fetchedDestination.destination_type.type
+        connectionTestResult.jurisdictionDescription =
+          fetchedDestination.jurisdiction?.description
+        connectionTestResult.testResults = [
           {
             name: '',
             detail:
@@ -95,67 +112,78 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             order: -1,
             message: `The URL retrieved for ${destId} is malformed`,
           },
-        ],
-      })
-    }
+        ]
+        res
+          .status(constants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .json(connectionTestResult)
+      } else {
+        const IZG_ENDPOINT_CRT_PATH =
+          process.env.IZG_ENDPOINT_CRT_PATH || undefined
+        const IZG_ENDPOINT_KEY_PATH =
+          process.env.IZG_ENDPOINT_KEY_PATH || undefined
+        const IZG_ENDPOINT_PASSCODE =
+          process.env.IZG_ENDPOINT_PASSCODE || undefined
 
-    const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
-    const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
-    const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
+        const destIdURL = convertUrlStringToUrlObject(
+          fetchedDestination?.dest_uri
+        )
 
-    const destIdURL = convertUrlStringToUrlObject(fetchedDestination?.dest_uri)
+        const connectionTestRequest: ConnectionTestRequest = {
+          ip: '',
+          port: +destIdURL.port || DEFAULT_PORT,
+          hostname: destIdURL.hostname,
+          path: destIdURL.pathname,
+          id: destId as string,
+          desttypeid: destination_type.type_id,
+          order: 0,
+          certPath: IZG_ENDPOINT_CRT_PATH,
+          keyPath: IZG_ENDPOINT_KEY_PATH,
+          passphrase: IZG_ENDPOINT_PASSCODE,
+        }
 
-    const connectionTestRequest: ConnectionTestRequest = {
-      ip: '',
-      port: +destIdURL.port || DEFAULT_PORT,
-      hostname: destIdURL.hostname,
-      path: destIdURL.pathname,
-      id: destId as string,
-      desttypeid: destination_type.type_id,
-      order: 0,
-      certPath: IZG_ENDPOINT_CRT_PATH,
-      keyPath: IZG_ENDPOINT_KEY_PATH,
-      passphrase: IZG_ENDPOINT_PASSCODE,
-    }
+        logger.debug(
+          'STARTING TESTS ON DEST ID: ' +
+            destId +
+            ' USING URL: ' +
+            connectionTestRequest.hostname +
+            ' ON PORT: ' +
+            connectionTestRequest.port
+        )
 
-    logger.info(
-      'STARTING TESTS ON DEST ID: ' +
-        destId +
-        ' USING URL: ' +
-        connectionTestRequest.hostname +
-        ' ON PORT: ' +
-        connectionTestRequest.port
-    )
+        let testCounter = 0
+        // eslint-disable-next-line no-loops/no-loops
+        for (const test of testSuite) {
+          logger.debug('running test: ' + test + ' for destination ' + destId)
+          connectionTestRequest.order = ++testCounter
+          const T = ConnectionTestFactory.getConnectionTest(
+            test,
+            connectionTestRequest
+          )
+          const result = await T.run()
+          testResults.push(...result)
+          if (test === 'dns') {
+            logger.debug('Resolved IP address is: ' + result[0]?.detail)
+            connectionTestRequest.ip = result[0]?.detail
+          }
+        }
 
-    let testCounter = 0
-    // eslint-disable-next-line no-loops/no-loops
-    for (const test of testSuite) {
-      logger.debug('running test: ' + test + ' for destination ' + destId)
-      connectionTestRequest.order = ++testCounter
-      const T = ConnectionTestFactory.getConnectionTest(
-        test,
-        connectionTestRequest
-      )
-      const result = await T.run()
-      testResults.push(...result)
-      if (test === 'dns') {
-        logger.debug('Resolved IP address is: ' + result[0]?.detail)
-        connectionTestRequest.ip = result[0]?.detail
+        connectionTestResult.destId = destId || 'unknown'
+        connectionTestResult.destUrl = destIdURL.hostname || 'unknown'
+        connectionTestResult.destType =
+          fetchedDestination?.destination_type.type || 'unknown'
+        connectionTestResult.jurisdictionDescription =
+          fetchedDestination?.jurisdiction.description || 'unknown'
+        connectionTestResult.testResults = testResults
+        res.status(200).json(connectionTestResult)
       }
+      logger.info('Connection Test Results', { req, res, connectionTestResult })
+    } else {
+      throw new Error(
+        `The HTTP ${req.method} method is not supported at this route.`
+      )
     }
-
-    res.status(200).json({
-      destId: destId || 'unknown',
-      destUrl: destIdURL.hostname || 'unknown',
-      destType: fetchedDestination?.destination_type.type || 'unknown',
-      jurisdictionDescription:
-        fetchedDestination?.jurisdiction.description || 'unknown',
-      testResults,
-    })
   } else {
-    throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`
-    )
+    res.status(401)
   }
 }
 
@@ -171,4 +199,4 @@ const isValidUrl = (urlString: string) => {
   }
 }
 
-export default withMiddleware('checkAccessToDestId')(handler)
+export default withMiddleware()(handler)

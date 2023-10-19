@@ -19,4 +19,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(503).json(healthcheck)
   }
 }
-export default handler
+export default withMiddleware()(handler)
