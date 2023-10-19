@@ -70,4 +70,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('checkAccessToDestId')(handler)
+export default withMiddleware()(handler)

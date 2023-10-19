@@ -2,12 +2,12 @@ import axios from 'axios'
 import https from 'https'
 
 const JIRA_API_AUTH_BASE64 = process.env.JIRA_API_AUTH_BASE64 || undefined
-const JIRA_BROWSE_URL = process.env.JIRA_BROWSE_URL || undefined
+const JIRA_API_URL = process.env.JIRA_API_URL || undefined
 const getChangeRequestStatus = async (id) => {
   const jiraBasicAuthHeader = 'Basic ' + JIRA_API_AUTH_BASE64
   const config = {
     method: 'GET',
-    url: `${JIRA_BROWSE_URL}${id}?fields=status`,
+    url: `${JIRA_API_URL}/issue/${id}?fields=status`,
     headers: {
       Authorization: jiraBasicAuthHeader,
       'Content-Type': 'application/json',

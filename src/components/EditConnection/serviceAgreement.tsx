@@ -28,7 +28,7 @@ const ServiceAgreement = (props: PolicyProps) => {
       />
       <Divider />
       <CardContent>
-        <div>
+        <Typography variant="body1" component="div">
           I hereby attest that I have been duly authorized by the jurisdiction
           to make changes to the Immunization (IZ) Gateway configuration for my
           jurisdiction. I understand the responsibility entrusted to me and
@@ -57,7 +57,7 @@ const ServiceAgreement = (props: PolicyProps) => {
           I understand that any misrepresentation or violation of the
           jurisdiction’s or IZ Gateway&apos;s policies may result in the
           revocation of my authorization and potential legal consequences.
-        </div>
+        </Typography>
         <FormControl>
           <RadioGroup onChange={props.clickOnAgree}>
             <FormControlLabel

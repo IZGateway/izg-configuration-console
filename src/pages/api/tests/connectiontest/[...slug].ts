@@ -214,4 +214,4 @@ const isValidUrl = (urlString: string) => {
   }
 }
 
-export default withMiddleware('checkAccessToDestId')(handler)
+export default withMiddleware()(handler)

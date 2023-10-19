@@ -22,29 +22,21 @@ const DetailsChangeRequest = (params: {
   } = useSWR(`/api/destinations/${params.destTypeId}/${params.destId}`)
 
   const {
-    data: passwordDiffData,
+    data,
     error: passwordDiffError,
     isLoading: passwordDiffLoading,
   } = useSWR(
-    `/api/changerequest/checkPasswordDifference/${params.destTypeId}/${params.destId}`
+    `/api/changerequest/passwordComparison/${params.destTypeId}/${params.destId}`
   )
 
   if (destError || passwordDiffError)
     throw new Error(destError.message || passwordDiffError.message)
   if (isDestLoading || passwordDiffLoading) return <div>loading...</div>
 
-  console.log(passwordDiffData)
-
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader
-          title={
-            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Details Change Request
-            </Typography>
-          }
-        />
+        <CardHeader title="Details Change Request" />
         <Divider />
         <CardContent>
           <Details
@@ -54,7 +46,7 @@ const DetailsChangeRequest = (params: {
               'password',
               '.........'
             )}
-            isPasswordDifference={passwordDiffData}
+            isPasswordDifferent={data.isPasswordDifferent}
           />
         </CardContent>
       </Card>

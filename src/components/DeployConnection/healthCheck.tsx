@@ -36,15 +36,12 @@ const HealthCheck = (props) => {
   }
 
   return (
-    <Card
-      sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
-      id="health-check"
-    >
+    <Card sx={{ borderRadius: '0px 0px 16px 16px' }} id="health-check">
       <CardHeader title="Run health check requested configuration edits" />
 
       <Divider />
       <CardContent>
-        <Typography variant="subtitle1" component="div">
+        <Typography variant="body1" component="div">
           This step is not mandatory but highly suggest running it before an
           approval of a change request. This test is using the new credentials
         </Typography>
@@ -60,6 +57,8 @@ const HealthCheck = (props) => {
             onClick={handleButtonClick}
             sx={{
               borderRadius: '30px',
+              marginTop: 4,
+              padding: '8px 32px',
             }}
           >
             RUN

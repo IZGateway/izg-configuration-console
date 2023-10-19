@@ -5,7 +5,6 @@ import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
-import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import {
   Collapse,
@@ -18,11 +17,12 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 import AppHeaderBar from '../AppHeader'
 
-const drawerWidthOpen = '20em'
+const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
 
 const closedMixin = () => ({
@@ -179,36 +179,37 @@ const MiniDrawer = () => {
         <Divider color="#00D998" />
         {list()}
         {session?.isAdmin && (
-          <Link href="/api-doc">
-            <Button
-              variant="text"
-              sx={{
-                color: '#FFFFFF',
-                textDecoration: 'underline',
-                position: 'absolute',
-                left: '5px',
-                bottom: '50px',
-                textTransform: 'capitalize',
-              }}
-            >
-              Swagger API
-            </Button>
+          <Link
+            href="/api-doc"
+            sx={{
+              textWrap: 'wrap',
+              textAlign: 'center',
+              color: '#FFFFFF',
+              textDecoration: 'underline',
+              position: 'absolute',
+              left: '8px',
+              bottom: '50px',
+              textTransform: 'capitalize',
+            }}
+          >
+            Swagger API
           </Link>
         )}
-        <Button
-          variant="text"
+        <Link
           onClick={() => signOut({})}
           sx={{
+            textWrap: 'wrap',
+            textAlign: 'center',
             color: '#FFFFFF',
             textDecoration: 'underline',
             position: 'absolute',
-            left: '10px',
+            left: '8px',
             bottom: '20px',
             textTransform: 'capitalize',
           }}
         >
           Log Out
-        </Button>
+        </Link>
         <Collapse in={!open} timeout="auto" />
         {/* Commenting this code as it is not part of any user story right now */}
         {/* <Button

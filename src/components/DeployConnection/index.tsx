@@ -32,10 +32,9 @@ const DeployConnection = (props) => {
     return <div>loading...</div>
 
   const status = changerequestStatusData.fields.status.name
-
+  console.log(changerequestData)
   return (
     <>
-      <Close />
       <Box sx={{ marginTop: 4 }}>
         <Typography
           variant="h1"
@@ -48,20 +47,30 @@ const DeployConnection = (props) => {
           {changerequestData.destinations.destination_type.type}
         </Typography>
       </Box>
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        <Box sx={{ width: '50%' }}>
+      <Close />
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 4,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          marginTop: 4,
+        }}
+      >
+        <Box sx={{ width: '33%' }}>
           <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
           {status === 'Approved' ? (
             <DeployConfirmation
               destId={props.destId}
               destTypeId={props.destTypeId}
               submittingValue={changerequestData}
+              status={status}
             />
           ) : (
-            <ViewChangeRequestTicket {...changerequestData} />
+            <ViewChangeRequestTicket {...changerequestData} status={status} />
           )}
         </Box>
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ width: '66%' }}>
           <DetailsChangeRequest
             destId={props.destId}
             destTypeId={props.destTypeId}

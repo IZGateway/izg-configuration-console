@@ -93,22 +93,26 @@ const ConnectionsTable = () => {
     {
       field: 'destType',
       headerName: 'ENVIRONMENT',
-      width: 150,
+      flex: 0.5,
+      minWidth: 50,
     },
     {
       field: 'destId',
       headerName: 'JURISDICTION',
-      width: 200,
+      flex: 0.5,
+      minWidth: 25,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
-      width: 550,
+      flex: 1,
+      minWidth: 100,
     },
     {
       field: 'status',
       headerName: 'STATUS',
-      width: 200,
+      flex: 0.5,
+      minWidth: 100,
       filterable: false,
       valueFormatter: ({ value }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -197,7 +201,8 @@ const ConnectionsTable = () => {
       headerName: 'ACTION',
       sortable: false,
       filterable: false,
-      width: 200,
+      flex: 0.5,
+      minWidth: 100,
       renderCell: (params) => {
         return (
           <div>

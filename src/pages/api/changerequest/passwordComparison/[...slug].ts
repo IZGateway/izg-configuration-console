@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../../lib/accesshelper'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import isPasswordUpdated from '../../../../lib/isPasswordUpdated'
+import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
 /**
  * @swagger
  * /api/changerequest/checkPasswordDifference/{destTypeId}/{destId}:
@@ -36,8 +36,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
       try {
-        const passwordsDifferent = await isPasswordUpdated(destId, destTypeId)
-        res.status(200).json({ passwordsDifferent })
+        const result = await passwordComparison(destId, destTypeId)
+        let isPasswordDifferent = false
+        if (Number(result[0].is_password_different) === 1) {
+          isPasswordDifferent = true
+        }
+        res.status(200).json({ isPasswordDifferent: isPasswordDifferent })
       } catch (error) {
         throw new Error(error.message)
       }

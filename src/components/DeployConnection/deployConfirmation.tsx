@@ -6,15 +6,16 @@ import {
   CardContent,
   Divider,
   Button,
+  Tooltip,
+  Chip,
+  Box,
 } from '@mui/material'
-import useSWR, { mutate } from 'swr'
-import Link from 'next/link'
+import { mutate } from 'swr'
 import LaunchIcon from '@mui/icons-material/Launch'
 import router from 'next/router'
 
-const JIRA_BROWSE_URL = process.env.JIRA_BROWSE_URL || undefined
-
 const DeployConfirmation = (props) => {
+  const humanReadableScheduledTime = new Date(props.submittingValue.scheduledAt)
   const handleDeploy = async () => {
     const response = await fetch(
       `/api/update/destination/${props.destTypeId}/${props.destId}`,
@@ -37,11 +38,38 @@ const DeployConfirmation = (props) => {
       sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
       id="change-request"
     >
-      <CardHeader title="Confirmation" />
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginRight: 4,
+        }}
+      >
+        <CardHeader title="Confirmation" />
+        <Tooltip
+          title={
+            <div>
+              To be deployed on <br />
+              {humanReadableScheduledTime.toLocaleString()}
+            </div>
+          }
+          placement="bottom"
+        >
+          <Chip
+            label={props.status}
+            variant="filled"
+            color="secondary"
+            sx={{
+              borderRadius: '4px',
+            }}
+          />
+        </Tooltip>
+      </Box>
 
       <Divider />
       <CardContent>
-        <Typography variant="subtitle1" component="div">
+        <Typography variant="body1" component="div">
           Please review the proposed edits to a user`s connection. Determine
           whether the changes accurately reflect the connection details and
           adhere to our platform guidelines. Choose `Deploy` if the connection
@@ -55,6 +83,8 @@ const DeployConfirmation = (props) => {
           onClick={handleDeploy}
           sx={{
             borderRadius: '30px',
+            marginTop: 4,
+            padding: '8px 32px',
           }}
         >
           DEPLOY

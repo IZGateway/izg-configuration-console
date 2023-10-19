@@ -3,16 +3,10 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ReportProblemIcon from '@mui/icons-material/ReportProblem'
 import ErrorIcon from '@mui/icons-material/Error'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import ReactToPrint from 'react-to-print'
-import PrintIcon from '@mui/icons-material/Print'
-import { useRef } from 'react'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
-  Card,
-  CardHeader,
-  CardContent,
-  Container,
   Box,
-  ButtonGroup,
   Typography,
   Divider,
   Button,
@@ -23,14 +17,14 @@ import {
   ListItem,
   Chip,
 } from '@mui/material'
+import { useState } from 'react'
 
 interface testListProps {
   testResults: any[]
 }
 
 const TestsResults = ({ testResults }: testListProps) => {
-  const handleReload = () => window.location.reload()
-  const componentRef = useRef(null)
+  const [displayList, setDisplayList] = useState(true)
   const passeddata = testResults.filter((item) => item.status === 'PASS').length
   const totaldata = testResults.length
   const progressPct = Number(((passeddata / totaldata) * 100).toFixed())
@@ -93,7 +87,9 @@ const TestsResults = ({ testResults }: testListProps) => {
       ))}
     </List>
   )
-
+  const handleExpand = () => {
+    setDisplayList(!displayList)
+  }
   return (
     <>
       <Typography variant="body1">
@@ -111,10 +107,43 @@ const TestsResults = ({ testResults }: testListProps) => {
           borderRadius: '8px',
         }}
       />
-      <Typography variant="body1">
-        {passeddata} out of {totaldata} Test Passed
-      </Typography>
-      {list()}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Typography variant="body1">
+          {passeddata} out of {totaldata} Test Passed
+        </Typography>
+        {displayList ? (
+          <Button
+            id="less-details"
+            color="primary"
+            onClick={handleExpand}
+            sx={{
+              float: 'right',
+            }}
+          >
+            Less Details
+            <ExpandLessIcon />
+          </Button>
+        ) : (
+          <Button
+            id="more-details"
+            color="primary"
+            onClick={handleExpand}
+            sx={{
+              float: 'right',
+            }}
+          >
+            More Details
+            <ExpandMoreIcon />
+          </Button>
+        )}
+      </Box>
+      {displayList && list()}
     </>
   )
 }
