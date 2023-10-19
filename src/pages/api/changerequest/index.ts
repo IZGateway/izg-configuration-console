@@ -122,4 +122,4 @@ const createChangeRequest = async (changeRequestDetails: any) => {
     })
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware('logRequest')(handler)

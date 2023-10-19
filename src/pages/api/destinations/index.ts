@@ -69,4 +69,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(401)
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware('logRequest')(handler)
