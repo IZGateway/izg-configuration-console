@@ -19,7 +19,6 @@ const destinationChangeRequest = async (destId: string, dest_type: number) =>
       scheduledAt: true,
       username: true,
       facility_id: true,
-      id: true,
     },
   })
 
