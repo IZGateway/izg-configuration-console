@@ -60,7 +60,7 @@ const createChangeRequestTicket = async (changeRequestData) => {
   }|${getRequestedValue(
     requested,
     'RXA11'
-  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}}\r\n\r\n*Config Console Links*\r\n\*Test Change Request*: https://dev.console.izgateway.org/cc/test/1234\r\n*Deploy Change Request*: https://dev.console.izgateway.org/cc/deploy/1234`
+  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: link coming soon`
   const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
     method: 'POST',
     headers: new Headers({
