@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import OktaProvider from 'next-auth/providers/okta'
 import logger from '../../../../logger'
+import _ from 'lodash'
 
 const userInfoEndpoint = `${process.env.OKTA_ISSUER}/oauth2/v1/userinfo`
 const isDebugging =
@@ -12,9 +13,13 @@ export const authOptions = {
       clientId: process.env.OKTA_CLIENT_ID,
       clientSecret: process.env.OKTA_CLIENT_SECRET,
       issuer: process.env.OKTA_ISSUER,
+      idToken: true,
       authorization: { params: { scope: 'openid email profile groups' } },
     }),
   ],
+  session: {
+    maxAge: 1800, // seconds = 30 mins
+  },
   callbacks: {
     async session({ session, token, user }) {
       if (token) {
@@ -38,7 +43,7 @@ export const authOptions = {
             },
           })
           const data = await response.json()
-          token.jurisdictions = data?.jurisdictions
+          token.jurisdictions = data?.jurisdictions?.map((j) => _.lowerCase(j))
         } catch (err) {
           logger.error('ERROR FETCHING USER INFO FROM OKTA: ' + err)
         }
