@@ -32,7 +32,7 @@ const DeployConnection = (props) => {
     return <div>loading...</div>
 
   const status = changerequestStatusData.fields.status.name
-  console.log(changerequestData)
+
   return (
     <>
       <Box sx={{ marginTop: 4 }}>

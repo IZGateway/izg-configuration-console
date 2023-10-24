@@ -51,13 +51,13 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
       ) : session?.isAdmin ? (
         <Link
           href={{
-            pathname: `/deploy/${params.destTypeId}/${params.destId}`,
+            pathname: `/changerequest/${params.destTypeId}/${params.destId}`,
           }}
         >
-          <Tooltip arrow placement="bottom" title="Deploy">
+          <Tooltip arrow placement="bottom" title="Change Request">
             <IconButton
-              id="deploy"
-              aria-label="deploy"
+              id="changerequest"
+              aria-label="changerequest"
               color="primary"
               sx={actionButtonStyle}
             >

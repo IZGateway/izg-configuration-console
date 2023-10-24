@@ -139,6 +139,7 @@ const EditConnection = (props: editConnectionProps) => {
             ...defaultFormValues,
           },
           dest_id: destData.dest_id,
+          dest_uri: destData.dest_uri,
           dest_type_id: destData.destination_type.type_id,
           dest_type: destData.destination_type.type,
           jira_id: null,
@@ -155,8 +156,6 @@ const EditConnection = (props: editConnectionProps) => {
     clearValue()
     if (response.ok) {
       router.push('/manage')
-      // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destTypeId}/${props.destId}`)
     } else {
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`

@@ -4,11 +4,12 @@ import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
 import withMiddleware from '../api-middleware-helper'
+import _ from 'lodash'
 /**
  * @swagger
- * /api/destinationaudit/{id}:
+ * /api/destinationaudit/{destTypeId}/{destId}:
  *   get:
- *     summary: Get audit in change in destination by ID.
+ *     summary: Get connection test results for destination by ID.
  *     parameters:
  *       - name: id
  *         in: path
@@ -16,17 +17,30 @@ import withMiddleware from '../api-middleware-helper'
  *         schema:
  *           type: string
  *         description: The ID of the destination.
+ *       - name: destTypeId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: The ID of destination type
  *     responses:
  *       200:
  *         description: OK.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const destId = req.query.id.toString()
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
+
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const result = await destinationaudithistory(destId, session.user.name)
+      const result = await destinationaudithistory(
+        destId,
+        destTypeId,
+        session.user.name
+      )
       res.json(result)
     } else {
       throw new Error(
@@ -37,4 +51,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(401)
   }
 }
-export default withMiddleware('logRequest')(handler)
+export default handler

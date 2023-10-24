@@ -22,7 +22,7 @@ import withMiddleware from '../api-middleware-helper'
  *         required: true
  *         schema:
  *           type: number
- *         description: The If of destination type
+ *         description: The ID of destination type
  *     responses:
  *       200:
  *         description: OK.

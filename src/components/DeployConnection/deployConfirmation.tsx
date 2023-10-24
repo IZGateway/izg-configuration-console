@@ -18,10 +18,10 @@ const DeployConfirmation = (props) => {
   const humanReadableScheduledTime = new Date(props.submittingValue.scheduledAt)
   const handleDeploy = async () => {
     const response = await fetch(
-      `/api/update/destination/${props.destTypeId}/${props.destId}`,
+      `/api/deploy/destination/${props.destTypeId}/${props.destId}`,
       {
         method: 'POST',
-        body: JSON.stringify(props.submittingValue), ///ADD PASSWORD HERE
+        body: JSON.stringify(props.submittingValue),
       }
     )
     if (response.ok) {

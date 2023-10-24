@@ -1,17 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../../lib/accesshelper'
 import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
-import desttypehelper from '../../../../lib/desttypehelper'
-import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
+import destination from '../../../../lib/queries/fetch/destination'
+import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
 /**
  * @swagger
- * /api/update/destination/{id}:
+ * /api/deploy/destination/{destTypeId}/{destId}:
  *   post:
- *     summary: Update destination information by ID.
+ *     summary: Get connection test results for destination by ID.
  *     parameters:
  *       - name: id
  *         in: path
@@ -19,12 +18,12 @@ import _ from 'lodash'
  *         schema:
  *           type: string
  *         description: The ID of the destination.
- *       - name: destType
- *         in: query
+ *       - name: destTypeId
+ *         in: path
  *         required: true
  *         schema:
- *           type: string
- *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
+ *           type: number
+ *         description: The ID of destination type
  *     requestBody:
  *       required: true
  *       content:
@@ -50,23 +49,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
-
-  if (req.method === 'POST') {
-    const data = JSON.parse(req.body)
-    const result = await updatedAuditedDestination(
-      destId,
-      destTypeId,
-      data
-      // data.user,
-      // data.oldValues,
-      // data.newValues,
-      // data.tableName
-    )
-    res.json(result)
-  } else {
-    throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`
-    )
+  const session = await getServerSession(req, res, authOptions)
+  if (session.isAdmin) {
+    if (req.method === 'POST') {
+      const data = JSON.parse(req.body)
+      const oldValues = await destination(destId, destTypeId)
+      const result = await updatedAuditedDestination(
+        destId,
+        destTypeId,
+        data,
+        session.user.name,
+        oldValues
+      )
+      res.json(result)
+      if (res.statusCode === 200) {
+        await deleteDestinationChangeRequest(data.id)
+      }
+    } else {
+      throw new Error(
+        `The HTTP ${req.method} method is not supported at this route.`
+      )
+    }
   }
 }
 

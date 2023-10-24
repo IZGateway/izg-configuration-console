@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
+import DeployConnection from '../../components/DeployConnection/index'
 
 const Edit = (props) => {
   const router = useRouter()
@@ -20,8 +21,10 @@ const Edit = (props) => {
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
-            getting change request for {router?.query?.slug[0]} /
-            {router?.query?.slug[1]}
+            <DeployConnection
+              destId={router?.query?.slug[1] as string}
+              destTypeId={router?.query?.slug[0] as string}
+            />
           </div>
         </Box>
       </ErrorBoundary>
