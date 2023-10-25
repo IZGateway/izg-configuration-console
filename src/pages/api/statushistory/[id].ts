@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authOptions } from '../auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../lib/accesshelper'
 import * as fs from 'fs'
 import path from 'path'
 import https from 'https'

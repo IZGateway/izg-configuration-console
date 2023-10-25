@@ -2,6 +2,15 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 
+/**
+ * @swagger
+ * /api/healthcheck:
+ *   get:
+ *     summary: returns HTTP OK (200).
+ *     responses:
+ *       200:
+ *         description: OK.
+ */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const healthcheck = {
     status: 'Healthy',
