@@ -1,5 +1,4 @@
 import { ThemeOptions } from '@mui/material/styles'
-import { error } from 'console'
 
 const lightThemeOptions: ThemeOptions = {
   palette: {

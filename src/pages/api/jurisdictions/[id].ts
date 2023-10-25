@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authOptions } from '../auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../lib/accesshelper'
 import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
 import withMiddleware from '../api-middleware-helper'
 /**

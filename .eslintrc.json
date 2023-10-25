@@ -17,7 +17,7 @@
   "rules": {
     "no-loops/no-loops": 2,
     "no-console": ["error", { "allow": ["warn", "error", "info", "log"] }],
-    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-explicit-any": 0,
     "no-irregular-whitespace": [
       "error",
       {

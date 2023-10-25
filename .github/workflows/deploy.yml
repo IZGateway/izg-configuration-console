@@ -99,7 +99,7 @@ jobs:
             type=raw,value=${{env.RELEASE_DATE}}
             type=raw,value=release,enable=${{ github.ref == 'refs/heads/production' && github.event.inputs.is-release == 'true' }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=rc,enable=${{ github.ref == 'refs/heads/staging' }}
+            type=raw,value=rc,enable=${{ github.ref == 'refs/heads/preprod' }}
           flavor: |
             latest=true
 

@@ -5,7 +5,12 @@ import ChangeHistory from './changeHistory'
 import ConnectionInfo from './connectionInfo'
 import Close from '../Close'
 
-const ConnectionHistory = (props: any) => {
+type connectionHistoryProps = {
+  destId: string
+  destTypeId: string
+  status: string
+}
+const ConnectionHistory = (props: connectionHistoryProps) => {
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (

@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authOptions } from '../../auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../../lib/accesshelper'
 import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
 import desttypehelper from '../../../../lib/desttypehelper'
 import destinationType from '../../../../lib/queries/fetch/destinationtype'
