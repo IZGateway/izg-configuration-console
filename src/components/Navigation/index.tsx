@@ -179,7 +179,8 @@ const MiniDrawer = () => {
         <Divider color="#00D998" />
         {list()}
         {session?.isAdmin && (
-          <Link
+          <Button
+            id="swaggerapi"
             href="/api-doc"
             sx={{
               textWrap: 'wrap',
@@ -193,10 +194,10 @@ const MiniDrawer = () => {
             }}
           >
             Swagger API
-          </Link>
+          </Button>
         )}
-        <Link
-          onClick={() => signOut({})}
+        <Button
+          id="logout"
           sx={{
             textWrap: 'wrap',
             textAlign: 'center',
@@ -207,9 +208,10 @@ const MiniDrawer = () => {
             bottom: '20px',
             textTransform: 'capitalize',
           }}
+          onClick={() => signOut({})}
         >
           Log Out
-        </Link>
+        </Button>
         <Collapse in={!open} timeout="auto" />
         {/* Commenting this code as it is not part of any user story right now */}
         {/* <Button

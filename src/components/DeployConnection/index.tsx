@@ -7,6 +7,7 @@ import ViewChangeRequestTicket from './viewChangeRequestTicket'
 import DeployConfirmation from './deployConfirmation'
 import DetailsChangeRequest from './detailsChangeRequest'
 
+const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 const DeployConnection = (props) => {
   const {
     data: changerequestData,
@@ -59,7 +60,7 @@ const DeployConnection = (props) => {
       >
         <Box sx={{ width: '33%' }}>
           <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
-          {status === 'Approved' ? (
+          {status === JIRA_STATUS_FOR_DEPLOY ? (
             <DeployConfirmation
               destId={props.destId}
               destTypeId={props.destTypeId}

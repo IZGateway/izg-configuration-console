@@ -11,7 +11,7 @@ import {
   Box,
 } from '@mui/material'
 import Link from 'next/link'
-const JIRA_BROWSE_URL = process.env.JIRA_BROWSE_URL || undefined
+const JIRA_BROWSE_URL = process.env.NEXT_PUBLIC_JIRA_BROWSE_URL || undefined
 
 const ViewChangeRequestTicket = (props: any) => {
   const humanReadableScheduledTime = new Date(props.scheduledAt)

@@ -5,8 +5,9 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import DeployConnection from '../../components/DeployConnection/index'
+import AdminGuard from '../../components/AdminGuard'
 
-const Edit = (props) => {
+const Changerequest = (props) => {
   const router = useRouter()
   const { isReady, query } = router
 
@@ -32,4 +33,4 @@ const Edit = (props) => {
   )
 }
 
-export default Edit
+export default AdminGuard(Changerequest)

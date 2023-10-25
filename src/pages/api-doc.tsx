@@ -2,6 +2,7 @@ import { GetStaticProps, InferGetStaticPropsType } from 'next'
 import { createSwaggerSpec } from 'next-swagger-doc'
 import dynamic from 'next/dynamic'
 import 'swagger-ui-react/swagger-ui.css'
+import AdminGuard from '../components/AdminGuard'
 
 const SwaggerUI = dynamic<{
   spec: any
@@ -30,4 +31,4 @@ export const getStaticProps: GetStaticProps = async () => {
   }
 }
 
-export default ApiDoc
+export default AdminGuard(ApiDoc)

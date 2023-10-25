@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
 import { useSession } from 'next-auth/react'
-import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye'
+import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 const actionButtonStyle = {
   borderRadius: 90,
   background: '#FFFFF',
@@ -61,7 +61,7 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
               color="primary"
               sx={actionButtonStyle}
             >
-              <RemoveRedEyeIcon fontSize="small" />
+              <PublishedWithChangesIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Link>

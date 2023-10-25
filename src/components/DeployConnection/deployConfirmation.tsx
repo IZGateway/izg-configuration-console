@@ -70,26 +70,40 @@ const DeployConfirmation = (props) => {
       <Divider />
       <CardContent>
         <Typography variant="body1" component="div">
-          Please review the proposed edits to a user`s connection. Determine
-          whether the changes accurately reflect the connection details and
-          adhere to our platform guidelines. Choose `Deploy` if the connection
-          is ready.
+          Please review the proposed edits to a user&apos;s connection.
+          Determine whether the changes accurately reflect the connection
+          details and adhere to our platform guidelines. Choose
+          &apos;Deploy&apos; if the connection is ready.
         </Typography>
-        <Button
-          id="deploy"
-          color="primary"
-          variant="outlined"
-          data-testid="deployIcon"
-          onClick={handleDeploy}
+        <Box
           sx={{
-            borderRadius: '30px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginRight: 2,
             marginTop: 4,
-            padding: '8px 32px',
           }}
         >
-          DEPLOY
-          <LaunchIcon sx={{ marginLeft: 1 }} />
-        </Button>
+          <Button
+            id="deploy"
+            color="primary"
+            variant="outlined"
+            data-testid="deployIcon"
+            onClick={handleDeploy}
+            sx={{
+              borderRadius: '30px',
+              padding: '8px 32px',
+            }}
+          >
+            DEPLOY
+            <LaunchIcon sx={{ marginLeft: 1 }} />
+          </Button>
+          <Typography variant="subtitle2" align="right">
+            <strong>Scheduled On:</strong>
+            <br />
+            {humanReadableScheduledTime.toLocaleString()}
+          </Typography>
+        </Box>
       </CardContent>
     </Card>
   )
