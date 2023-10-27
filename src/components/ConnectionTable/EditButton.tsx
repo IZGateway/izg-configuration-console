@@ -36,7 +36,7 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
         >
           <Tooltip arrow placement="bottom" title="Edit">
             <IconButton
-              id="edit"
+              id={params.destTypeId + '_' + params.destId}
               aria-label="edit"
               color="primary"
               disabled={!canEdit}
@@ -49,7 +49,7 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
       ) : (
         <Tooltip arrow placement="bottom" title="Edit">
           <IconButton
-            id="edit"
+            id={params.destTypeId + '_' + params.destId}
             aria-label="edit"
             color="primary"
             disabled={!canEdit}

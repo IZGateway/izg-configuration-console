@@ -210,7 +210,7 @@ const ConnectionsTable = () => {
             >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
-                  id="test"
+                  id={'test_' + params.row.destTypeId + '_' + params.id}
                   aria-label="test"
                   color="primary"
                   sx={actionButtonStyle}
@@ -229,7 +229,7 @@ const ConnectionsTable = () => {
             >
               <Tooltip arrow placement="bottom" title="History">
                 <IconButton
-                  id="history"
+                  id={'history_' + params.row.destTypeId + '_' + params.id}
                   aria-label="history"
                   color="secondary"
                   sx={actionButtonStyle}
@@ -269,6 +269,7 @@ const ConnectionsTable = () => {
       </Box>
 
       <DataGrid
+        experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
         rows={Object.entries(data).map(([, x]: [any, any]) => {
           return {
