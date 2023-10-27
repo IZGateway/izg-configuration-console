@@ -10,7 +10,8 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "test:watch": "jest --watch",
-    "test": "jest"
+    "test": "jest",
+    "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json"
   },
   "dependencies": {
     "@babel/types": "^7.22.5",
