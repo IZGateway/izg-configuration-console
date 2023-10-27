@@ -1,73 +1,26 @@
 # Configurable Environment variables for Configuration Console
 
-- OKTA_CLIENT_SECRET
-
-- OKTA_CLIENT_ID
-
-- OKTA_ISSUER
-
-- JIRA_API_AUTH_BASE64
-
-- JIRA_API_ISSUE_TYPE
-
-- JIRA_API_PROJECT_ID
-
-- JIRA_API_URL
-
-- IZG_ENDPOINT_CRT_PATH
-
-  Certificate used to connect to IZGATEWAY Hub endpoint
-
-- IZG_ENDPOINT_KEY_PATH
-
-  Key used with the certificate to connect to IZGATEWAY Hub endpoint
-
-- IZG_ENDPOINT_PASSCODE
-
-  Passcode in association with the certificate to authorize and connect with IZGateway Hub
-
-- IZG_STATUS_ENDPOINT_URL
-
-  IZGateway Status History endpoint used to display Test History
-
-- IZG_MAX_STATUS_HISTORY_RETURNED
-
-  Count of history to be returned
-
-- NEXTAUTH_SECRET
-
-- NEXTAUTH_DEBUG
-
-  Enable to debug authentication
-
-- NEXTAUTH_URL
-
-  URL of the
-
-- ELASTIC_API_KEY
-
-  Key for elastic search endpoint
-
-- ELASTIC_HOST
-
-  Elastic Search endpoint used Monitoring
-
-- ELASTIC_INDEX
-
-  Elastic Search Index to be used for config console
-
-- ELASTIC_ENV_TAG
-
-  Environment tag if is dev or prod
-
-- DATABASE_URL
-
-  Database endpoint to connect to the DB
-
-- SHOW_SQL_IN_CONSOLE
-
-  To be enable to log prisma sql queries
-
-- LOG_LEVEL
-
-  Logging level, eg : error,warn,info,http,verbose,debug,silly
+| KEY                             | DESCRIPTION                                                                                                                                             | DEFAULT VALUE | REQUIRED |
+| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------ | :-----------: | :------: |
+| OKTA_CLIENT_SECRET              | Secret generated when creating a client in Okta. Used for Okta authentication.                                                                          |   undefined   |   true   |
+| OKTA_CLIENT_ID                  | ID for a particular Okta client. Used for Okta authentication.                                                                                          |   undefined   |   true   |
+| OKTA_ISSUER                     | URL to the Okta instance.                                                                                                                               |   undefined   |   true   |
+| JIRA_API_AUTH_BASE64            | Key for Jira authentication.                                                                                                                            |   undefined   |   true   |
+| JIRA_API_ISSUE_TYPE             | The type of issue ticket to be created.                                                                                                                 |   undefined   |   true   |
+| JIRA_API_PROJECT_ID             | The Jira project where a ticket is created.                                                                                                             |   undefined   |   true   |
+| JIRA_API_URL                    | The endpoint url for Jira connection                                                                                                                    |   undefined   |   true   |
+| IZG_ENDPOINT_CRT_PATH           | Certificate used to connect to IZGATEWAY Hub endpoint.                                                                                                  |   undefined   |   true   |
+| IZG_ENDPOINT_KEY_PATH           | Key used with the certificate to connect to IZGATEWAY Hub endpoint.                                                                                     |   undefined   |   true   |
+| IZG_ENDPOINT_PASSCODE           | Passcode in association with the certificate to authorize and connect with IZGateway Hub.                                                               |   undefined   |   true   |
+| IZG_STATUS_ENDPOINT_URL         | IZGateway Status History endpoint used to display Test History.                                                                                         |   undefined   |   true   |
+| IZG_MAX_STATUS_HISTORY_RETURNED | Count of history to be returned.                                                                                                                        |       4       |  false   |
+| NEXTAUTH_SECRET                 | Used to encrypt the NextAuth.js JWT, and to hash email verification tokens. This is the default value for the secret option in NextAuth and Middleware. |   undefined   |   true   |
+| NEXTAUTH_DEBUG                  | Set debug to true to enable debug messages for authentication and database operations.                                                                  |     false     |  false   |
+| NEXTAUTH_URL                    | When deploying to production, set the NEXTAUTH_URL environment variable to the canonical URL of your site.                                              |   undefined   |   true   |
+| ELASTIC_API_KEY                 | Key for elastic search endpoint.                                                                                                                        |   undefined   |   true   |
+| ELASTIC_HOST                    | Elastic Search endpoint used Monitoring.                                                                                                                |   undefined   |   true   |
+| ELASTIC_INDEX                   | Elastic Search Index to be used for config console.                                                                                                     |   undefined   |   true   |
+| ELASTIC_ENV_TAG                 | Environment tag if is dev or prod.                                                                                                                      |   undefined   |   true   |
+| DATABASE_URL                    | Database endpoint to connect to the DB.                                                                                                                 |   undefined   |   true   |
+| SHOW_SQL_IN_CONSOLE             | Set to true enable logging of prisma sql queries. Not recommended for production unless necessary.                                                      |     false     |  false   |
+| LOG_LEVEL                       | Logging level, eg : error,warn,info,http,verbose,debug,silly                                                                                            |     info      |  false   |
