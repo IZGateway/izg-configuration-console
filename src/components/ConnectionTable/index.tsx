@@ -201,8 +201,13 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            <EditButton destId={params.id} destTypeId={params.row.destTypeId} />
+            <EditButton
+              tabIndex={params.tabIndex}
+              destId={params.id}
+              destTypeId={params.row.destTypeId}
+            />
             <Link
+              tabIndex={params.tabIndex}
               href={{
                 pathname: `/test/${params.id}`,
                 query: { destType: params.row.destType },
@@ -220,6 +225,7 @@ const ConnectionsTable = () => {
               </Tooltip>
             </Link>
             <Link
+              tabIndex={params.tabIndex}
               href={{
                 pathname: `/history/${params.row.destTypeId}/${params.id}`,
                 query: {
