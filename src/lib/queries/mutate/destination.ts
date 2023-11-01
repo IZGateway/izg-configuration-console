@@ -7,7 +7,7 @@ const updateDestination = async (
 ) => {
   let updatedDestination = updatedData
   if (updatedDestination.hasOwnProperty('newPassword')) {
-    const { newPassword, confirmPassword, ...submittingValue } = updatedData
+    const { ...submittingValue } = updatedData
     updatedDestination = {
       ...submittingValue,
       password: updatedData.newPassword,

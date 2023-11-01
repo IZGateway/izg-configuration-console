@@ -161,7 +161,7 @@ const MiniDrawer = () => {
   return (
     <>
       <AppHeaderBar open={open} />
-      <Drawer variant="permanent" open={open} id="navigation">
+      <Drawer variant="permanent" open={open} id="navigation" role="navigation">
         <DrawerHeader>
           <IconButton
             onClick={handleClick}

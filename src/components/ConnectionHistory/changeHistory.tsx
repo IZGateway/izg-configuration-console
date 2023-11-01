@@ -1,4 +1,3 @@
-/* eslint-disable no-loops/no-loops */
 import * as React from 'react'
 import {
   Typography,
