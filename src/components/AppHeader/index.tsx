@@ -32,7 +32,7 @@ const AppHeaderBar = (props: AppHeaderProps) => {
   const { data: session, status } = useSession()
 
   return (
-    <AppBar sx={headerStyle} position="fixed" open={props.open}>
+    <AppBar role="banner" sx={headerStyle} position="fixed" open={props.open}>
       <Toolbar id="app-header" sx={{ height: '84px' }}>
         <Avatar
           sx={{
@@ -42,7 +42,7 @@ const AppHeaderBar = (props: AppHeaderProps) => {
             ...(props.open && { marginLeft: '16px' }),
           }}
         >
-          <Image src={userImage} alt="user image" height={'70'} />
+          <Image src={userImage} alt="your avatar" height={'70'} />
         </Avatar>
         <Typography fontWeight={'700'} fontSize={'16px'}>
           Welcome to IZ Gateway,{' '}
