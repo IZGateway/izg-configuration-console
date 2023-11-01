@@ -1,4 +1,4 @@
-import { label, Middleware, use } from 'next-api-middleware'
+import { label, Middleware } from 'next-api-middleware'
 import { authOptions } from './auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import { decode } from 'next-auth/jwt'

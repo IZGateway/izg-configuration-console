@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authOptions } from '../auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../lib/accesshelper'
 import destination from '../../../lib/queries/fetch/destination'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
@@ -9,20 +6,20 @@ import withMiddleware from '../api-middleware-helper'
  * @swagger
  * /api/destinations/{destTypeId}/{destId}:
  *   get:
- *     summary: Get connection test results for destination by ID.
+ *     summary: Get destination information for a destination id for a given destination type (Development,Production,Staging,Onboarding,Testing,UNKNOWN).
  *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the destination.
  *       - name: destTypeId
  *         in: path
  *         required: true
  *         schema:
  *           type: number
- *         description: The ID of destination type
+ *         description: The id of the destination type.
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The id of the destination.
  *     responses:
  *       200:
  *         description: OK.

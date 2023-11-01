@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as React from 'react'
 import Container from '../../components/Container'
 import { Box } from '@mui/material'

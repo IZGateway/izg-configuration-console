@@ -15,8 +15,11 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 
-const EditButton = (params: { destTypeId: any; destId: any }) => {
-  const { data: session } = useSession()
+const EditButton = (params: {
+  destTypeId: any
+  destId: any
+  tabIndex: any
+}) => {
   const [canEdit, setCanEdit] = useState(false)
   const { data, error, isLoading } = useSWR(
     `/api/changerequest/${params.destTypeId}/${params.destId}`
@@ -32,13 +35,14 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
     <>
       {canEdit ? (
         <Link
+          tabIndex={params.tabIndex}
           href={{
             pathname: `/edit/${params.destTypeId}/${params.destId}`,
           }}
         >
           <Tooltip arrow placement="bottom" title="Edit">
             <IconButton
-              id="edit"
+              id={params.destTypeId + '_' + params.destId}
               aria-label="edit"
               color="primary"
               disabled={!canEdit}
@@ -68,7 +72,7 @@ const EditButton = (params: { destTypeId: any; destId: any }) => {
       ) : (
         <Tooltip arrow placement="bottom" title="Edit">
           <IconButton
-            id="edit"
+            id={params.destTypeId + '_' + params.destId}
             aria-label="edit"
             color="primary"
             disabled={!canEdit}

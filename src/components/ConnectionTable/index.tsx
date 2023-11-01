@@ -206,15 +206,20 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            <EditButton destId={params.id} destTypeId={params.row.destTypeId} />
+            <EditButton
+              tabIndex={params.tabIndex}
+              destId={params.id}
+              destTypeId={params.row.destTypeId}
+            />
             <Link
+              tabIndex={params.tabIndex}
               href={{
                 pathname: `/test/${params.row.destTypeId}/${params.id}`,
               }}
             >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
-                  id="test"
+                  id={'test_' + params.row.destTypeId + '_' + params.id}
                   aria-label="test"
                   color="primary"
                   sx={actionButtonStyle}
@@ -224,6 +229,7 @@ const ConnectionsTable = () => {
               </Tooltip>
             </Link>
             <Link
+              tabIndex={params.tabIndex}
               href={{
                 pathname: `/history/${params.row.destTypeId}/${params.id}`,
                 query: {
@@ -233,7 +239,7 @@ const ConnectionsTable = () => {
             >
               <Tooltip arrow placement="bottom" title="History">
                 <IconButton
-                  id="history"
+                  id={'history_' + params.row.destTypeId + '_' + params.id}
                   aria-label="history"
                   color="secondary"
                   sx={actionButtonStyle}
@@ -273,6 +279,7 @@ const ConnectionsTable = () => {
       </Box>
 
       <DataGrid
+        experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
         rows={Object.entries(data).map(([, x]: [any, any]) => {
           return {

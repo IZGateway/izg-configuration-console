@@ -44,10 +44,7 @@ const Schedule = (props: any) => {
             the implementation of your changes:
           </div>
 
-          <RadioGroup
-            aria-labelledby="demo-controlled-radio-buttons-group"
-            name="controlled-radio-buttons-group"
-          >
+          <RadioGroup name="schedule-change-radio-buttons-group">
             <FormControlLabel
               value="ScheduleASAP"
               control={<Radio />}

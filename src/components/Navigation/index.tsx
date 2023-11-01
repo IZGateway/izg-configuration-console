@@ -72,14 +72,10 @@ export type MenuItem = {
   path: string
 }
 
-// export interface MenuItems extends Array<MenuItem> {
-//   items: MenuItem[];
-// }
-
 const MiniDrawer = () => {
   const { data: session } = useSession()
   const [open, setOpen] = React.useState(true)
-  const [selectedIndex, setSelectedIndex] = React.useState(1)
+  const [selectedIndex, setSelectedIndex] = React.useState(0)
 
   const handleClick = () => {
     setOpen(!open)
@@ -119,17 +115,18 @@ const MiniDrawer = () => {
         }}
       >
         {menuItems.map((item: MenuItem, index) => (
-          <NextLink
+          <ListItem
             key={item.label}
-            href={item.path}
-            style={{ textDecoration: 'none', color: 'white' }}
-            passHref
+            id={item.label}
+            sx={{
+              padding: '0 0',
+            }}
           >
-            <ListItem
+            <NextLink
               key={item.label}
-              sx={{
-                padding: '0 0',
-              }}
+              href={item.path}
+              style={{ textDecoration: 'none', color: 'white' }}
+              passHref
             >
               <ListItemButton
                 sx={{
@@ -138,11 +135,12 @@ const MiniDrawer = () => {
                   '&& .Mui-selected , && .Mui-selected:hover': {
                     fontWeight: '700',
                   },
+                  width: '150%',
                 }}
                 key={item.label}
                 selected={selectedIndex === index}
                 onClick={(event) => handleListItemClick(event, index)}
-                id={item.label}
+                id={item.label + '_button'}
               >
                 <ListItemIcon
                   sx={{
@@ -153,9 +151,9 @@ const MiniDrawer = () => {
                 </ListItemIcon>
                 <ListItemText primary={item.label} />
               </ListItemButton>
-              <Divider color="#00D998" />
-            </ListItem>
-          </NextLink>
+            </NextLink>
+            <Divider color="#00D998" />
+          </ListItem>
         ))}
       </List>
     </>
@@ -163,9 +161,13 @@ const MiniDrawer = () => {
   return (
     <>
       <AppHeaderBar open={open} />
-      <Drawer variant="permanent" open={open} id="navigation">
+      <Drawer variant="permanent" open={open} id="navigation" role="navigation">
         <DrawerHeader>
-          <IconButton onClick={handleClick}>
+          <IconButton
+            onClick={handleClick}
+            name="toggle navigation drawer"
+            aria-label="toggle navigation drawer"
+          >
             {!open ? (
               <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
             ) : (
@@ -179,22 +181,22 @@ const MiniDrawer = () => {
         <Divider color="#00D998" />
         {list()}
         {session?.isAdmin && (
-          <Button
-            id="swaggerapi"
-            href="/api-doc"
-            sx={{
-              textWrap: 'wrap',
-              textAlign: 'center',
-              color: '#FFFFFF',
-              textDecoration: 'underline',
-              position: 'absolute',
-              left: '8px',
-              bottom: '50px',
-              textTransform: 'capitalize',
-            }}
-          >
-            Swagger API
-          </Button>
+          <Link href="/api-doc">
+            <Button
+              variant="text"
+              name="swagger api"
+              sx={{
+                color: '#FFFFFF',
+                textDecoration: 'underline',
+                position: 'absolute',
+                left: '5px',
+                bottom: '50px',
+                textTransform: 'capitalize',
+              }}
+            >
+              Swagger API
+            </Button>
+          </Link>
         )}
         <Button
           id="logout"
