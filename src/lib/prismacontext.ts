@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// eslint-disable-next-line camelcase
 import { PrismaClient } from '@prisma/client'
 
 const showSql =

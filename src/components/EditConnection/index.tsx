@@ -48,11 +48,11 @@ const EditConnection = (props: editConnectionProps) => {
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
-  const [accepted, setAccepted] = useState(false)
+  const [, setAccepted] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [formValues, setFormValues] = useState(null)
-  const [formValuesDelta, setFormValuesDelta] = useState(null)
+  const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
   const [
     hasCreateChangeRequestTicketError,
@@ -177,14 +177,14 @@ const EditConnection = (props: editConnectionProps) => {
     }))
   }
 
-  const handlePrevious = (e) => {
+  const handlePrevious = () => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(null)
     setAsapSelected(false)
     setScheduledDateTime(null)
   }
 
-  const handleNext = (e) => {
+  const handleNext = () => {
     if (_.isEmpty(formErrors)) {
       advanceStepper(1)
     }

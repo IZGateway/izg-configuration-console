@@ -6,7 +6,6 @@ import {
   CardContent,
   Divider,
 } from '@mui/material'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import Timeline from '@mui/lab/Timeline'
 import TimelineItem from '@mui/lab/TimelineItem'
 import TimelineSeparator from '@mui/lab/TimelineSeparator'
@@ -14,20 +13,11 @@ import TimelineConnector from '@mui/lab/TimelineConnector'
 import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
-import moment from 'moment'
 import Status from '../Status'
 import useSWR from 'swr'
 
 interface TestHistoryProps {
   destId: string
-}
-
-function msToTime(ms) {
-  const duration = moment.duration(ms, 'milliseconds')
-  if (duration.asSeconds() < 60) return duration.asSeconds() + ' Sec'
-  else if (duration.asMinutes() < 60) return duration.asMinutes() + ' Min'
-  else if (duration.asHours() < 24) return duration.asHours() + ' Hrs'
-  else return duration.asDays() + ' Day'
 }
 
 const timeline = (data) => (

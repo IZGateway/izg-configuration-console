@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { SessionProvider } from 'next-auth/react'
 import type { AppProps } from 'next/app'
 import { CacheProvider, EmotionCache } from '@emotion/react'
@@ -13,6 +14,13 @@ import { AppProvider } from '../contexts/app'
 import { SWRConfig } from 'swr'
 import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
+import React from 'react'
+
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  const ReactDOM = require('react-dom')
+  const axe = require('@axe-core/react')
+  axe(React, ReactDOM, 1000)
+}
 interface MyAppProps extends AppProps {
   emotionCache?: EmotionCache
   pageProps: { session: any; pageProps: any }
