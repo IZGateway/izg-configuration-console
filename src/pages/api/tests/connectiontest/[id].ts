@@ -150,7 +150,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         )
 
         let testCounter = 0
-        // eslint-disable-next-line no-loops/no-loops
         for (const test of testSuite) {
           logger.debug('running test: ' + test + ' for destination ' + destId)
           connectionTestRequest.order = ++testCounter
