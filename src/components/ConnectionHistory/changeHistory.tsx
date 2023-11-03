@@ -15,25 +15,23 @@ import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import useSWR from 'swr'
-import { isEmpty } from 'underscore'
 import _ from 'lodash'
 
 interface ChangeHistoryProps {
   destId: string
-  destTypeId: number
+  destTypeId: string
 }
 
-const findDifferentKeysAndValues = (obj1, obj2, isPasswordDifferent) => {
+const findDifferentKeysAndValues = (obj1, obj2) => {
   const allKeys = _.intersection(Object.keys(obj1), Object.keys(obj2))
   const modifiedKeys = _.omit(allKeys, 'dest_uri')
   const differentKeys = []
-
   _.each(modifiedKeys, (key) => {
     if (!_.isEqual(obj1[key], obj2[key])) {
       differentKeys.push(key)
     }
   })
-  if (isPasswordDifferent) {
+  if (obj1.is_password_different === '1') {
     differentKeys.push('Password')
   }
   return differentKeys.join(' , ')
@@ -43,26 +41,14 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   const { data, error, isLoading } = useSWR(
     `/api/destinationaudit/${props.destTypeId}/${props.destId}`
   )
-  const {
-    data: isPasswordDifferent,
-    error: passwordDiffError,
-    isLoading: passwordDiffLoading,
-  } = useSWR(
-    `/api/changerequest/passwordComparison/${props.destTypeId}/${props.destId}`
-  )
-  if (error || passwordDiffError)
-    throw new Error(error.message || passwordDiffError)
-  if (isLoading || passwordDiffLoading) return <div>loading...</div>
+
+  if (error) throw new Error(error.message)
+  if (isLoading) return <div>loading...</div>
   if (!data) return <div>no data</div>
   const historyDataLength = data.length
   const defaultChangeHistoryView = data.slice(0, 5)
-
   const updatedFields = (data) => {
-    return findDifferentKeysAndValues(
-      JSON.parse(data.newValues),
-      JSON.parse(data.oldValues),
-      isPasswordDifferent
-    )
+    return findDifferentKeysAndValues(data.newValues, data.oldValues)
   }
 
   const timeline = (data) => (

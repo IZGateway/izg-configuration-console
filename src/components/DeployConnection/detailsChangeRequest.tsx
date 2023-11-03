@@ -1,11 +1,5 @@
 import * as React from 'react'
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  Divider,
-  Typography,
-} from '@mui/material'
+import { Card, CardHeader, CardContent, Divider } from '@mui/material'
 import useSWR from 'swr'
 import Details from '../ChangeRequest/details'
 import _ from 'lodash'

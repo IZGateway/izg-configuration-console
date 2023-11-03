@@ -3,8 +3,7 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
-import withMiddleware from '../api-middleware-helper'
-import _ from 'lodash'
+
 /**
  * @swagger
  * /api/destinationaudit/{destTypeId}/{destId}:
@@ -30,7 +29,7 @@ import _ from 'lodash'
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
-  const destTypeId = _.toNumber(slug[0])
+  const destTypeId = slug[0]
 
   const session = await getServerSession(req, res, authOptions)
 

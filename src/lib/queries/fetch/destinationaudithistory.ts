@@ -2,7 +2,7 @@ import { prismacontext } from '../../prismacontext'
 
 const destinationaudithistory = async (
   destId: string,
-  destTypeId: number,
+  destTypeId: string,
   user: string
 ) =>
   await prismacontext.prisma.audit_history.findMany({
@@ -12,12 +12,14 @@ const destinationaudithistory = async (
       AND: [
         {
           newValues: {
-            contains: `\"dest_type\":${destTypeId}`,
+            path: '$.dest_id',
+            equals: destId,
           },
         },
         {
           newValues: {
-            contains: `\"dest_id\":\"${destId}\"`,
+            path: '$.dest_type',
+            equals: destTypeId,
           },
         },
       ],

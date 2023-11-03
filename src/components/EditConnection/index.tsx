@@ -17,7 +17,6 @@ import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
 import useSWR from 'swr'
-import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
@@ -123,7 +122,7 @@ const EditConnection = (props: editConnectionProps) => {
     setAgreed(true)
   }
 
-  const handleSubmit = async () => {
+  const handleSchedule = async () => {
     let response
     const scheduleAt = asapSelected
       ? new Date().toISOString()
@@ -236,7 +235,7 @@ const EditConnection = (props: editConnectionProps) => {
               color="primary"
               variant="contained"
               disabled={asapSelected ? !asapSelected : !scheduledDateTime}
-              onClick={handleSubmit}
+              onClick={handleSchedule}
               sx={{
                 borderRadius: '30px',
               }}

@@ -169,7 +169,6 @@ const handler = async (
       )
 
       let testCounter = 0
-      // eslint-disable-next-line no-loops/no-loops
       for (const test of testSuite) {
         logger.info('running test: ' + test + 'for destination' + destId)
         connectionTestRequest.order = ++testCounter

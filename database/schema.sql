@@ -170,8 +170,8 @@ CREATE TABLE `audit_history` (
   `tableName` VARCHAR(50) NOT NULL,
   `userName` VARCHAR(50) NOT NULL,
   `changeType` ENUM('Insert', 'Update', 'Delete') NOT NULL,
-  `oldValues` VARCHAR(1024) NULL DEFAULT NULL,
-  `newValues` VARCHAR(1024) NULL DEFAULT NULL,
+  `oldValues` JSON DEFAULT NULL,
+  `newValues` JSON DEFAULT NULL,
   `createdAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 --

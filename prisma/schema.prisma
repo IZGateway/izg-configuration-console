@@ -21,8 +21,8 @@ model audit_history {
   tableName  String                   @db.VarChar(50)
   userName   String                   @db.VarChar(50)
   changeType audit_history_changeType
-  oldValues  String?                  @db.VarChar(1024)
-  newValues  String?                  @db.VarChar(1024)
+  oldValues  Json?                    @db.Json
+  newValues  Json?                    @db.Json
   createdAt  DateTime                 @default(now()) @db.DateTime(0)
 }
 

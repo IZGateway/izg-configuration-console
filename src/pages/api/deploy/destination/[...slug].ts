@@ -6,6 +6,7 @@ import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
 import destination from '../../../../lib/queries/fetch/destination'
 import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
+import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
 /**
  * @swagger
  * /api/deploy/destination/{destTypeId}/{destId}:
@@ -54,12 +55,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
       const oldValues = await destination(destId, destTypeId)
+      const isPasswordDifferent = await passwordComparison(destId, destTypeId)
       const result = await updatedAuditedDestination(
         destId,
         destTypeId,
         data,
         session.user.name,
-        oldValues
+        oldValues,
+        isPasswordDifferent
       )
       res.json(result)
       if (res.statusCode === 200) {

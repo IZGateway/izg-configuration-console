@@ -20,6 +20,7 @@ const EditButton = (params: {
   destId: any
   tabIndex: any
 }) => {
+  const { data: session } = useSession()
   const [canEdit, setCanEdit] = useState(false)
   const { data, error, isLoading } = useSWR(
     `/api/changerequest/${params.destTypeId}/${params.destId}`

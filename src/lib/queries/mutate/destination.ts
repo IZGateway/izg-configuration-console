@@ -25,15 +25,16 @@ const updateDestination = async (
 const auditDestination = async (
   user: string,
   oldValues: object,
-  updatedData: object
+  updatedData: object,
+  isPasswordDifferent: object
 ) =>
   await prismacontext.prisma.audit_history.create({
     data: {
       tableName: 'destinations',
       userName: user,
       changeType: 'Update',
-      oldValues: JSON.stringify(oldValues),
-      newValues: JSON.stringify(updatedData),
+      oldValues: oldValues,
+      newValues: { ...updatedData, ...isPasswordDifferent },
       createdAt: new Date(),
     },
   })
@@ -43,11 +44,12 @@ const updatedAuditedDestination = async (
   destType: number,
   updatedData: object,
   user: string,
-  oldValues: object
+  oldValues: object,
+  isPasswordDifferent: object
 ) => {
   await prismacontext.prisma.$transaction(async () => {
     await updateDestination(destId, destType, updatedData)
-    await auditDestination(user, oldValues, updatedData)
+    await auditDestination(user, oldValues, updatedData, isPasswordDifferent)
   })
 }
 export default updatedAuditedDestination

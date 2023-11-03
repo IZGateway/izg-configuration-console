@@ -37,9 +37,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === 'GET') {
       try {
         const result = await passwordComparison(destId, destTypeId)
-        let isPasswordDifferent = false
-        if (Number(result[0].is_password_different) === 1) {
+        let isPasswordDifferent
+        if (Number(result.is_password_different) === 1) {
           isPasswordDifferent = true
+        } else {
+          isPasswordDifferent = false
         }
         res.status(200).json({ isPasswordDifferent: isPasswordDifferent })
       } catch (error) {
