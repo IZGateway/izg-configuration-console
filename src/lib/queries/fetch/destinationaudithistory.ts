@@ -1,14 +1,9 @@
 import { prismacontext } from '../../prismacontext'
 
-const destinationaudithistory = async (
-  destId: string,
-  destTypeId: string,
-  user: string
-) =>
+const destinationaudithistory = async (destId: string, destTypeId: number) =>
   await prismacontext.prisma.audit_history.findMany({
     where: {
       tableName: 'destinations',
-      userName: user,
       AND: [
         {
           newValues: {

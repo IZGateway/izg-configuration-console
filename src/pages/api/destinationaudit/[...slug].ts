@@ -3,6 +3,7 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
+import _ from 'lodash'
 
 /**
  * @swagger
@@ -29,17 +30,13 @@ import destinationaudithistory from '../../../lib/queries/fetch/destinationaudit
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
-  const destTypeId = slug[0]
+  const destTypeId = _.toNumber(slug[0])
 
   const session = await getServerSession(req, res, authOptions)
 
   if (hasAccessToDestId(destId, session)) {
     if (req.method === 'GET') {
-      const result = await destinationaudithistory(
-        destId,
-        destTypeId,
-        session.user.name
-      )
+      const result = await destinationaudithistory(destId, destTypeId)
       res.json(result)
     } else {
       throw new Error(
