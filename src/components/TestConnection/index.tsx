@@ -14,7 +14,6 @@ const TestConnection = (props) => {
   if (error) {
     throw new Error(error)
   }
-  if (isLoading) return <div>loading...</div>
 
   return (
     <Box sx={{ position: 'relative' }}>
