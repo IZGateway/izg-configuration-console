@@ -134,6 +134,21 @@ const lightThemeOptions: ThemeOptions = {
         },
       },
     },
+    MuiAlert: {
+      styleOverrides: {
+        filledSuccess: {
+          backgroundColor: '#00D998',
+          color: '#000',
+        },
+        filledInfo: {
+          backgroundColor: '#0A3F7E',
+        },
+        filledWarning: {
+          backgroundColor: '#F2D0A7',
+          color: '#5C3607',
+        },
+      },
+    },
   },
 }
 
