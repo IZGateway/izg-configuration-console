@@ -71,17 +71,15 @@ const EditButton = (params: {
           </Tooltip>
         </Link>
       ) : (
-        <Tooltip arrow placement="bottom" title="Edit">
-          <IconButton
-            id={params.destTypeId + '_' + params.destId}
-            aria-label="edit"
-            color="primary"
-            disabled={!canEdit}
-            sx={actionButtonStyle}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <IconButton
+          id={params.destTypeId + '_' + params.destId}
+          aria-label="edit"
+          color="primary"
+          disabled={!canEdit}
+          sx={actionButtonStyle}
+        >
+          <EditIcon fontSize="small" />
+        </IconButton>
       )}
     </>
   )

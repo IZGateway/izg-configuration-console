@@ -21,7 +21,6 @@ import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
 import * as _ from 'lodash'
-
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -53,11 +52,11 @@ const EditConnection = (props: editConnectionProps) => {
   const [formValues, setFormValues] = useState(null)
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
+
   const [
     hasCreateChangeRequestTicketError,
     setHasCreateChangeRequestTicketError,
   ] = useState(false)
-
   const {
     data: destData,
     error: destError,
@@ -154,8 +153,15 @@ const EditConnection = (props: editConnectionProps) => {
     }
     clearValue()
     if (response.ok) {
-      router.push('/manage')
+      router.push({
+        pathname: '/manage',
+        query: { alert: 'success' },
+      })
     } else {
+      router.push({
+        pathname: '/manage',
+        query: { alert: 'error' },
+      })
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
       )
@@ -338,7 +344,6 @@ const EditConnection = (props: editConnectionProps) => {
               setAsapSelected={setAsapSelected}
             />
           )}
-
           <Container
             maxWidth="sm"
             sx={{
