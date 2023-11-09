@@ -167,7 +167,7 @@ const ConnectionsTable = () => {
                       </Box>
                       <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
                       <Box sx={{ fontWeight: 'regular' }}>
-                        {params.row.retry_strategy}
+                        {params.row.retryStrategy}
                       </Box>
                     </CardContent>
                   )}
