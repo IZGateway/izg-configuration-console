@@ -54,11 +54,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (token) {
     if (req.method === 'GET') {
       const result = await fetchEndpointStatus(
-        session.isAdmin,
-        session.jurisdictions
+        session.user.isAdmin,
+        session.user.jurisdictions
       )
-
-      //   const result = await destinations(session.isAdmin, session.jurisdictions)
       res.json(result)
     } else {
       throw new Error(

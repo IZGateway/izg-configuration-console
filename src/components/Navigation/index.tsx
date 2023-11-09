@@ -180,7 +180,7 @@ const MiniDrawer = () => {
         </div>
         <Divider color="#00D998" />
         {list()}
-        {session?.isAdmin && (
+        {session?.user.isAdmin && (
           <Link href="/api-doc">
             <Button
               variant="text"
@@ -200,7 +200,11 @@ const MiniDrawer = () => {
         )}
         <Button
           variant="text"
-          onClick={() => signOut({})}
+          onClick={() => {
+            signOut().then(() => {
+              return (window.location.href = `${process.env.OKTA_ISSUER}/login/signout`)
+            })
+          }}
           sx={{
             color: '#FFFFFF',
             textDecoration: 'underline',
