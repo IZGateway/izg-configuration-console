@@ -19,7 +19,8 @@ export const authOptions = {
     }),
   ],
   session: {
-    maxAge: 1800, // seconds = 30 mins
+    maxAge: 30 * 60, // 30 mins
+    jwt: true,
   },
   callbacks: {
     async session({ session, token, user }) {
