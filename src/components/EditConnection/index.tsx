@@ -42,7 +42,7 @@ const getDelta = (a, b) =>
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { data: session } = useSession()
-  const { clearValue } = useContext(CombinedContext)
+  const { clearValue, setAlert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
@@ -62,12 +62,15 @@ const EditConnection = (props: editConnectionProps) => {
     error: destError,
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
-
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
-      throw new Error('Error creating change request ticket.')
+      setAlert({
+        level: 'error',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destination_type.type,
+      })
     }
   }, [hasCreateChangeRequestTicketError])
 
@@ -153,15 +156,14 @@ const EditConnection = (props: editConnectionProps) => {
     }
     clearValue()
     if (response.ok) {
-      router.push({
-        pathname: '/manage',
-        query: { alert: 'success' },
+      setAlert({
+        level: 'success',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destination_type.type,
       })
+      router.push({ pathname: '/manage' })
     } else {
-      router.push({
-        pathname: '/manage',
-        query: { alert: 'error' },
-      })
+      router.push({ pathname: '/manage' })
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
       )

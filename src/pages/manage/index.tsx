@@ -2,26 +2,27 @@ import * as React from 'react'
 import ConnectionsTable from '../../components/ConnectionTable'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import Container from '../../components/Container'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
-import { useRouter } from 'next/router'
+import CombinedContext from '../../contexts/app'
+import _ from 'lodash'
 
 const Manage = () => {
-  const router = useRouter()
+  const { alert } = useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = useState(false)
-  const query = router.query
+
   useEffect(() => {
-    if (query.alert) {
+    if (_.isEmpty(alert.level)) {
       setShowSnackbar(true)
     }
-  }, [query, query.alert])
+  }, [alert])
 
-  const renderMessage = (severity) => {
-    switch (severity) {
+  const renderMessage = (level, jurisdiction, destType) => {
+    switch (level) {
       case 'error':
-        return 'Error creating change request. Please try again later!'
+        return `Error creating change request ticket for ${jurisdiction} on environment ${destType}. Please try again later!`
       case 'success':
-        return 'Change request is created successfully!'
+        return `Change request is created successfully for ${jurisdiction} on environment ${destType}!`
     }
   }
   return (
@@ -30,8 +31,12 @@ const Manage = () => {
         <ConnectionsTable />
         {showSnackbar && (
           <CustomSnackbar
-            severity={query.alert}
-            message={renderMessage(query.alert)}
+            severity={alert.level}
+            message={renderMessage(
+              alert.level,
+              alert.jurisdiction,
+              alert.dest_type
+            )}
           />
         )}
       </ErrorBoundary>
