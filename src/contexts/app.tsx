@@ -1,5 +1,11 @@
 import { createContext, useState } from 'react'
 
+interface Alert {
+  level: string
+  jurisdiction: string
+  dest_type: string
+}
+
 export type AppContextType = {
   pageSize: number
   setPageSize: (newSession: number) => void
@@ -9,6 +15,8 @@ export type EditConnectionContextType = {
   isChangePasswordClicked: boolean
   setIsChangePasswordClicked: (isChangePasswordClicked: boolean) => void
   clearValue: () => void
+  alert: Alert
+  setAlert: (alert: Alert) => void
 }
 
 export type CombinedContextType = AppContextType & EditConnectionContextType
@@ -23,6 +31,11 @@ export const AppProvider = ({ children }) => {
   const clearValue = () => {
     setIsChangePasswordClicked(false)
   }
+  const [alert, setAlert] = useState({
+    level: '',
+    jurisdiction: '',
+    dest_type: '',
+  })
 
   const combinedContextValue: CombinedContextType = {
     pageSize,
@@ -30,6 +43,8 @@ export const AppProvider = ({ children }) => {
     isChangePasswordClicked,
     setIsChangePasswordClicked,
     clearValue,
+    alert,
+    setAlert,
   }
   return (
     <CombinedContext.Provider value={combinedContextValue}>
