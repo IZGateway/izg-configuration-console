@@ -51,7 +51,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   const session = await getServerSession(req, res, authOptions)
-  if (session.isAdmin) {
+  if (session.user.isAdmin) {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
       const oldValues = await destination(destId, destTypeId)
