@@ -12,6 +12,7 @@ import Details from '../ChangeRequest/details'
 const Verify = (props: any) => {
   let submittingValue
   let existingValue
+  let isPasswordDifferent
 
   if (props.value.newPassword === '' && props.value.confirmPassword === '') {
     submittingValue = _.omit({ ...props.value, password: '.........' }, [
@@ -22,6 +23,7 @@ const Verify = (props: any) => {
       'confirmPassword',
       'newPassword',
     ])
+    isPasswordDifferent = false
   } else {
     submittingValue = _.omit(
       { ...props.value, password: props.value.newPassword },
@@ -31,6 +33,7 @@ const Verify = (props: any) => {
       'confirmPassword',
       'newPassword',
     ])
+    isPasswordDifferent = true
   }
   return (
     <div>
@@ -60,6 +63,7 @@ const Verify = (props: any) => {
           <Details
             existingValue={existingValue}
             submittingValue={submittingValue}
+            isPasswordDifferent={isPasswordDifferent}
           />
         </CardContent>
       </Card>
