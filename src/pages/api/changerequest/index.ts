@@ -119,7 +119,7 @@ const createChangeRequest = async (changeRequestDetails: any) => {
       })
       await updateChangeRequestRecord({
         ...changeRequestRecord,
-        jira_id: changeRequestTicketResponse.id,
+        jira_id: changeRequestTicketResponse.key,
       })
     } catch (error) {
       throw new Error(
@@ -142,6 +142,7 @@ const insertChangeRequestRecord = async (changeRequestDetails: any) => {
     password: changeRequestDetails.requested.newPassword,
     jira_id: null,
     dest_id: changeRequestDetails.dest_id,
+    dest_uri: changeRequestDetails.dest_uri,
     dest_type: changeRequestDetails.dest_type_id,
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,

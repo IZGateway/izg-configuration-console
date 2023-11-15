@@ -5,7 +5,6 @@ import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
-import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import {
   Collapse,
@@ -18,11 +17,12 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 import AppHeaderBar from '../AppHeader'
 
-const drawerWidthOpen = '20em'
+const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
 
 const closedMixin = () => ({
@@ -199,6 +199,7 @@ const MiniDrawer = () => {
           </Link>
         )}
         <Button
+          id="logout"
           variant="text"
           onClick={() => {
             signOut().then(() => {
@@ -206,10 +207,12 @@ const MiniDrawer = () => {
             })
           }}
           sx={{
+            textWrap: 'wrap',
+            textAlign: 'center',
             color: '#FFFFFF',
             textDecoration: 'underline',
             position: 'absolute',
-            left: '10px',
+            left: '8px',
             bottom: '20px',
             textTransform: 'capitalize',
           }}

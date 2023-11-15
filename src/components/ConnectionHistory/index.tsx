@@ -49,7 +49,7 @@ const ConnectionHistory = (props: connectionHistoryProps) => {
         </Item>
         <Item sx={{ flexGrow: 1 }}>
           <TestHistory destId={props.destId} />
-          <ChangeHistory destId={props.destId} />
+          <ChangeHistory destId={props.destId} destTypeId={props.destTypeId} />
         </Item>
       </Box>
     </div>

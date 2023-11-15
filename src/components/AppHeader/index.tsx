@@ -24,7 +24,7 @@ const AppBar = styled(MuiAppBar, {
 })<AppBarProps>(({ open }) => ({
   ...(open && {
     marginLeft: '20em',
-    width: `calc(100% - 19em)`,
+    width: `calc(100% - 280px)`,
   }),
 }))
 

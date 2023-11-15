@@ -17,12 +17,11 @@ import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
 import useSWR from 'swr'
-import { mutate } from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
-import desttypehelper from '../../lib/desttypehelper'
 import changeRequestValidation from '../../lib/changerequestvalidation'
 import * as _ from 'lodash'
+
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -116,14 +115,14 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues, formErrors])
 
-  if (destError) return <div>failed to load</div>
+  if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
 
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
 
-  const handleSubmit = async () => {
+  const handleSchedule = async () => {
     let response
     const scheduleAt = asapSelected
       ? new Date().toISOString()
@@ -139,6 +138,7 @@ const EditConnection = (props: editConnectionProps) => {
             ...defaultFormValues,
           },
           dest_id: destData.dest_id,
+          dest_uri: destData.dest_uri,
           dest_type_id: destData.destination_type.type_id,
           dest_type: destData.destination_type.type,
           jira_id: null,
@@ -155,8 +155,6 @@ const EditConnection = (props: editConnectionProps) => {
     clearValue()
     if (response.ok) {
       router.push('/manage')
-      // manually trigger revalidation to fetch the latest data from the server without refresh
-      mutate(`/api/destinations/${props.destTypeId}/${props.destId}`)
     } else {
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
@@ -237,7 +235,7 @@ const EditConnection = (props: editConnectionProps) => {
               color="primary"
               variant="contained"
               disabled={asapSelected ? !asapSelected : !scheduledDateTime}
-              onClick={handleSubmit}
+              onClick={handleSchedule}
               sx={{
                 borderRadius: '30px',
               }}
@@ -302,9 +300,7 @@ const EditConnection = (props: editConnectionProps) => {
               id="add-connecton"
             >
               Editing {destData?.jurisdiction.description}{' '}
-              {desttypehelper.destTypeFormattedToSyncWithApi(
-                destData?.destination_type.type
-              )}
+              {destData.destination_type.type}
             </Typography>
             <Typography gutterBottom align="center" variant="body1">
               Use the stepper to edit & manage sections of your connection
@@ -323,9 +319,7 @@ const EditConnection = (props: editConnectionProps) => {
           {activeStep === 1 && (
             <Jurisdiction
               jurisdictionName={destData?.jurisdiction.description}
-              destType={desttypehelper.destTypeFormattedToSyncWithApi(
-                destData?.destination_type.type
-              )}
+              destType={destData?.destination_type.type}
             />
           )}
           {activeStep === 2 && (

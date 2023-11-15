@@ -5,34 +5,36 @@ const updateDestination = async (
   destType: number,
   updatedData
 ) => {
-  let updatedDestination = updatedData
-  if (updatedDestination.hasOwnProperty('newPassword')) {
-    const { ...submittingValue } = updatedData
-    updatedDestination = {
-      ...submittingValue,
-      password: updatedData.newPassword,
-    }
-  }
-
+  const submittedDestPassword = await prismacontext.prisma
+    .$queryRaw`SELECT password FROM destination_change_request where dest_id=${destId} and dest_type=${destType}`
   await prismacontext.prisma.destinations.update({
     where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
-    data: updatedDestination,
+    data: {
+      username: updatedData.username,
+      password: submittedDestPassword[0].password,
+      MSH3: updatedData.MSH3,
+      MSH4: updatedData.MSH4,
+      MSH5: updatedData.MSH5,
+      MSH6: updatedData.MSH6,
+      MSH22: updatedData.MSH22,
+      RXA11: updatedData.RXA11,
+    },
   })
 }
 
 const auditDestination = async (
   user: string,
   oldValues: object,
-  newValues: object,
-  tableName: string
+  updatedData: object,
+  isPasswordDifferent: object
 ) =>
   await prismacontext.prisma.audit_history.create({
     data: {
-      tableName: tableName,
+      tableName: 'destinations',
       userName: user,
       changeType: 'Update',
       oldValues: oldValues,
-      newValues: newValues,
+      newValues: { ...updatedData, ...isPasswordDifferent },
       createdAt: new Date(),
     },
   })
@@ -43,12 +45,11 @@ const updatedAuditedDestination = async (
   updatedData: object,
   user: string,
   oldValues: object,
-  newValues: object,
-  tableName: string
+  isPasswordDifferent: object
 ) => {
   await prismacontext.prisma.$transaction(async () => {
     await updateDestination(destId, destType, updatedData)
-    await auditDestination(user, oldValues, newValues, tableName)
+    await auditDestination(user, oldValues, updatedData, isPasswordDifferent)
   })
 }
 export default updatedAuditedDestination

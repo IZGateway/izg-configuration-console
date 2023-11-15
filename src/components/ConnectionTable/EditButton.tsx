@@ -4,7 +4,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import useSWR from 'swr'
 import { useEffect, useState } from 'react'
 import _ from 'lodash'
-
+import { useSession } from 'next-auth/react'
+import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 const actionButtonStyle = {
   borderRadius: 90,
   background: '#FFFFF',
@@ -19,6 +20,7 @@ const EditButton = (params: {
   destId: any
   tabIndex: any
 }) => {
+  const { data: session } = useSession()
   const [canEdit, setCanEdit] = useState(false)
   const { data, error, isLoading } = useSWR(
     `/api/changerequest/${params.destTypeId}/${params.destId}`
@@ -48,6 +50,23 @@ const EditButton = (params: {
               sx={actionButtonStyle}
             >
               <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Link>
+      ) : session?.isAdmin ? (
+        <Link
+          href={{
+            pathname: `/changerequest/${params.destTypeId}/${params.destId}`,
+          }}
+        >
+          <Tooltip arrow placement="bottom" title="Change Request">
+            <IconButton
+              id="changerequest"
+              aria-label="changerequest"
+              color="primary"
+              sx={actionButtonStyle}
+            >
+              <PublishedWithChangesIcon fontSize="small" />
             </IconButton>
           </Tooltip>
         </Link>
