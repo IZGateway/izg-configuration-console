@@ -19,23 +19,28 @@ export const authOptions = {
     }),
   ],
   session: {
-    maxAge: 1800, // seconds = 30 mins
+    maxAge: 30 * 60, // 30 mins
+    jwt: true,
   },
   callbacks: {
     async session({ session, token, user }) {
       if (token) {
-        session.id = token.id
-        session.groups = token.groups
-        session.isAdmin = token?.groups?.includes(process.env.OPERATIONS_GROUP)
-        session.jurisdictions = token.jurisdictions
+        session.user.id = token.id
+        session.accessToken = token.accessToken
+        session.user.isAdmin = token?.groups?.includes(
+          process.env.OPERATIONS_GROUP
+        )
+        session.user.jurisdictions = token.jurisdictions
       }
       return session
     },
-    async jwt({ token, user, account, profile, isNewUser }) {
+    async jwt({ token, user, account, profile, isNewUser, idToken }) {
       if (account) {
+        token.idToken = idToken
         token.id_token = account.id_token
         token.provider = account.provider
         token.accessToken = account.access_token
+        token.id = profile.id
         token.groups = profile.groups
         try {
           const response = await fetch(userInfoEndpoint, {
