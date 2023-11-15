@@ -1,7 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { authOptions } from '../../auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import hasAccessToDestId from '../../../../lib/accesshelper'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
 import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
@@ -31,29 +28,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
-  const session = await getServerSession(req, res, authOptions)
 
-  if (hasAccessToDestId(destId, session)) {
-    if (req.method === 'GET') {
-      try {
-        const result = await passwordComparison(destId, destTypeId)
-        let isPasswordDifferent
-        if (Number(result.is_password_different) === 1) {
-          isPasswordDifferent = true
-        } else {
-          isPasswordDifferent = false
-        }
-        res.status(200).json({ isPasswordDifferent: isPasswordDifferent })
-      } catch (error) {
-        throw new Error(error.message)
+  if (req.method === 'GET') {
+    try {
+      const result = await passwordComparison(destId, destTypeId)
+      let isPasswordDifferent
+      if (Number(result.is_password_different) === 1) {
+        isPasswordDifferent = true
+      } else {
+        isPasswordDifferent = false
       }
-    } else {
-      throw new Error(
-        `The HTTP ${req.method} method is not supported at this route.`
-      )
+      res.status(200).json({ isPasswordDifferent: isPasswordDifferent })
+    } catch (error) {
+      throw new Error(error.message)
     }
   } else {
-    res.status(401)
+    throw new Error(
+      `The HTTP ${req.method} method is not supported at this route.`
+    )
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware('checkAccessToDestIdSlug')(handler)

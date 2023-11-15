@@ -53,7 +53,7 @@ const EditButton = (params: {
             </IconButton>
           </Tooltip>
         </Link>
-      ) : session?.isAdmin ? (
+      ) : session?.user.isAdmin ? (
         <Link
           href={{
             pathname: `/changerequest/${params.destTypeId}/${params.destId}`,

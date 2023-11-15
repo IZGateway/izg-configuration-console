@@ -24,3 +24,4 @@
 | DATABASE_URL                    | Database endpoint to connect to the DB.                                                                                                                 |   undefined   |   true   |
 | SHOW_SQL_IN_CONSOLE             | Set to true enable logging of prisma sql queries. Not recommended for production unless necessary.                                                      |     false     |  false   |
 | LOG_LEVEL                       | Logging level, eg : error,warn,info,http,verbose,debug,silly                                                                                            |     info      |  false   |
+| NEXT_PUBLIC_JIRA_BROWSE_URL     | The endpoint url for browing Jira connection                                                                                                            |   undefined   |   true   |

@@ -10,7 +10,7 @@ const AdminGuard = (Component: any) => {
 
     useEffect(() => {
       if (status === 'authenticated') {
-        if (session?.isAdmin) {
+        if (session?.user.isAdmin) {
           setIsLoading(false)
         } else {
           router.push('/manage')
