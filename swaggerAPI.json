@@ -150,6 +150,16 @@
         }
       }
     },
+    "/api/deephealthcheck": {
+      "get": {
+        "summary": "returns HTTP OK (200).",
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
     "/api/jurisdictions/{id}": {
       "get": {
         "summary": "Get destination's juridiction data by ID.",
