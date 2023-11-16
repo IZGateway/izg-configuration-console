@@ -12,33 +12,23 @@ const Manage = () => {
   const [showSnackbar, setShowSnackbar] = useState(false)
 
   useEffect(() => {
-    if (_.isEmpty(alert.level)) {
+    if (!_.isEmpty(alert.level)) {
       setShowSnackbar(true)
+    } else {
+      setShowSnackbar(false)
     }
   }, [alert])
 
-  const renderMessage = (level, jurisdiction, destType) => {
-    switch (level) {
-      case 'error':
-        return `Error creating change request ticket for ${jurisdiction} on environment ${destType}. Please try again later!`
-      case 'success':
-        return `Change request is created successfully for ${jurisdiction} on environment ${destType}!`
-    }
-  }
   return (
     <Container title="Manage Connections">
       <ErrorBoundary>
         <ConnectionsTable />
-        {showSnackbar && (
-          <CustomSnackbar
-            severity={alert.level}
-            message={renderMessage(
-              alert.level,
-              alert.jurisdiction,
-              alert.dest_type
-            )}
-          />
-        )}
+        <CustomSnackbar
+          open={showSnackbar}
+          severity={alert.level}
+          message={alert.message}
+          onClose={() => setShowSnackbar(false)}
+        />
       </ErrorBoundary>
     </Container>
   )

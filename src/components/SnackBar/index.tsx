@@ -1,7 +1,6 @@
 import * as React from 'react'
 import Snackbar from '@mui/material/Snackbar'
 import MuiAlert, { AlertProps } from '@mui/material/Alert'
-import { useState } from 'react'
 
 const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   props,
@@ -10,8 +9,7 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />
 })
 
-const CustomSnackbar = ({ severity, message }) => {
-  const [open, setOpen] = useState(true)
+const CustomSnackbar = ({ open, severity, message, onClose }) => {
   const vertical = 'bottom'
   const horizontal = 'center'
 
@@ -23,7 +21,7 @@ const CustomSnackbar = ({ severity, message }) => {
       return
     }
 
-    setOpen(false)
+    onClose()
   }
 
   return (
