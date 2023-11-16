@@ -13,10 +13,17 @@ import {
 import { mutate } from 'swr'
 import LaunchIcon from '@mui/icons-material/Launch'
 import router from 'next/router'
+import { useContext } from 'react'
+import CombinedContext from '../../contexts/app'
 
 const DeployConfirmation = (props) => {
+  const { setAlert } = useContext(CombinedContext)
   const humanReadableScheduledTime = new Date(props.submittingValue.scheduledAt)
+
   const handleDeploy = async () => {
+    const jurisdiction =
+      props.submittingValue.destinations.jurisdiction.description
+    const destType = props.submittingValue.destinations.destination_type.type
     const response = await fetch(
       `/api/deploy/destination/${props.destTypeId}/${props.destId}`,
       {
@@ -25,11 +32,22 @@ const DeployConfirmation = (props) => {
       }
     )
     if (response.ok) {
+      setAlert({
+        level: 'success',
+        jurisdiction: jurisdiction,
+        dest_type: destType,
+        message: `Connection ${jurisdiction} on environment ${destType} updated successfully!`,
+      })
       // manually trigger revalidation to fetch the latest data from the server without refresh
       mutate(`/api/destinations/${props.destId}`)
       router.push('/manage')
     } else {
-      throw new Error('Update was not successful. Please try again later')
+      setAlert({
+        level: 'error',
+        jurisdiction: jurisdiction,
+        dest_type: destType,
+        message: `Update on connection ${jurisdiction} on environment ${destType} was not successful. Please try again later!`,
+      })
     }
   }
 

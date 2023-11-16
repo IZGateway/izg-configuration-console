@@ -70,6 +70,7 @@ const EditConnection = (props: editConnectionProps) => {
         level: 'error',
         jurisdiction: destData.jurisdiction.description,
         dest_type: destData.destination_type.type,
+        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}. Please try again later!`,
       })
     }
   }, [hasCreateChangeRequestTicketError])
@@ -160,14 +161,15 @@ const EditConnection = (props: editConnectionProps) => {
         level: 'success',
         jurisdiction: destData.jurisdiction.description,
         dest_type: destData.destination_type.type,
+        message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}!`,
       })
-      router.push({ pathname: '/manage' })
+      router.push('/manage')
     } else {
-      router.push({ pathname: '/manage' })
+      setHasCreateChangeRequestTicketError(true)
+      router.push('/manage')
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
       )
-      setHasCreateChangeRequestTicketError(true)
     }
   }
 

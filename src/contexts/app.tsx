@@ -4,6 +4,7 @@ interface Alert {
   level: string
   jurisdiction: string
   dest_type: string
+  message: string
 }
 
 export type AppContextType = {
@@ -31,12 +32,12 @@ export const AppProvider = ({ children }) => {
   const clearValue = () => {
     setIsChangePasswordClicked(false)
   }
-  const [alert, setAlert] = useState({
+  const [alert, setAlert] = useState<Alert>({
     level: '',
     jurisdiction: '',
     dest_type: '',
+    message: '',
   })
-
   const combinedContextValue: CombinedContextType = {
     pageSize,
     setPageSize,
@@ -44,7 +45,7 @@ export const AppProvider = ({ children }) => {
     setIsChangePasswordClicked,
     clearValue,
     alert,
-    setAlert,
+    setAlert: (newAlert: Alert) => setAlert(newAlert),
   }
   return (
     <CombinedContext.Provider value={combinedContextValue}>
