@@ -97,7 +97,7 @@ const ConnectionsTable = () => {
       minWidth: 50,
     },
     {
-      field: 'destId',
+      field: 'jurisdictionName',
       headerName: 'JURISDICTION',
       flex: 0.5,
       minWidth: 25,
@@ -311,7 +311,7 @@ const ConnectionsTable = () => {
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: ['destType', 'destId', 'destUri', 'status'],
+              fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
             },
           },
           panel: {

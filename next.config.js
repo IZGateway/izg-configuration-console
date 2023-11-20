@@ -2,10 +2,8 @@
 module.exports = {
   reactStrictMode: true,
   env: {
-    OPERATIONS_GROUP: 'IZG Operations',
-    USER_GROUP: 'IZG User',
-    GA_ID: 'G-SE3E339T7E',
-    OKTA_ISSUER: process.env.OKTA_ISSUER,
+    OPERATIONS_GROUP: `${process.env.OPERATIONS_GROUP}`,
+    USER_GROUP: `${process.env.USER_GROUP}`,
   },
   async redirects() {
     return [
