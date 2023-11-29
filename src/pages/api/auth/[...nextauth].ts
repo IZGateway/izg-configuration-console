@@ -19,7 +19,8 @@ export const authOptions = {
     }),
   ],
   session: {
-    maxAge: 30 * 60, // 30 mins
+    //maxAge: 30 * 60, // 30 mins
+    maxAge: 20 * 1, // 20 seconds
     jwt: true,
   },
   callbacks: {
