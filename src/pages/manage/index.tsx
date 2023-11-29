@@ -59,9 +59,31 @@ const Manage = (
 
 export default Manage
 
+type DestDetails = [
+  {
+    destId: string
+    destType: string
+    destTypeId: number
+    destUri: string
+    destVersion: string
+    status: string
+    statusAt: string
+    statusBy: string
+    detail?: string
+    diagnostics?: string
+    retryStrategy?: string
+    jurisdictionName: string
+    jurisdictionDesc: string
+    hasChangeRequest?: boolean
+  }
+]
+
+type DestEndpointStatusType = {
+  [key: string]: DestDetails
+}
 export const getServerSideProps = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions)
-  const endpointStatuses = await fetchEndpointStatus(
+  const endpointStatuses: DestEndpointStatusType = await fetchEndpointStatus(
     session.user.isAdmin,
     session.user.jurisdictions
   )
