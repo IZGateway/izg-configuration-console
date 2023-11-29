@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import useSWR from 'swr'
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import {
@@ -81,8 +82,13 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 
-const ConnectionsTable = (props) => {
+const ConnectionsTable = () => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const { data, error, isLoading } = useSWR('/api/destinations')
+
+  if (error) return <div>failed to load</div>
+  if (isLoading) return <div>loading...</div>
+
   const columns: GridColDef[] = [
     {
       field: 'destType',
@@ -204,11 +210,9 @@ const ConnectionsTable = (props) => {
               tabIndex={params.tabIndex}
               destId={params.id}
               destTypeId={params.row.destTypeId}
-              hasChangeRequest={params.row.hasChangeRequest}
             />
             <Link
               tabIndex={params.tabIndex}
-              prefetch={false}
               href={{
                 pathname: `/test/${params.row.destTypeId}/${params.id}`,
               }}
@@ -226,7 +230,6 @@ const ConnectionsTable = (props) => {
             </Link>
             <Link
               tabIndex={params.tabIndex}
-              prefetch={false}
               href={{
                 pathname: `/history/${params.row.destTypeId}/${params.id}`,
                 query: {
@@ -278,7 +281,7 @@ const ConnectionsTable = (props) => {
       <DataGrid
         experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
-        rows={Object.entries(props.data).map(([, x]: [any, any]) => {
+        rows={Object.entries(data).map(([, x]: [any, any]) => {
           return {
             ...x[0],
           }

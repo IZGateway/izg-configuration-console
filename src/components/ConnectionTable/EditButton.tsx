@@ -1,8 +1,11 @@
 import { Tooltip, IconButton } from '@mui/material'
 import Link from 'next/link'
 import EditIcon from '@mui/icons-material/Edit'
-import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
+import useSWR from 'swr'
+import { useEffect, useState } from 'react'
+import _ from 'lodash'
 import { useSession } from 'next-auth/react'
+import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 const actionButtonStyle = {
   borderRadius: 90,
   background: '#FFFFF',
@@ -12,29 +15,35 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 
-const EditButton = (props: {
+const EditButton = (params: {
   destTypeId: any
   destId: any
-  hasChangeRequest: any
   tabIndex: any
 }) => {
   const { data: session } = useSession()
-  const { destTypeId, hasChangeRequest } = props
-  const canEdit = !hasChangeRequest
+  const [canEdit, setCanEdit] = useState(false)
+  const { data, error, isLoading } = useSWR(
+    `/api/changerequest/${params.destTypeId}/${params.destId}`
+  )
 
+  useEffect(() => {
+    setCanEdit(_.isEmpty(data))
+  }, [data])
+
+  if (error) return <div>failed to load</div>
+  if (isLoading) return <div>loading...</div>
   return (
     <>
       {canEdit ? (
         <Link
-          prefetch={false}
-          tabIndex={props.tabIndex}
+          tabIndex={params.tabIndex}
           href={{
-            pathname: `/edit/${destTypeId}/${props.destId}`,
+            pathname: `/edit/${params.destTypeId}/${params.destId}`,
           }}
         >
           <Tooltip arrow placement="bottom" title="Edit">
             <IconButton
-              id={props.destTypeId + '_' + props.destId}
+              id={params.destTypeId + '_' + params.destId}
               aria-label="edit"
               color="primary"
               disabled={!canEdit}
@@ -44,11 +53,10 @@ const EditButton = (props: {
             </IconButton>
           </Tooltip>
         </Link>
-      ) : session?.user?.isAdmin ? (
+      ) : session?.user.isAdmin ? (
         <Link
-          prefetch={false}
           href={{
-            pathname: `/changerequest/${props.destTypeId}/${props.destId}`,
+            pathname: `/changerequest/${params.destTypeId}/${params.destId}`,
           }}
         >
           <Tooltip arrow placement="bottom" title="Change Request">
@@ -64,7 +72,7 @@ const EditButton = (props: {
         </Link>
       ) : (
         <IconButton
-          id={props.destTypeId + '_' + props.destId}
+          id={params.destTypeId + '_' + params.destId}
           aria-label="edit"
           color="primary"
           disabled={!canEdit}
