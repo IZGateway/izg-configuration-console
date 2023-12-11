@@ -38,6 +38,52 @@ import withMiddleware from '../../api-middleware-helper'
  *       200:
  *         description: OK.
  */
+const getFetchedDestination = async (
+  destId: string,
+  destTypeId: number,
+  configuration?: string,
+  values?: any
+) => {
+  let fetchedDestination
+  let destTypeValue
+  let jurisdictionDescriptionValue
+  if (values) {
+    fetchedDestination = {
+      dest_id: destId,
+      dest_uri: values.dest_uri,
+      username: values.username,
+      facility_id: values.facility_id,
+      MSH6: values.MSH6,
+      MSH3: values.MSH3,
+      MSH4: values.MSH4,
+      MSH5: values.MSH5,
+      MSH22: values.MSH22,
+      RXA11: values.RXA11,
+    } ////add password
+    destTypeValue = values.type
+    jurisdictionDescriptionValue = values.jurisdiction
+  } else {
+    if (configuration === 'test') {
+      fetchedDestination = await destination(destId?.toString(), destTypeId)
+      destTypeValue = fetchedDestination.destination_type.type
+      jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
+    } else if (configuration === 'deploy') {
+      fetchedDestination = await destinationChangeRequest(
+        destId?.toString(),
+        destTypeId
+      )
+      destTypeValue = fetchedDestination.destinations.destination_type.type
+      jurisdictionDescriptionValue =
+        fetchedDestination.destinations.jurisdiction.description
+    }
+  }
+  return {
+    fetchedDestination,
+    destTypeValue,
+    jurisdictionDescriptionValue,
+  }
+}
+
 const handler = async (
   req: NextApiRequest,
   res: NextApiResponse<APIResponse>
@@ -45,9 +91,8 @@ const handler = async (
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
-  const configuration = req.query.configuration
-
-  if (req.method === 'GET') {
+  const { values, configuration } = req.body
+  if (req.method === 'POST') {
     const DEFAULT_PORT = 443
     const testSuite: string[] = [
       'dns',
@@ -62,19 +107,17 @@ const handler = async (
     let fetchedDestination
     let destTypeValue
     let jurisdictionDescriptionValue
-    if (configuration === 'test') {
-      fetchedDestination = await destination(destId?.toString(), destTypeId)
-      destTypeValue = fetchedDestination.destination_type.type
-      jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
-    } else if (configuration === 'deploy') {
-      fetchedDestination = await destinationChangeRequest(
+    try {
+      const result = await getFetchedDestination(
         destId?.toString(),
-        destTypeId
+        destTypeId,
+        configuration as string,
+        values
       )
-      destTypeValue = fetchedDestination.destinations.destination_type.type
-      jurisdictionDescriptionValue =
-        fetchedDestination.destinations.jurisdiction.description
-    } else {
+      fetchedDestination = result.fetchedDestination
+      destTypeValue = result.destTypeValue
+      jurisdictionDescriptionValue = result.jurisdictionDescriptionValue
+    } catch (error) {
       res.status(constants.HTTP_STATUS_NOT_FOUND).json({
         destId: destId,
         destUrl: 'unknown',
@@ -86,7 +129,7 @@ const handler = async (
             detail: 'configuration passed was incorrect.',
             status: null,
             order: -1,
-            message: `configuration passed was incorrect.`,
+            message: error,
           },
         ],
       })

@@ -3,17 +3,42 @@ import TestSkeleton from '../../components/Skeleton'
 import Close from '../Close'
 import { Box, Container } from '@mui/material'
 import TestsList from './TestsList'
-import useSWR from 'swr'
 
 const TestConnection = (props) => {
-  const { data, error, isLoading } = useSWR(
-    props.destId
-      ? `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=test`
-      : null
-  )
-  if (error) {
-    throw new Error(error)
-  }
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [testResults, setTestResults] = React.useState(null)
+  let data
+  React.useEffect(() => {
+    const fetchTestResults = async () => {
+      try {
+        const res = await fetch(
+          `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              configuration: 'test',
+            }),
+          }
+        )
+
+        if (!res.ok) {
+          throw new Error('Network response was not ok')
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        data = await res.json()
+        setIsLoading(false)
+        setTestResults(data.testResults)
+      } catch (error) {
+        throw new Error(error)
+      }
+    }
+
+    fetchTestResults()
+  }, []) //Run only once
 
   return (
     <Box sx={{ position: 'relative' }}>
@@ -24,7 +49,7 @@ const TestConnection = (props) => {
             <TestSkeleton />
           ) : (
             <TestsList
-              testResults={data?.testResults}
+              testResults={testResults}
               destination={data?.jurisdictionDescription}
               destinationType={data?.destType}
               jurisdictionUrl={data?.destUrl}

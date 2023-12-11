@@ -6,6 +6,7 @@ import {
   ButtonGroup,
   Button,
   Tooltip,
+  IconButton,
 } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
@@ -21,6 +22,9 @@ import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
 import * as _ from 'lodash'
+import TestDrawer from './testDrawer'
+
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -52,7 +56,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [formValues, setFormValues] = useState(null)
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
-
+  const [open, setOpen] = React.useState(false)
   const [
     hasCreateChangeRequestTicketError,
     setHasCreateChangeRequestTicketError,
@@ -120,6 +124,10 @@ const EditConnection = (props: editConnectionProps) => {
 
   if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
+
+  const toggleDrawer = () => {
+    setOpen(!open)
+  }
 
   const handleIAgreeButton = () => {
     setAgreed(true)
@@ -296,6 +304,35 @@ const EditConnection = (props: editConnectionProps) => {
     </Box>
   )
 
+  const testButton = () => (
+    <Box sx={{ float: 'right', marginBottom: -8 }}>
+      <Button
+        // href={{
+        //   pathname: `/test/${props.destTypeId}/${props.destId}`,
+        // }}
+        onClick={toggleDrawer}
+      >
+        <Tooltip arrow placement="bottom" title="Test">
+          <IconButton
+            // id={'test_' + params.row.destTypeId + '_' + params.id}
+            aria-label="test"
+            color="primary"
+            sx={{
+              borderRadius: 90,
+              background: '#FFFFF',
+              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+              width: 35,
+              height: 35,
+              marginRight: 2,
+            }}
+          >
+            <MonitorHeartOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Button>
+    </Box>
+  )
+
   return (
     <div>
       <Close />
@@ -340,6 +377,7 @@ const EditConnection = (props: editConnectionProps) => {
               formErrors={formErrors}
             />
           )}
+
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
           {activeStep === 4 && (
             <Schedule
@@ -358,6 +396,22 @@ const EditConnection = (props: editConnectionProps) => {
           </Container>
         </div>
       </Container>
+      {activeStep === 2 && !open ? (
+        testButton()
+      ) : (
+        <TestDrawer
+          open={open}
+          display={toggleDrawer}
+          destTypeId={destData.destination_type.type_id}
+          destId={destData.dest_id}
+          values={{
+            ...formValues,
+            dest_uri: destData.dest_uri,
+            type: destData.destination_type.type,
+            jurisdiction: destData.jurisdiction.description,
+          }}
+        />
+      )}
     </div>
   )
 }

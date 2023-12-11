@@ -8,31 +8,39 @@ import {
   Button,
 } from '@mui/material'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
-import useSWR, { mutate } from 'swr'
-import TestSkeleton from '../Skeleton'
 import TestsResults from '../TestConnection/TestsResults'
 import { useState } from 'react'
 
 const HealthCheck = (props) => {
   const [isRun, setIsRun] = useState(false)
-  const { data, error, isLoading } = useSWR(
-    props.destId
-      ? `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
-      : null
-  )
+  const [testResults, setTestResults] = React.useState(null)
 
-  const handleButtonClick = () => {
-    //Revalidate on button click
-    mutate(
-      `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
-    )
-    setIsRun(true)
-    if (error) {
+  const handleButtonClick = async () => {
+    try {
+      const res = await fetch(
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            configuration: 'deploy',
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        throw new Error('Network response was not ok')
+      }
+
+      const data = await res.json()
+      setIsRun(false)
+      setTestResults(data.testResults)
+    } catch (error) {
       throw new Error(error)
     }
-    if (isLoading) {
-      return <TestSkeleton />
-    }
+    setIsRun(true)
   }
 
   return (
@@ -47,7 +55,7 @@ const HealthCheck = (props) => {
         </Typography>
 
         {isRun ? (
-          <TestsResults testResults={data?.testResults} />
+          <TestsResults testResults={testResults} />
         ) : (
           <Button
             id="run"
