@@ -108,7 +108,7 @@ const TestHistory = (props: TestHistoryProps) => {
               alignItems: 'center',
             },
           }}
-          title="Test History"
+          title="IZ Gateway Hub Status History"
         ></CardHeader>
         <Divider />
         <CardContent>

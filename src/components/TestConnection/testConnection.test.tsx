@@ -17,6 +17,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -37,6 +38,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -57,6 +59,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -77,6 +80,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()

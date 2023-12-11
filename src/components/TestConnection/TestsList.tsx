@@ -67,7 +67,7 @@ const TestsList = ({
                 primary={item.name}
                 secondary={
                   <Typography variant="body2" color="default">
-                    Cannot test further on failure
+                    Test skipped due to connectivity test failures
                   </Typography>
                 }
               />

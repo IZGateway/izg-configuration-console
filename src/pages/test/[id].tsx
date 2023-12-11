@@ -13,6 +13,7 @@ import { ConnectionTestResult } from '../../lib/connectiontests/types/Connection
 import desttypehelper from '../../lib/desttypehelper'
 import destination from '../../lib/queries/fetch/destination'
 import destinationType from '../../lib/queries/fetch/destinationtype'
+import { TestStatus } from '../../lib/connectiontests/TestStatus'
 
 enum TestSuite {
   'dns',
@@ -23,6 +24,9 @@ enum TestSuite {
   'connectivity',
   'qbp',
 }
+
+const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
+const numberOfTests = testSuiteKeys.length
 
 export async function getServerSideProps(context) {
   const { req, res } = context
@@ -118,17 +122,31 @@ export async function getServerSideProps(context) {
       )
 
       let testCounter = 0
-      for (const test in TestSuite) {
-        connectionTestRequest.order = ++testCounter
-        const T = ConnectionTestFactory.getConnectionTest(
-          TestSuite[test],
-          connectionTestRequest
-        )
-        const result = await T.run()
+      let skipTests = false
+      for (const test in testSuiteKeys) {
+        ++testCounter
+        let result: ConnectionTestResult[] = [
+          {
+            name: TestSuite[test],
+            status: TestStatus.SKIPPED,
+            message: '',
+            detail: '',
+            order: testCounter,
+          },
+        ]
+        connectionTestRequest.order = testCounter
+        if (!skipTests) {
+          const T = ConnectionTestFactory.getConnectionTest(
+            TestSuite[test],
+            connectionTestRequest
+          )
+          result = await T.run()
+        }
+
         testResults.push(...result)
         if (TestSuite.dns || TestSuite.tcp) {
-          if (result[0]?.status === 'FAIL') {
-            break
+          if (result[0]?.status === TestStatus.FAIL) {
+            skipTests = true
           }
           connectionTestRequest.ip = result[0]?.detail
         }
@@ -145,7 +163,7 @@ export async function getServerSideProps(context) {
     logger.debug('Connection Test Results', { req, res, connectionTestResult })
   }
   return {
-    props: { connectionTestResult },
+    props: { connectionTestResult, numberOfTests },
   }
 }
 
@@ -157,7 +175,7 @@ const Test = (
       <ErrorBoundary>
         <TestConnection
           connectionTestResult={props.connectionTestResult}
-          numberOfTests={Object.keys(TestSuite).length}
+          numberOfTests={props.numberOfTests}
         />
       </ErrorBoundary>
     </Container>

@@ -130,16 +130,6 @@
         }
       }
     },
-    "/api/destinations": {
-      "get": {
-        "summary": "Get all destinations information.",
-        "responses": {
-          "200": {
-            "description": "OK."
-          }
-        }
-      }
-    },
     "/api/healthcheck": {
       "get": {
         "summary": "returns HTTP OK (200).",
@@ -195,36 +185,6 @@
     "/api/edit/queryTest/{id}": {
       "get": {
         "summary": "Get query test result for destination by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          },
-          {
-            "name": "destType",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK."
-          }
-        }
-      }
-    },
-    "/api/tests/connectiontest/{id}": {
-      "get": {
-        "summary": "Get connection test results for destination by ID.",
         "parameters": [
           {
             "name": "id",
