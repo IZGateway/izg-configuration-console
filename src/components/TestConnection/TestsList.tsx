@@ -29,6 +29,7 @@ interface testListProps {
   destination: string
   destinationType: string
   jurisdictionUrl: string
+  numberOfTests: number
 }
 
 const TestsList = ({
@@ -36,12 +37,12 @@ const TestsList = ({
   destination,
   destinationType,
   jurisdictionUrl,
+  numberOfTests,
 }: testListProps) => {
   const handleReload = () => window.location.reload()
   const componentRef = useRef(null)
   const passeddata = testResults.filter((item) => item.status === 'PASS').length
-  const totaldata = testResults.length
-  const progressPct = Number(((passeddata / totaldata) * 100).toFixed())
+  const progressPct = Number(((passeddata / numberOfTests) * 100).toFixed())
 
   const list = () => (
     <List>
@@ -66,7 +67,7 @@ const TestsList = ({
                 primary={item.name}
                 secondary={
                   <Typography variant="body2" color="default">
-                    Cannot test further on failure
+                    Test skipped due to connectivity test failures
                   </Typography>
                 }
               />
@@ -200,7 +201,7 @@ const TestsList = ({
                 }}
               />
               <Typography variant="body1">
-                {passeddata} out of {totaldata} Test Passed
+                {passeddata} out of {numberOfTests} Test Passed
               </Typography>
               {list()}
             </CardContent>

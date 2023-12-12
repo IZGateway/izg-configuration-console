@@ -17,6 +17,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -37,6 +38,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -57,6 +59,7 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
@@ -77,12 +80,13 @@ describe('Test History', () => {
         destination={'dev'}
         destinationType={'test'}
         jurisdictionUrl={'www.random.com'}
+        numberOfTests={0}
       />
     )
     expect(screen.getByText('Unit tests')).toBeInTheDocument()
     expect(screen.getByText('N/A')).toBeInTheDocument()
     expect(
-      screen.getByText('Cannot test further on failure')
+      screen.getByText('Test skipped due to connectivity test failures')
     ).toBeInTheDocument()
     expect(screen.queryByText('error message')).not.toBeInTheDocument()
   })
