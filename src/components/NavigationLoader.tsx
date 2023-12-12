@@ -6,7 +6,7 @@ import Image from 'next/image'
 
 const LOADER_THRESHOLD = 250
 
-export default function NavigationLoader(props) {
+export default function NavigationLoader() {
   const [isLoading, setLoading] = React.useState(false)
   const router = useRouter()
 

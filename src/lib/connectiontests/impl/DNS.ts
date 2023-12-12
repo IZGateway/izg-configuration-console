@@ -20,7 +20,7 @@ export default class DNS extends ConnectionTest {
     return new Promise((resolve) => {
       dns.resolve4(
         this.connectionTestRequest.hostname,
-        (error: Error, address: string[]) => {
+        (error: NodeJS.ErrnoException, address: string[]) => {
           resolve([
             {
               ...dnsConnectionTestResult,
