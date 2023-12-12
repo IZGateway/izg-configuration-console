@@ -62,25 +62,23 @@ const TestDrawer = ({
 
   return (
     <Drawer anchor={'right'} open={open} onClose={display}>
-      <Container>
-        <Box sx={{ marginTop: 8 }}>
+      <Container maxWidth="xs">
+        <Box sx={{ marginTop: 2 }}>
           <Typography
             gutterBottom
-            align="center"
-            variant="h1"
+            variant="h5"
             fontWeight={700}
-            fontSize="32px"
             id="test-connection"
           >
             Run health check with the new edits
           </Typography>
           <Divider />
-          <Typography align="center" variant="body1">
+          <Typography sx={{ marginTop: 2, marginBottom: 2, }} variant="body1">
             Some text needed for this section
           </Typography>
         </Box>
         <Card
-          sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
+          sx={{ borderRadius: '0px 0px 16px 16px' }}
           id="test-connection-info"
         >
           <CardContent>
