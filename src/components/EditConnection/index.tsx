@@ -6,7 +6,7 @@ import {
   ButtonGroup,
   Button,
   Tooltip,
-  IconButton,
+  Fab,
 } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
@@ -305,31 +305,25 @@ const EditConnection = (props: editConnectionProps) => {
   )
 
   const testButton = () => (
-    <Box sx={{ float: 'right', marginBottom: -8 }}>
-      <Button
-        // href={{
-        //   pathname: `/test/${props.destTypeId}/${props.destId}`,
-        // }}
+    <Box>
+      <Fab 
+        sx={{  
+          position: 'absolute',
+          bottom: 32,
+          right: 16, 
+          backgroundColor: "#FFF",
+          border: '1px solid #FFF',
+          '&:hover': {
+            border: '1.5px solid #015a2f',
+            transition: '200ms',
+          },
+        }} 
         onClick={toggleDrawer}
-      >
+        >
         <Tooltip arrow placement="bottom" title="Test">
-          <IconButton
-            // id={'test_' + params.row.destTypeId + '_' + params.id}
-            aria-label="test"
-            color="primary"
-            sx={{
-              borderRadius: 90,
-              background: '#FFFFF',
-              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-              width: 35,
-              height: 35,
-              marginRight: 2,
-            }}
-          >
-            <MonitorHeartOutlinedIcon fontSize="small" />
-          </IconButton>
+            <MonitorHeartOutlinedIcon color="primary" aria-label="test" fontSize="small" />
         </Tooltip>
-      </Button>
+      </Fab>
     </Box>
   )
 
