@@ -92,7 +92,6 @@ const ConnectionsTable = (props) => {
     },
     {
       field: 'jurisdictionName',
-      field: 'jurisdictionName',
       headerName: 'JURISDICTION',
       flex: 0.5,
       minWidth: 25,
