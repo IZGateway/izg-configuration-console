@@ -2,13 +2,14 @@ import * as React from 'react'
 import { Button } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import CombinedContext from '../../contexts/app'
+import { useRouter } from 'next/router'
 
 const Close = () => {
   const { clearValue } = React.useContext(CombinedContext)
-  const handleClose = (event) => {
-    event.preventDefault()
-    history.back()
+  const router = useRouter()
+  const handleClose = () => {
     clearValue()
+    router.push('/manage')
   }
 
   return (

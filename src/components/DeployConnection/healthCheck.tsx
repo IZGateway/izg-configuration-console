@@ -8,30 +8,31 @@ import {
   Button,
 } from '@mui/material'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
-import useSWR, { mutate } from 'swr'
-import TestSkeleton from '../Skeleton'
 import TestsResults from '../TestConnection/TestsResults'
 import { useState } from 'react'
+import TestSkeleton from '../Skeleton'
 
 const HealthCheck = (props) => {
-  const [isRun, setIsRun] = useState(false)
-  const { data, error, isLoading } = useSWR(
-    props.destId
-      ? `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
-      : null
-  )
+  const [testResults, setTestResults] = useState(null)
+  const [isLoadingTest, setIsLoadingTest] = useState(false)
 
-  const handleButtonClick = () => {
-    //Revalidate on button click
-    mutate(
-      `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
-    )
-    setIsRun(true)
-    if (error) {
+  const handleButtonClick = async () => {
+    setIsLoadingTest(true)
+    try {
+      const response = await fetch(
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
+      )
+      if (!response.ok) {
+        setIsLoadingTest(false)
+        const message = `An error has occured: ${response.status}`
+        throw new Error(message)
+      }
+      const results = await response.json()
+      setTestResults(results.testResults)
+      setIsLoadingTest(false)
+    } catch (error) {
+      setIsLoadingTest(false)
       throw new Error(error)
-    }
-    if (isLoading) {
-      return <TestSkeleton />
     }
   }
 
@@ -46,8 +47,9 @@ const HealthCheck = (props) => {
           approval of a change request. This test is using the new credentials
         </Typography>
 
-        {isRun ? (
-          <TestsResults testResults={data?.testResults} />
+        {isLoadingTest && <TestSkeleton />}
+        {testResults ? (
+          <TestsResults testResults={testResults} />
         ) : (
           <Button
             id="run"
