@@ -19,7 +19,8 @@
     "**/*.ts",
     "**/*.tsx",
     "./jest-setup.ts",
-    "logger.ts"
+    "logger.ts",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

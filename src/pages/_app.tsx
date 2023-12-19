@@ -16,6 +16,7 @@ import { SWRConfig } from 'swr'
 import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
+import NavigationLoader from '../components/NavigationLoader'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')
@@ -46,6 +47,7 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
             <AppProvider>
               <SWRConfig value={{ fetcher: fetch }}>
                 <GoogleAnalytics />
+                <NavigationLoader />
                 <Component {...pageProps} />
               </SWRConfig>
             </AppProvider>

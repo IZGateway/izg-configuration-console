@@ -10,37 +10,30 @@ import {
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import TestsResults from '../TestConnection/TestsResults'
 import { useState } from 'react'
+import TestSkeleton from '../Skeleton'
 
 const HealthCheck = (props) => {
-  const [isRun, setIsRun] = useState(false)
-  const [testResults, setTestResults] = React.useState(null)
+  const [testResults, setTestResults] = useState(null)
+  const [isLoadingTest, setIsLoadingTest] = useState(false)
 
   const handleButtonClick = async () => {
+    setIsLoadingTest(true)
     try {
-      const res = await fetch(
-        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            configuration: 'deploy',
-          }),
-        }
+      const response = await fetch(
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
       )
-
-      if (!res.ok) {
-        throw new Error('Network response was not ok')
+      if (!response.ok) {
+        setIsLoadingTest(false)
+        const message = `An error has occured: ${response.status}`
+        throw new Error(message)
       }
-
-      const data = await res.json()
-      setIsRun(false)
-      setTestResults(data.testResults)
+      const results = await response.json()
+      setTestResults(results.testResults)
+      setIsLoadingTest(false)
     } catch (error) {
+      setIsLoadingTest(false)
       throw new Error(error)
     }
-    setIsRun(true)
   }
 
   return (
@@ -54,7 +47,8 @@ const HealthCheck = (props) => {
           approval of a change request. This test is using the new credentials
         </Typography>
 
-        {isRun ? (
+        {isLoadingTest && <TestSkeleton />}
+        {testResults ? (
           <TestsResults testResults={testResults} />
         ) : (
           <Button

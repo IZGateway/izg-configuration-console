@@ -37,7 +37,7 @@ export default class TCP extends ConnectionTest {
         resolve([
           {
             ...dnsConnectionTestResult,
-            detail: error,
+            detail: error?.code,
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
                 ? TestResponseMessages.TCP_TIMEOUT(

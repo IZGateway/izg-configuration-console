@@ -113,14 +113,15 @@ const EditConnection = (props: editConnectionProps) => {
       setFormErrors(null)
       setFormValuesDelta(null)
       const changedValues = getDelta(defaultFormValues, formValues)
-      setFormValuesDelta(changedValues)
       const validationErrors = changeRequestValidation(
         changedValues,
         changedValues.facility_id || defaultFormValues.facility_id
       ).errors
+
+      setFormValuesDelta(changedValues)
       setFormErrors(validationErrors)
     }
-  }, [activeStep, defaultFormValues, formValues, formErrors])
+  }, [activeStep, defaultFormValues, formValues])
 
   if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
