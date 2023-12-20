@@ -57,6 +57,9 @@ const EditConnection = (props: editConnectionProps) => {
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
   const [open, setOpen] = React.useState(false)
+  const [testResults, setTestResults] = useState(null)
+  const [isLoadingTest, setIsLoadingTest] = useState(false)
+
   const [
     hasCreateChangeRequestTicketError,
     setHasCreateChangeRequestTicketError,
@@ -126,8 +129,35 @@ const EditConnection = (props: editConnectionProps) => {
   if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
 
-  const toggleDrawer = () => {
+  const toggleTestDrawer = async () => {
     setOpen(!open)
+    setIsLoadingTest(true)
+    try {
+      const response = await fetch(
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: { ...destData, ...formValues },
+          }),
+        }
+      )
+      if (!response.ok) {
+        setIsLoadingTest(false)
+        const message = `An error has occured: ${response.status}`
+        throw new Error(message)
+      }
+      const results = await response.json()
+      console.log(results)
+      setTestResults(results.testResults)
+      setIsLoadingTest(false)
+    } catch (error) {
+      setIsLoadingTest(false)
+      throw new Error(error)
+    }
   }
 
   const handleIAgreeButton = () => {
@@ -319,7 +349,8 @@ const EditConnection = (props: editConnectionProps) => {
             transition: '200ms',
           },
         }}
-        onClick={toggleDrawer}
+        onClick={toggleTestDrawer}
+        disabled={!isFormChanged}
       >
         <Tooltip arrow placement="bottom" title="Test">
           <MonitorHeartOutlinedIcon
@@ -400,8 +431,11 @@ const EditConnection = (props: editConnectionProps) => {
       ) : (
         <TestDrawer
           open={open}
-          display={toggleDrawer}
-          values={{ ...destData, ...formValues }} //This order is necessary to have latest changed form values
+          onClose={() => {
+            setOpen(!open)
+          }}
+          isLoading={isLoadingTest}
+          testResults={testResults}
         />
       )}
     </div>
