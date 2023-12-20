@@ -13,27 +13,19 @@ import TestsResults from '../TestConnection/TestsResults'
 import TestSkeleton from '../Skeleton'
 
 interface TestDrawerProps {
-  destId: string
-  destTypeId: number
   open: boolean
   display: (isOpen: boolean) => void
-  values?: object
+  values?: any
 }
 
-const TestDrawer = ({
-  destId,
-  destTypeId,
-  open,
-  display,
-  values,
-}: TestDrawerProps) => {
+const TestDrawer = ({ open, display, values }: TestDrawerProps) => {
   const [testResults, setTestResults] = React.useState(null)
   const [isLoading, setIsLoading] = React.useState(true)
   React.useEffect(() => {
     const fetchTestResults = async () => {
       try {
         const res = await fetch(
-          `/api/tests/connectiontest/${destTypeId}/${destId}`,
+          `/api/tests/connectiontest/${values.destination_type.type_id}/${values.dest_id}`,
           {
             method: 'POST',
             headers: {
@@ -73,7 +65,7 @@ const TestDrawer = ({
             Run health check with the new edits
           </Typography>
           <Divider />
-          <Typography sx={{ marginTop: 2, marginBottom: 2, }} variant="body1">
+          <Typography sx={{ marginTop: 2, marginBottom: 2 }} variant="body1">
             Some text needed for this section
           </Typography>
         </Box>

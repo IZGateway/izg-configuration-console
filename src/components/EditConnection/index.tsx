@@ -307,22 +307,26 @@ const EditConnection = (props: editConnectionProps) => {
 
   const testButton = () => (
     <Box>
-      <Fab 
-        sx={{  
+      <Fab
+        sx={{
           position: 'absolute',
           bottom: 32,
-          right: 16, 
-          backgroundColor: "#FFF",
+          right: 16,
+          backgroundColor: '#FFF',
           border: '1px solid #FFF',
           '&:hover': {
             border: '1.5px solid #015a2f',
             transition: '200ms',
           },
-        }} 
+        }}
         onClick={toggleDrawer}
-        >
+      >
         <Tooltip arrow placement="bottom" title="Test">
-            <MonitorHeartOutlinedIcon color="primary" aria-label="test" fontSize="small" />
+          <MonitorHeartOutlinedIcon
+            color="primary"
+            aria-label="test"
+            fontSize="small"
+          />
         </Tooltip>
       </Fab>
     </Box>
@@ -397,14 +401,7 @@ const EditConnection = (props: editConnectionProps) => {
         <TestDrawer
           open={open}
           display={toggleDrawer}
-          destTypeId={destData.destination_type.type_id}
-          destId={destData.dest_id}
-          values={{
-            ...formValues,
-            dest_uri: destData.dest_uri,
-            type: destData.destination_type.type,
-            jurisdiction: destData.jurisdiction.description,
-          }}
+          values={{ ...destData, ...formValues }} //This order is necessary to have latest changed form values
         />
       )}
     </div>
