@@ -90,7 +90,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
       passphrase: IZG_ENDPOINT_PASSCODE,
     }
 
-    logger.debug(
+    logger.info(
       `STARTING TESTS ON DEST ID: ${destination.dest_id} USING URL: ${connectionTestRequest.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
     )
 
@@ -133,7 +133,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
       destination?.jurisdiction.description || 'unknown'
     connectionTestResult.testResults = testResults
   }
-  logger.debug('Connection Test Results', {
+  logger.info('Connection Test Results', {
     connectionTestResult,
   })
   return {
