@@ -56,7 +56,8 @@ const TestDrawer = ({
         </Card>
         <Box pt={4} textAlign="center">
           <Button
-            id="closeDetail"
+            id="close"
+            data-testid="close"
             color="primary"
             variant="outlined"
             fullWidth
