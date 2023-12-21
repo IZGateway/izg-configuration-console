@@ -39,7 +39,9 @@ const TestDrawer = ({
           </Typography>
           <Divider />
           <Typography sx={{ marginTop: 2, marginBottom: 2 }} variant="body1">
-            Some text needed for this section
+            Health check results are displayed below. For any tests that fail,
+            please make required changes to the connection and then retry health
+            check.
           </Typography>
         </Box>
         <Card

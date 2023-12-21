@@ -20,7 +20,9 @@ describe('TestDrawer component', () => {
       screen.getByText('Run health check with the new edits')
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Some text needed for this section')
+      screen.getByText(
+        'Health check results are displayed below. For any tests that fail, please make required changes to the connection and then retry health check.'
+      )
     ).toBeInTheDocument()
     expect(screen.getByTestId('skeleton')).toBeInTheDocument()
   })
