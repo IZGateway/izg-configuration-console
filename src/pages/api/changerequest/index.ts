@@ -10,6 +10,7 @@ import {
   deleteDestinationChangeRequest,
 } from '../../../lib/queries/mutate/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
+import logger from '../../../../logger'
 /**
  * @swagger
  * /api/changerequest:
@@ -79,6 +80,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           )
         } else {
           await createChangeRequest(requestBody)
+          logger.info(
+            'change request created successfully for ' + requestBody.dest_uri
+          )
           res.status(200)
           res.json('The change request was created.')
         }
