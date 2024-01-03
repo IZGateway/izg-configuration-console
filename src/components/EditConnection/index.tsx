@@ -6,6 +6,7 @@ import {
   ButtonGroup,
   Button,
   Tooltip,
+  Fab,
 } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
@@ -21,6 +22,9 @@ import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
 import * as _ from 'lodash'
+import TestDrawer from './testDrawer'
+
+import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -52,6 +56,9 @@ const EditConnection = (props: editConnectionProps) => {
   const [formValues, setFormValues] = useState(null)
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
+  const [open, setOpen] = React.useState(false)
+  const [testResults, setTestResults] = useState(null)
+  const [isLoadingTest, setIsLoadingTest] = useState(false)
 
   const [
     hasCreateChangeRequestTicketError,
@@ -121,6 +128,37 @@ const EditConnection = (props: editConnectionProps) => {
 
   if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
+
+  const toggleTestDrawer = async () => {
+    setOpen(!open)
+    setIsLoadingTest(true)
+    try {
+      const response = await fetch(
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            values: { ...destData, ...formValues },
+          }),
+        }
+      )
+      if (!response.ok) {
+        setIsLoadingTest(false)
+        const message = `An error has occured: ${response.status}`
+        throw new Error(message)
+      }
+      const results = await response.json()
+      console.log(results)
+      setTestResults(results.testResults)
+      setIsLoadingTest(false)
+    } catch (error) {
+      setIsLoadingTest(false)
+      throw new Error(error)
+    }
+  }
 
   const handleIAgreeButton = () => {
     setAgreed(true)
@@ -297,6 +335,34 @@ const EditConnection = (props: editConnectionProps) => {
     </Box>
   )
 
+  const testButton = () => (
+    <Box>
+      <Fab
+        sx={{
+          position: 'absolute',
+          bottom: 32,
+          right: 16,
+          backgroundColor: '#FFF',
+          border: '1px solid #FFF',
+          '&:hover': {
+            border: '1.5px solid #015a2f',
+            transition: '200ms',
+          },
+        }}
+        onClick={toggleTestDrawer}
+        disabled={!isFormChanged}
+      >
+        <Tooltip arrow placement="bottom" title="Test">
+          <MonitorHeartOutlinedIcon
+            color="primary"
+            aria-label="test"
+            fontSize="small"
+          />
+        </Tooltip>
+      </Fab>
+    </Box>
+  )
+
   return (
     <div>
       <Close />
@@ -341,6 +407,7 @@ const EditConnection = (props: editConnectionProps) => {
               formErrors={formErrors}
             />
           )}
+
           {activeStep === 3 && <Verify {...destData} value={formValues} />}
           {activeStep === 4 && (
             <Schedule
@@ -359,6 +426,18 @@ const EditConnection = (props: editConnectionProps) => {
           </Container>
         </div>
       </Container>
+      {activeStep === 2 && !open ? (
+        testButton()
+      ) : (
+        <TestDrawer
+          open={open}
+          onClose={() => {
+            setOpen(!open)
+          }}
+          isLoading={isLoadingTest}
+          testResults={testResults}
+        />
+      )}
     </div>
   )
 }

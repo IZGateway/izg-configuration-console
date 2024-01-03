@@ -6,14 +6,13 @@ import _ from 'lodash'
 import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
-import { Destination } from '../../../../lib/types/Destination'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 /**
  * @swagger
- * /api/tests/connectiontest/{destTypeId}/{destId}?configuration=test/deploy:
- *   get:
- *     summary: Get connection test results for destination by ID.
+ * /api/tests/connectiontest/{destTypeId}/{destId}:
+ *   post:
+ *     summary: Get connection test results by the destination values posted in request body
  *     parameters:
  *       - name: id
  *         in: path
@@ -27,16 +26,57 @@ import { authOptions } from '../../auth/[...nextauth]'
  *         schema:
  *           type: number
  *         description: The ID of destination type
- *       - name: configuration
- *         in: query
- *         required: true
- *         schema:
- *           type: string
- *         description: It is call made from to this api( options: test/deploy)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             values: object
+ *             configuration: string
  *     responses:
  *       200:
- *         description: OK.
+ *         description: successfully received test results for the destination values posted in body.
+ *         content:
+ *           application/json:
+ *       400:
+ *         description: Bad request.
  */
+
+const getFetchedDestination = async (
+  destId: string,
+  destTypeId: number,
+  configuration?: string,
+  values?: any
+) => {
+  let fetchedDestination
+  let destTypeValue
+  let jurisdictionDescriptionValue
+  let data
+  if (values) {
+    fetchedDestination = { ...values, configuration: 'edit' }
+    destTypeValue = values.type
+    jurisdictionDescriptionValue = values.jurisdiction
+  } else {
+    if (configuration === 'test') {
+      data = await destination(destId?.toString(), destTypeId)
+      fetchedDestination = { ...data, configuration: 'test' }
+      destTypeValue = fetchedDestination.destination_type.type
+      jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
+    } else if (configuration === 'deploy') {
+      data = await destinationChangeRequest(destId?.toString(), destTypeId)
+      fetchedDestination = { ...data, configuration: 'deploy' }
+      destTypeValue = fetchedDestination.destinations.destination_type.type
+      jurisdictionDescriptionValue =
+        fetchedDestination.destinations.jurisdiction.description
+    }
+  }
+  return {
+    fetchedDestination,
+    destTypeValue,
+    jurisdictionDescriptionValue,
+  }
+}
+
 const handler = async (
   req: NextApiRequest,
   res: NextApiResponse<APIResponse>
@@ -44,55 +84,23 @@ const handler = async (
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
-  const configuration = req.query.configuration
-
-  if (req.method === 'GET') {
-    let fetchedDestinationChangeRequest
+  const { configuration, values } = req.body
+  if (req.method === 'POST') {
+    let fetchedDestination
     let destTypeValue
     let jurisdictionDescriptionValue
-    let destinationToTest: Destination = {
-      dest_id: '',
-      dest_uri: '',
-      dest_version: '',
-      username: '',
-      MSH6: '',
-      MSH22: '',
-      MSH3: '',
-      MSH4: '',
-      MSH5: '',
-      RXA11: '',
-      facility_id: '',
-      pass_expiry: undefined,
-      destination_type: {
-        type: '',
-        type_id: 0,
-      },
-      jurisdiction: {
-        name: '',
-        description: '',
-      },
-    }
     const session = await getServerSession(req, res, authOptions)
-    if (configuration === 'test') {
-      destinationToTest = await destination(destId?.toString(), destTypeId)
-      destTypeValue = destinationToTest.destination_type.type
-      jurisdictionDescriptionValue = destinationToTest.jurisdiction.description
-    } else if (configuration === 'deploy') {
-      fetchedDestinationChangeRequest = await destinationChangeRequest(
+    try {
+      const result = await getFetchedDestination(
         destId?.toString(),
-        destTypeId
+        destTypeId,
+        configuration as string,
+        values
       )
-      destTypeValue =
-        fetchedDestinationChangeRequest.destinations.destination_type.type
-      jurisdictionDescriptionValue =
-        fetchedDestinationChangeRequest.destinations.jurisdiction.description
-      destinationToTest.dest_id = fetchedDestinationChangeRequest.dest_id
-      destinationToTest.dest_uri = fetchedDestinationChangeRequest.dest_uri
-      destinationToTest.destination_type =
-        fetchedDestinationChangeRequest.destinations.destination_type
-      destinationToTest.jurisdiction =
-        fetchedDestinationChangeRequest.destinations.jurisdiction
-    } else {
+      fetchedDestination = result.fetchedDestination
+      destTypeValue = result.destTypeValue
+      jurisdictionDescriptionValue = result.jurisdictionDescriptionValue
+    } catch (error) {
       res.status(constants.HTTP_STATUS_NOT_FOUND).json({
         destId: destId,
         destUrl: 'unknown',
@@ -104,18 +112,19 @@ const handler = async (
             detail: 'configuration passed was incorrect.',
             status: null,
             order: -1,
-            message: `configuration passed was incorrect.`,
+            message: error,
           },
         ],
       })
     }
+
     const { connectionTestResult } = await connectionTest(
-      destinationToTest,
+      fetchedDestination,
       session.user.email
     )
     res.status(200).json({
       destId: destId || 'unknown',
-      destUrl: destinationToTest.dest_uri || 'unknown',
+      destUrl: fetchedDestination.dest_uri || 'unknown',
       destType: destTypeValue || 'unknown',
       jurisdictionDescription: jurisdictionDescriptionValue || 'unknown',
       testResults: connectionTestResult.testResults,
