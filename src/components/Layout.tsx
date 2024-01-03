@@ -1,6 +1,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Navigation from './Navigation';
+
 const container = {
   display: 'flex',
   flexDirection: 'column',
@@ -24,11 +25,11 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const Layout = ({ children, }: DashboardLayoutProps) => {
+const Layout = ({ children }: DashboardLayoutProps) => {
   return (
     <Box sx={container}>
       <Box sx={content}>
-        <Navigation/>
+        <Navigation />
         <Box role="main" sx={pageContainer}>
           {children}
         </Box>
