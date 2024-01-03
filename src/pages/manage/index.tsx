@@ -15,7 +15,7 @@ import logger from '../../../logger'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
-
+import AppHeaderBar from '../../components/AppHeader'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -32,6 +32,7 @@ const Manage = (
 
   return (
     <Container title="Manage Connections">
+     <AppHeaderBar open/>
       <ErrorBoundary>
         <ConnectionsTable data={props.data} />
         <CustomSnackbar
