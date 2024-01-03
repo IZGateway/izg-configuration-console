@@ -7,19 +7,18 @@ import withMiddleware from '../api-middleware-helper'
  * /api/changerequest/{destTypeId}/{destId}:
  *   get:
  *     summary: Get destination change request for destination type and destination id.
- *     parameters:
  *       - name: id
  *         in: path
  *         required: true
  *         schema:
  *           type: string
  *         description: The ID of the destination.
- *       - name: destType
- *         in: query
+ *       - name: destTypeId
+ *         in: path
  *         required: true
  *         schema:
- *           type: string
- *         description: The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)
+ *           type: number
+ *         description: The ID of destination type
  *     responses:
  *       200:
  *         description: OK.

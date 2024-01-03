@@ -1,11 +1,10 @@
 import logger from '../../../logger'
-import { Destination } from '../types/Destination'
 import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
 
-const connectionTest = async (destination: Destination, userId: string) => {
+const connectionTest = async (destination: any, userId: string) => {
   enum TestSuite {
     'dns',
     'tcp',
@@ -15,7 +14,6 @@ const connectionTest = async (destination: Destination, userId: string) => {
     'connectivity',
     'qbp',
   }
-
   const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
   const numberOfTests = testSuiteKeys.length
   const connectionTestResult = {
@@ -38,7 +36,10 @@ const connectionTest = async (destination: Destination, userId: string) => {
 
   const DEFAULT_PORT = 443
   const testResults: ConnectionTestResult[] = []
-
+  let desttypeid
+  let destType
+  let jurisdictionDescription
+  const changeRequestDestination = destination?.destinations
   if (!destination) {
     connectionTestResult.destId = 'unknown'
     connectionTestResult.destUrl = 'unknown'
@@ -54,11 +55,22 @@ const connectionTest = async (destination: Destination, userId: string) => {
     ]
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else if (destination && !isValidUrl(destination.dest_uri)) {
+    if (changeRequestDestination) {
+      destType = destination?.destinations.destination_type.type
+      jurisdictionDescription =
+        destination?.destinations.jurisdiction.description
+    } else {
+      destType = destination?.destination_type.type
+      jurisdictionDescription = destination.jurisdiction.description
+    }
     connectionTestResult.destId = destination.dest_id as string
     connectionTestResult.destUrl = destination.dest_uri
-    connectionTestResult.destType = destination.destination_type.type
+    connectionTestResult.destType =
+      destination.destination_type.type ||
+      destination.destionations.destination_type.type
     connectionTestResult.jurisdictionDescription =
-      destination.jurisdiction?.description
+      destination.jurisdiction?.description ||
+      destination.destinations?.jurisdiction.description
     connectionTestResult.testResults = [
       {
         name: '',
@@ -75,6 +87,16 @@ const connectionTest = async (destination: Destination, userId: string) => {
     const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
     const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
 
+    if (changeRequestDestination) {
+      desttypeid = destination.destinations.destination_type.type_id
+      destType = destination?.destinations.destination_type.type
+      jurisdictionDescription =
+        destination?.destinations.jurisdiction.description
+    } else {
+      desttypeid = destination.destination_type.type_id
+      destType = destination?.destination_type.type
+      jurisdictionDescription = destination.jurisdiction.description
+    }
     const destIdURL = convertUrlStringToUrlObject(destination?.dest_uri)
 
     const connectionTestRequest: ConnectionTestRequest = {
@@ -83,11 +105,12 @@ const connectionTest = async (destination: Destination, userId: string) => {
       hostname: destIdURL.hostname,
       path: destIdURL.pathname,
       id: destination.dest_id as string,
-      desttypeid: destination.destination_type.type_id,
+      desttypeid: desttypeid,
       order: 0,
       certPath: IZG_ENDPOINT_CRT_PATH,
       keyPath: IZG_ENDPOINT_KEY_PATH,
       passphrase: IZG_ENDPOINT_PASSCODE,
+      destinationData: destination,
     }
 
     logger.info(
@@ -98,6 +121,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
     let skipTests = false
     for (const test in testSuiteKeys) {
       ++testCounter
+
       let result: ConnectionTestResult[] = [
         {
           name: TestSuite[test],
@@ -127,10 +151,8 @@ const connectionTest = async (destination: Destination, userId: string) => {
 
     connectionTestResult.destId = destination.dest_id || 'unknown'
     connectionTestResult.destUrl = destIdURL.hostname || 'unknown'
-    connectionTestResult.destType =
-      destination?.destination_type.type || 'unknown'
-    connectionTestResult.jurisdictionDescription =
-      destination?.jurisdiction.description || 'unknown'
+    connectionTestResult.destType = destType
+    connectionTestResult.jurisdictionDescription = jurisdictionDescription
     connectionTestResult.testResults = testResults
   }
   logger.info('Connection Test Results', {

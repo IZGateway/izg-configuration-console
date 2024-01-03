@@ -9,4 +9,5 @@ export type ConnectionTestRequest = {
   keyPath?: string
   certPath?: string
   passphrase?: string
+  destinationData: any
 }

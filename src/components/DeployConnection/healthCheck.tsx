@@ -20,7 +20,16 @@ const HealthCheck = (props) => {
     setIsLoadingTest(true)
     try {
       const response = await fetch(
-        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}?configuration=deploy`
+        `/api/tests/connectiontest/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            configuration: 'deploy',
+          }),
+        }
       )
       if (!response.ok) {
         setIsLoadingTest(false)
