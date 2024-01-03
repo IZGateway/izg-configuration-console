@@ -20,7 +20,6 @@ import {
   Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
-import AppHeaderBar from '../AppHeader'
 
 const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
@@ -160,7 +159,6 @@ const MiniDrawer = () => {
   )
   return (
     <>
-      <AppHeaderBar open={open} />
       <Drawer variant="permanent" open={open} id="navigation" role="navigation">
         <DrawerHeader>
           <IconButton
