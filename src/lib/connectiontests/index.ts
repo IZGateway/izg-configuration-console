@@ -113,7 +113,7 @@ const connectionTest = async (destination: any, userId: string) => {
       destinationData: destination,
     }
 
-    logger.debug(
+    logger.info(
       `STARTING TESTS ON DEST ID: ${destination.dest_id} USING URL: ${connectionTestRequest.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
     )
 
@@ -155,8 +155,7 @@ const connectionTest = async (destination: any, userId: string) => {
     connectionTestResult.jurisdictionDescription = jurisdictionDescription
     connectionTestResult.testResults = testResults
   }
-
-  logger.debug('Connection Test Results', {
+  logger.info('Connection Test Results', {
     connectionTestResult,
   })
   return {

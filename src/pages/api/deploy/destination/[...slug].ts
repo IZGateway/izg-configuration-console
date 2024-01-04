@@ -7,6 +7,7 @@ import _ from 'lodash'
 import destination from '../../../../lib/queries/fetch/destination'
 import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
 import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
+import logger from '../../../../../logger'
 /**
  * @swagger
  * /api/deploy/destination/{destTypeId}/{destId}:
@@ -66,6 +67,26 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       )
       res.json(result)
       if (res.statusCode === 200) {
+        const passwordChanged =
+          isPasswordDifferent.is_password_different.toString() === '1'
+            ? 'yes'
+            : 'no'
+
+        logger.info(
+          'Changes for ' +
+            oldValues.jurisdiction.description +
+            ' endpoint ' +
+            oldValues.dest_uri +
+            ' deployed by ' +
+            session.user.name,
+          {
+            userName: session.user.name,
+            oldValues: oldValues,
+            newValues: data,
+            passwordChanged: passwordChanged,
+            createdAt: new Date(),
+          }
+        )
         await deleteDestinationChangeRequest(data.id)
       }
     } else {

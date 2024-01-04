@@ -40,21 +40,21 @@ module.exports = async (phase, { defaultConfig }) => {
     )
   }
   if (phase === PHASE_DEVELOPMENT_SERVER) {
-    logger.info('Config Console Server started', {
+    logger.info('Config Console Service started', {
       'startup-phase': phase,
     })
   } else if (
     process.argv.includes('start') &&
     phase === PHASE_PRODUCTION_SERVER
   ) {
-    logger.info('Config Console Server started ', {
+    logger.info('Config Console Service started ', {
       'startup-phase': phase,
     })
   } else if (
     process.argv.includes('build') &&
     phase === PHASE_PRODUCTION_BUILD
   ) {
-    logger.info('Config Console Server building', {
+    logger.info('Config Console Service building', {
       'build-phase': phase,
     })
   }
