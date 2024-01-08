@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { Box, CircularProgress } from '@mui/material'
 import izgLogo from '../public/IZ_Gateway_Logo 1.png'
 import Image from 'next/image'
+import palette from '../styles/theme/palette'
 
 const LOADER_THRESHOLD = 250
 
@@ -52,7 +53,7 @@ export default function NavigationLoader() {
         alignItems: 'center',
         justifyContent: 'center',
         background: '#0006',
-        color: '#fff',
+        color: palette.white,
         zIndex: 999,
       }}
     >
