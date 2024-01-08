@@ -25,6 +25,7 @@ import * as _ from 'lodash'
 import TestDrawer from './testDrawer'
 
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
+import palette from '../../styles/theme/palette'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -342,7 +343,7 @@ const EditConnection = (props: editConnectionProps) => {
           position: 'absolute',
           bottom: 32,
           right: 16,
-          backgroundColor: '#FFF',
+          backgroundColor: palette.white,
           border: '1px solid #FFF',
           '&:hover': {
             border: '1.5px solid #015a2f',
