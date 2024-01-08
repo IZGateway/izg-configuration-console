@@ -4,6 +4,7 @@ import MuiAppBar from '@mui/material/AppBar'
 import Image from 'next/image'
 import userImage from '../../public/userImage.png'
 import { useSession } from 'next-auth/react'
+import palette from '../../styles/theme/palette'
 
 interface AppHeaderProps {
   open: boolean;
@@ -11,8 +12,8 @@ interface AppHeaderProps {
 
 const AppBar = styled(MuiAppBar)({
   display: 'flex',
-  background: '#00D998',
-  color: '#212121',
+  background: palette.primaryLight,
+  color: palette.greyDark,
   height: 84,
   boxShadow: '0px 0px 5px rgba(0, 0, 0, 0.25)',
   borderRadius: '0px 0px 30px 0px',
