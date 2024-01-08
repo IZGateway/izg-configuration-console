@@ -20,6 +20,7 @@ import {
   Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
+import palette from '../../styles/theme/palette'
 
 const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
@@ -27,16 +28,16 @@ const drawerWidthClosed = '5em'
 const closedMixin = () => ({
   width: drawerWidthClosed,
   overflowX: 'hidden',
-  background: '#1E4D3B',
-  color: '#FFFFFF',
+  background: palette.primaryDark,
+  color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
 })
 
 const openMixin = () => ({
   width: drawerWidthOpen,
   overflowX: 'hidden',
-  background: '#1E4D3B',
-  color: '#FFFFFF',
+  background: palette.primaryDark,
+  color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
 })
 
@@ -95,10 +96,10 @@ const MiniDrawer = () => {
           '&& .Mui-selected , && .Mui-selected:hover': {
             backgroundColor: 'white',
             '&, & .MuiListItemIcon-root': {
-              color: '#015A2F',
+              color: palette.primaryDark,
             },
             '&, & .MuiListItemText-root': {
-              color: 'black',
+              color: palette.black,
             },
             'span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root':
               {
@@ -108,7 +109,7 @@ const MiniDrawer = () => {
           '& .MuiListItemButton-root:hover': {
             bgcolor: 'rgb(255 255 255 / 10%)',
             '&, & .MuiListItemIcon-root': {
-              color: 'white',
+              color: palette.white,
             },
           },
         }}
@@ -151,7 +152,7 @@ const MiniDrawer = () => {
                 <ListItemText primary={item.label} />
               </ListItemButton>
             </NextLink>
-            <Divider color="#00D998" />
+            <Divider color={palette.primaryLight} />
           </ListItem>
         ))}
       </List>
@@ -167,16 +168,19 @@ const MiniDrawer = () => {
             aria-label="toggle navigation drawer"
           >
             {!open ? (
-              <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+              <ChevronRightIcon
+                fontSize="large"
+                sx={{ color: palette.white }}
+              />
             ) : (
-              <ChevronLeftIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+              <ChevronLeftIcon fontSize="large" sx={{ color: palette.white }} />
             )}
           </IconButton>
         </DrawerHeader>
         <div>
           <IZGLogo />
         </div>
-        <Divider color="#00D998" />
+        <Divider color={palette.primaryLight} />
         {list()}
         {session?.user.isAdmin && (
           <Link href="/api-doc">
@@ -184,7 +188,7 @@ const MiniDrawer = () => {
               variant="text"
               name="swagger api"
               sx={{
-                color: '#FFFFFF',
+                color: palette.white,
                 textDecoration: 'underline',
                 position: 'absolute',
                 left: '5px',
@@ -207,7 +211,7 @@ const MiniDrawer = () => {
           sx={{
             textWrap: 'wrap',
             textAlign: 'center',
-            color: '#FFFFFF',
+            color: palette.white,
             textDecoration: 'underline',
             position: 'absolute',
             left: '8px',
@@ -223,7 +227,7 @@ const MiniDrawer = () => {
         variant="contained"
         size="large"
         sx={{
-          background: "#00D998",
+          background: color={palette.primaryLight},
           borderRadius: "37.5px",
           margin: "1em",
           //marginTop:"700px", TODO fix this with a better positioning option

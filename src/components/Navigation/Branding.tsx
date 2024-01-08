@@ -2,6 +2,7 @@ import * as React from 'react'
 import Image from 'next/image'
 import izgLogo from '../../public/IZ_Gateway_Logo 1.png'
 import { CardContent, Typography, Avatar, Card, Box } from '@mui/material'
+import palette from '../../styles/theme/palette'
 
 const IZGLogo = () => {
   return (
@@ -9,8 +10,8 @@ const IZGLogo = () => {
       sx={{
         display: 'flex',
         boxShadow: 0,
-        background: '#1E4D3B',
-        color: 'white',
+        background: palette.primaryDark,
+        color: palette.white,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
