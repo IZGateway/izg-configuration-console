@@ -17,6 +17,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 import SessionContext from '../../contexts/app'
 import EditButton from './EditButton'
+import palette from '../../styles/theme/palette'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -28,9 +29,9 @@ const dataGridCustom = {
     },
   '& .MuiDataGrid-main': {
     marginTop: '-8px',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
     borderRadius: '0 0 30px 30px',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
   },
@@ -39,20 +40,20 @@ const dataGridCustom = {
       width: '32vw',
     },
   '& .MuiDataGrid-columnHeaders': {
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
   },
   '& .MuiDataGrid-toolbarContainer': {
     display: 'flex',
     flexDirection: 'row-reverse',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
     padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     marginBottom: '8px',
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
     {
-      color: '#00D998',
+      color: palette.primaryLight,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
     width: '28em',
@@ -61,20 +62,20 @@ const dataGridCustom = {
     margin: '2em 0',
     justifyContent: 'center',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
   },
   '& .MuiTablePagination-actions': {
-    color: '#015A2F',
+    color: palette.primary,
   },
   '& .MuiTablePagination-selectIcon.MuiSelect-icon.MuiSelect-iconStandard.css-pqjvzy-MuiSvgIcon-root-MuiSelect-icon':
     {
-      color: '#015A2F',
+      color: palette.primary,
     },
 }
 
 const actionButtonStyle = {
   borderRadius: 90,
-  background: '#FFFFF',
+  background: palette.white,
   boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
   width: 35,
   height: 35,
@@ -123,11 +124,11 @@ const ConnectionsTable = (props) => {
             componentsProps={{
               tooltip: {
                 sx: {
-                  backgroundColor: '#ffffff',
+                  backgroundColor: palette.white,
                   boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                  border: '1px solid #BFBFBF',
+                  border: `1px solid ${palette.border}`,
                   '& .MuiTooltip-arrow': {
-                    color: '#BFBFBF',
+                    color: palette.border,
                   },
                 },
               },
@@ -137,15 +138,14 @@ const ConnectionsTable = (props) => {
                 <Card elevation={0}>
                   <CardHeader
                     title={
-                      <Typography sx={{ fontWeight: 'bold' }} color="#212121">
+                      <Typography sx={{ fontWeight: 'bold', color: palette.greyDarkTypography }}>
                         {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
                       <Typography
-                        sx={{ fontWeight: 'regular' }}
+                        sx={{ fontWeight: 'regular',  color: palette.greyDarkTypography }}
                         variant="body2"
-                        color="#212121"
                       >
                         {asOfDate}
                       </Typography>
@@ -335,7 +335,7 @@ const ConnectionsTable = (props) => {
                 paddingRight: '1vh',
                 paddingLeft: '1vh',
                 borderRadius: '0 0 30px 30px',
-                border: '1px solid rgba(224, 224, 224, 1)',
+                border: `1px solid ${palette.border}`,
                 width: 'fit-content',
               },
               '& .MuiDataGrid-filterFormDeleteIcon': {

@@ -2,6 +2,7 @@ import React from 'react'
 import { Typography, Box } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import palette from '../../styles/theme/palette'
 
 interface statusProps {
   isConnected: boolean
@@ -15,7 +16,7 @@ const Status = (props: statusProps) => {
       <Typography
         gutterBottom
         variant="body1"
-        sx={{ color: '#757575' }}
+        sx={{ color: palette.greyDarkTypography }}
         component="div"
       >
         {!props.isConnected ? (

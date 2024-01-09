@@ -18,6 +18,7 @@ import {
   Chip,
 } from '@mui/material'
 import { useState } from 'react'
+import palette from '../../styles/theme/palette'
 
 interface testListProps {
   testResults: any[]
@@ -41,7 +42,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                 <ReportProblemIcon color="warning" />
               )}
               {item.status === 'SKIPPED' && (
-                <ErrorOutlineIcon sx={{ color: '#424242' }} />
+                <ErrorOutlineIcon sx={{ color: palette.error }} />
               )}
             </ListItemIcon>
 

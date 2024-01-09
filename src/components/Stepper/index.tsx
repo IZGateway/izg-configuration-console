@@ -4,6 +4,7 @@ import StepConnector, {
   stepConnectorClasses,
 } from '@mui/material/StepConnector'
 import { styled } from '@mui/material/styles'
+import palette from '../../styles/theme/palette'
 
 interface stepperProps {
   activeStep: number
@@ -13,20 +14,20 @@ interface stepperProps {
 const StepperLine = styled(StepConnector)(() => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     [`& .${stepConnectorClasses.line}`]: {
-      borderColor: '#EEEEEE',
+      borderColor: palette.greyMain,
     },
-    top: 18,
+    top: 12,
     left: 'calc(-50% + 18px)',
     right: 'calc(50% + 18px)',
   },
   [`&.${stepConnectorClasses.active}`]: {
     [`& .${stepConnectorClasses.line}`]: {
-      borderColor: '#00D998',
+      borderColor: palette.primaryLight,
     },
   },
   [`&.${stepConnectorClasses.completed}`]: {
     [`& .${stepConnectorClasses.line}`]: {
-      borderColor: '#00D998',
+      borderColor: palette.primaryLight,
     },
   },
   [`& .${stepConnectorClasses.line}`]: {
