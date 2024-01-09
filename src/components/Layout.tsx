@@ -1,6 +1,6 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Navigation from './Navigation';
+import React from 'react'
+import Box from '@mui/material/Box'
+import Navigation from './Navigation'
 
 const container = {
   display: 'flex',

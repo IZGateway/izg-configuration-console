@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { styled, Avatar, Typography, Toolbar } from '@mui/material';
-import MuiAppBar from '@mui/material/AppBar';
-import Image from 'next/image';
-import userImage from '../../public/userImage.png';
-import { useSession } from 'next-auth/react';
+import * as React from 'react'
+import { styled, Avatar, Typography, Toolbar } from '@mui/material'
+import MuiAppBar from '@mui/material/AppBar'
+import Image from 'next/image'
+import userImage from '../../public/userImage.png'
+import { useSession } from 'next-auth/react'
 
 interface AppHeaderProps {
   open: boolean;
