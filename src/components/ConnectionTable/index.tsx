@@ -31,7 +31,7 @@ const dataGridCustom = {
     marginTop: '-8px',
     backgroundColor: palette.white,
     borderRadius: '0 0 30px 30px',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
   },
@@ -48,7 +48,7 @@ const dataGridCustom = {
     backgroundColor: palette.white,
     padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     marginBottom: '8px',
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
@@ -126,7 +126,7 @@ const ConnectionsTable = (props) => {
                 sx: {
                   backgroundColor: palette.white,
                   boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                  border: '1px solid #BFBFBF',
+                  border: `1px solid ${palette.border}`,
                   '& .MuiTooltip-arrow': {
                     color: palette.border,
                   },
@@ -335,7 +335,7 @@ const ConnectionsTable = (props) => {
                 paddingRight: '1vh',
                 paddingLeft: '1vh',
                 borderRadius: '0 0 30px 30px',
-                border: '1px solid rgba(224, 224, 224, 1)',
+                border: `1px solid ${palette.border}`,
                 width: 'fit-content',
               },
               '& .MuiDataGrid-filterFormDeleteIcon': {

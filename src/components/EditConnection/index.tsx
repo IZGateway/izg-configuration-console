@@ -344,9 +344,9 @@ const EditConnection = (props: editConnectionProps) => {
           bottom: 32,
           right: 16,
           backgroundColor: palette.white,
-          border: '1px solid #FFF',
+          border: `1px solid ${palette.white}`,
           '&:hover': {
-            border: '1.5px solid #015a2f',
+            border: `1.5px solid ${palette.primary}`,
             transition: '200ms',
           },
         }}
