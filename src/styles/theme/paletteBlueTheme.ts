@@ -1,3 +1,5 @@
+// This palette will be used in the future, do not use.// 
+
 const paletteBlueTheme = {
     active: '#66926d',
     background: '#F9F9F9',
