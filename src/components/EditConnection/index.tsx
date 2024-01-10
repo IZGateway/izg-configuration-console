@@ -152,7 +152,6 @@ const EditConnection = (props: editConnectionProps) => {
         throw new Error(message)
       }
       const results = await response.json()
-      console.log(results)
       setTestResults(results.testResults)
       setIsLoadingTest(false)
     } catch (error) {

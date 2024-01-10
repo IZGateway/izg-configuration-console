@@ -344,9 +344,13 @@ async function lookupDestinationVersion(
     return destination.dest_version
   } else {
     const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
-    FROM destinations d JOIN destination_change_request dc ON d.dest_id=dc.dest_id AND d.dest_type = dc.dest_type
-    WHERE dc.dest_id = ${destId}
-    AND dc.dest_type = ${destType}`
-    return result[0].dest_version
+    FROM destinations d
+    WHERE d.dest_id = ${destId}
+    AND d.dest_type = ${destType}`
+    if (result[0].dest_version === '') {
+      return '2014'
+    } else {
+      return result[0].dest_version
+    }
   }
 }
