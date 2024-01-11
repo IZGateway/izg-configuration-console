@@ -35,7 +35,7 @@ RUN cd ../filebeat && \
     rm -rf /filebeat/filebeat.yml && \
     cp ../app/filebeat.yml ./filebeat.yml
 
-# Run metricbeat
+# Replace default metricbeat config with custom config file
 RUN cd ../metricbeat && \
     rm -rf /metricbeat/metricbeat.yml && \
     cp ../app/metricbeat.yml ./metricbeat.yml
