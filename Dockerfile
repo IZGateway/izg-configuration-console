@@ -26,13 +26,19 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
+COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 
-# Install filebeat
+# Replace default filebeat config with custom config file
 RUN cd ../filebeat && \
     rm -rf /filebeat/filebeat.yml && \
     cp ../app/filebeat.yml ./filebeat.yml
+
+# Replace default metricbeat config with custom config file
+RUN cd ../metricbeat && \
+    rm -rf /metricbeat/metricbeat.yml && \
+    cp ../app/metricbeat.yml ./metricbeat.yml
 
 #USER nextjs
 RUN chmod a+x start-app.sh
