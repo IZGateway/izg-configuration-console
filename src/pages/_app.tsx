@@ -10,7 +10,7 @@ import '@fontsource/ubuntu/400.css'
 import '@fontsource/ubuntu/500.css'
 import '@fontsource/ubuntu/700.css'
 import createEmotionCache from '../utility/createEmotionCache'
-import lightThemeOptions from '../styles/theme/lightThemeOptions'
+import blueThemeOptions from '../styles/theme/blueThemeOptions'
 import { AppProvider } from '../contexts/app'
 import { SWRConfig } from 'swr'
 import fetch from '../lib/fetch'
@@ -29,7 +29,7 @@ interface MyAppProps extends AppProps {
 }
 
 const clientSideEmotionCache = createEmotionCache()
-const lightTheme = createTheme(lightThemeOptions)
+const blueTheme = createTheme(blueThemeOptions)
 
 const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
   const {
@@ -41,7 +41,7 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
   return (
     <SessionProvider session={session}>
       <CacheProvider value={emotionCache}>
-        <ThemeProvider theme={lightTheme}>
+        <ThemeProvider theme={blueTheme}>
           <CssBaseline />
           <Layout>
             <AppProvider>
