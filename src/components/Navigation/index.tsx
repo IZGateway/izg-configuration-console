@@ -94,12 +94,12 @@ const MiniDrawer = () => {
         sx={{
           padding: '0 0',
           '&& .Mui-selected , && .Mui-selected:hover': {
-            backgroundColor: 'white',
+            backgroundColor: palette.primaryLight,
             '&, & .MuiListItemIcon-root': {
               color: palette.primaryDark,
             },
             '&, & .MuiListItemText-root': {
-              color: palette.black,
+              color: palette.primaryDark,
             },
             'span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root':
               {
@@ -131,7 +131,7 @@ const MiniDrawer = () => {
               <ListItemButton
                 sx={{
                   padding: '1rem 1.5rem',
-                  borderBottom: '1px solid #00D998',
+                  borderBottom: `1px solid ${palette.primaryLight}`,
                   '&& .Mui-selected , && .Mui-selected:hover': {
                     fontWeight: '700',
                   },
