@@ -1,6 +1,6 @@
 import * as React from 'react'
 import Image from 'next/image'
-import izgLogo from '../../public/IZ_Gateway_Logo 1.png'
+import izgLogo from '../../public/IZG Logo 2023.svg'
 import { CardContent, Typography, Avatar, Card, Box } from '@mui/material'
 import palette from '../../styles/theme/palette'
 
@@ -14,8 +14,8 @@ const IZGLogo = () => {
         color: palette.white,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-        <Avatar alt="IZ Gateway Logo" sx={{ width: 50, height: 50 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', pl: 1.5 }}>
+        <Avatar sx={{ bgcolor: palette.primaryDark, width: 55, height: 55  }} alt="IZ Gateway Logo">
           <Image src={izgLogo} alt="izg logo" width={50} />
         </Avatar>
       </Box>
@@ -30,7 +30,7 @@ const IZGLogo = () => {
           <Typography variant="h6" component="div">
             IZ Gateway
           </Typography>
-          <Typography variant="caption" component="div">
+          <Typography sx={{ marginTop: '-4px'}} variant="caption" component="div">
             Fast, Efficient, Accurate Data Sharing
           </Typography>
         </CardContent>
