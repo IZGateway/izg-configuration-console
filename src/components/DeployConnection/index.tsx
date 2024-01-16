@@ -1,5 +1,4 @@
 import * as React from 'react'
-import Close from '../Close'
 import { Box, Typography } from '@mui/material'
 import useSWR from 'swr'
 import HealthCheck from './healthCheck'
@@ -48,7 +47,6 @@ const DeployConnection = (props) => {
           {changerequestData.destinations.destination_type.type}
         </Typography>
       </Box>
-      <Close />
       <Box
         sx={{
           display: 'flex',

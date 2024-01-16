@@ -7,6 +7,7 @@ import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import DeployConnection from '../../components/DeployConnection/index'
 import AdminGuard from '../../components/AdminGuard'
+import Close from '../../components/Close'
 
 const Changerequest = (props) => {
   const router = useRouter()
@@ -23,6 +24,7 @@ const Changerequest = (props) => {
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
+            <Close/>
             <DeployConnection
               destId={router?.query?.slug[1] as string}
               destTypeId={router?.query?.slug[0] as string}
