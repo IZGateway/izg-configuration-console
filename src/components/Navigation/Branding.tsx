@@ -1,7 +1,7 @@
 import * as React from 'react'
 import Image from 'next/image'
 import izgLogo from '../../public/IZG Logo 2023.svg'
-import { CardContent, Typography, Avatar, Card, Box } from '@mui/material'
+import { CardContent, Typography, Card, Box } from '@mui/material'
 import palette from '../../styles/theme/palette'
 
 const IZGLogo = () => {
@@ -12,26 +12,25 @@ const IZGLogo = () => {
         boxShadow: 0,
         background: palette.primaryDark,
         color: palette.white,
+        justifyContent:'space-between',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', pl: 1.5 }}>
-        <Avatar sx={{ bgcolor: palette.primaryDark, width: 55, height: 55  }} alt="IZ Gateway Logo">
-          <Image src={izgLogo} alt="izg logo" width={50} />
-        </Avatar>
-      </Box>
       <Box
         sx={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          flexDirection: 'row',
+          alignItems: 'flex-end',
         }}
       >
-        <CardContent sx={{ flex: '1 0 auto' }}>
-          <Typography variant="h6" component="div">
+        <Box sx={{ display: 'flex',  alignItems: 'center', }}>
+          <Image src={izgLogo} alt="izg logo" width={58} />
+        </Box>
+        <CardContent sx={{ pr: 0,  '&:last-child': { pb: 0 }}}>
+          <Typography sx={{ fontWeight: '900', lineHeight:'1.7em' }} variant="h6" component="div">
             IZ Gateway
           </Typography>
-          <Typography sx={{ marginTop: '-4px'}} variant="caption" component="div">
-            Fast, Efficient, Accurate Data Sharing
+          <Typography sx={{ marginTop: '-4px', textWrap: 'wrap', fontWeight: '300', lineHeight:'1.4em', fontSize: '10px' }} variant="caption" component="div">
+            Fast, Efficient, Accurate <br/> Data Sharing
           </Typography>
         </CardContent>
       </Box>

@@ -31,6 +31,7 @@ const closedMixin = () => ({
   background: palette.primaryDark,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+  transition: 'width 0.8s ease',
 })
 
 const openMixin = () => ({
@@ -39,6 +40,7 @@ const openMixin = () => ({
   background: palette.primaryDark,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+  transition: 'width 0.8s ease',
 })
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -160,8 +162,10 @@ const MiniDrawer = () => {
   )
   return (
     <>
-      <Drawer variant="permanent" open={open} id="navigation" role="navigation">
-        <DrawerHeader>
+      <Drawer variant="permanent" transitionDuration={2000000 | 100 } open={open} id="navigation" role="navigation">
+        <DrawerHeader sx={{ justifyContent:'space-between',
+ mt: 0, pl: 2, pt:0, pb: 1.5,}}>
+          <IZGLogo />
           <IconButton
             onClick={handleClick}
             name="toggle navigation drawer"
@@ -176,10 +180,7 @@ const MiniDrawer = () => {
               <ChevronLeftIcon fontSize="large" sx={{ color: palette.white }} />
             )}
           </IconButton>
-        </DrawerHeader>
-        <div>
-          <IZGLogo />
-        </div>
+          </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
         {session?.user.isAdmin && (
@@ -194,6 +195,8 @@ const MiniDrawer = () => {
                 left: '5px',
                 bottom: '50px',
                 textTransform: 'capitalize',
+                textWrap: 'wrap',
+                textAlign: 'left'
               }}
             >
               Swagger API
