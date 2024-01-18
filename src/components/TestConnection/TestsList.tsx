@@ -84,7 +84,7 @@ const TestsList = ({
     <Box sx={{ position: 'relative' }}>
       <div>
         <Container ref={componentRef}>
-          <Box sx={{ marginTop: 8 }}>
+          <Box sx={{ marginTop: 4 }}>
             <Typography
               gutterBottom
               align="center"

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useRouter } from 'next/router'
 import { Box, CircularProgress } from '@mui/material'
-import izgLogo from '../public/IZ_Gateway_Logo 1.png'
+import izgLogo from '../public/IZG_Loader_Logo_DarkBlue.svg'
 import Image from 'next/image'
 import palette from '../styles/theme/palette'
 
@@ -59,15 +59,20 @@ export default function NavigationLoader() {
     >
       <Box sx={{ display: 'flex', alignItems: 'center' }}>
         <Box sx={{ m: 1, position: 'relative' }}>
-          <Image src={izgLogo} alt="izg logo" width={70} />
+          <Image src={izgLogo} alt="izg logo" width={56} />
           <CircularProgress
-            size={80}
+            size={68}
             sx={{
               position: 'absolute',
               top: -6,
               left: -6,
               zIndex: 1,
+              color: palette.primaryLight,
+              '.MuiCircularProgress-circle': {
+                r: '22px',
+              }
             }}
+            thickness={3}
           />
         </Box>
       </Box>

@@ -37,7 +37,7 @@ const TestsResults = ({ testResults }: testListProps) => {
           <ListItem id={item.name}>
             <ListItemIcon>
               {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
-              {item.status === 'FAIL' && <ErrorIcon color="secondary" />}
+              {item.status === 'FAIL' && <ErrorIcon color="error" />}
               {item.status === 'WARNING' && (
                 <ReportProblemIcon color="warning" />
               )}
@@ -61,7 +61,7 @@ const TestsResults = ({ testResults }: testListProps) => {
               <ListItemText
                 primary={item.name}
                 secondary={
-                  <Typography variant="body2" color="secondary">
+                  <Typography variant="body2" color="error">
                     {item.message}
                   </Typography>
                 }
@@ -75,7 +75,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                   ? 'primary'
                   : item.status === 'SKIPPED'
                   ? 'default'
-                  : 'secondary'
+                  : 'error'
               }
               sx={{
                 borderRadius: '4px',

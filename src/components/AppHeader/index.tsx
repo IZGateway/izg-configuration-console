@@ -37,7 +37,7 @@ const AppHeaderBar = (props: AppHeaderProps) => {
         >
           <Image src={userImage} alt="your avatar" height={'70'} />
         </Avatar>
-        <Typography fontWeight={'700'} fontSize={'16px'}>
+        <Typography sx={{color:`${palette.primaryDark}`}} fontWeight={'700'} fontSize={'16px'}>
           Welcome to IZ Gateway,{' '}
           {status === 'authenticated' && session.user.name}
         </Typography>

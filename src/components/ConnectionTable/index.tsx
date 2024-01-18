@@ -53,7 +53,7 @@ const dataGridCustom = {
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
     {
-      color: palette.primaryLight,
+      color: palette.primary,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
     width: '28em',

@@ -1,5 +1,5 @@
 import { Box, Typography, Button, List, ListItem } from '@mui/material'
-import pageNotFound from '../public/PageNotFound.png'
+import pageNotFound from '../public/IZG_PageNotFound_Graphic.png'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 
@@ -124,6 +124,7 @@ const PageNotFound = () => {
           width={600}
           height={500}
           alt="page not found image"
+          style={{ marginBottom: '-36px',}}
         />
       </Box>
     </Box>
