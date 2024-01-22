@@ -66,7 +66,11 @@ const DeployConnection = (props) => {
               status={status}
             />
           ) : (
-            <ViewChangeRequestTicket {...changerequestData} status={status} />
+            <ViewChangeRequestTicket
+              {...changerequestData}
+              status={status}
+              jiraUrl={props.jiraUrl}
+            />
           )}
         </Box>
         <Box sx={{ width: '66%' }}>

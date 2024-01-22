@@ -11,10 +11,10 @@ import {
   Box,
 } from '@mui/material'
 import Link from 'next/link'
-const JIRA_BROWSE_URL = process.env.NEXT_PUBLIC_JIRA_BROWSE_URL || undefined
 
 const ViewChangeRequestTicket = (props: any) => {
   const humanReadableScheduledTime = new Date(props.scheduledAt)
+  const { jiraUrl } = props
   return (
     <Card
       sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
@@ -55,7 +55,7 @@ const ViewChangeRequestTicket = (props: any) => {
           below. Something how Jira is the source of truth and you may need to
           login additional systems.
         </Typography>
-        <Link href={JIRA_BROWSE_URL + props.jira_id} target="_blank">
+        <Link href={jiraUrl + props.jira_id} target="_blank">
           <Button
             id="run"
             color="primary"
