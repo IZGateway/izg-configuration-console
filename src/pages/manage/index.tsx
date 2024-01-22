@@ -19,7 +19,7 @@ import AppHeaderBar from '../../components/AppHeader'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
-  const { alert } = useContext(CombinedContext)
+  const { alert, setAlert } = useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = useState(false)
 
   useEffect(() => {
@@ -30,16 +30,26 @@ const Manage = (
     }
   }, [alert])
 
+  const handleClose = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      jurisdiction: '',
+      dest_type: '',
+      message: '',
+    })
+  }
+
   return (
     <Container title="Manage Connections">
-     <AppHeaderBar open/>
+      <AppHeaderBar open />
       <ErrorBoundary>
         <ConnectionsTable data={props.data} />
         <CustomSnackbar
           open={showSnackbar}
           severity={alert.level}
           message={alert.message}
-          onClose={() => setShowSnackbar(false)}
+          onClose={handleClose}
         />
       </ErrorBoundary>
     </Container>
