@@ -23,9 +23,11 @@ import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
 import * as _ from 'lodash'
 import TestDrawer from './testDrawer'
-
+import SaveIcon from '@mui/icons-material/Save'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import palette from '../../styles/theme/palette'
+import CachedIcon from '@mui/icons-material/Cached'
+import CustomSnackbar from '../SnackBar'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -47,7 +49,7 @@ const getDelta = (a, b) =>
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { data: session } = useSession()
-  const { clearValue, setAlert } = useContext(CombinedContext)
+  const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
@@ -60,6 +62,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [open, setOpen] = React.useState(false)
   const [testResults, setTestResults] = useState(null)
   const [isLoadingTest, setIsLoadingTest] = useState(false)
+  const [showSnackbar, setShowSnackbar] = useState(false)
 
   const [
     hasCreateChangeRequestTicketError,
@@ -70,6 +73,11 @@ const EditConnection = (props: editConnectionProps) => {
     error: destError,
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
+  const {
+    data: draftData,
+    error: draftError,
+    isLoading: isDraftLoading,
+  } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
   const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
@@ -84,7 +92,32 @@ const EditConnection = (props: editConnectionProps) => {
   }, [hasCreateChangeRequestTicketError])
 
   useEffect(() => {
-    if (destData) {
+    if (draftData) {
+      setFormValues({
+        username: draftData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: draftData?.facility_id,
+        MSH3: draftData?.MSH3,
+        MSH4: draftData?.MSH4,
+        MSH5: draftData?.MSH5,
+        MSH6: draftData?.MSH6,
+        MSH22: draftData?.MSH22,
+        RXA11: draftData?.RXA11,
+      })
+      setDefaultFormValues({
+        username: draftData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: draftData?.facility_id,
+        MSH3: draftData?.MSH3,
+        MSH4: draftData?.MSH4,
+        MSH5: draftData?.MSH5,
+        MSH6: draftData?.MSH6,
+        MSH22: draftData?.MSH22,
+        RXA11: draftData?.RXA11,
+      })
+    } else if (destData) {
       setFormValues({
         username: destData?.username,
         newPassword: '',
@@ -114,6 +147,16 @@ const EditConnection = (props: editConnectionProps) => {
 
   useEffect(() => {
     if (activeStep === 2) {
+      if (!_.isEmpty(alert.level)) {
+        setShowSnackbar(true)
+      } else {
+        setShowSnackbar(false)
+      }
+    }
+  }, [alert])
+
+  useEffect(() => {
+    if (activeStep === 2) {
       setFormErrors(null)
       setFormValuesDelta(null)
       const changedValues = getDelta(defaultFormValues, formValues)
@@ -127,8 +170,8 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues])
 
-  if (destError) throw new Error(destError.message)
-  if (isDestLoading) return <div>loading...</div>
+  if (destError || draftError) throw new Error(destError.message)
+  if (isDestLoading || isDraftLoading) return <div>loading...</div>
 
   const toggleTestDrawer = async () => {
     setOpen(!open)
@@ -160,6 +203,16 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }
 
+  const handleCloseSnackBar = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      jurisdiction: '',
+      dest_type: '',
+      message: '',
+    })
+  }
+
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
@@ -187,6 +240,7 @@ const EditConnection = (props: editConnectionProps) => {
           isAsap: asapSelected,
           scheduledAt: scheduleAt,
           requestedBy: session.user.email,
+          draft: false,
         }),
       })
     } catch (error) {
@@ -239,6 +293,42 @@ const EditConnection = (props: editConnectionProps) => {
 
   const advanceStepper = (advanceBy: number) => {
     setActiveStep((prevActiveStep) => prevActiveStep + advanceBy)
+  }
+
+  const saveDraft = async () => {
+    const scheduleAt = new Date().toISOString()
+    const response = await fetch(`/api/changerequest`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requested: {
+          ...formValues,
+        },
+        current: {
+          ...defaultFormValues,
+        },
+        dest_id: destData.dest_id,
+        dest_uri: destData.dest_uri,
+        dest_type_id: destData.destination_type.type_id,
+        dest_type: destData.destination_type.type,
+        jira_id: null,
+        isAsap: true,
+        scheduledAt: scheduleAt,
+        requestedBy: session.user.email,
+        draft: true,
+      }),
+    })
+    if (response.ok) {
+      setAlert({
+        level: 'success',
+        message: `Your draft was saved!`,
+      })
+    } else {
+      setAlert({
+        level: 'error',
+        message: `Error saving the draft`,
+      })
+      console.error(`Error saving the draft`)
+    }
   }
 
   const actionButtons = () => (
@@ -335,12 +425,12 @@ const EditConnection = (props: editConnectionProps) => {
     </Box>
   )
 
-  const testButton = () => (
+  const floatingButtons = () => (
     <Box>
       <Fab
         sx={{
           position: 'absolute',
-          bottom: 32,
+          bottom: 160,
           right: 16,
           backgroundColor: palette.white,
           border: `1px solid ${palette.white}`,
@@ -358,6 +448,44 @@ const EditConnection = (props: editConnectionProps) => {
             aria-label="test"
             fontSize="small"
           />
+        </Tooltip>
+      </Fab>
+      <Fab
+        sx={{
+          position: 'absolute',
+          bottom: 96,
+          right: 16,
+          backgroundColor: palette.white,
+          border: `1px solid ${palette.white}`,
+          '&:hover': {
+            border: `1.5px solid ${palette.primary}`,
+            transition: '200ms',
+          },
+        }}
+        onClick={saveDraft}
+        disabled={!isFormChanged}
+      >
+        <Tooltip arrow placement="bottom" title="Save">
+          <SaveIcon color="primary" aria-label="save" fontSize="small" />
+        </Tooltip>
+      </Fab>
+      <Fab
+        sx={{
+          position: 'absolute',
+          bottom: 32,
+          right: 16,
+          backgroundColor: palette.white,
+          border: `1px solid ${palette.white}`,
+          '&:hover': {
+            border: `1.5px solid ${palette.primary}`,
+            transition: '200ms',
+          },
+        }}
+        // onClick={toggleTestDrawer}
+        // disabled={!isFormChanged}
+      >
+        <Tooltip arrow placement="bottom" title="Reset">
+          <CachedIcon color="primary" aria-label="reset" fontSize="small" />
         </Tooltip>
       </Fab>
     </Box>
@@ -424,10 +552,16 @@ const EditConnection = (props: editConnectionProps) => {
           >
             {activeStep === 0 ? acceptButton() : actionButtons()}
           </Container>
+          <CustomSnackbar
+            open={showSnackbar}
+            severity={alert.level}
+            message={alert.message}
+            onClose={handleCloseSnackBar}
+          />
         </div>
       </Container>
       {activeStep === 2 && !open ? (
-        testButton()
+        floatingButtons()
       ) : (
         <TestDrawer
           open={open}
