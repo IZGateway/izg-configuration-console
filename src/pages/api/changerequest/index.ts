@@ -81,11 +81,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         res.json('Draft was saved.')
       } else {
         try {
-          if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
-            res.status(409)
-            res.json(
-              'Conflict creating the requested resource because it already exists.'
-            )
+          if (await hasActiveDraft(dest_id, dest_type_id)) {
+            const draftRecord = await hasActiveDraft(dest_id, dest_type_id)
+            let changeRequestTicketResponse = null
+            try {
+              changeRequestTicketResponse = await createChangeRequestTicket({
+                ...requestBody,
+                changeRequestId: draftRecord.id,
+              })
+              await updateChangeRequestRecord({
+                ...draftRecord,
+                jira_id: changeRequestTicketResponse.key,
+              })
+            } catch (error) {
+              throw new Error(
+                `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
+              )
+            }
           } else {
             await createChangeRequest(requestBody)
             logger.info(

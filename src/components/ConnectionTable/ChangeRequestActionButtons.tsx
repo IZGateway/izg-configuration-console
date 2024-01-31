@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react'
 import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 import palette from '../../styles/theme/palette'
 import SaveIcon from '@mui/icons-material/Save'
+import useSWR from 'swr'
+import moment from 'moment'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
@@ -14,7 +16,7 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 
-const ChangeRequestActionButton = (props: {
+const ChangeRequestActionButtons = (props: {
   destTypeId: any
   destId: any
   hasChangeRequest: any
@@ -26,6 +28,22 @@ const ChangeRequestActionButton = (props: {
 
   const { data: session } = useSession()
   const isAdmin = session?.user.isAdmin
+
+  const {
+    data: draftData,
+    error: draftError,
+    isLoading: isDraftLoading,
+  } = useSWR(
+    hasActiveDraft
+      ? `/api/destinationdraft/${props.destTypeId}/${props.destId}`
+      : null
+  )
+  if (draftError) throw new Error(draftError.message)
+  if (isDraftLoading) return <div>loading...</div>
+  const date =
+    draftData &&
+    moment(new Date(draftData.scheduledAt)).format('MMM DD, YYYY [at] h:mm A')
+
   return (
     <>
       {canEdit && (
@@ -58,10 +76,14 @@ const ChangeRequestActionButton = (props: {
             pathname: `/edit/${destTypeId}/${props.destId}`,
           }}
         >
-          <Tooltip arrow placement="bottom" title="Edit">
+          <Tooltip
+            arrow
+            placement="bottom"
+            title={`Draft Saved with edits from ${draftData.requestedBy} ${date}`}
+          >
             <IconButton
               id={props.destTypeId + '_' + props.destId}
-              aria-label="edit"
+              aria-label="draft"
               color="primary"
               sx={actionButtonStyle}
             >
@@ -104,4 +126,4 @@ const ChangeRequestActionButton = (props: {
   )
 }
 
-export default ChangeRequestActionButton
+export default ChangeRequestActionButtons

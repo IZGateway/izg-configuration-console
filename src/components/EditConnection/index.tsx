@@ -1,13 +1,5 @@
 import * as React from 'react'
-import {
-  Container,
-  Typography,
-  Box,
-  ButtonGroup,
-  Button,
-  Tooltip,
-  Fab,
-} from '@mui/material'
+import { Container, Typography, Box } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
 import Verify from './verify'
@@ -21,13 +13,13 @@ import useSWR from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
-import * as _ from 'lodash'
 import TestDrawer from './testDrawer'
-import SaveIcon from '@mui/icons-material/Save'
-import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
-import palette from '../../styles/theme/palette'
-import CachedIcon from '@mui/icons-material/Cached'
 import CustomSnackbar from '../SnackBar'
+import _ from 'lodash'
+import moment from 'moment'
+import FloatingActionButtons from './floatingActionButtons'
+import ActionButtons from './actionButtons'
+import AcceptButton from './acceptButton'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -77,8 +69,8 @@ const EditConnection = (props: editConnectionProps) => {
     data: draftData,
     error: draftError,
     isLoading: isDraftLoading,
+    mutate,
   } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
-  const isFormChanged = !_.isEqual(formValues, defaultFormValues)
 
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
@@ -170,8 +162,18 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues])
 
-  if (destError || draftError) throw new Error(destError.message)
+  if (destError || draftError)
+    throw new Error(destError.message || draftError.message)
   if (isDestLoading || isDraftLoading) return <div>loading...</div>
+
+  const isFormChanged = !_.isEqual(formValues, defaultFormValues)
+  const isResetButtonDisabled = _.isNull(draftData)
+  const isNextButtonDisabled =
+    (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
+    !_.isEmpty(formErrors)
+  const isScheduleButtonDisabled = asapSelected
+    ? !asapSelected
+    : !scheduledDateTime
 
   const toggleTestDrawer = async () => {
     setOpen(!open)
@@ -289,6 +291,16 @@ const EditConnection = (props: editConnectionProps) => {
     if (_.isEmpty(formErrors)) {
       advanceStepper(1)
     }
+    if (activeStep === 1 && !_.isNull(draftData)) {
+      setAlert({
+        level: 'info',
+        message: `You are working on the latest draft. Last draft was saved by ${
+          draftData.requestedBy
+        } on ${moment(new Date(draftData.scheduledAt)).format(
+          'MMM DD, YYYY [at] h:mm A'
+        )}`,
+      })
+    }
   }
 
   const advanceStepper = (advanceBy: number) => {
@@ -318,6 +330,7 @@ const EditConnection = (props: editConnectionProps) => {
       }),
     })
     if (response.ok) {
+      await mutate()
       setAlert({
         level: 'success',
         message: `Your draft was saved!`,
@@ -331,165 +344,51 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }
 
-  const actionButtons = () => (
-    <Box
-      sx={{
-        textAlign: 'center',
-      }}
-    >
-      <ButtonGroup
-        variant="contained"
-        fullWidth
-        size="large"
-        sx={{
-          margin: '1em',
-          alignItems: 'center',
-          borderRadius: '30px',
-        }}
-      >
-        <Button
-          id="previous"
-          color="primary"
-          variant="outlined"
-          disabled={activeStep === 0}
-          onClick={handlePrevious}
-          sx={{
-            borderRadius: '30px',
-          }}
-        >
-          PREVIOUS
-        </Button>
-        {activeStep === steps.length - 1 ? (
-          <Tooltip
-            arrow
-            placement="bottom"
-            title="Please select date and time"
-            open={
-              (asapSelected ? !asapSelected : !scheduledDateTime) ? true : false
-            }
-          >
-            <Button
-              id="schedule"
-              type="submit"
-              color="primary"
-              variant="contained"
-              disabled={asapSelected ? !asapSelected : !scheduledDateTime}
-              onClick={handleSchedule}
-              sx={{
-                borderRadius: '30px',
-              }}
-            >
-              SCHEDULE
-            </Button>
-          </Tooltip>
-        ) : (
-          <Button
-            id="next"
-            type="submit"
-            color="primary"
-            variant="contained"
-            onClick={handleNext}
-            disabled={
-              (activeStep === 2 && !isFormChanged) || !_.isEmpty(formErrors)
-            }
-            sx={{
-              borderRadius: '30px',
-            }}
-          >
-            NEXT
-          </Button>
-        )}
-      </ButtonGroup>
-    </Box>
-  )
-
-  const acceptButton = () => (
-    <Box sx={{ textAlign: 'center' }}>
-      <Button
-        id="accept"
-        variant="contained"
-        color="primary"
-        size="large"
-        onClick={handleAccept}
-        disabled={!agreed}
-        sx={{
-          background: 'secondary',
-          borderRadius: '37.5px',
-          margin: '1em',
-          alignItems: 'center',
-          width: 350,
-        }}
-      >
-        ACCEPT
-      </Button>
-    </Box>
-  )
-
-  const floatingButtons = () => (
-    <Box>
-      <Fab
-        sx={{
-          position: 'absolute',
-          bottom: 160,
-          right: 16,
-          backgroundColor: palette.white,
-          border: `1px solid ${palette.white}`,
-          '&:hover': {
-            border: `1.5px solid ${palette.primary}`,
-            transition: '200ms',
-          },
-        }}
-        onClick={toggleTestDrawer}
-        disabled={!isFormChanged}
-      >
-        <Tooltip arrow placement="bottom" title="Test">
-          <MonitorHeartOutlinedIcon
-            color="primary"
-            aria-label="test"
-            fontSize="small"
-          />
-        </Tooltip>
-      </Fab>
-      <Fab
-        sx={{
-          position: 'absolute',
-          bottom: 96,
-          right: 16,
-          backgroundColor: palette.white,
-          border: `1px solid ${palette.white}`,
-          '&:hover': {
-            border: `1.5px solid ${palette.primary}`,
-            transition: '200ms',
-          },
-        }}
-        onClick={saveDraft}
-        disabled={!isFormChanged}
-      >
-        <Tooltip arrow placement="bottom" title="Save">
-          <SaveIcon color="primary" aria-label="save" fontSize="small" />
-        </Tooltip>
-      </Fab>
-      <Fab
-        sx={{
-          position: 'absolute',
-          bottom: 32,
-          right: 16,
-          backgroundColor: palette.white,
-          border: `1px solid ${palette.white}`,
-          '&:hover': {
-            border: `1.5px solid ${palette.primary}`,
-            transition: '200ms',
-          },
-        }}
-        // onClick={toggleTestDrawer}
-        // disabled={!isFormChanged}
-      >
-        <Tooltip arrow placement="bottom" title="Reset">
-          <CachedIcon color="primary" aria-label="reset" fontSize="small" />
-        </Tooltip>
-      </Fab>
-    </Box>
-  )
+  const resetDraftValues = async () => {
+    setDefaultFormValues({
+      username: destData?.username,
+      newPassword: '',
+      confirmPassword: '',
+      facility_id: destData?.facility_id,
+      MSH3: destData?.MSH3,
+      MSH4: destData?.MSH4,
+      MSH5: destData?.MSH5,
+      MSH6: destData?.MSH6,
+      MSH22: destData?.MSH22,
+      RXA11: destData?.RXA11,
+    })
+    setFormValues({
+      username: destData?.username,
+      newPassword: '',
+      confirmPassword: '',
+      facility_id: destData?.facility_id,
+      MSH3: destData?.MSH3,
+      MSH4: destData?.MSH4,
+      MSH5: destData?.MSH5,
+      MSH6: destData?.MSH6,
+      MSH22: destData?.MSH22,
+      RXA11: destData?.RXA11,
+    })
+    const response = await fetch(
+      `/api/changerequest/draft/${props.destTypeId}/${props.destId}/${draftData.id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+    if (response.ok) {
+      setAlert({
+        level: 'success',
+        message: `Your draft was reset!`,
+      })
+    } else {
+      setAlert({
+        level: 'error',
+        message: `Error resetting draft`,
+      })
+      console.error(`Error resetting draft`)
+    }
+    await mutate()
+  }
 
   return (
     <div>
@@ -550,7 +449,19 @@ const EditConnection = (props: editConnectionProps) => {
               marginTop: 4,
             }}
           >
-            {activeStep === 0 ? acceptButton() : actionButtons()}
+            {activeStep === 0 ? (
+              <AcceptButton handleAccept={handleAccept} agreed={agreed} />
+            ) : (
+              <ActionButtons
+                activeStep={activeStep}
+                handlePrevious={handlePrevious}
+                steps={steps}
+                isScheduleButtonDisabled={isScheduleButtonDisabled}
+                handleSchedule={handleSchedule}
+                handleNext={handleNext}
+                isNextButtonDisabled={isNextButtonDisabled}
+              />
+            )}
           </Container>
           <CustomSnackbar
             open={showSnackbar}
@@ -561,7 +472,13 @@ const EditConnection = (props: editConnectionProps) => {
         </div>
       </Container>
       {activeStep === 2 && !open ? (
-        floatingButtons()
+        <FloatingActionButtons
+          toggleTestDrawer={toggleTestDrawer}
+          isFormChanged={isFormChanged}
+          saveDraft={saveDraft}
+          isResetButtonDisabled={isResetButtonDisabled}
+          resetDraft={resetDraftValues}
+        />
       ) : (
         <TestDrawer
           open={open}

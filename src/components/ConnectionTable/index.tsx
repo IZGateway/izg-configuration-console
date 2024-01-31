@@ -15,7 +15,7 @@ import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
-import ChangeRequestActionButton from './ChangeRequestActionButton'
+import ChangeRequestActionButtons from './changeRequestActionButtons'
 import palette from '../../styles/theme/palette'
 
 const dataGridCustom = {
@@ -207,7 +207,7 @@ const ConnectionsTable = (props) => {
       renderCell: (params) => {
         return (
           <div>
-            <ChangeRequestActionButton
+            <ChangeRequestActionButtons
               tabIndex={params.tabIndex}
               destId={params.id}
               destTypeId={params.row.destTypeId}
