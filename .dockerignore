@@ -2,6 +2,10 @@
 node_modules
 **/node_modules
 
+database
+cypress
+.husky
+
 # All secrets
 **/.env.local
 **/.env.*.local
@@ -54,3 +58,4 @@ tmp
 
 .idea
 .vscode
+.editorconfig

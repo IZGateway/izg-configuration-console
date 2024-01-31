@@ -20,7 +20,7 @@ import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
-  const { alert } = useContext(CombinedContext)
+  const { alert, setAlert } = useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = useState(false)
 
   useEffect(() => {
@@ -31,6 +31,16 @@ const Manage = (
     }
   }, [alert])
 
+  const handleClose = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      jurisdiction: '',
+      dest_type: '',
+      message: '',
+    })
+  }
+
   return (
     <Container title="Manage Connections">
       <AppHeaderBar open />
@@ -40,7 +50,7 @@ const Manage = (
           open={showSnackbar}
           severity={alert.level}
           message={alert.message}
-          onClose={() => setShowSnackbar(false)}
+          onClose={handleClose}
         />
       </ErrorBoundary>
     </Container>
