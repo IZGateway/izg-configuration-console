@@ -98,8 +98,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
               )
             }
+          } else if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
+            res.status(409)
+            res.json(
+              'Conflict creating the requested resource because it already exists.'
+            )
           } else {
             await createChangeRequest(requestBody)
+            console.log('I am here')
             logger.info(
               'change request created successfully for ' + requestBody.dest_uri
             )

@@ -1,5 +1,4 @@
 import { Box, Button } from '@mui/material'
-import _ from 'lodash'
 const AcceptButton = (props: { handleAccept: any; agreed: boolean }) => {
   return (
     <Box sx={{ textAlign: 'center' }}>
