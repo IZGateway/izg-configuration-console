@@ -70,6 +70,9 @@ const dataGridCustom = {
     {
       color: palette.primary,
     },
+  '& .MuiDataGrid-virtualScroller': {
+    overflow: 'hidden',
+  },
 }
 
 const actionButtonStyle = {
