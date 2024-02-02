@@ -15,6 +15,33 @@ const actionButtonStyle = {
   height: 35,
   marginRight: 2,
 }
+const draftButtonStyle = {
+  borderRadius: 90,
+  background: palette.primary,
+  color: palette.white,
+  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  width: 35,
+  height: 35,
+  marginRight: 2,
+  '&:hover': {
+    background: palette.primaryDark,
+    color: palette.white,
+  },
+}
+
+const publishButtonStyle = {
+  borderRadius: 90,
+  background: palette.primaryDark,
+  color: palette.white,
+  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  width: 35,
+  height: 35,
+  marginRight: 2,
+  '&:hover': {
+    background: '#021a2d',
+    color: palette.white,
+  },
+}
 
 const ChangeRequestActionButtons = (props: {
   destTypeId: any
@@ -78,14 +105,14 @@ const ChangeRequestActionButtons = (props: {
         >
           <Tooltip
             arrow
-            placement="bottom"
+            placement="left"
             title={`Draft Saved with edits from ${draftData.requestedBy} ${date}`}
           >
             <IconButton
               id={props.destTypeId + '_' + props.destId}
               aria-label="draft"
               color="primary"
-              sx={actionButtonStyle}
+              sx={draftButtonStyle}
             >
               <SaveIcon fontSize="small" />
             </IconButton>
@@ -99,12 +126,12 @@ const ChangeRequestActionButtons = (props: {
             pathname: `/changerequest/${destTypeId}/${destId}`,
           }}
         >
-          <Tooltip arrow placement="bottom" title="Change Request">
+          <Tooltip arrow placement="left" title="Change Request">
             <IconButton
               id="changerequest"
               aria-label="changerequest"
               color="primary"
-              sx={actionButtonStyle}
+              sx={publishButtonStyle}
             >
               <PublishedWithChangesIcon fontSize="small" />
             </IconButton>
@@ -117,7 +144,7 @@ const ChangeRequestActionButtons = (props: {
           aria-label="edit"
           color="primary"
           disabled={!canEdit}
-          sx={actionButtonStyle}
+          sx={draftButtonStyle}
         >
           <EditIcon fontSize="small" />
         </IconButton>
