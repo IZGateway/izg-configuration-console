@@ -19,7 +19,6 @@ const ActionButtons = (props: {
         fullWidth
         size="large"
         sx={{
-          margin: '1em',
           alignItems: 'center',
           borderRadius: '30px',
         }}
