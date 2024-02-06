@@ -6,7 +6,7 @@ import ChangeHistory from './changeHistory'
 describe('Change History component', () => {
   it('renders without throwing any errors', () => {
     expect(() => {
-      render(<ChangeHistory destId={'ak'} />)
+      render(<ChangeHistory destId={'ak'} destTypeId={'2'} />)
     }).not.toThrow()
   })
 })

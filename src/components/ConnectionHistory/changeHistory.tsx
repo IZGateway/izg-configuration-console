@@ -6,6 +6,7 @@ import {
   CardContent,
   Divider,
   Chip,
+  Button,
 } from '@mui/material'
 import Timeline from '@mui/lab/Timeline'
 import TimelineItem from '@mui/lab/TimelineItem'
@@ -16,41 +17,68 @@ import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import useSWR from 'swr'
 import _ from 'lodash'
-
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ShowChanges from './showchanges'
 interface ChangeHistoryProps {
   destId: string
   destTypeId: string
 }
 
-const findDifferentKeysAndValues = (obj1, obj2) => {
-  const allKeys = _.intersection(Object.keys(obj1), Object.keys(obj2))
+const findDifferentKeysAndValues = (newObj, oldObj) => {
+  if (!newObj || !oldObj) {
+    console.error('One or both objects are undefined or null.')
+    return {}
+  }
+
+  const allKeys = _.intersection(Object.keys(newObj), Object.keys(oldObj))
   const modifiedKeys = _.omit(allKeys, 'dest_uri')
-  const differentKeys = []
+  const differentKeysValues = {}
+
   _.each(modifiedKeys, (key) => {
-    if (!_.isEqual(obj1[key], obj2[key])) {
-      differentKeys.push(key)
+    if (!_.isEqual(newObj[key], oldObj[key])) {
+      differentKeysValues[key] = {
+        newValue: newObj[key],
+        oldValue: oldObj[key],
+      }
     }
   })
-  if (obj1.is_password_different === '1') {
-    differentKeys.push('Password')
+
+  if (newObj.is_password_different === '1') {
+    differentKeysValues['Password'] = {
+      newValue: '.........',
+      oldValue: '.........',
+    }
   }
-  return differentKeys.join(' , ')
+  return differentKeysValues
 }
 
 const ChangeHistory = (props: ChangeHistoryProps) => {
   const { data, error, isLoading } = useSWR(
     `/api/destinationaudit/${props.destTypeId}/${props.destId}`
   )
+  const [openStates, setOpenStates] = React.useState(Array(5).fill(false))
 
   if (error) throw new Error(error.message)
   if (isLoading) return <div>loading...</div>
   if (!data) return <div>no data</div>
   const historyDataLength = data.length
   const defaultChangeHistoryView = data.slice(0, 5)
+
+  const toggleOpenState = (index: number) => {
+    setOpenStates((prevStates) => {
+      const newStates = [...prevStates]
+      newStates[index] = !newStates[index]
+      return newStates
+    })
+  }
   const updatedFields = (data) => {
     return findDifferentKeysAndValues(data.newValues, data.oldValues)
   }
 
+  const updatedKeys = (data) => {
+    return Object.keys(updatedFields(data)).join(' , ')
+  }
   const timeline = (data) => (
     <>
       <Timeline
@@ -77,7 +105,7 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
               {index !== data.length - 1 && <TimelineConnector />}
             </TimelineSeparator>
             <TimelineContent sx={{ padding: '8px 16px' }}>
-              <strong>{item.userName} </strong> updated {updatedFields(item)}
+              <strong>{item.userName} </strong> updated {updatedKeys(item)}
               <Typography variant="body2">
                 {new Date(item.createdAt).toLocaleString('en-US', {
                   timeZone: 'America/New_York',
@@ -86,6 +114,30 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
                   day: '2-digit',
                 })}
               </Typography>
+              {openStates[index] ? (
+                <>
+                  <Button
+                    variant="text"
+                    color="primary"
+                    onClick={() => toggleOpenState(index)}
+                    id="close"
+                  >
+                    Hide Changes
+                    <ExpandLessIcon fontSize="large" />
+                  </Button>
+                  <ShowChanges fields={updatedFields(item)} />
+                </>
+              ) : (
+                <Button
+                  variant="text"
+                  color="primary"
+                  onClick={() => toggleOpenState(index)}
+                  id="close"
+                >
+                  Show Changes
+                  <ExpandMoreIcon fontSize="large" />
+                </Button>
+              )}
             </TimelineContent>
             <Typography gutterBottom variant="body1" component="div">
               <Chip
