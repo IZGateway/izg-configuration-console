@@ -24,7 +24,7 @@ const timeline = (data) => (
   <>
     <Timeline
       sx={{
-        margin: '0px 0px 16px 0px',
+        margin: '0px 0px 8px 0px',
         padding: '0px',
       }}
     >
@@ -85,9 +85,9 @@ const TestHistory = (props: TestHistoryProps) => {
     props.destId ? `/api/statushistory/${props.destId}` : null
   )
 
-  if (error) {
-    throw new Error(error)
-  }
+  // if (error) {
+  //   throw new Error(error)
+  // }
 
   if (isLoading) return <div>loading...</div>
 
