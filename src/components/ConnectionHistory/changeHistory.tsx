@@ -117,25 +117,27 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
               {openStates[index] ? (
                 <>
                   <Button
+                    sx={{ mt: 2 }}
                     variant="text"
                     color="primary"
                     onClick={() => toggleOpenState(index)}
                     id="close"
                   >
                     Hide Changes
-                    <ExpandLessIcon fontSize="large" />
+                    <ExpandLessIcon />
                   </Button>
                   <ShowChanges fields={updatedFields(item)} />
                 </>
               ) : (
                 <Button
+                  sx={{ mt: 2 }}
                   variant="text"
                   color="primary"
                   onClick={() => toggleOpenState(index)}
                   id="close"
                 >
                   Show Changes
-                  <ExpandMoreIcon fontSize="large" />
+                  <ExpandMoreIcon />
                 </Button>
               )}
             </TimelineContent>
