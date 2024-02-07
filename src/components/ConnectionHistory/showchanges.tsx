@@ -1,5 +1,7 @@
 import { Box, Typography } from '@mui/material'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import * as React from 'react'
+import palette from '../../styles/theme/palette'
 
 interface ShowChangesProps {
   fields: any
@@ -8,11 +10,28 @@ interface ShowChangesProps {
 const ShowChanges = (props: ShowChangesProps) => {
   return (
     <>
-      <Box sx={{ display: 'flex', gap: '2rem' }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          width: '100%',
+          gap: '2rem',
+          alignItems: 'center',
+          p: 2,
+          borderRadius: '0 0 16px 16px',
+          border: `1px solid ${palette.border}`,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            width: '100%',
+            gap: 1,
+            flexDirection: 'column',
+          }}
+        >
           <Box>
-            <Typography variant="h6" component="div">
-              FROM
+            <Typography variant="body1" component="div">
+              <strong>FROM</strong>
             </Typography>
           </Box>
           {Object.entries(props.fields).map(
@@ -21,20 +40,32 @@ const ShowChanges = (props: ShowChangesProps) => {
               { newValue: string; oldValue: string }
             ]) => (
               <Box key={key}>
-                <Typography variant="subtitle1" component="div">
+                <Typography
+                  sx={{ fontWeight: 500 }}
+                  variant="subtitle1"
+                  component="div"
+                >
                   {key}
                 </Typography>
-                <Typography key={key} gutterBottom variant="caption">
+                <Typography key={key} gutterBottom variant="body2">
                   {`${nestedObject.oldValue}`}
                 </Typography>
               </Box>
             )
           )}
         </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <ArrowForwardIcon htmlColor={palette.grey} />
+        <Box
+          sx={{
+            display: 'flex',
+            width: '100%',
+            gap: 1,
+            flexDirection: 'column',
+          }}
+        >
           <Box>
-            <Typography variant="h6" component="div">
-              TO
+            <Typography variant="body1" component="div">
+              <strong>TO</strong>
             </Typography>
           </Box>
           {Object.entries(props.fields).map(
@@ -43,10 +74,14 @@ const ShowChanges = (props: ShowChangesProps) => {
               { newValue: string; oldValue: string }
             ]) => (
               <Box key={key} sx={{ backgroundColor: 'rgb(242, 208, 167, .2)' }}>
-                <Typography variant="subtitle1" component="div">
+                <Typography
+                  sx={{ fontWeight: 500 }}
+                  variant="subtitle1"
+                  component="div"
+                >
                   {key}
                 </Typography>
-                <Typography key={key} gutterBottom variant="caption">
+                <Typography key={key} gutterBottom variant="body2">
                   {`${nestedObject.newValue}`}
                 </Typography>
               </Box>
