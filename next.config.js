@@ -13,15 +13,6 @@ module.exports = async (phase, { defaultConfig }) => {
       OPERATIONS_GROUP: `${process.env.OPERATIONS_GROUP}`,
       USER_GROUP: `${process.env.USER_GROUP}`,
     },
-    async redirects() {
-      return [
-        {
-          source: '/',
-          destination: '/manage',
-          permanent: true,
-        },
-      ]
-    },
   }
   const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
