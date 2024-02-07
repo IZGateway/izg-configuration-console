@@ -16,6 +16,15 @@ import palette from '../../styles/theme/palette'
 import { ArrowForward, Star } from '@mui/icons-material'
 import Image from 'next/image'
 import generalError from '../../public/GeneralError.png'
+import CDCLogo from '../../public/United_States_Centers_for_Disease_Control_and_Prevention_logo 1.svg'
+import homePageBanner from '../../public/IZ-Gateway-BannerImagery.svg'
+const actionButtonStyle = {
+  borderRadius: 90,
+  background: palette.white,
+  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  width: 45,
+  height: 45,
+}
 
 function HomeComponent() {
   return (
@@ -56,11 +65,11 @@ function HomeComponent() {
                 </Button>
               </Box>
             </Box>
-            <Box width={250} height={180}>
+            <Box width={300} height={150}>
               <Image
-                src={generalError}
-                width={250}
-                height={215}
+                src={homePageBanner}
+                width={300}
+                height={180}
                 alt="general error image"
               />
             </Box>
@@ -134,8 +143,8 @@ function HomeComponent() {
                   justifyContent={'center'}
                   gap={1}
                 >
-                  <IconButton>
-                    <Star />
+                  <IconButton sx={actionButtonStyle}>
+                    <Star color="primary" />
                   </IconButton>
                   <Typography>Something</Typography>
                 </Box>
@@ -146,8 +155,8 @@ function HomeComponent() {
                   justifyContent={'center'}
                   gap={1}
                 >
-                  <IconButton>
-                    <Star />
+                  <IconButton sx={actionButtonStyle}>
+                    <Star color="primary" />
                   </IconButton>
                   <Typography>Something</Typography>
                 </Box>
@@ -158,8 +167,8 @@ function HomeComponent() {
                   justifyContent={'center'}
                   gap={1}
                 >
-                  <IconButton>
-                    <Star />
+                  <IconButton sx={actionButtonStyle}>
+                    <Star color="primary" />
                   </IconButton>
                   <Typography>Something</Typography>
                 </Box>
@@ -290,10 +299,23 @@ function HomeComponent() {
               <Typography variant="caption">
                 Version 1.0 | Placeholder
               </Typography>
-              <Typography variant="caption">
-                This application has been authorized by the Centers for Disease
-                Control and Prevention (CDC).
-              </Typography>
+              <Box
+                display={'flex'}
+                justifyContent={'space-between'}
+                alignItems={'center'}
+                gap={1}
+              >
+                <Typography variant="caption">
+                  This application has been authorized by the Centers for
+                  Disease Control and Prevention{' '}
+                </Typography>
+                <Image
+                  src={CDCLogo}
+                  width={20}
+                  height={20}
+                  alt="general error image"
+                />
+              </Box>
             </Box>
           </Container>
         </Paper>
