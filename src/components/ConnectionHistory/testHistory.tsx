@@ -85,9 +85,9 @@ const TestHistory = (props: TestHistoryProps) => {
     props.destId ? `/api/statushistory/${props.destId}` : null
   )
 
-  // if (error) {
-  //   throw new Error(error)
-  // }
+  if (error) {
+    throw new Error(error)
+  }
 
   if (isLoading) return <div>loading...</div>
 
