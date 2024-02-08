@@ -8,23 +8,18 @@ import {
   CardContent,
   CardHeader,
   Card,
-  IconButton,
   CardActions,
 } from '@mui/material'
+
 import AppHeaderBar from '../AppHeader'
 import palette from '../../styles/theme/palette'
-import { ArrowForward, Star } from '@mui/icons-material'
+import HomeCircleCallouts from '../Home/HomeCircleCallouts'
+
+import { ArrowForward } from '@mui/icons-material'
+
 import Image from 'next/image'
-import generalError from '../../public/GeneralError.png'
 import CDCLogo from '../../public/United_States_Centers_for_Disease_Control_and_Prevention_logo 1.svg'
 import homePageBanner from '../../public/IZ-Gateway-BannerImagery.svg'
-const actionButtonStyle = {
-  borderRadius: 90,
-  background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-  width: 45,
-  height: 45,
-}
 
 function HomeComponent() {
   return (
@@ -84,7 +79,7 @@ function HomeComponent() {
             justifyContent={'space-between'}
             width={'-webkit-fill-available'}
             mt={4}
-            pb={16}
+            pb={8}
           >
             <Box
               display={'flex'}
@@ -96,9 +91,15 @@ function HomeComponent() {
               <Card
                 sx={{
                   width: '-webkit-fill-available',
+                  borderRadius: '0px 0px 30px 30px',
                 }}
               >
                 <CardHeader
+                  titleTypographyProps={{
+                    fontSize: '1.3em',
+                    fontWeight: '500',
+                  }}
+                  sx={{ pt: 2, pl: 2, pb: 0 }}
                   title="What is IZ Gateway"
                   subheader="Here a breakdown from our team. "
                 />
@@ -118,7 +119,7 @@ function HomeComponent() {
                     through defined, streamlined IZ Gateway processes
                   </Typography>
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ mb: 2, ml: 1 }}>
                   <Button
                     variant="outlined"
                     color="primary"
@@ -129,50 +130,7 @@ function HomeComponent() {
                   </Button>
                 </CardActions>
               </Card>
-              <Box
-                display={'flex'}
-                justifyContent={'space-between'}
-                flexDirection={'row'}
-                pl={2}
-                pr={2}
-              >
-                <Box
-                  display={'flex'}
-                  flexDirection={'column'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                  gap={1}
-                >
-                  <IconButton sx={actionButtonStyle}>
-                    <Star color="primary" />
-                  </IconButton>
-                  <Typography>Something</Typography>
-                </Box>
-                <Box
-                  display={'flex'}
-                  flexDirection={'column'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                  gap={1}
-                >
-                  <IconButton sx={actionButtonStyle}>
-                    <Star color="primary" />
-                  </IconButton>
-                  <Typography>Something</Typography>
-                </Box>
-                <Box
-                  display={'flex'}
-                  flexDirection={'column'}
-                  alignItems={'center'}
-                  justifyContent={'center'}
-                  gap={1}
-                >
-                  <IconButton sx={actionButtonStyle}>
-                    <Star color="primary" />
-                  </IconButton>
-                  <Typography>Something</Typography>
-                </Box>
-              </Box>
+              <HomeCircleCallouts />
             </Box>
             <Box
               display={'flex'}
@@ -183,6 +141,7 @@ function HomeComponent() {
               <Card
                 sx={{
                   width: '-webkit-fill-available',
+                  borderRadius: '0px 0px 30px 30px',
                 }}
               >
                 <CardHeader
@@ -191,7 +150,7 @@ function HomeComponent() {
                     fontWeight: '500',
                   }}
                   title="Frequently Asked Questions"
-                  sx={{ p: 2, pb: 0 }}
+                  sx={{ pt: 2, pl: 2, pb: 0 }}
                 />
                 <CardContent>
                   <Typography variant="body2">
@@ -200,7 +159,7 @@ function HomeComponent() {
                     insights into common queries
                   </Typography>
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ mb: 2, ml: 1 }}>
                   <Button
                     variant="outlined"
                     color="primary"
@@ -214,6 +173,7 @@ function HomeComponent() {
               <Card
                 sx={{
                   width: '-webkit-fill-available',
+                  borderRadius: '0px 0px 30px 30px',
                 }}
               >
                 <CardHeader
@@ -221,7 +181,7 @@ function HomeComponent() {
                     fontSize: '1.3em',
                     fontWeight: '500',
                   }}
-                  sx={{ p: 2, pb: 0 }}
+                  sx={{ pt: 2, pl: 2, pb: 0 }}
                   title="Use Cases"
                 />
                 <CardContent>
@@ -232,7 +192,7 @@ function HomeComponent() {
                     and Consumer Access functionalities,
                   </Typography>
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ mb: 2, ml: 1 }}>
                   <Button
                     variant="outlined"
                     color="primary"
@@ -246,6 +206,7 @@ function HomeComponent() {
               <Card
                 sx={{
                   width: '-webkit-fill-available',
+                  borderRadius: '0px 0px 30px 30px',
                 }}
               >
                 <CardHeader
@@ -253,7 +214,7 @@ function HomeComponent() {
                     fontSize: '1.3em',
                     fontWeight: '500',
                   }}
-                  sx={{ p: 2, pb: 0 }}
+                  sx={{ pt: 2, pl: 2, pb: 0 }}
                   title="Requirements"
                 />
                 <CardContent>
@@ -263,7 +224,7 @@ function HomeComponent() {
                     compatibility.
                   </Typography>
                 </CardContent>
-                <CardActions>
+                <CardActions sx={{ mb: 2, ml: 1 }}>
                   <Button
                     variant="outlined"
                     color="primary"
