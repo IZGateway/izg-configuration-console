@@ -20,6 +20,7 @@ import { ArrowForward } from '@mui/icons-material'
 import Image from 'next/image'
 import CDCLogo from '../../public/United_States_Centers_for_Disease_Control_and_Prevention_logo 1.svg'
 import homePageBanner from '../../public/IZ-Gateway-BannerImagery.svg'
+import Link from 'next/link'
 
 function HomeComponent() {
   return (
@@ -52,12 +53,16 @@ function HomeComponent() {
                 </strong>
               </Typography>
               <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
-                <Button variant="contained" color="primary">
-                  Manage Connections
-                </Button>
-                <Button variant="outlined" color="primary">
-                  OUR API
-                </Button>
+                <Link href="/manage">
+                  <Button variant="contained" color="primary">
+                    Manage Connections
+                  </Button>
+                </Link>
+                <Link href="/api-doc">
+                  <Button variant="outlined" color="primary">
+                    OUR API
+                  </Button>
+                </Link>
               </Box>
             </Box>
             <Box width={300} height={150}>
@@ -255,7 +260,7 @@ function HomeComponent() {
               flexDirection={'row'}
               gap={2}
               pt={2}
-              pb={2}
+              pb={1}
             >
               <Typography variant="caption">
                 Version 1.0 | Placeholder
