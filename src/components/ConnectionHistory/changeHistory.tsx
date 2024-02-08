@@ -121,7 +121,7 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
                     variant="text"
                     color="primary"
                     onClick={() => toggleOpenState(index)}
-                    id="close"
+                    id="hide"
                   >
                     Hide Changes
                     <ExpandLessIcon />
@@ -134,7 +134,7 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
                   variant="text"
                   color="primary"
                   onClick={() => toggleOpenState(index)}
-                  id="close"
+                  id="show"
                 >
                   Show Changes
                   <ExpandMoreIcon />

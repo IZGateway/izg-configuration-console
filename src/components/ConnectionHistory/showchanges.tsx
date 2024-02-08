@@ -1,7 +1,13 @@
-import { Box, Typography } from '@mui/material'
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import * as React from 'react'
-import palette from '../../styles/theme/palette'
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
+import { styled } from '@mui/material/styles'
+
+const StyledCategoryCell = styled(TableCell)(({ theme }) => ({
+  backgroundColor: theme.palette.grey[200],
+  fontWeight: 600,
+}))
+const StyledDifferenceTableCell = styled(TableCell)(() => ({
+  backgroundColor: 'rgb(242, 208, 167, .2)',
+}))
 
 interface ShowChangesProps {
   fields: any
@@ -10,85 +16,42 @@ interface ShowChangesProps {
 const ShowChanges = (props: ShowChangesProps) => {
   return (
     <>
-      <Box
-        sx={{
-          display: 'flex',
-          width: '100%',
-          gap: '2rem',
-          alignItems: 'center',
-          p: 2,
-          borderRadius: '0 0 16px 16px',
-          border: `1px solid ${palette.border}`,
-        }}
-      >
-        <Box
-          sx={{
-            display: 'flex',
-            width: '100%',
-            gap: 1,
-            flexDirection: 'column',
-          }}
-        >
-          <Box>
-            <Typography variant="body1" component="div">
-              <strong>FROM</strong>
-            </Typography>
-          </Box>
+      <Table sx={{ minWidth: 400 }} aria-label="simple table">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 600 }}> FIELDS</TableCell>
+            <TableCell align="left" sx={{ fontWeight: 600 }}>
+              FROM
+            </TableCell>
+            <TableCell align="left" sx={{ fontWeight: 600 }}>
+              TO
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {Object.entries(props.fields).map(
             ([key, nestedObject]: [
               string,
               { newValue: string; oldValue: string }
-            ]) => (
-              <Box key={key}>
-                <Typography
-                  sx={{ fontWeight: 500 }}
-                  variant="subtitle1"
-                  component="div"
+            ]) => {
+              return (
+                <TableRow
+                  key={key}
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                 >
-                  {key}
-                </Typography>
-                <Typography key={key} gutterBottom variant="body2">
-                  {`${nestedObject.oldValue}`}
-                </Typography>
-              </Box>
-            )
+                  <StyledCategoryCell component="th" scope="row">
+                    {key}
+                  </StyledCategoryCell>
+                  <TableCell align="left">{`${nestedObject.oldValue}`}</TableCell>
+                  <StyledDifferenceTableCell align="left">
+                    {`${nestedObject.newValue}`}
+                  </StyledDifferenceTableCell>
+                </TableRow>
+              )
+            }
           )}
-        </Box>
-        <ArrowForwardIcon htmlColor={palette.grey} />
-        <Box
-          sx={{
-            display: 'flex',
-            width: '100%',
-            gap: 1,
-            flexDirection: 'column',
-          }}
-        >
-          <Box>
-            <Typography variant="body1" component="div">
-              <strong>TO</strong>
-            </Typography>
-          </Box>
-          {Object.entries(props.fields).map(
-            ([key, nestedObject]: [
-              string,
-              { newValue: string; oldValue: string }
-            ]) => (
-              <Box key={key} sx={{ backgroundColor: 'rgb(242, 208, 167, .2)' }}>
-                <Typography
-                  sx={{ fontWeight: 500 }}
-                  variant="subtitle1"
-                  component="div"
-                >
-                  {key}
-                </Typography>
-                <Typography key={key} gutterBottom variant="body2">
-                  {`${nestedObject.newValue}`}
-                </Typography>
-              </Box>
-            )
-          )}
-        </Box>
-      </Box>
+        </TableBody>
+      </Table>
     </>
   )
 }
