@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react'
-import ShowChanges from './showChanges'
+import ShowChanges from './showchanges'
 
 describe('ShowChanges component', () => {
   const fields: { [key: string]: { newValue: string; oldValue: string } } = {
