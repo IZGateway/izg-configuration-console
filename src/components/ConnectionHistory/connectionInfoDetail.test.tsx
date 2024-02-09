@@ -32,14 +32,15 @@ describe('ConnectionInfoDetail component', () => {
     ;(useSWR as jest.Mock).mockReturnValueOnce({
       data: destination,
       error: undefined,
-      isValidating: false,
+      isLoading: false,
     })
+    const displayMock = jest.fn()
 
     const { getByText, getByLabelText } = render(
       <ConnectionInfoDetail
         destination={destination}
         open={true}
-        display={() => {}}
+        display={displayMock}
       />
     )
 
