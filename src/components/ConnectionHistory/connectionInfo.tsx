@@ -94,7 +94,7 @@ const ConnectionInfo = (props) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <Box>
                 <Typography variant="subtitle1" component="div">
-                  JURISDICTION
+                  ORGANIZATION
                 </Typography>
                 <Typography gutterBottom variant="body1">
                   {destData ? destData.jurisdiction.description : 'N/A'}

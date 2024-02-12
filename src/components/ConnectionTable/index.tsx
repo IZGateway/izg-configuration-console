@@ -93,7 +93,7 @@ const ConnectionsTable = (props) => {
     },
     {
       field: 'jurisdictionName',
-      headerName: 'JURISDICTION',
+      headerName: 'ORGANIZATION',
       flex: 0.5,
       minWidth: 25,
     },
@@ -138,13 +138,21 @@ const ConnectionsTable = (props) => {
                 <Card elevation={0}>
                   <CardHeader
                     title={
-                      <Typography sx={{ fontWeight: 'bold', color: palette.greyDarkTypography }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 'bold',
+                          color: palette.greyDarkTypography,
+                        }}
+                      >
                         {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
                       <Typography
-                        sx={{ fontWeight: 'regular',  color: palette.greyDarkTypography }}
+                        sx={{
+                          fontWeight: 'regular',
+                          color: palette.greyDarkTypography,
+                        }}
                         variant="body2"
                       >
                         {asOfDate}
@@ -288,7 +296,7 @@ const ConnectionsTable = (props) => {
         autoHeight
         initialState={{
           sorting: {
-            sortModel: [{ field: 'jurisdiction', sort: 'asc' }],
+            sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
           },
           pagination: { paginationModel: { pageSize } },
         }}

@@ -29,21 +29,21 @@ const ServiceAgreement = (props: PolicyProps) => {
       <Divider />
       <CardContent>
         <Typography variant="body1" component="div">
-          I hereby attest that I have been duly authorized by the jurisdiction
+          I hereby attest that I have been duly authorized by the organization
           to make changes to the Immunization (IZ) Gateway configuration for my
-          jurisdiction. I understand the responsibility entrusted to me and
+          organization. I understand the responsibility entrusted to me and
           acknowledge that any alterations made shall comply with all applicable
           laws, regulations, and policies governing system configurations within
-          the jurisdiction. I affirm that I have undergone the necessary
+          the organization. I affirm that I have undergone the necessary
           training and possess the technical competence required to carry out
           system configuration changes effectively and responsibly. I am aware
           of the potential risks associated with such modifications and commit
           to implementing appropriate safeguards to ensure the integrity,
           availability, and confidentiality of the system and its data.
           Furthermore, I understand that my authorization is subject to any
-          limitations or conditions imposed by the jurisdiction, and I shall
+          limitations or conditions imposed by the organization, and I shall
           adhere to all established procedures and protocols governing IZ
-          Gateway configuration changes for my jurisdiction. I will exercise due
+          Gateway configuration changes for my organization. I will exercise due
           diligence in evaluating the impact of any modifications and seek
           necessary approvals before implementing them. I acknowledge that the
           IZ Gateway may monitor and audit the changes made to the system
@@ -55,7 +55,7 @@ const ServiceAgreement = (props: PolicyProps) => {
           users, data, and overall exchange. By clicking Accept below, I declare
           that the information attested is accurate to the best of my knowledge.
           I understand that any misrepresentation or violation of the
-          jurisdiction’s or IZ Gateway&apos;s policies may result in the
+          organization’s or IZ Gateway&apos;s policies may result in the
           revocation of my authorization and potential legal consequences.
         </Typography>
         <FormControl>
