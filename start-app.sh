@@ -11,4 +11,5 @@ else
     echo Filebeat logging not enabled
 fi
 
+./replace-variable.sh && 
 npm start

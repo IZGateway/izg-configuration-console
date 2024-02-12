@@ -10,6 +10,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
+#Strategy for using NEXT_PUBLIC variables found at https://phase.dev/blog/nextjs-public-runtime-variables/
+ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
+ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
 RUN npx prisma generate
 RUN npm run build
 
@@ -29,6 +32,7 @@ RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
+COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
 # Install filebeat
 
