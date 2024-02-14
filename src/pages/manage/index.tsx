@@ -16,6 +16,7 @@ import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import AppHeaderBar from '../../components/AppHeader'
+import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -74,6 +75,7 @@ type DestDetails = [
     jurisdictionName: string
     jurisdictionDesc: string
     hasChangeRequest?: boolean
+    hasActiveDraft?: boolean
   }
 ]
 
@@ -98,6 +100,7 @@ export const getServerSideProps = async (context) => {
             x.destId,
             x.destTypeId
           ),
+          hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
         }
       })
     )
@@ -139,4 +142,8 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
   return (await destinationChangeRequest(destId, destTypeId)) ? true : false
+}
+
+const hasActiveDraft = async (destId, destTypeId) => {
+  return (await fetchDraftRecord(destId, destTypeId)) ? true : false
 }

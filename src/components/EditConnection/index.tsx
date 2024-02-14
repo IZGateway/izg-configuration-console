@@ -1,13 +1,5 @@
 import * as React from 'react'
-import {
-  Container,
-  Typography,
-  Box,
-  ButtonGroup,
-  Button,
-  Tooltip,
-  Fab,
-} from '@mui/material'
+import { Container, Typography, Box } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
 import Verify from './verify'
@@ -21,11 +13,13 @@ import useSWR from 'swr'
 import { useSession } from 'next-auth/react'
 import Schedule from './schedule'
 import changeRequestValidation from '../../lib/changerequestvalidation'
-import * as _ from 'lodash'
 import TestDrawer from './testDrawer'
-
-import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
-import palette from '../../styles/theme/palette'
+import CustomSnackbar from '../SnackBar'
+import _ from 'lodash'
+import moment from 'moment'
+import FloatingActionButtons from './floatingActionButtons'
+import ActionButtons from './actionButtons'
+import AcceptButton from './acceptButton'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -47,7 +41,7 @@ const getDelta = (a, b) =>
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { data: session } = useSession()
-  const { clearValue, setAlert } = useContext(CombinedContext)
+  const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
   const [agreed, setAgreed] = useState(false)
@@ -60,6 +54,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [open, setOpen] = React.useState(false)
   const [testResults, setTestResults] = useState(null)
   const [isLoadingTest, setIsLoadingTest] = useState(false)
+  const [showSnackbar, setShowSnackbar] = useState(false)
 
   const [
     hasCreateChangeRequestTicketError,
@@ -70,7 +65,12 @@ const EditConnection = (props: editConnectionProps) => {
     error: destError,
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
-  const isFormChanged = !_.isEqual(formValues, defaultFormValues)
+  const {
+    data: draftData,
+    error: draftError,
+    isLoading: isDraftLoading,
+    mutate,
+  } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
 
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
@@ -84,7 +84,32 @@ const EditConnection = (props: editConnectionProps) => {
   }, [hasCreateChangeRequestTicketError])
 
   useEffect(() => {
-    if (destData) {
+    if (draftData) {
+      setFormValues({
+        username: draftData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: draftData?.facility_id,
+        MSH3: draftData?.MSH3,
+        MSH4: draftData?.MSH4,
+        MSH5: draftData?.MSH5,
+        MSH6: draftData?.MSH6,
+        MSH22: draftData?.MSH22,
+        RXA11: draftData?.RXA11,
+      })
+      setDefaultFormValues({
+        username: draftData?.username,
+        newPassword: '',
+        confirmPassword: '',
+        facility_id: draftData?.facility_id,
+        MSH3: draftData?.MSH3,
+        MSH4: draftData?.MSH4,
+        MSH5: draftData?.MSH5,
+        MSH6: draftData?.MSH6,
+        MSH22: draftData?.MSH22,
+        RXA11: draftData?.RXA11,
+      })
+    } else if (destData) {
       setFormValues({
         username: destData?.username,
         newPassword: '',
@@ -114,6 +139,16 @@ const EditConnection = (props: editConnectionProps) => {
 
   useEffect(() => {
     if (activeStep === 2) {
+      if (!_.isEmpty(alert.level)) {
+        setShowSnackbar(true)
+      } else {
+        setShowSnackbar(false)
+      }
+    }
+  }, [alert])
+
+  useEffect(() => {
+    if (activeStep === 2) {
       setFormErrors(null)
       setFormValuesDelta(null)
       const changedValues = getDelta(defaultFormValues, formValues)
@@ -127,8 +162,18 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues])
 
-  if (destError) throw new Error(destError.message)
-  if (isDestLoading) return <div>loading...</div>
+  if (destError || draftError)
+    throw new Error(destError.message || draftError.message)
+  if (isDestLoading || isDraftLoading) return <div>loading...</div>
+
+  const isFormChanged = !_.isEqual(formValues, defaultFormValues)
+  const isResetButtonDisabled = _.isNull(draftData)
+  const isNextButtonDisabled =
+    (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
+    !_.isEmpty(formErrors)
+  const isScheduleButtonDisabled = asapSelected
+    ? !asapSelected
+    : !scheduledDateTime
 
   const toggleTestDrawer = async () => {
     setOpen(!open)
@@ -160,6 +205,16 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }
 
+  const handleCloseSnackBar = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      jurisdiction: '',
+      dest_type: '',
+      message: '',
+    })
+  }
+
   const handleIAgreeButton = () => {
     setAgreed(true)
   }
@@ -187,6 +242,7 @@ const EditConnection = (props: editConnectionProps) => {
           isAsap: asapSelected,
           scheduledAt: scheduleAt,
           requestedBy: session.user.email,
+          draft: false,
         }),
       })
     } catch (error) {
@@ -235,133 +291,104 @@ const EditConnection = (props: editConnectionProps) => {
     if (_.isEmpty(formErrors)) {
       advanceStepper(1)
     }
+    if (activeStep === 1 && !_.isNull(draftData)) {
+      setAlert({
+        level: 'info',
+        message: `You are working on the latest draft. Last draft was saved by ${
+          draftData.requestedBy
+        } on ${moment(new Date(draftData.scheduledAt)).format(
+          'MMM DD, YYYY [at] h:mm A'
+        )}`,
+      })
+    }
   }
 
   const advanceStepper = (advanceBy: number) => {
     setActiveStep((prevActiveStep) => prevActiveStep + advanceBy)
   }
 
-  const actionButtons = () => (
-    <Box
-      sx={{
-        textAlign: 'center',
-      }}
-    >
-      <ButtonGroup
-        variant="contained"
-        fullWidth
-        size="large"
-        sx={{
-          margin: '1em',
-          alignItems: 'center',
-          borderRadius: '30px',
-        }}
-      >
-        <Button
-          id="previous"
-          color="primary"
-          variant="outlined"
-          disabled={activeStep === 0}
-          onClick={handlePrevious}
-          sx={{
-            borderRadius: '30px',
-          }}
-        >
-          PREVIOUS
-        </Button>
-        {activeStep === steps.length - 1 ? (
-          <Tooltip
-            arrow
-            placement="bottom"
-            title="Please select date and time"
-            open={
-              (asapSelected ? !asapSelected : !scheduledDateTime) ? true : false
-            }
-          >
-            <Button
-              id="schedule"
-              type="submit"
-              color="primary"
-              variant="contained"
-              disabled={asapSelected ? !asapSelected : !scheduledDateTime}
-              onClick={handleSchedule}
-              sx={{
-                borderRadius: '30px',
-              }}
-            >
-              SCHEDULE
-            </Button>
-          </Tooltip>
-        ) : (
-          <Button
-            id="next"
-            type="submit"
-            color="primary"
-            variant="contained"
-            onClick={handleNext}
-            disabled={
-              (activeStep === 2 && !isFormChanged) || !_.isEmpty(formErrors)
-            }
-            sx={{
-              borderRadius: '30px',
-            }}
-          >
-            NEXT
-          </Button>
-        )}
-      </ButtonGroup>
-    </Box>
-  )
+  const saveDraft = async () => {
+    const scheduleAt = new Date().toISOString()
+    const response = await fetch(`/api/changerequest`, {
+      method: 'POST',
+      body: JSON.stringify({
+        requested: {
+          ...formValues,
+        },
+        current: {
+          ...defaultFormValues,
+        },
+        dest_id: destData.dest_id,
+        dest_uri: destData.dest_uri,
+        dest_type_id: destData.destination_type.type_id,
+        dest_type: destData.destination_type.type,
+        jira_id: null,
+        isAsap: true,
+        scheduledAt: scheduleAt,
+        requestedBy: session.user.email,
+        draft: true,
+      }),
+    })
+    if (response.ok) {
+      await mutate()
+      setAlert({
+        level: 'success',
+        message: `Your draft was saved!`,
+      })
+    } else {
+      setAlert({
+        level: 'error',
+        message: `Error saving the draft`,
+      })
+      console.error(`Error saving the draft`)
+    }
+  }
 
-  const acceptButton = () => (
-    <Box sx={{ textAlign: 'center' }}>
-      <Button
-        id="accept"
-        variant="contained"
-        color="primary"
-        size="large"
-        onClick={handleAccept}
-        disabled={!agreed}
-        sx={{
-          background: 'secondary',
-          borderRadius: '37.5px',
-          margin: '1em',
-          alignItems: 'center',
-          width: 350,
-        }}
-      >
-        ACCEPT
-      </Button>
-    </Box>
-  )
-
-  const testButton = () => (
-    <Box>
-      <Fab
-        sx={{
-          position: 'absolute',
-          bottom: 32,
-          right: 16,
-          backgroundColor: palette.white,
-          border: `1px solid ${palette.white}`,
-          '&:hover': {
-            border: `1.5px solid ${palette.primary}`,
-            transition: '200ms',
-          },
-        }}
-        onClick={toggleTestDrawer}
-        disabled={!isFormChanged}
-      >
-        <Tooltip arrow placement="bottom" title="Test">
-          <MonitorHeartOutlinedIcon
-            color="primary"
-            aria-label="test"
-            fontSize="small"
-          />
-        </Tooltip>
-      </Fab>
-    </Box>
-  )
+  const resetDraftValues = async () => {
+    setDefaultFormValues({
+      username: destData?.username,
+      newPassword: '',
+      confirmPassword: '',
+      facility_id: destData?.facility_id,
+      MSH3: destData?.MSH3,
+      MSH4: destData?.MSH4,
+      MSH5: destData?.MSH5,
+      MSH6: destData?.MSH6,
+      MSH22: destData?.MSH22,
+      RXA11: destData?.RXA11,
+    })
+    setFormValues({
+      username: destData?.username,
+      newPassword: '',
+      confirmPassword: '',
+      facility_id: destData?.facility_id,
+      MSH3: destData?.MSH3,
+      MSH4: destData?.MSH4,
+      MSH5: destData?.MSH5,
+      MSH6: destData?.MSH6,
+      MSH22: destData?.MSH22,
+      RXA11: destData?.RXA11,
+    })
+    const response = await fetch(
+      `/api/changerequest/draft/${props.destTypeId}/${props.destId}/${draftData.id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+    if (response.ok) {
+      setAlert({
+        level: 'success',
+        message: `Your draft was reset!`,
+      })
+    } else {
+      setAlert({
+        level: 'error',
+        message: `Error resetting draft`,
+      })
+      console.error(`Error resetting draft`)
+    }
+    await mutate()
+  }
 
   return (
     <div>
@@ -422,12 +449,36 @@ const EditConnection = (props: editConnectionProps) => {
               marginTop: 4,
             }}
           >
-            {activeStep === 0 ? acceptButton() : actionButtons()}
+            {activeStep === 0 ? (
+              <AcceptButton handleAccept={handleAccept} agreed={agreed} />
+            ) : (
+              <ActionButtons
+                activeStep={activeStep}
+                handlePrevious={handlePrevious}
+                steps={steps}
+                isScheduleButtonDisabled={isScheduleButtonDisabled}
+                handleSchedule={handleSchedule}
+                handleNext={handleNext}
+                isNextButtonDisabled={isNextButtonDisabled}
+              />
+            )}
           </Container>
+          <CustomSnackbar
+            open={showSnackbar}
+            severity={alert.level}
+            message={alert.message}
+            onClose={handleCloseSnackBar}
+          />
         </div>
       </Container>
       {activeStep === 2 && !open ? (
-        testButton()
+        <FloatingActionButtons
+          toggleTestDrawer={toggleTestDrawer}
+          isFormChanged={isFormChanged}
+          saveDraft={saveDraft}
+          isResetButtonDisabled={isResetButtonDisabled}
+          resetDraft={resetDraftValues}
+        />
       ) : (
         <TestDrawer
           open={open}

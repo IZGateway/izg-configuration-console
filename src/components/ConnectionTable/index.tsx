@@ -14,9 +14,8 @@ import HistoryIcon from '@mui/icons-material/History'
 import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-
 import SessionContext from '../../contexts/app'
-import EditButton from './EditButton'
+import ChangeRequestActionButtons from './changeRequestActionButtons'
 import palette from '../../styles/theme/palette'
 
 const dataGridCustom = {
@@ -71,6 +70,9 @@ const dataGridCustom = {
     {
       color: palette.primary,
     },
+  '& .MuiDataGrid-virtualScroller': {
+    overflow: 'hidden',
+  },
 }
 
 const actionButtonStyle = {
@@ -138,13 +140,21 @@ const ConnectionsTable = (props) => {
                 <Card elevation={0}>
                   <CardHeader
                     title={
-                      <Typography sx={{ fontWeight: 'bold', color: palette.greyDarkTypography }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 'bold',
+                          color: palette.greyDarkTypography,
+                        }}
+                      >
                         {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
                       <Typography
-                        sx={{ fontWeight: 'regular',  color: palette.greyDarkTypography }}
+                        sx={{
+                          fontWeight: 'regular',
+                          color: palette.greyDarkTypography,
+                        }}
                         variant="body2"
                       >
                         {asOfDate}
@@ -200,11 +210,12 @@ const ConnectionsTable = (props) => {
       renderCell: (params) => {
         return (
           <div>
-            <EditButton
+            <ChangeRequestActionButtons
               tabIndex={params.tabIndex}
               destId={params.id}
               destTypeId={params.row.destTypeId}
               hasChangeRequest={params.row.hasChangeRequest}
+              hasActiveDraft={params.row.hasActiveDraft}
             />
             <Link
               tabIndex={params.tabIndex}
