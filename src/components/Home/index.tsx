@@ -13,14 +13,15 @@ import {
 
 import AppHeaderBar from '../AppHeader'
 import palette from '../../styles/theme/palette'
-import HomeCircleCallouts from '../Home/HomeCircleCallouts'
-
-import { ArrowForward } from '@mui/icons-material'
 
 import Image from 'next/image'
 import CDCLogo from '../../public/United_States_Centers_for_Disease_Control_and_Prevention_logo 1.svg'
 import homePageBanner from '../../public/IZ-Gateway-BannerImagery.svg'
 import Link from 'next/link'
+import UseCases from './UseCases'
+import Requirements from './Requirements'
+import HomeCircleCallouts from './HomeCircleCallouts'
+import Faq from './Faqs'
 
 function HomeComponent() {
   return (
@@ -124,16 +125,6 @@ function HomeComponent() {
                     through defined, streamlined IZ Gateway processes
                   </Typography>
                 </CardContent>
-                <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    endIcon={<ArrowForward />}
-                  >
-                    Learn More
-                  </Button>
-                </CardActions>
               </Card>
               <HomeCircleCallouts />
             </Box>
@@ -165,14 +156,7 @@ function HomeComponent() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    endIcon={<ArrowForward />}
-                  >
-                    Learn More
-                  </Button>
+                  <Faq />
                 </CardActions>
               </Card>
               <Card
@@ -198,14 +182,7 @@ function HomeComponent() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    endIcon={<ArrowForward />}
-                  >
-                    Learn More
-                  </Button>
+                  <UseCases />
                 </CardActions>
               </Card>
               <Card
@@ -230,14 +207,7 @@ function HomeComponent() {
                   </Typography>
                 </CardContent>
                 <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    size="small"
-                    endIcon={<ArrowForward />}
-                  >
-                    Learn More
-                  </Button>
+                  <Requirements />
                 </CardActions>
               </Card>
             </Box>
@@ -263,7 +233,7 @@ function HomeComponent() {
               pb={1}
             >
               <Typography variant="caption">
-                Version 1.0 | Placeholder
+                Version 1.0 | Immunization (IZ) Gateway 2024
               </Typography>
               <Box
                 display={'flex'}
