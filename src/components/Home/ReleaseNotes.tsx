@@ -110,7 +110,7 @@ const ReleaseNotes = () => {
             </Typography>
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ mr: 1 }}>
           <Button onClick={handleClose}>Close</Button>
         </DialogActions>
       </Dialog>

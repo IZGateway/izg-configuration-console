@@ -94,7 +94,7 @@ const LegalDocumentation = () => {
             provision of this Agreement, Licensee should not use the Software.
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ mr: 1 }}>
           <Button onClick={handleClose}>Close</Button>
         </DialogActions>
       </Dialog>

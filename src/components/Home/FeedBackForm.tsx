@@ -118,7 +118,7 @@ const FeedbackForm = () => {
             </Box>
           </form>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ mr: 1 }}>
           <Button onClick={handleClose}>Cancel</Button>
           <Button onClick={handleSubmit} variant="contained" color="primary">
             Submit
