@@ -167,6 +167,8 @@ DROP TABLE IF EXISTS audit_history;
 
 CREATE TABLE `audit_history` (
   `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `dest_id` varchar(128) NOT NULL,
+  `dest_type` int(11) NOT NULL,
   `tableName` VARCHAR(50) NOT NULL,
   `userName` VARCHAR(50) NOT NULL,
   `changeType` ENUM('Insert', 'Update', 'Delete') NOT NULL,
