@@ -3,6 +3,8 @@ import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
+import fs from 'fs'
+import forge from 'node-forge'
 
 const connectionTest = async (destination: any, userId: string) => {
   enum TestSuite {
@@ -14,6 +16,7 @@ const connectionTest = async (destination: any, userId: string) => {
     'connectivity',
     'qbp',
   }
+
   const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
   const numberOfTests = testSuiteKeys.length
   const connectionTestResult = {
@@ -33,8 +36,26 @@ const connectionTest = async (destination: any, userId: string) => {
       },
     ],
   }
-
   const DEFAULT_PORT = 443
+  const hasHostname = (url) => {
+    try {
+      const parsedUrl = new URL(url)
+      return !!parsedUrl.hostname
+    } catch (error) {
+      return false
+    }
+  }
+
+  const setHostnameIfNull = (url) => {
+    let hostname
+    if (!hasHostname(url)) {
+      hostname = 'https://' + getHostNameFromCert()
+      return hostname + url
+    } else {
+      return url
+    }
+  }
+
   const testResults: ConnectionTestResult[] = []
   let desttypeid
   let destType
@@ -54,7 +75,10 @@ const connectionTest = async (destination: any, userId: string) => {
       },
     ]
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
-  } else if (destination && !isValidUrl(destination.dest_uri)) {
+  } else if (
+    destination &&
+    !isValidUrl(setHostnameIfNull(destination.dest_uri))
+  ) {
     if (changeRequestDestination) {
       destType = destination?.destinations.destination_type.type
       jurisdictionDescription =
@@ -97,7 +121,9 @@ const connectionTest = async (destination: any, userId: string) => {
       destType = destination?.destination_type.type
       jurisdictionDescription = destination.jurisdiction.description
     }
-    const destIdURL = convertUrlStringToUrlObject(destination?.dest_uri)
+    const destIdURL = convertUrlStringToUrlObject(
+      setHostnameIfNull(destination?.dest_uri)
+    )
 
     const connectionTestRequest: ConnectionTestRequest = {
       ip: '',
@@ -175,4 +201,23 @@ const isValidUrl = (urlString: string) => {
   } catch (e) {
     return false
   }
+}
+
+const getHostNameFromCert = () => {
+  let hostname = ''
+  try {
+    const certPem = fs.readFileSync(process.env.IZG_ENDPOINT_CRT_PATH, 'utf8')
+    const cert = forge.pki.certificateFromPem(certPem)
+
+    const subjectAttributes = cert.subject.attributes
+    for (const attribute of subjectAttributes) {
+      if (attribute.shortName === 'CN') {
+        hostname = attribute.value
+        break
+      }
+    }
+  } catch (error) {
+    console.error('Error reading certificate for hostname:', error)
+  }
+  return hostname
 }
