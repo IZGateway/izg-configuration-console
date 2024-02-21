@@ -16,7 +16,7 @@ describe('ConnectionInfoDetail component', () => {
 
   it('renders connection info details correctly', () => {
     const destination = {
-      jurisdiction: { description: 'Jurisdiction Description' },
+      jurisdiction: { description: 'Organization Description' },
       destination_type: { type: 'Test' },
       dest_uri: 'http://example.com',
       username: 'user123',
@@ -50,8 +50,8 @@ describe('ConnectionInfoDetail component', () => {
         'View connection information below. Editing is not available on this panel.'
       )
     ).toBeInTheDocument()
-    expect(getByLabelText('Jurisdiction')).toHaveValue(
-      'Jurisdiction Description'
+    expect(getByLabelText('Organization')).toHaveValue(
+      'Organization Description'
     )
     expect(getByLabelText('Type of Connection')).toHaveValue('Test')
     expect(getByLabelText('Endpoint URL')).toHaveValue('http://example.com')
