@@ -18,6 +18,8 @@ model accesscontrol {
 
 model audit_history {
   id         Int                      @id @default(autoincrement())
+  dest_id    String                   @db.VarChar(50)
+  dest_type  Int
   tableName  String                   @db.VarChar(50)
   userName   String                   @db.VarChar(50)
   changeType audit_history_changeType
