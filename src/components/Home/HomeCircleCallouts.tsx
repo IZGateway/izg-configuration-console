@@ -3,20 +3,23 @@ import Box from '@mui/material/Box'
 import FeedbackForm from './FeedBackForm'
 import ReleaseNotes from './ReleaseNotes'
 import LegalDocumentation from './LegalDocumentation'
+import { Slide } from '@mui/material'
 
 const HomeCircleCallouts = ({}) => {
   return (
-    <Box
-      display={'flex'}
-      justifyContent={'space-between'}
-      flexDirection={'row'}
-      pl={2}
-      pr={2}
-    >
-      <ReleaseNotes />
-      <LegalDocumentation />
-      <FeedbackForm />
-    </Box>
+    <Slide in={true} timeout={2400} direction="up">
+      <Box
+        display={'flex'}
+        justifyContent={'space-between'}
+        flexDirection={'row'}
+        pl={2}
+        pr={2}
+      >
+        <ReleaseNotes />
+        <LegalDocumentation />
+        <FeedbackForm />
+      </Box>
+    </Slide>
   )
 }
 

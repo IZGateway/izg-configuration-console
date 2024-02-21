@@ -22,6 +22,7 @@ import UseCases from './UseCases'
 import Requirements from './Requirements'
 import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
+import Slide from '@mui/material/Slide'
 
 function HomeComponent() {
   return (
@@ -44,35 +45,39 @@ function HomeComponent() {
               flexDirection: 'row ',
             }}
           >
-            <Box>
-              <Typography>IZ Gateway</Typography>
-              <Typography component={'h1'} variant="h5">
-                <strong>
-                  Exchanging of immunization data between immunization
-                  information systems (IISs), provider organizations, and
-                  consumer applications.
-                </strong>
-              </Typography>
-              <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
-                <Link href="/manage">
-                  <Button variant="contained" color="primary">
-                    Manage Connections
-                  </Button>
-                </Link>
-                <Link href="/api-doc">
-                  <Button variant="outlined" color="primary">
-                    OUR API
-                  </Button>
-                </Link>
+            <Slide in={true} timeout={1200} direction="down">
+              <Box>
+                <Typography>IZ Gateway</Typography>
+                <Typography component={'h1'} variant="h5">
+                  <strong>
+                    Exchanging of immunization data between immunization
+                    information systems (IISs), provider organizations, and
+                    consumer applications.
+                  </strong>
+                </Typography>
+                <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
+                  <Link href="/manage">
+                    <Button variant="contained" color="primary">
+                      Manage Connections
+                    </Button>
+                  </Link>
+                  <Link href="/api-doc">
+                    <Button variant="outlined" color="primary">
+                      OUR API
+                    </Button>
+                  </Link>
+                </Box>
               </Box>
-            </Box>
+            </Slide>
             <Box width={300} height={150}>
-              <Image
-                src={homePageBanner}
-                width={300}
-                height={180}
-                alt="general error image"
-              />
+              <Slide in={true} timeout={1200} direction="down">
+                <Image
+                  src={homePageBanner}
+                  width={300}
+                  height={180}
+                  alt="general error image"
+                />
+              </Slide>
             </Box>
           </Container>
         </Paper>
@@ -94,38 +99,41 @@ function HomeComponent() {
               justifyContent={'flex-start'}
               width={'75%'}
             >
-              <Card
-                sx={{
-                  width: '-webkit-fill-available',
-                  borderRadius: '0px 0px 30px 30px',
-                }}
-              >
-                <CardHeader
-                  titleTypographyProps={{
-                    fontSize: '1.3em',
-                    fontWeight: '500',
+              <Slide in={true} timeout={1200} direction="up">
+                <Card
+                  sx={{
+                    width: '-webkit-fill-available',
+                    borderRadius: '0px 0px 30px 30px',
                   }}
-                  sx={{ pt: 2, pl: 2, pb: 0 }}
-                  title="What is IZ Gateway"
-                  subheader="Here a breakdown from our team. "
-                />
-                <CardContent>
-                  <Typography>
-                    The IZ Gateway is a secure, cloud-based message routing
-                    service that enables data exchange among jurisdiction
-                    immunization information systems (IIS) and
-                    multijurisdictional vaccine provider systems. It is also
-                    designed to facilitate consumer access to their immunization
-                    data. The IZ Gateway does not access or store immunization
-                    data and meets all federal data security requirements. The
-                    centralized data exchange facilitated by the IZ Gateway
-                    eliminates the need for multiple, individual, point-to-point
-                    connections between providers’ systems and IISs. It also
-                    minimizes technical and policy data exchange challenges
-                    through defined, streamlined IZ Gateway processes
-                  </Typography>
-                </CardContent>
-              </Card>
+                >
+                  <CardHeader
+                    titleTypographyProps={{
+                      fontSize: '1.3em',
+                      fontWeight: '500',
+                    }}
+                    sx={{ pt: 2, pl: 2, pb: 0 }}
+                    title="What is IZ Gateway"
+                    subheader="Here a breakdown from our team. "
+                  />
+                  <CardContent>
+                    <Typography>
+                      The IZ Gateway is a secure, cloud-based message routing
+                      service that enables data exchange among jurisdiction
+                      immunization information systems (IIS) and
+                      multijurisdictional vaccine provider systems. It is also
+                      designed to facilitate consumer access to their
+                      immunization data. The IZ Gateway does not access or store
+                      immunization data and meets all federal data security
+                      requirements. The centralized data exchange facilitated by
+                      the IZ Gateway eliminates the need for multiple,
+                      individual, point-to-point connections between providers’
+                      systems and IISs. It also minimizes technical and policy
+                      data exchange challenges through defined, streamlined IZ
+                      Gateway processes
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Slide>
               <HomeCircleCallouts />
             </Box>
             <Box
@@ -134,82 +142,88 @@ function HomeComponent() {
               gap={4}
               width={'-webkit-fill-available'}
             >
-              <Card
-                sx={{
-                  width: '-webkit-fill-available',
-                  borderRadius: '0px 0px 30px 30px',
-                }}
-              >
-                <CardHeader
-                  titleTypographyProps={{
-                    fontSize: '1.3em',
-                    fontWeight: '500',
+              <Slide in={true} timeout={1200} direction="up">
+                <Card
+                  sx={{
+                    width: '-webkit-fill-available',
+                    borderRadius: '0px 0px 30px 30px',
                   }}
-                  title="Frequently Asked Questions"
-                  sx={{ pt: 2, pl: 2, pb: 0 }}
-                />
-                <CardContent>
-                  <Typography variant="body2">
-                    Explore the frequently asked questions (FAQs) section for
-                    the IZ Gateway, where you can find detailed answers and
-                    insights into common queries
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Faq />
-                </CardActions>
-              </Card>
-              <Card
-                sx={{
-                  width: '-webkit-fill-available',
-                  borderRadius: '0px 0px 30px 30px',
-                }}
-              >
-                <CardHeader
-                  titleTypographyProps={{
-                    fontSize: '1.3em',
-                    fontWeight: '500',
+                >
+                  <CardHeader
+                    titleTypographyProps={{
+                      fontSize: '1.3em',
+                      fontWeight: '500',
+                    }}
+                    title="Frequently Asked Questions"
+                    sx={{ pt: 2, pl: 2, pb: 0 }}
+                  />
+                  <CardContent>
+                    <Typography variant="body2">
+                      Explore the frequently asked questions (FAQs) section for
+                      the IZ Gateway, where you can find detailed answers and
+                      insights into common queries
+                    </Typography>
+                  </CardContent>
+                  <CardActions sx={{ mb: 2, ml: 1 }}>
+                    <Faq />
+                  </CardActions>
+                </Card>
+              </Slide>
+              <Slide in={true} timeout={1600} direction="up">
+                <Card
+                  sx={{
+                    width: '-webkit-fill-available',
+                    borderRadius: '0px 0px 30px 30px',
                   }}
-                  sx={{ pt: 2, pl: 2, pb: 0 }}
-                  title="Use Cases"
-                />
-                <CardContent>
-                  <Typography variant="body2">
-                    This page contains comprehensive content detailing various
-                    use cases related to four key elements: IIS-IIS
-                    interactions, Provider-IIS relationships, IIS-CDC scenarios,
-                    and Consumer Access functionalities,
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <UseCases />
-                </CardActions>
-              </Card>
-              <Card
-                sx={{
-                  width: '-webkit-fill-available',
-                  borderRadius: '0px 0px 30px 30px',
-                }}
-              >
-                <CardHeader
-                  titleTypographyProps={{
-                    fontSize: '1.3em',
-                    fontWeight: '500',
+                >
+                  <CardHeader
+                    titleTypographyProps={{
+                      fontSize: '1.3em',
+                      fontWeight: '500',
+                    }}
+                    sx={{ pt: 2, pl: 2, pb: 0 }}
+                    title="Use Cases"
+                  />
+                  <CardContent>
+                    <Typography variant="body2">
+                      This page contains comprehensive content detailing various
+                      use cases related to four key elements: IIS-IIS
+                      interactions, Provider-IIS relationships, IIS-CDC
+                      scenarios, and Consumer Access functionalities,
+                    </Typography>
+                  </CardContent>
+                  <CardActions sx={{ mb: 2, ml: 1 }}>
+                    <UseCases />
+                  </CardActions>
+                </Card>
+              </Slide>
+              <Slide in={true} timeout={2000} direction="up">
+                <Card
+                  sx={{
+                    width: '-webkit-fill-available',
+                    borderRadius: '0px 0px 30px 30px',
                   }}
-                  sx={{ pt: 2, pl: 2, pb: 0 }}
-                  title="Requirements"
-                />
-                <CardContent>
-                  <Typography variant="body2">
-                    Specific requirements for seamless integration and providing
-                    essential guidelines for effective implementation and system
-                    compatibility.
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ mb: 2, ml: 1 }}>
-                  <Requirements />
-                </CardActions>
-              </Card>
+                >
+                  <CardHeader
+                    titleTypographyProps={{
+                      fontSize: '1.3em',
+                      fontWeight: '500',
+                    }}
+                    sx={{ pt: 2, pl: 2, pb: 0 }}
+                    title="Requirements"
+                  />
+                  <CardContent>
+                    <Typography variant="body2">
+                      Specific requirements for seamless integration and
+                      providing essential guidelines for effective
+                      implementation and system compatibility.
+                    </Typography>
+                  </CardContent>
+                  <CardActions sx={{ mb: 2, ml: 1 }}>
+                    <Requirements />
+                  </CardActions>
+                </Card>
+              </Slide>
             </Box>
           </Box>
         </Container>
@@ -221,6 +235,7 @@ function HomeComponent() {
             ml: -4,
             zIndex: 10,
             boxShadow: '0px -4px 8px rgba(0, 0, 0, 0.20)',
+            position: 'fixed',
           }}
         >
           <Container>
