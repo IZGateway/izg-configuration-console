@@ -45,7 +45,7 @@ const Faq = () => {
         onClick={handleClickOpen}
         endIcon={<ArrowForward />}
       >
-        Learn More
+        Get Answers
       </Button>
       <Dialog
         PaperProps={{
@@ -56,9 +56,6 @@ const Faq = () => {
       >
         <DialogTitle>Frequently Asked Questions</DialogTitle>
         <DialogContent>
-          <Typography gutterBottom>
-            <strong>Welcome!</strong>{' '}
-          </Typography>
           <Typography gutterBottom>
             We've compiled answers to some of the most common questions our
             customers have. Please select a given question to expand the answer.
@@ -75,14 +72,19 @@ const Faq = () => {
               aria-controls="panel1a-content"
               id="panel1a-header"
             >
-              <Typography variant="h6">1. How can I place an order?</Typography>
+              <Typography variant="body1">
+                <strong>What is the Configuration Console?</strong>
+              </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography>
-                To place an order, simply browse through our products, select
-                the items you'd like to purchase, and proceed to checkout.
-                Follow the prompts to enter your shipping and payment
-                information, and you're all set!
+                The Configuration Console is a configuration service designed
+                for organizations utilizing the IZ Gateway for immunization data
+                exchange. It facilitates the seamless updating and testing of
+                critical system configurations, ensuring the accuracy of
+                parameters such as Endpoint URL, Endpoint ID, Username and
+                Password, and MSH segment and FacilityID values used in HL7
+                messages
               </Typography>
             </AccordionDetails>
           </Accordion>
@@ -96,15 +98,187 @@ const Faq = () => {
               aria-controls="panel2a-content"
               id="panel2a-header"
             >
-              <Typography variant="h6">
-                2. What payment methods do you accept?
+              <Typography variant="body1">
+                <strong>
+                  What are the key features of the Configuration Console?
+                </strong>
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography>
-                We accept various payment methods, including credit/debit cards,
-                PayPal, and other secure online payment options. Rest assured
-                that your payment information is encrypted and protected.
+                The key features include Endpoint configuration management, a
+                dedicated testing mechanism, HL7 message customization, secure
+                user authentication, and robust audit trail and versioning
+                mechanisms.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel3'}
+            onChange={handleChange('panel3')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel3a-content"
+              id="panel3a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  What organization system settings can be managed within the
+                  Configuration Console?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                The Configuration Console allows the management of Endpoint URL,
+                Endpoint ID, Username, Password, MSH, and FacilityID values
+                crucial for immunization data exchange.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel4'}
+            onChange={handleChange('panel4')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel4a-content"
+              id="panel4a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  How does the Configuration Console support testing?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                It provides a dedicated testing environment where users can
+                validate configurations before deploying them to the production
+                environment, minimizing the risk of errors.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel5'}
+            onChange={handleChange('panel5')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel5a-content"
+              id="panel5a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  Can HL7 messages be customized using the Configuration
+                  Console?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                Yes, the Configuration Console allows users to customize HL7
+                messages by modifying MSH and FacilityID values, ensuring
+                compatibility with varied system requirements
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel6'}
+            onChange={handleChange('panel6')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel6a-content"
+              id="panel6a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  How does the Configuration Console ensure security?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                It implements secure mechanisms for updating sensitive
+                information such as usernames and passwords. User authentication
+                details are handled with utmost confidentiality, adhering to
+                industry security standards.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel7'}
+            onChange={handleChange('panel7')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel7a-content"
+              id="panel7a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  Is there a mechanism to track configuration changes?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                Yes, the Configuration Console maintains an audit trail of
+                configuration changes, providing traceability and
+                accountability. It also supports versioning to track different
+                configurations over time.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel8'}
+            onChange={handleChange('panel8')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel8a-content"
+              id="panel8a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  What is the scope of the Configuration Console project?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                The project scope includes configuration management, a testing
+                environment, HL7 message customization, secure user
+                authentication, and audit trail and versioning features. It
+                excludes production deployment processes, IZ Gateway
+                development, and support for data exchange protocols beyond HL7.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel9'}
+            onChange={handleChange('panel9')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel9a-content"
+              id="panel9a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  Who are the primary users of the Configuration Console?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                The primary end users are Immunization Information System
+                program and technical staff responsible for updating and testing
+                configurations. Stakeholders are healthcare organizations
+                relying on the IZ Gateway for comprehensive immunization
+                records.
               </Typography>
             </AccordionDetails>
           </Accordion>
