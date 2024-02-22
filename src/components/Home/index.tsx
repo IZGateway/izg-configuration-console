@@ -9,6 +9,7 @@ import {
   CardHeader,
   Card,
   CardActions,
+  Divider,
 } from '@mui/material'
 
 import AppHeaderBar from '../AppHeader'
@@ -104,6 +105,7 @@ function HomeComponent() {
                   sx={{
                     width: '-webkit-fill-available',
                     borderRadius: '0px 0px 30px 30px',
+                    zIndex: 4,
                   }}
                 >
                   <CardHeader
@@ -116,12 +118,15 @@ function HomeComponent() {
                     subheader="Here a breakdown from our team. "
                   />
                   <CardContent>
-                    <Typography>
+                    <Typography gutterBottom>
                       The IZ Gateway is a secure, cloud-based message routing
                       service that enables data exchange among jurisdiction
                       immunization information systems (IIS) and
-                      multijurisdictional vaccine provider systems. It is also
-                      designed to facilitate consumer access to their
+                      multijurisdictional vaccine provider systems.
+                    </Typography>
+                    <Divider sx={{ mt: 2, mb: 2 }} />
+                    <Typography variant="body2">
+                      It is also designed to facilitate consumer access to their
                       immunization data. The IZ Gateway does not access or store
                       immunization data and meets all federal data security
                       requirements. The centralized data exchange facilitated by
@@ -243,8 +248,9 @@ function HomeComponent() {
               display={'flex'}
               justifyContent={'space-between'}
               flexDirection={'row'}
+              alignItems={'center'}
               gap={2}
-              pt={2}
+              pt={1}
               pb={1}
             >
               <Typography variant="caption">
@@ -260,12 +266,16 @@ function HomeComponent() {
                   This application has been authorized by the Centers for
                   Disease Control and Prevention{' '}
                 </Typography>
-                <Image
-                  src={CDCLogo}
-                  width={20}
-                  height={20}
-                  alt="general error image"
-                />
+                <Box>
+                  <Link href={'https://www.cdc.gov/'} target="_blank">
+                    <Image
+                      src={CDCLogo}
+                      width={27}
+                      height={15}
+                      alt="CDC Logo"
+                    />
+                  </Link>
+                </Box>
               </Box>
             </Box>
           </Container>
