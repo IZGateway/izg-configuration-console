@@ -43,12 +43,17 @@ const LegalDocumentation = () => {
         flexDirection={'column'}
         alignItems={'center'}
         justifyContent={'center'}
-        gap={1}
+        gap={2}
       >
         <IconButton sx={actionButtonStyle} onClick={handleClickOpen}>
           <PolicyOutlined color="primary" />
         </IconButton>
-        <Typography> Legal Documentation</Typography>
+        <Typography align="center">
+          {' '}
+          Legal
+          <br />
+          Documentation
+        </Typography>
       </Box>
       <Dialog
         PaperProps={{

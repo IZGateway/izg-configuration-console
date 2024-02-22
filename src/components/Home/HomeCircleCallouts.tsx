@@ -14,6 +14,7 @@ const HomeCircleCallouts = ({}) => {
         flexDirection={'row'}
         pl={2}
         pr={2}
+        pt={2}
       >
         <ReleaseNotes />
         <LegalDocumentation />

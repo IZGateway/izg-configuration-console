@@ -43,12 +43,14 @@ const ReleaseNotes = () => {
         flexDirection={'column'}
         alignItems={'center'}
         justifyContent={'center'}
-        gap={1}
+        gap={2}
       >
         <IconButton sx={actionButtonStyle} onClick={handleClickOpen}>
           <NotesOutlined color="primary" />
         </IconButton>
-        <Typography>Release Notes</Typography>
+        <Typography align="center">
+          Release <br /> Notes
+        </Typography>
       </Box>
       <Dialog
         PaperProps={{

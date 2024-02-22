@@ -57,12 +57,16 @@ const FeedbackForm = () => {
         flexDirection={'column'}
         alignItems={'center'}
         justifyContent={'center'}
-        gap={1}
+        gap={2}
       >
         <IconButton sx={actionButtonStyle} onClick={handleClickOpen}>
           <RateReviewOutlined color="primary" />
         </IconButton>
-        <Typography>Give Us Feedback!</Typography>
+        <Typography align="center">
+          Give Us
+          <br />
+          Feedback!
+        </Typography>
       </Box>
       <Dialog
         PaperProps={{
