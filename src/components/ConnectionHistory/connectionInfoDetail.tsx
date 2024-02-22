@@ -62,8 +62,8 @@ const ConnectionInfoDetail = ({
                   justifyContent="space-between"
                 >
                   <TextField
-                    id="jurisdiction"
-                    label="Jurisdiction"
+                    id="organization"
+                    label="Organization"
                     variant="filled"
                     disabled
                     defaultValue={destination.jurisdiction.description}

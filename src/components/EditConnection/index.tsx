@@ -27,7 +27,7 @@ interface editConnectionProps {
 
 const steps = [
   'SERVICE AGREEMENT',
-  'JURISDICTION',
+  'ORGANIZATION',
   'IDENTIFY',
   'VERIFY',
   'SCHEDULE',
