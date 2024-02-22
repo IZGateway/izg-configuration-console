@@ -215,13 +215,15 @@ function HomeComponent() {
                       fontWeight: '500',
                     }}
                     sx={{ pt: 2, pl: 2, pb: 0 }}
-                    title="Requirements"
+                    title="Supoorting Documentation"
                   />
                   <CardContent>
                     <Typography variant="body2">
-                      Specific requirements for seamless integration and
-                      providing essential guidelines for effective
-                      implementation and system compatibility.
+                      For detailed information and guidance on implementation,
+                      integration, and utilization of these systems, access our
+                      comprehensive supporting documentation. Discover how these
+                      solutions can enhance your immunization data management
+                      and reporting processes.
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ mb: 2, ml: 1 }}>

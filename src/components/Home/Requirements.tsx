@@ -11,8 +11,10 @@ import {
   Button,
   Typography,
   Divider,
+  List,
+  ListItem,
 } from '@mui/material'
-import palette from '../../styles/theme/palette'
+import Link from 'next/link'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
@@ -20,7 +22,7 @@ const customPaperStyles = {
   paddingBottom: '16px',
 }
 
-const Requirements = () => {
+const SupportingDocumentation = () => {
   const [open, setOpen] = useState(false)
 
   const handleClickOpen = () => {
@@ -45,7 +47,7 @@ const Requirements = () => {
         onClick={handleClickOpen}
         endIcon={<ArrowForward />}
       >
-        Learn More
+        View Documentation
       </Button>
       <Dialog
         PaperProps={{
@@ -54,29 +56,111 @@ const Requirements = () => {
         open={open}
         onClose={handleClose}
       >
-        <DialogTitle>Requirements</DialogTitle>
+        <DialogTitle>Supporting Documentation</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            We outline the essential criteria and specifications for using our
-            products/services effectively. Understanding these requirements
-            ensures a smooth and optimal user experience, allowing you to
-            maximize the benefits of our offerings.
+            Access documentation now to streamline your operations and improve
+            public health outcomes.
           </Typography>
           <Divider sx={{ mt: 2, mb: 2 }} />
-          <Typography gutterBottom>
-            1. Device Compatibility: Ensure compatibility with your devices and
-            operating systems. Our products/services may require specific
-            hardware specifications or software versions to function properly.
-            Check the compatibility list provided to ensure seamless integration
-            with your devices.
-          </Typography>
-          <Typography gutterBottom>
-            2. Internet Connection: A stable internet connection is often
-            necessary to access and utilize our online products/services.
-            Whether you're streaming content, accessing cloud-based tools, or
-            downloading updates, a reliable internet connection ensures
-            uninterrupted access and optimal performance.
-          </Typography>
+          <Accordion
+            expanded={expandedAccordion === 'panel1'}
+            onChange={handleChange('panel1')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore color="primary" />}
+              aria-controls="panel1a-content"
+              id="panel1a-header"
+            >
+              <Typography variant="h6">
+                IZG IIS-CDC Reporting (Automate Data Submissions)
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List>
+                <ListItem>
+                  <Typography>
+                    The IZG IIS-CDC Reporting system automates data submissions
+                    from Immunization Information Systems (IIS) to the Centers
+                    for Disease Control and Prevention (CDC), streamlining
+                    reporting processes.{' '}
+                    <Link
+                      href={
+                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20IIS-CDC%20Reporting%20(Automate%20Data%20Submissions)?csf=1&web=1&e=wZbFmh'
+                      }
+                    >
+                      Access documentation
+                    </Link>
+                  </Typography>
+                </ListItem>
+              </List>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion
+            expanded={expandedAccordion === 'panel2'}
+            onChange={handleChange('panel2')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore color="primary" />}
+              aria-controls="panel2a-content"
+              id="panel2a-header"
+            >
+              <Typography variant="h6">IZG IIS-to-IIS Data Exchange</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List>
+                <ListItem>
+                  <Typography>
+                    The IZG IIS-to-IIS Data Exchange facilitates secure and
+                    standardized transmission of immunization data among
+                    different Immunization Information Systems (IIS), promoting
+                    interoperability.{' '}
+                    <Link
+                      href={
+                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20IIS-to-IIS%20Data%20Exchange?csf=1&web=1&e=5UcDZG'
+                      }
+                    >
+                      Access documentation
+                    </Link>
+                  </Typography>
+                </ListItem>
+              </List>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel3'}
+            onChange={handleChange('panel3')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore color="primary" />}
+              aria-controls="panel3a-content"
+              id="panel3a-header"
+            >
+              <Typography variant="h6">
+                IZG Provider-to-IIS Data Exchange
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List>
+                <ListItem>
+                  <Typography>
+                    The IZG Provider-to-IIS Data Exchange enables healthcare
+                    providers to submit immunization data directly to
+                    Immunization Information Systems (IIS), enhancing public
+                    health surveillance.{' '}
+                    <Link
+                      href={
+                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA'
+                      }
+                    >
+                      Access documentation
+                    </Link>
+                  </Typography>
+                </ListItem>
+              </List>
+            </AccordionDetails>
+          </Accordion>
         </DialogContent>
         <DialogActions sx={{ mr: 1 }}>
           <Button onClick={handleClose}>Close</Button>
@@ -86,4 +170,4 @@ const Requirements = () => {
   )
 }
 
-export default Requirements
+export default SupportingDocumentation
