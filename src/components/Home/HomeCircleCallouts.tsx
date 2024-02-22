@@ -7,7 +7,7 @@ import { Slide } from '@mui/material'
 
 const HomeCircleCallouts = ({}) => {
   return (
-    <Slide in={true} timeout={2400} direction="up">
+    <Slide in={true} timeout={2000} direction="up">
       <Box
         display={'flex'}
         justifyContent={'space-between'}
