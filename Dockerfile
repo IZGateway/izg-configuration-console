@@ -28,6 +28,8 @@ RUN  npm install --omit=dev --force
 RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
+COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
+COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 
 # Install filebeat
@@ -42,6 +44,11 @@ RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBE
     cp filebeat /usr/bin && \
     rm -rf /filebeat/filebeat.yml && \
     cp ../filebeat.yml ./filebeat.yml
+
+# Replace default metricbeat config with custom config file
+RUN cd ../metricbeat && \
+    rm -rf /metricbeat/metricbeat.yml && \
+    cp ../app/metricbeat.yml ./metricbeat.yml
 
 #USER nextjs
 RUN chmod a+x start-app.sh
