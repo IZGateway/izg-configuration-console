@@ -2,7 +2,7 @@ FROM node:alpine AS deps
 #RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN  npm install --force
+RUN  npm ci --force
 
 FROM node:alpine AS builder
 WORKDIR /app
@@ -10,6 +10,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
+#Strategy for using NEXT_PUBLIC variables found at https://phase.dev/blog/nextjs-public-runtime-variables/
+ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
+ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
 RUN npx prisma generate
 RUN npm run build
 
@@ -24,13 +27,14 @@ RUN apk add bash
 
 COPY prisma ./prisma/
 COPY package.json package-lock.json ./
-RUN  npm install --omit=dev --force
+RUN  npm ci --omit=dev --force
 RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
+COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
 # Install filebeat
 

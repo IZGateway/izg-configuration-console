@@ -20,6 +20,7 @@ interface testListProps {
   destination: string
   destinationType: string
   jurisdictionUrl: string
+  numberOfTests: number
 }
 
 const TestsList = ({
