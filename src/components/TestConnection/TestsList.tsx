@@ -20,6 +20,7 @@ interface testListProps {
   destination: string
   destinationType: string
   jurisdictionUrl: string
+  numberOfTests: number
 }
 
 const TestsList = ({
@@ -27,6 +28,7 @@ const TestsList = ({
   destination,
   destinationType,
   jurisdictionUrl,
+  numberOfTests,
 }: testListProps) => {
   const handleReload = () => window.location.reload()
   const componentRef = useRef(null)

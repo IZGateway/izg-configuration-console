@@ -7,7 +7,7 @@ import { useSession } from 'next-auth/react'
 import palette from '../../styles/theme/palette'
 
 interface AppHeaderProps {
-  open: boolean;
+  open: boolean
 }
 
 const AppBar = styled(MuiAppBar)({
@@ -19,10 +19,10 @@ const AppBar = styled(MuiAppBar)({
   borderRadius: '0px 0px 30px 0px',
   margin: '-4em -1.5em 3em -3em',
   width: '-webkit-fill-available',
-});
+})
 
 const AppHeaderBar = (props: AppHeaderProps) => {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession()
 
   return (
     <AppBar role="banner" position="sticky">
@@ -37,7 +37,11 @@ const AppHeaderBar = (props: AppHeaderProps) => {
         >
           <Image src={userImage} alt="your avatar" height={'70'} />
         </Avatar>
-        <Typography sx={{color:`${palette.primaryDark}`}} fontWeight={'700'} fontSize={'16px'}>
+        <Typography
+          sx={{ color: `${palette.primaryDark}` }}
+          fontWeight={'700'}
+          fontSize={'16px'}
+        >
           Welcome to IZ Gateway,{' '}
           {status === 'authenticated' && session.user.name}
         </Typography>
@@ -46,4 +50,4 @@ const AppHeaderBar = (props: AppHeaderProps) => {
   )
 }
 
-export default AppHeaderBar;
+export default AppHeaderBar

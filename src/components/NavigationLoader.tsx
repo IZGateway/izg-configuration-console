@@ -70,7 +70,7 @@ export default function NavigationLoader() {
               color: palette.primaryLight,
               '.MuiCircularProgress-circle': {
                 r: '22px',
-              }
+              },
             }}
             thickness={3}
           />

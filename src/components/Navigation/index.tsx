@@ -162,9 +162,16 @@ const MiniDrawer = () => {
   )
   return (
     <>
-      <Drawer variant="permanent" transitionDuration={2000000 | 100 } open={open} id="navigation" role="navigation">
-        <DrawerHeader sx={{ justifyContent:'space-between',
- mt: 0, pl: 2, pt:0, pb: 1.5,}}>
+      <Drawer
+        variant="permanent"
+        transitionDuration={2000000 | 100}
+        open={open}
+        id="navigation"
+        role="navigation"
+      >
+        <DrawerHeader
+          sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 1.5 }}
+        >
           <IZGLogo />
           <IconButton
             onClick={handleClick}
@@ -180,7 +187,7 @@ const MiniDrawer = () => {
               <ChevronLeftIcon fontSize="large" sx={{ color: palette.white }} />
             )}
           </IconButton>
-          </DrawerHeader>
+        </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
         {session?.user.isAdmin && (
@@ -196,7 +203,7 @@ const MiniDrawer = () => {
                 bottom: '50px',
                 textTransform: 'capitalize',
                 textWrap: 'wrap',
-                textAlign: 'left'
+                textAlign: 'left',
               }}
             >
               Swagger API
