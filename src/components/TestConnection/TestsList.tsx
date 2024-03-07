@@ -28,7 +28,6 @@ const TestsList = ({
   destination,
   destinationType,
   jurisdictionUrl,
-  numberOfTests,
 }: testListProps) => {
   const handleReload = () => window.location.reload()
   const componentRef = useRef(null)
