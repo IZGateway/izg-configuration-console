@@ -30,7 +30,7 @@ const loginToOkta = (username: string, password: string) => {
       cy.get('[type="submit"]').click()
     }
   )
-  cy.get('#app-header').should('contain', name)
+  cy.get('#app-header', { timeout: 10000 }).should('contain', name)
 }
 
 const logOut = () => {

@@ -83,7 +83,7 @@ const ChangeRequestActionButtons = (props: {
         >
           <Tooltip arrow placement="bottom" title="Edit">
             <IconButton
-              id={props.destTypeId + '_' + props.destId}
+              id={'edit_' + props.destTypeId + '_' + props.destId}
               aria-label="edit"
               color="primary"
               disabled={!canEdit}
@@ -128,7 +128,7 @@ const ChangeRequestActionButtons = (props: {
         >
           <Tooltip arrow placement="left" title="Change Request">
             <IconButton
-              id="changerequest"
+              id={'changerequest_' + props.destTypeId + '_' + props.destId}
               aria-label="changerequest"
               color="primary"
               sx={publishButtonStyle}
@@ -140,7 +140,7 @@ const ChangeRequestActionButtons = (props: {
       )}
       {!canEdit && !hasActiveDraft && !isAdmin && (
         <IconButton
-          id={props.destTypeId + '_' + props.destId}
+          id={'edit_' + props.destTypeId + '_' + props.destId}
           aria-label="edit"
           color="primary"
           disabled={!canEdit}

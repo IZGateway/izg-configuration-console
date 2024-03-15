@@ -18,7 +18,7 @@ describe('As a user, on manage connections page', () => {
   it('should have correct columns in defined order', () => {
     const expectedHeaders = [
       'ENVIRONMENT',
-      'JURISDICTION',
+      'ORGANIZATION',
       'ENDPOINT URL',
       'STATUS',
       'ACTION',
@@ -34,16 +34,32 @@ describe('As a user, on manage connections page', () => {
     assert.exists(cy.get(manageElements.pagination))
   })
 
-  it('should have edit, history, policy buttons in actions column', () => {
-    cy.get('[data-field="action"]').each(() => {
-      assert.exists(cy.get('#edit'))
-      assert.exists(cy.get('#history'))
-      assert.exists(cy.get('#policy'))
+  it('should have edit or change request, history, test buttons in actions column', () => {
+    cy.get('[data-field="action"] div a').each((action) => {
+      cy.wrap(action)
+        .invoke('attr', 'href')
+        .then((href) => {
+          expect(href).to.satisfy(
+            (text) =>
+              text.includes('edit') ||
+              text.includes('changerequest') ||
+              text.includes('history') ||
+              text.includes('test')
+          )
+        })
     })
   })
 
   it('should have Export option on table', () => {
-    assert.exists(cy.get(manageElements.export))
+    assert.exists(cy.get('[data-testid="SaveAltIcon"]'))
+  })
+
+  it('should have filters option on table', () => {
+    assert.exists(cy.get('[data-testid="FilterListIcon"]'))
+  })
+
+  it('should have search bar on table', () => {
+    assert.exists(cy.get('[data-testid="SearchIcon"]'))
   })
 
   after(() => {

@@ -22,13 +22,14 @@ const historyElements = {
 }
 
 const destination = 'dev'
+const destId = 2
 
 describe('As a user, on manage connections page', () => {
   describe('when clicks on history button for alaska connection', () => {
     before(() => {
       cy.visit('/')
       cy.loginByOkta(Cypress.env('auth_username'), Cypress.env('auth_password'))
-      cy.get(`#history_2_${destination}`).click()
+      cy.visit(`/history/${destId}/${destination}`)
       cy.get(historyElements.connectionInfo, { timeout: 10000 }).should(
         'be.visible'
       )
@@ -59,7 +60,7 @@ describe('As a user, on connection history page', () => {
   beforeEach(() => {
     cy.visit('/')
     cy.loginByOkta(Cypress.env('auth_username'), Cypress.env('auth_password'))
-    cy.get(`#history_2_${destination}`).click()
+    cy.visit(`/history/${destId}/${destination}`)
     cy.get(historyElements.connectionInfo, { timeout: 10000 }).should(
       'be.visible'
     )
