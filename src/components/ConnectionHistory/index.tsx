@@ -5,7 +5,12 @@ import ChangeHistory from './changeHistory'
 import ConnectionInfo from './connectionInfo'
 import Close from '../Close'
 
-const ConnectionHistory = (props: any) => {
+type connectionHistoryProps = {
+  destId: string
+  destTypeId: string
+  status: string
+}
+const ConnectionHistory = (props: connectionHistoryProps) => {
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (
@@ -36,7 +41,11 @@ const ConnectionHistory = (props: any) => {
       </Box>
       <Box sx={{ display: 'flex', gap: 4 }}>
         <Item sx={{ width: '40%' }}>
-          <ConnectionInfo destId={props.destId} />
+          <ConnectionInfo
+            destId={props.destId}
+            destTypeId={props.destTypeId}
+            status={props.status}
+          />
         </Item>
         <Item sx={{ flexGrow: 1 }}>
           <TestHistory destId={props.destId} />

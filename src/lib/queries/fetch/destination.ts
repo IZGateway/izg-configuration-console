@@ -1,8 +1,8 @@
 import { prismacontext } from '../../prismacontext'
 
-const destination = async (destId: string) =>
+const destination = async (destId: string, destType: number) =>
   await prismacontext.prisma.destinations.findUnique({
-    where: { dest_id: destId },
+    where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
     select: {
       dest_id: true,
       dest_uri: true,
@@ -16,22 +16,16 @@ const destination = async (destId: string) =>
       RXA11: true,
       facility_id: true,
       pass_expiry: true,
-      signed_mou: true,
       destination_type: {
         select: {
           type: true,
+          type_id: true,
         },
       },
-      endpointstatus: {
+      jurisdiction: {
         select: {
-          detail: true,
-          diagnostics: true,
-          retry_strategy: true,
-          ran_at: true,
-          status: true,
-        },
-        orderBy: {
-          ran_at: 'desc',
+          name: true,
+          description: true,
         },
       },
     },

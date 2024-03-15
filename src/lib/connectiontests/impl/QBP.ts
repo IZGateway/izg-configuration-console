@@ -11,6 +11,7 @@ import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import { prismacontext } from '../../prismacontext'
+import logger from '../../../../logger'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -22,7 +23,8 @@ let responseMessage: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = await lookupDestinationInfo(
-      this.connectionTestRequest.id
+      this.connectionTestRequest.id,
+      this.connectionTestRequest.desttypeid
     )
 
     const hl7QueryTestResult: ConnectionTestResult = {
@@ -160,7 +162,7 @@ export default class QBP extends ConnectionTest {
           res.on('end', function () {
             xml2js.parseString(data, (err, result) => {
               if (err) {
-                console.log('An error has occurred: ' + err)
+                logger.error('An error has occurred: ' + err)
                 return
               }
               if (destination?.dest_version === '2011') {
@@ -298,8 +300,8 @@ export default class QBP extends ConnectionTest {
   }
 }
 
-async function lookupDestinationInfo(destId: any) {
+async function lookupDestinationInfo(destId: any, destType: any) {
   return await prismacontext.prisma.destinations.findUnique({
-    where: { dest_id: destId },
+    where: { dest_id_dest_type: { dest_id: destId, dest_type: destType } },
   })
 }

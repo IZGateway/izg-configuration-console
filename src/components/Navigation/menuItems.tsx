@@ -19,14 +19,4 @@ export const menuItems: MenuItem[] = [
     ),
     path: '/manage',
   },
-  // {
-  //   label: "Add Connection",
-  //   icon: (
-  //     <CloseIcon
-  //       sx={{ transform: "rotate(45deg)"}}
-  //       fontSize="large"
-  //     />
-  //   ),
-  //   path: "/add",
-  // },
 ]

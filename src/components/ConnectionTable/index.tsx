@@ -1,5 +1,4 @@
 import React, { useContext } from 'react'
-import useSWR from 'swr'
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import {
@@ -17,6 +16,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 import SessionContext from '../../contexts/app'
+import EditButton from './EditButton'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -81,44 +81,36 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 
-const ConnectionsTable = () => {
+const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
-  const { data, error, isLoading } = useSWR('/api/destinations')
-
-  if (error) return <div>failed to load</div>
-  if (isLoading) return <div>loading...</div>
-
   const columns: GridColDef[] = [
     {
-      field: 'destination_type',
-      valueFormatter: ({ value }) => value?.type,
+      field: 'destType',
       headerName: 'ENVIRONMENT',
       width: 150,
     },
     {
-      field: 'dest_id',
+      field: 'jurisdictionName',
       headerName: 'JURISDICTION',
       width: 200,
     },
     {
-      field: 'dest_uri',
+      field: 'destUri',
       headerName: 'ENDPOINT URL',
       width: 550,
     },
     {
-      field: 'endpointstatus',
+      field: 'status',
       headerName: 'STATUS',
       width: 200,
       filterable: false,
       valueFormatter: ({ value }) =>
-        value?.status?.toLowerCase() === 'connected'
-          ? 'Connected'
-          : 'Not Connected',
-      renderCell: ({ value }) => {
+        value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
+      renderCell: (params) => {
         const isConnected =
-          value?.status?.toLowerCase() === 'connected' ? true : false
-        const asOfDate = value?.ran_at
-          ? new Date(value.ran_at).toLocaleString()
+          params.row.status?.toLowerCase() === 'connected' ? true : false
+        const asOfDate = params.row.statusAt
+          ? new Date(params.row.statusAt).toLocaleString()
           : 'Unknown'
         return (
           <Tooltip
@@ -142,7 +134,7 @@ const ConnectionsTable = () => {
                   <CardHeader
                     title={
                       <Typography sx={{ fontWeight: 'bold' }} color="#212121">
-                        {value?.status.toUpperCase()}
+                        {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
@@ -161,15 +153,15 @@ const ConnectionsTable = () => {
                         Details:
                       </Box>
                       <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {value?.detail}
+                        {params.row.detail}
                       </Box>
                       <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
                       <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {value?.diagnostics}
+                        {params.row.diagnostics}
                       </Box>
                       <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
                       <Box sx={{ fontWeight: 'regular' }}>
-                        {value?.retry_strategy}
+                        {params.row.retryStrategy}
                       </Box>
                     </CardContent>
                   )}
@@ -203,20 +195,23 @@ const ConnectionsTable = () => {
       renderCell: (params) => {
         return (
           <div>
-            {/* <Tooltip arrow placement="bottom" title="Edit">
-              <IconButton
-                id="edit"
-                aria-label="edit"
-                color="primary"
-                sx={actionButtonStyle}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip> */}
-            <Link href={`/test/${params.id}`}>
+            <EditButton
+              tabIndex={params.tabIndex}
+              destId={params.id}
+              destTypeId={params.row.destTypeId}
+              hasChangeRequest={params.row.hasChangeRequest}
+            />
+            <Link
+              tabIndex={params.tabIndex}
+              prefetch={false}
+              href={{
+                pathname: `/test/${params.id}`,
+                query: { destType: params.row.destType },
+              }}
+            >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
-                  id="test"
+                  id={'test_' + params.row.destTypeId + '_' + params.id}
                   aria-label="test"
                   color="primary"
                   sx={actionButtonStyle}
@@ -225,10 +220,19 @@ const ConnectionsTable = () => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link href={`/history/${params.id}`}>
+            <Link
+              tabIndex={params.tabIndex}
+              prefetch={false}
+              href={{
+                pathname: `/history/${params.row.destTypeId}/${params.id}`,
+                query: {
+                  status: params.row.status,
+                },
+              }}
+            >
               <Tooltip arrow placement="bottom" title="History">
                 <IconButton
-                  id="history"
+                  id={'history_' + params.row.destTypeId + '_' + params.id}
                   aria-label="history"
                   color="secondary"
                   sx={actionButtonStyle}
@@ -266,14 +270,13 @@ const ConnectionsTable = () => {
           </Typography>
         </Card>
       </Box>
+
       <DataGrid
+        experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
-        rows={data.map((x: any) => {
+        rows={Object.entries(props.data).map(([, x]: [any, any]) => {
           return {
-            ...x,
-            dest_type: x.destination_type.type,
-            jurisdiction: x.jurisdiction?.description || 'N/A',
-            endpointstatus: x.endpointstatus[0],
+            ...x[0],
           }
         })}
         columns={columns}
@@ -290,7 +293,7 @@ const ConnectionsTable = () => {
         disableColumnSelector
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-        getRowId={(row) => row.dest_id}
+        getRowId={(row) => row.destId}
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
@@ -301,12 +304,7 @@ const ConnectionsTable = () => {
             printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
             csvOptions: {
-              fields: [
-                'dest_type',
-                'jurisdiction',
-                'dest_uri',
-                'endpointstatus',
-              ],
+              fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
             },
           },
           panel: {

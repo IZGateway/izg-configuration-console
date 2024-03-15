@@ -18,6 +18,7 @@ const pageContainer = {
   padding: 3,
   width: '80vw',
   flexGrow: 1,
+  paddingTop: '7em',
 }
 
 interface DashboardLayoutProps {
@@ -29,7 +30,9 @@ const Layout = ({ children }: DashboardLayoutProps) => {
     <Box sx={container}>
       <Box sx={content}>
         <Navigation />
-        <Box sx={pageContainer}>{children}</Box>
+        <Box role="main" sx={pageContainer}>
+          {children}
+        </Box>
       </Box>
     </Box>
   )

@@ -1,0 +1,271 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "NextJS Swagger",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/changerequest/{destTypeId}/{destId}": {
+      "get": {
+        "summary": "Get destination change request for destination type and destination id.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/changerequest": {
+      "post": {
+        "summary": "Schedule change in destination information by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "username": "string",
+                "facility_id": "string",
+                "MSH3": "string",
+                "MSH4": "string",
+                "MSH5": "string",
+                "MSH6": "string",
+                "MSH22": "string",
+                "RXA11": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "destination successfully scheduled to change upon approval.",
+            "content": {
+              "application/json": null
+            }
+          },
+          "400": {
+            "description": "Bad request."
+          }
+        }
+      }
+    },
+    "/api/destinationaudit/{id}": {
+      "get": {
+        "summary": "Get audit in change in destination by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/destinations/{destTypeId}/{destId}": {
+      "get": {
+        "summary": "Get destination information for a destination id for a given destination type (Development,Production,Staging,Onboarding,Testing,UNKNOWN).",
+        "parameters": [
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The id of the destination type."
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The id of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/healthcheck": {
+      "get": {
+        "summary": "returns HTTP OK (200).",
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/jurisdictions/{id}": {
+      "get": {
+        "summary": "Get destination's juridiction data by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/statushistory/{id}": {
+      "get": {
+        "summary": "Get status of destination by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/edit/queryTest/{id}": {
+      "get": {
+        "summary": "Get query test result for destination by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        }
+      }
+    },
+    "/api/update/destination/{id}": {
+      "post": {
+        "summary": "Update destination information by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destType",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "username": "string",
+                "facility_id": "string",
+                "MSH3": "string",
+                "MSH4": "string",
+                "MSH5": "string",
+                "MSH6": "string",
+                "MSH22": "string",
+                "RXA11": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "destination successfully updated.",
+            "content": {
+              "application/json": null
+            }
+          },
+          "400": {
+            "description": "Bad request."
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": []
+}

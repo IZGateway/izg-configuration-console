@@ -5,19 +5,37 @@ export type AppContextType = {
   setPageSize: (newSession: number) => void
 }
 
-const AppContext = createContext<AppContextType | undefined>({
-  pageSize: 5,
-  setPageSize: undefined,
-})
+export type EditConnectionContextType = {
+  isChangePasswordClicked: boolean
+  setIsChangePasswordClicked: (isChangePasswordClicked: boolean) => void
+  clearValue: () => void
+}
+
+export type CombinedContextType = AppContextType & EditConnectionContextType
+
+const CombinedContext = createContext<CombinedContextType | undefined>(
+  undefined
+)
 
 export const AppProvider = ({ children }) => {
   const [pageSize, setPageSize] = useState<number>(5)
+  const [isChangePasswordClicked, setIsChangePasswordClicked] = useState(false)
+  const clearValue = () => {
+    setIsChangePasswordClicked(false)
+  }
 
+  const combinedContextValue: CombinedContextType = {
+    pageSize,
+    setPageSize,
+    isChangePasswordClicked,
+    setIsChangePasswordClicked,
+    clearValue,
+  }
   return (
-    <AppContext.Provider value={{ pageSize, setPageSize }}>
+    <CombinedContext.Provider value={combinedContextValue}>
       {children}
-    </AppContext.Provider>
+    </CombinedContext.Provider>
   )
 }
 
-export default AppContext
+export default CombinedContext

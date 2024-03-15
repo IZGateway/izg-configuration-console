@@ -14,6 +14,7 @@ import Link from 'next/link'
 import Status from '../Status'
 import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
+import desttypehelper from '../../lib/desttypehelper'
 
 const ConnectionInfo = (props) => {
   const [open, setOpen] = React.useState(false)
@@ -21,15 +22,9 @@ const ConnectionInfo = (props) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destId}`)
-  const {
-    data: jurisdictionData,
-    error: jurisdictionError,
-    isLoading: isJurisdictionLoading,
-  } = useSWR(`/api/jurisdictions/${props.destId}`)
-  if (destError && jurisdictionError) return <div>failed to load</div>
-  if (isDestLoading && isJurisdictionLoading) return <div>loading...</div>
-  if (!jurisdictionData) return <div>no jurisdiction data found</div>
+  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
+  if (destError) return <div>failed to load</div>
+  if (isDestLoading) return <div>loading...</div>
   if (!destData) return <div>no destination data found</div>
 
   const toggleDrawer = () => {
@@ -62,7 +57,6 @@ const ConnectionInfo = (props) => {
         {open && (
           <ConnectionInfoDetail
             destination={destData}
-            jurisdiction={jurisdictionData}
             open={open}
             display={toggleDrawer}
           />
@@ -76,7 +70,9 @@ const ConnectionInfo = (props) => {
                   ENVIRONMENT
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {/* {destData.destination_type.type} */}
+                  {desttypehelper.destTypeFormattedToSyncWithApi(
+                    destData.destination_type.type
+                  )}
                 </Typography>
               </Box>
               <Box>
@@ -84,7 +80,11 @@ const ConnectionInfo = (props) => {
                   ENDPOINT URL
                 </Typography>
                 <Typography>
-                  <Link href={destData?.dest_uri.toString()} target="_blank">
+                  <Link
+                    href={destData?.dest_uri.toString()}
+                    target="_blank"
+                    style={{ color: '#015A2F', overflowWrap: 'anywhere' }}
+                  >
                     {destData?.dest_uri.toString()}
                   </Link>
                 </Typography>
@@ -96,7 +96,7 @@ const ConnectionInfo = (props) => {
                   JURISDICTION
                 </Typography>
                 <Typography gutterBottom variant="body1">
-                  {jurisdictionData ? jurisdictionData.description : 'N/A'}
+                  {destData ? destData.jurisdiction.description : 'N/A'}
                 </Typography>
               </Box>
               <Box>
@@ -104,10 +104,7 @@ const ConnectionInfo = (props) => {
                   STATUS
                 </Typography>
                 <Status
-                  isConnected={
-                    destData?.endpointstatus[0]?.status?.toLowerCase() ===
-                    'connected'
-                  }
+                  isConnected={props.status?.toLowerCase() === 'connected'}
                   color={false}
                 />
               </Box>

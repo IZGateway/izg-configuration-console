@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
@@ -58,7 +56,7 @@ export default class CIPHER extends ConnectionTest {
         resolve([
           {
             ...cipherConnectionTestResult,
-            detail: (res.socket as any).getCipher(),
+            detail: JSON.stringify((res.socket as any).getCipher()),
             status: this.isAcceptableCipher(
               (res.socket as any).getCipher().standardName
             )

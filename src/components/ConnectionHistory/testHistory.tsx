@@ -6,7 +6,6 @@ import {
   CardContent,
   Divider,
 } from '@mui/material'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import Timeline from '@mui/lab/Timeline'
 import TimelineItem from '@mui/lab/TimelineItem'
 import TimelineSeparator from '@mui/lab/TimelineSeparator'
@@ -14,20 +13,11 @@ import TimelineConnector from '@mui/lab/TimelineConnector'
 import TimelineContent from '@mui/lab/TimelineContent'
 import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
-import moment from 'moment'
 import Status from '../Status'
 import useSWR from 'swr'
 
 interface TestHistoryProps {
   destId: string
-}
-
-function msToTime(ms) {
-  const duration = moment.duration(ms, 'milliseconds')
-  if (duration.asSeconds() < 60) return duration.asSeconds() + ' Sec'
-  else if (duration.asMinutes() < 60) return duration.asMinutes() + ' Min'
-  else if (duration.asHours() < 24) return duration.asHours() + ' Hrs'
-  else return duration.asDays() + ' Day'
 }
 
 const timeline = (data) => (
@@ -58,8 +48,8 @@ const timeline = (data) => (
           <TimelineContent sx={{ fontWeight: '700', padding: '8px 16px' }}>
             Connection Tested
             <Typography variant="body2">
-              {item.ran_at
-                ? new Date(item.ran_at).toLocaleString('en-US', {
+              {item.statusAt
+                ? new Date(item.statusAt).toLocaleString('en-US', {
                     timeZone: 'America/New_York',
                     year: 'numeric',
                     month: '2-digit',
@@ -101,9 +91,8 @@ const TestHistory = (props: TestHistoryProps) => {
 
   if (isLoading) return <div>loading...</div>
 
-  const historyDataLength = data.length
-  const defaultTestHistoryView = data.slice(0, 5)
-  const frequency = data.historyInterval
+  const historyDataLength = data?.length
+  const defaultTestHistoryView = data?.slice(0, 5)
 
   return (
     <div>
@@ -119,13 +108,7 @@ const TestHistory = (props: TestHistoryProps) => {
               alignItems: 'center',
             },
           }}
-          title="Test History"
-          subheader={
-            <Typography variant="caption">
-              <ErrorOutlineIcon sx={{ fontSize: '1rem', mt: '8px' }} />
-              Automated test run every {msToTime(frequency)}
-            </Typography>
-          }
+          title="IZ Gateway Hub Status History"
         ></CardHeader>
         <Divider />
         <CardContent>

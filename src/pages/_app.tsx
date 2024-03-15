@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { SessionProvider } from 'next-auth/react'
+import { Session } from 'next-auth'
 import type { AppProps } from 'next/app'
 import { CacheProvider, EmotionCache } from '@emotion/react'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
@@ -14,19 +15,31 @@ import { AppProvider } from '../contexts/app'
 import { SWRConfig } from 'swr'
 import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
+import React from 'react'
+import NavigationLoader from '../components/NavigationLoader'
+
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+  const ReactDOM = require('react-dom')
+  const axe = require('@axe-core/react')
+  axe(React, ReactDOM, 1000)
+}
 interface MyAppProps extends AppProps {
   emotionCache?: EmotionCache
-  pageProps: { session: any; pageProps: any }
+  pageProps: { session: Session; pageProps: any }
 }
 
 const clientSideEmotionCache = createEmotionCache()
 const lightTheme = createTheme(lightThemeOptions)
 
 const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
-  const { Component, emotionCache = clientSideEmotionCache, pageProps } = props
+  const {
+    Component,
+    emotionCache = clientSideEmotionCache,
+    pageProps: { session, ...pageProps },
+  } = props
 
   return (
-    <SessionProvider session={pageProps.session}>
+    <SessionProvider session={session}>
       <CacheProvider value={emotionCache}>
         <ThemeProvider theme={lightTheme}>
           <CssBaseline />
@@ -34,6 +47,7 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
             <AppProvider>
               <SWRConfig value={{ fetcher: fetch }}>
                 <GoogleAnalytics />
+                <NavigationLoader />
                 <Component {...pageProps} />
               </SWRConfig>
             </AppProvider>
