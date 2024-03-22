@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { version } from '../../../package.json'
 import NextLink from 'next/link'
 import IZGLogo from './Branding'
 import MuiDrawer from '@mui/material/Drawer'
@@ -18,6 +19,8 @@ import {
   ListItemText,
   Button,
   Link,
+  Box,
+  Typography,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 import palette from '../../styles/theme/palette'
@@ -231,6 +234,19 @@ const MiniDrawer = () => {
         >
           Log Out
         </Button>
+        <Box
+          sx={{
+            textWrap: 'wrap',
+            textAlign: 'center',
+            color: palette.white,
+            position: 'absolute',
+            left: '3px',
+            bottom: '3px',
+            textTransform: 'lowercase',
+          }}
+        >
+          <Typography fontSize={10}>v{version} : BUILDISGOESHERE</Typography>
+        </Box>
         <Collapse in={!open} timeout="auto" />
         {/* Commenting this code as it is not part of any user story right now */}
         {/* <Button

@@ -4,29 +4,29 @@ name: Test, Build and Publish to AWS DEV environment
 on:
   push:
     branches:
-      - main
-      - preprod
-  workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-        type: choice
-        options:
-          - info
-          - warning
-          - debug
-      is-release:
-        required: true
-        description: Are you creating and tagging a release image?
-        type: boolean
-        default: false
-      deploy-to-staging:
-        required: true
-        description: Do you want this image to be deployed to the dev environment?
-        type: boolean
-        default: false
+      - IGDD-1232-versioning
+  #    - main
+  # workflow_dispatch:
+  #   inputs:
+  #     logLevel:
+  #       description: 'Log level'
+  #       required: true
+  #       default: 'warning'
+  #       type: choice
+  #       options:
+  #         - info
+  #         - warning
+  #         - debug
+  #     is-release:
+  #       required: true
+  #       description: Are you creating and tagging a release image?
+  #       type: boolean
+  #       default: false
+  #     deploy-to-staging:
+  #       required: true
+  #       description: Do you want this image to be deployed to the dev environment?
+  #       type: boolean
+  #       default: false
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -36,25 +36,25 @@ env:
   BRANCH: ${{ github.ref_name }}
 
 jobs:
-  code-quality-check:
-    name: Test and Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16.x'
-      # - name: Run Jest Tests
-      #   run: npm run test
-      # - name: Lint
-      #   run: npm run lint
+  # code-quality-check:
+  #   name: Test and Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '16.x'
+  # - name: Run Jest Tests
+  #   run: npm run test
+  # - name: Lint
+  #   run: npm run lint
 
   build-and-push-image:
     name: Build and push image
     runs-on: ubuntu-latest
-    needs: [code-quality-check]
+    # needs: [code-quality-check]
     permissions:
       contents: read
       packages: write
@@ -74,6 +74,17 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{env.RELEASE_DATE}}',
+              sha: context.sha
+            })
 
       - name: Configure AWS credentials
         if: ${{ github.ref == 'refs/heads/main' }}
@@ -113,18 +124,6 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Create tag
-        if: ${{ github.ref != 'refs/heads/main' && github.event.inputs.is-release == 'true' }}
-        uses: actions/github-script@v5
-        with:
-          script: |
-            github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/${{env.RELEASE_DATE}}',
-              sha: context.sha
-            })
 
   deploy-staging:
     name: Deploy to Staging
