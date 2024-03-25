@@ -1,4 +1,6 @@
-# .github/workflows/create-release.yaml
+---
+name: Build release artifact and create github draft release
+
 on:
   push:
     branches:
