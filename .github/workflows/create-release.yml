@@ -75,7 +75,7 @@ jobs:
           name: Release ${{env.RELEASE_DATE}}
           body: |
             ## Info
-            Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
+            Commit ${{ github.sha }} was built as an artifact and saved to github io. [See code diff](${{ github.event.compare }}).
 
             It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
 
