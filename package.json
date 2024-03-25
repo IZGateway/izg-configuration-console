@@ -10,6 +10,8 @@
     "start:local-docker": "docker-compose -f docker-compose.local.yml -f docker-compose.override.yml up -d",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
+    "code-quality-check": "next lint && npm run type-check",
+    "type-check": "tsc --noEmit",
     "test:watch": "jest --watch",
     "test": "jest",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json"

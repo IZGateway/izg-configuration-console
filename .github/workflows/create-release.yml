@@ -29,7 +29,7 @@ jobs:
       # - name: Run Jest Unit Tests
       #   run: npm run test
       - name: Lint
-        run: npm run lint
+        run: npm run code-quality-check
 
   build-and-push-image:
     name: Build and push image
