@@ -95,13 +95,13 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/${{env.RELEASE_DATE}}',
+              ref: 'refs/tags/${{steps.build-and-push-image.outputs.RELEASE_DATE}}',
               sha: context.sha
             })
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{env.RELEASE_DATE}}
+          tag_name: ${{needs.check-pr.outputs.pr-number}}
           name: Release ${{env.RELEASE_DATE}}
           body: |
             ## Info
