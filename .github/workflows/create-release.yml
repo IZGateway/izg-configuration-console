@@ -88,6 +88,16 @@ jobs:
       #   id: create-release-tag
       #   # left pads the run number with zeros to a length of 4; better alphabetical order
       #   run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
+      - name: Create tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{env.RELEASE_DATE}}',
+              sha: context.sha
+            })
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
