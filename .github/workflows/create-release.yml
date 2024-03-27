@@ -117,16 +117,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [generate-release-timestamp, build-and-push-image]
     steps:
-      - name: Create tag
-        uses: actions/github-script@v5
-        with:
-          script: |
-            github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'refs/tags/${{needs.generate-release-timestamp.outputs.releaseDate}}',
-              sha: context.sha
-            })
       - name: Create Draft Release
         uses: softprops/action-gh-release@v1
         with:
