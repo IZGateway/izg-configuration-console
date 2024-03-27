@@ -51,12 +51,7 @@ const MakeChanges = (props: any) => {
           change, and we want to ensure that you are certain about taking this
           action.
         </Typography>
-        <Container
-          sx={{
-            marginTop: 4,
-            display: 'flex',
-          }}
-        >
+        <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
           <Button
             id="reschedule"
             color="primary"
@@ -81,7 +76,7 @@ const MakeChanges = (props: any) => {
           >
             CANCEL REQUEST
           </Button>
-        </Container>
+        </Box>
         <RescheduleDialog
           open={openReschedule}
           handleClose={closeRescheduleDialog}
