@@ -184,7 +184,7 @@ const RescheduleDialog = (props: resetDialogProps) => {
               sx={{ backgroundColor: palette.greyLight, borderRadius: '30px' }}
               onClick={props.handleClose}
             >
-              Cancel
+              Close
             </Button>
           </ButtonGroup>
         </Dialog>
