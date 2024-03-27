@@ -6,6 +6,7 @@ import {
   DialogContentText,
   Container,
   Button,
+  ButtonGroup,
   Slide,
   Typography,
   Divider,
@@ -14,7 +15,6 @@ import { TransitionProps } from '@mui/material/transitions'
 import palette from '../../styles/theme/palette'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
-import CloseIcon from '@mui/icons-material/Close'
 import { useRouter } from 'next/router'
 
 interface cancelRequestDialogProps {
@@ -79,23 +79,14 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
           onClose={props.handleClose}
           keepMounted
           aria-describedby="reschedule-dialog-slide-description"
-          sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}
+          sx={{ borderRadius: '0px 0px 30px 30px' }}
         >
           <DialogTitle>
             <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
               Cancel Request
             </Typography>
           </DialogTitle>
-          <Button
-            variant="text"
-            color="primary"
-            sx={{ float: 'right', marginTop: -8 }}
-            onClick={props.handleClose}
-            id="close"
-          >
-            CLOSE
-            <CloseIcon sx={{ marginLeft: 1 }} />
-          </Button>
+
           <Divider />
           <DialogContent>
             <DialogContentText>
@@ -110,17 +101,37 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
               </Typography>
             </DialogContentText>
           </DialogContent>
-          <Button
-            id="cancel"
-            color="primary"
+          <ButtonGroup
             variant="contained"
-            onClick={handleCancelRequest}
+            color="inherit"
+            fullWidth
+            disableElevation
             sx={{
+              alignItems: 'center',
               borderRadius: '30px',
+              px: 2,
+              pb: 1,
             }}
           >
-            Cancel Request
-          </Button>
+            <Button
+              id="cancel"
+              variant="outlined"
+              color="error"
+              onClick={handleCancelRequest}
+              sx={{ borderRadius: '30px' }}
+            >
+              Cancel Request
+            </Button>
+            <Button
+              sx={{ backgroundColor: palette.greyLight, borderRadius: '30px' }}
+              variant="text"
+              color="inherit"
+              onClick={props.handleClose}
+              id="close"
+            >
+              CLOSE
+            </Button>
+          </ButtonGroup>
         </Dialog>
       </Container>
     </div>
