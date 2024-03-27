@@ -45,12 +45,12 @@ jobs:
       - name: Lint
         run: npm run code-quality-check
 
-    create-tag:
-      name: Create tag
-      runs-on: ubuntu-latest
-      needs: [code-quality-check]
-      steps:
-        - name: Create tag
+  create-tag:
+    name: Create tag
+    runs-on: ubuntu-latest
+    needs: [code-quality-check]
+    steps:
+      - name: Create tag
         uses: actions/github-script@v5
         with:
           script: |
