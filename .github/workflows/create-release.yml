@@ -66,7 +66,7 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console
           tags: |
             type=raw,value=${{env.RELEASE_DATE}}
-            type=raw,value=release
+            type=raw,value=rc
           flavor: |
             latest=true
 
@@ -91,10 +91,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-push-image]
     steps:
-      # - name: Create Release Tag
-      #   id: create-release-tag
-      #   # left pads the run number with zeros to a length of 4; better alphabetical order
-      #   run: echo "tag_name=r-$(printf %04d $GITHUB_RUN_NUMBER)" >> $GITHUB_OUTPUT
       - name: Create tag
         uses: actions/github-script@v5
         with:
@@ -113,8 +109,10 @@ jobs:
           body: |
             ## Info
             Commit ${{ github.sha }} was built as an artifact and saved to github io. [See code diff](${{ github.event.compare }}).
+             It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
 
-            It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
+            ## Artifact 
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console:${{needs.build-and-push-image.outputs.releaseDate}}
 
             ## How to Promote?
             In order to promote this to prod, edit the draft and press **"Publish release"**.

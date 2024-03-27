@@ -1,0 +1,29 @@
+# .github/workflows/deploy-production.yaml
+on:
+  release:
+    types: [published]
+
+jobs:
+  release-production:
+    name: Release to Production
+    if: startsWith(github.ref_name, 'r-') # the prefix we have added to the tag
+    environment: production
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Get Artifact from Release
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          version: ${{ github.event.release.id }}
+          file: cdk.out.zip
+      - name: Unzip Artifact
+        run: unzip cdk.out.zip
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      - name: Deploy Artifact
+        run: npx cdk deploy --app "./cdk.out/assembly-Prod" --all --concurrency 10 --method=direct --require-approval never
