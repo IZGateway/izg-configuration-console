@@ -82,14 +82,20 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
           sx={{ borderRadius: '0px 0px 30px 30px' }}
         >
           <DialogTitle>
-            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Cancel Request
-            </Typography>
+            <div>
+              <Typography
+                component="h2"
+                sx={{ fontWeight: 'bold' }}
+                variant="h6"
+              >
+                Cancel Request
+              </Typography>
+            </div>
           </DialogTitle>
 
           <Divider />
           <DialogContent>
-            <DialogContentText>
+            <div>
               <Typography
                 id="reschedule-dialog-slide-description"
                 variant="body1"
@@ -99,7 +105,7 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
                 your current request.Once you cancel your change, please note
                 that any information related to it will not be saved.
               </Typography>
-            </DialogContentText>
+            </div>
           </DialogContent>
           <ButtonGroup
             variant="contained"
@@ -129,7 +135,7 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
               onClick={props.handleClose}
               id="close"
             >
-              CLOSE
+              Close
             </Button>
           </ButtonGroup>
         </Dialog>

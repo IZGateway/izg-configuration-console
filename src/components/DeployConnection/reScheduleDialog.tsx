@@ -45,6 +45,7 @@ const customPaperStyles = {
 
 const RescheduleDialog = (props: resetDialogProps) => {
   const { setAlert } = useContext(CombinedContext)
+
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
@@ -104,13 +105,19 @@ const RescheduleDialog = (props: resetDialogProps) => {
           sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}
         >
           <DialogTitle>
-            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Reschedule Options
-            </Typography>
+            <div>
+              <Typography
+                component="h2"
+                sx={{ fontWeight: 'bold' }}
+                variant="h6"
+              >
+                Reschedule Options
+              </Typography>
+            </div>
           </DialogTitle>
           <Divider />
           <DialogContent>
-            <DialogContentText>
+            <div>
               <Typography
                 id="reschedule-dialog-slide-description"
                 variant="body1"
@@ -121,7 +128,7 @@ const RescheduleDialog = (props: resetDialogProps) => {
                 reschedule it now, or you can choose a later date that suits you
                 better.
               </Typography>
-            </DialogContentText>
+            </div>
           </DialogContent>
           <RadioGroup
             name="reschedule-change-radio-buttons-group"
@@ -179,7 +186,7 @@ const RescheduleDialog = (props: resetDialogProps) => {
               Schedule Now
             </Button>
             <Button
-              id="cancel"
+              id="close"
               fullWidth
               sx={{ backgroundColor: palette.greyLight, borderRadius: '30px' }}
               onClick={props.handleClose}
