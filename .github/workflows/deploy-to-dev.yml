@@ -64,7 +64,7 @@ jobs:
   build-and-push-image-aws:
     name: Build and push image to dev aws
     runs-on: ubuntu-latest
-    needs: [generate-release-timestamp]
+    needs: [code-quality-check, generate-release-timestamp]
     permissions:
       contents: write
       packages: write
