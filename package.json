@@ -37,7 +37,7 @@
     "http-status-codes": "^2.2.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
-    "next": "13.4.20-canary.13",
+    "next": "14.1.4",
     "next-api-middleware": "^2.0.1",
     "next-auth": "^4.24.1",
     "next-swagger-doc": "^0.4.0",
