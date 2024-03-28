@@ -5,27 +5,6 @@ on:
   push:
     branches:
       - main
-  # workflow_dispatch:
-  #   inputs:
-  #     logLevel:
-  #       description: 'Log level'
-  #       required: true
-  #       default: 'warning'
-  #       type: choice
-  #       options:
-  #         - info
-  #         - warning
-  #         - debug
-  #     is-release:
-  #       required: true
-  #       description: Are you creating and tagging a release image?
-  #       type: boolean
-  #       default: false
-  #     deploy-to-staging:
-  #       required: true
-  #       description: Do you want this image to be deployed to the dev environment?
-  #       type: boolean
-  #       default: false
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -35,22 +14,42 @@ env:
   BRANCH: ${{ github.ref_name }}
 
 jobs:
-  build-and-push-image:
-    name: Build and push image
+  generate-release-timestamp:
+    name: Generate release timestamp
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: write
-      repository-projects: write
+    outputs:
+      releaseDate: ${{ steps.exposeValue.outputs.releaseDate }}
     steps:
       - name: Get current date
         id: date
         run: echo "RELEASE_DATE=$(date +'%d%b%Y%H%M%S')" >> "$GITHUB_ENV"
+      - name: Expose value
+        id: exposeValue
+        run: |
+          echo "::set-output name=releaseDate::${{ env.RELEASE_DATE }}"
 
-      - name: Checkout repository
+  code-quality-check:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
         uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      - name: Install Dependencies
+        run: npm ci --force
+      # - name: Run Jest Unit Tests
+      #   run: npm run test
+      - name: Lint
+        run: npm run code-quality-check
 
+  create-tag:
+    name: Create tag
+    runs-on: ubuntu-latest
+    needs: [code-quality-check, generate-release-timestamp]
+    steps:
       - name: Create tag
         uses: actions/github-script@v5
         with:
@@ -58,9 +57,22 @@ jobs:
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/${{env.RELEASE_DATE}}',
+              ref: 'refs/tags/${{ needs.generate-release-timestamp.outputs.releaseDate }}',
               sha: context.sha
             })
+
+  build-and-push-image-aws:
+    name: Build and push image to dev aws
+    runs-on: ubuntu-latest
+    needs: [generate-release-timestamp]
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -81,7 +93,7 @@ jobs:
           images: |
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
           tags: |
-            type=raw,value=${{env.RELEASE_DATE}}
+            type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
             type=raw,value=snapshot
           flavor: |
             latest=true
@@ -100,7 +112,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [build-and-push-image]
+    needs: [build-and-push-image-aws]
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
