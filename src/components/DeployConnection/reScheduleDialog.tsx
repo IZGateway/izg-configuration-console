@@ -125,7 +125,7 @@ const RescheduleDialog = (props: resetDialogProps) => {
           </DialogContent>
           <RadioGroup
             name="reschedule-change-radio-buttons-group"
-            sx={{ marginLeft: 2 }}
+            sx={{ paddingLeft: 4 }}
           >
             <FormControlLabel
               value="RescheduleASAP"
@@ -144,29 +144,32 @@ const RescheduleDialog = (props: resetDialogProps) => {
                 <DateTimePicker
                   label="Deployment date and time"
                   disablePast
-                  value={scheduledDateTime}
                   onChange={(date) => {
                     setScheduledDateTime(date)
                   }}
-                  sx={{ marginRight: 5 }}
+                  sx={{ marginRight: 4, marginTop: 2 }}
                 />
               </LocalizationProvider>
             )}
           </RadioGroup>
           <ButtonGroup
             variant="contained"
+            color="inherit"
             fullWidth
-            size="large"
+            disableElevation
             sx={{
               alignItems: 'center',
               borderRadius: '30px',
+              px: 2,
+              pt: 4,
+              pb: 1,
             }}
           >
             <Button
               id="reschedule"
               fullWidth
               color="primary"
-              variant="outlined"
+              variant="contained"
               onClick={handleReSchedule}
               disabled={isScheduleButtonDisabled}
               sx={{
@@ -178,14 +181,10 @@ const RescheduleDialog = (props: resetDialogProps) => {
             <Button
               id="cancel"
               fullWidth
-              color="primary"
-              variant="contained"
+              sx={{ backgroundColor: palette.greyLight, borderRadius: '30px' }}
               onClick={props.handleClose}
-              sx={{
-                borderRadius: '30px',
-              }}
             >
-              Cancel
+              Close
             </Button>
           </ButtonGroup>
         </Dialog>
