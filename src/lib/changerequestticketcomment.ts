@@ -5,28 +5,32 @@ const changeRequestTicketComment = async (
   jira_id,
   requestedAt,
   scheduledAt?,
-  isAsap?
+  isAsap = false
 ) => {
   const jiraBasicAuthHeader = 'Basic ' + JIRA_API_AUTH_BASE64
-  let updateScheduleDateComment
-  let cancelChangeRequestComment
+  const isScheduledAtDateProvided: boolean = scheduledAt !== undefined
+  const isRescheduleRequest: boolean = isAsap || isScheduledAtDateProvided
   const requestedDateTime = new Intl.DateTimeFormat('en-US', {
     dateStyle: 'long',
     timeStyle: 'long',
   }).format(new Date(requestedAt))
-  if (scheduledAt && isAsap) {
-    const scheduledDateTime = new Intl.DateTimeFormat('en-US', {
-      dateStyle: 'long',
-      timeStyle: 'long',
-    }).format(new Date(scheduledAt))
 
-    updateScheduleDateComment = `Please update scheduled time for this ticket to be 
+  const scheduledDateTime = isRescheduleRequest
+    ? new Intl.DateTimeFormat('en-US', {
+        dateStyle: 'long',
+        timeStyle: 'long',
+      }).format(new Date(scheduledAt))
+    : null
+
+  const updateScheduleDateComment = isRescheduleRequest
+    ? `Please update scheduled time for this ticket to be 
   ${
     isAsap ? 'ASAP' : `on ${scheduledDateTime}`
-  } requested at ${requestedDateTime}`
-  } else {
-    cancelChangeRequestComment = `Cancelletion of this ticket is requested at ${requestedDateTime}`
-  }
+  } requested on ${requestedDateTime}`
+    : null
+
+  const cancelChangeRequestComment = `Cancelletion of this ticket is requested on ${requestedDateTime}`
+
   const jiraResponse = await fetch(JIRA_API_URL + `/issue/${jira_id}/comment`, {
     method: 'POST',
     headers: new Headers({
@@ -34,7 +38,9 @@ const changeRequestTicketComment = async (
       'Content-Type': 'application/json',
     }),
     body: JSON.stringify({
-      body: isAsap ? updateScheduleDateComment : cancelChangeRequestComment,
+      body: isRescheduleRequest
+        ? updateScheduleDateComment
+        : cancelChangeRequestComment,
     }),
   })
   if (!jiraResponse.ok) {
