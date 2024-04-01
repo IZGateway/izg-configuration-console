@@ -81,11 +81,7 @@ const ChangeRequestActionButtons = (props: {
             pathname: `/edit/${destTypeId}/${props.destId}`,
           }}
         >
-          <Tooltip
-            arrow
-            placement="left"
-            title={canEdit ? 'Edit' : 'Change request in process'}
-          >
+          <Tooltip arrow placement="left" title="Edit">
             <span>
               <IconButton
                 id={props.destTypeId + '_' + props.destId}
@@ -145,15 +141,19 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
       {!canEdit && !hasActiveDraft && !isAdmin && (
-        <IconButton
-          id={props.destTypeId + '_' + props.destId}
-          aria-label="edit"
-          color="primary"
-          disabled={!canEdit}
-          sx={draftButtonStyle}
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
+        <Tooltip arrow placement="left" title="Change request in process">
+          <span>
+            <IconButton
+              id={props.destTypeId + '_' + props.destId}
+              aria-label="edit"
+              color="primary"
+              disabled={!canEdit}
+              sx={draftButtonStyle}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
       )}
     </>
   )
