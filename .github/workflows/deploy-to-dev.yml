@@ -82,7 +82,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Login to the Amazon ECR
-        if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ github.ref == 'refs/heads/develop' }}
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
