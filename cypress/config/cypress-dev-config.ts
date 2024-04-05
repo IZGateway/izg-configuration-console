@@ -4,7 +4,7 @@ export default defineConfig({
   env: {
     auth_username: 'ADD_USERNAME',
     auth_password: 'ADD_PASSWORD',
-    okta_domain: 'ADD_OKAT_URL',
+    okta_domain: 'ADD_OKTA_URL',
   },
   e2e: {
     setupNodeEvents(on, config) {
