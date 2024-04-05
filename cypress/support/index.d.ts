@@ -9,3 +9,9 @@ declare namespace Cypress {
     logOut(): Chainable<Subject>
   }
 }
+
+declare namespace Cypress {
+  interface Chainable<Subject> {
+    exists(selector): Chainable<Subject>
+  }
+}
