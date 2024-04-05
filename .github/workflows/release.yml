@@ -1,0 +1,32 @@
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: true
+        description: 'Version to release'
+      dry-run:
+        type: boolean
+        required: false
+        description: 'Is this a dry run? If true, no PRs or Releases will be created and only the steps it would take to create this release are printed'
+        default: false
+  pull_request:
+    types:
+      - closed
+
+name: Release
+
+jobs:
+  release_workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: gitflow-workflow-action release workflows
+        uses: hoangvvo/gitflow-workflow-action@0.3.7
+        with:
+          develop_branch: 'develop'
+          main_branch: 'main'
+          merge_back_from_main: false
+          version: ${{ inputs.version }}
+          dry_run: ${{inputs.dry-run}}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

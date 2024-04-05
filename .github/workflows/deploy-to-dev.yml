@@ -4,7 +4,7 @@ name: Test, Build and Publish to AWS DEV environment
 on:
   push:
     branches:
-      - main
+      - develop
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
