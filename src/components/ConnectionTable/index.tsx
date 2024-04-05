@@ -95,7 +95,7 @@ const ConnectionsTable = (props) => {
     },
     {
       field: 'jurisdictionName',
-      headerName: 'JURISDICTION',
+      headerName: 'ORGANIZATION',
       flex: 0.5,
       minWidth: 25,
     },
@@ -299,7 +299,7 @@ const ConnectionsTable = (props) => {
         autoHeight
         initialState={{
           sorting: {
-            sortModel: [{ field: 'jurisdiction', sort: 'asc' }],
+            sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
           },
           pagination: { paginationModel: { pageSize } },
         }}

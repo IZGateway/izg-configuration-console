@@ -20,21 +20,21 @@ const Jurisdiction = (props: jurisdictionProps) => {
         <CardHeader
           title={
             <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Review the Jurisdiction to get started
+              Review the Organization to get started
             </Typography>
           }
         />
         <Divider />
         <CardContent>
           <div>
-            Within this section, you can review the Jurisdiction of your
+            Within this section, you can review the Organization of your
             selected connection. It&apos;s important to make sure that the
-            Jurisdiction is correct, as any changes made will impact the
+            Organization is correct, as any changes made will impact the
             selected connection.
           </div>
           <TextField
-            id="jurisdiction"
-            label="Jurisdiction"
+            id="organization"
+            label="Organization"
             variant="filled"
             fullWidth
             disabled

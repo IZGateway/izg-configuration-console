@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import fetchDestinationchangerequest from '../../../lib/queries/fetch/destinationchangerequest'
+import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 import {
@@ -105,7 +105,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             )
           } else {
             await createChangeRequest(requestBody)
-            console.log('I am here')
             logger.info(
               'change request created successfully for ' + requestBody.dest_uri
             )
@@ -130,10 +129,7 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await fetchDestinationchangerequest(
-    dest_id,
-    dest_type_id
-  )
+  const changeRequest = await destinationChangeRequest(dest_id, dest_type_id)
   return !_.isEmpty(changeRequest)
 }
 
