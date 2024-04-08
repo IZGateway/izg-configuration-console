@@ -55,6 +55,7 @@ RUN cd ../metricbeat && \
     cp ../app/metricbeat.yml ./metricbeat.yml
 
 #USER nextjs
+RUN chmod a+x replace-variable.sh
 RUN chmod a+x start-app.sh
 EXPOSE 3000
 
