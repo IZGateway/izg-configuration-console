@@ -1,10 +1,10 @@
 ---
-name: Test, Build and Publish to AWS DEV environment
+name: Test and Build Release Image
 
 on:
   push:
     branches:
-      - develop
+      - 'release/**'
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -61,8 +61,8 @@ jobs:
               sha: context.sha
             })
 
-  build-and-push-image-aws:
-    name: Build and push image to dev aws
+  build-and-push-image:
+    name: Build and push image
     runs-on: ubuntu-latest
     needs: [code-quality-check, generate-release-timestamp]
     permissions:
@@ -71,32 +71,30 @@ jobs:
       pull-requests: write
       repository-projects: write
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+      - name: Login to the GitHub Container registry
+        id: login-ghcr
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to the Amazon ECR
-        if: ${{ github.ref == 'refs/heads/develop' }}
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      - name: Get Version
+        id: get-version
+        run: echo "::set-output name=versionFromBranch::`echo "${GITHUB_REF_NAME}" | sed 's/.*\///'`"
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console
           tags: |
-            type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=snapshot
+            type=raw,value=${{ steps.get-version.outputs.versionFromBranch }}+${{ needs.generate-release-timestamp.outputs.releaseDate }}
+            type=raw,value=branch-${GITHUB_REF_NAME}
+            type=raw,value=release
           flavor: |
-            latest=true
+            latest=false
 
       - name: Build and push Docker Config Console image
         id: docker_build
@@ -108,18 +106,3 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  deploy-dev:
-    name: Deploy to Dev AWS environment
-    runs-on: ubuntu-latest
-    needs: [build-and-push-image-aws]
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Deploy to Dev AWS
-        run: |
-          aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
