@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Container,
   Typography,
@@ -26,6 +26,7 @@ import Faq from './Faqs'
 import Slide from '@mui/material/Slide'
 
 function HomeComponent() {
+  const [showFullContent, setShowFullContent] = useState(false)
   return (
     <>
       <AppHeaderBar open />
@@ -48,7 +49,7 @@ function HomeComponent() {
           >
             <Slide in={true} timeout={1200} direction="down">
               <Box>
-                <Typography>IZ Gateway</Typography>
+                <Typography>Immunization (IZ) Gateway</Typography>
                 <Typography component={'h1'} variant="h5">
                   <strong>
                     Exchanging of immunization data between immunization
@@ -98,7 +99,7 @@ function HomeComponent() {
               flexDirection={'column'}
               gap={6}
               justifyContent={'flex-start'}
-              width={'75%'}
+              width={'100%'}
             >
               <Slide in={true} timeout={1200} direction="up">
                 <Card
@@ -119,23 +120,81 @@ function HomeComponent() {
                   />
                   <CardContent>
                     <Typography gutterBottom>
-                      The IZ Gateway is a secure, cloud-based message routing
-                      service that enables data exchange among jurisdiction
-                      immunization information systems (IIS) and
-                      multijurisdictional vaccine provider systems.
+                      The IZ Gateway is a program that includes a technology
+                      solution and infrastructure that facilitate immunization
+                      data exchange.
+                    </Typography>
+                    <Typography gutterBottom>
+                      The IZ Gateway technology is a router that moves
+                      immunization data among jurisdictional immunization
+                      information systems (IIS) and between IIS and public and
+                      private vaccine-providing organizations (e.g., Veterans
+                      Health Administration, physician’s offices, pharmacies).
+                      The IZ Gateway also enables immunization data reporting to
+                      CDC.
                     </Typography>
                     <Divider sx={{ mt: 2, mb: 2 }} />
-                    <Typography variant="body2">
-                      It is also designed to facilitate consumer access to their
-                      immunization data. The IZ Gateway does not access or store
-                      immunization data and meets all federal data security
-                      requirements. The centralized data exchange facilitated by
-                      the IZ Gateway eliminates the need for multiple,
-                      individual, point-to-point connections between providers’
-                      systems and IISs. It also minimizes technical and policy
-                      data exchange challenges through defined, streamlined IZ
-                      Gateway processes
+                    <Typography gutterBottom variant="body2">
+                      The IZ Gateway program provides processes and resources to
+                      simplify making connections between the organizations
+                      sending data and those receiving the data. These processes
+                      and resources include centralized data use agreements that
+                      govern the datas movement and use, policy support to IZ
+                      Gateway users, and streamlined procedures for onboarding
+                      and testing connections.
                     </Typography>
+
+                    {showFullContent && (
+                      <>
+                        <Typography gutterBottom variant="body2">
+                          The movement of immunization data, also called data
+                          exchange, helps an individual’s vaccination record be
+                          more complete, accurate, and available to the
+                          individual and to their health care providers for use
+                          in health care recommendations and decision making.
+                        </Typography>
+                        <Typography gutterBottom variant="body2">
+                          The IZ Gateway technology is a router that moves
+                          immunization data among jurisdictional immunization
+                          information systems (IIS) and between IIS and public
+                          and private vaccine-providing organizations (e.g.,
+                          Veterans Health Administration, physician’s offices,
+                          pharmacies). The IZ Gateway also enables immunization
+                          data reporting to CDC.
+                        </Typography>
+                        <Typography gutterBottom variant="body2">
+                          Data exchange also helps public health agencies have
+                          more complete and accurate immunization data so they
+                          can understand the vaccine coverage and the risks for
+                          certain diseases in the communities they serve. These
+                          data inform routine public health decisions and
+                          preparations for disease outbreaks and emergencies.
+                        </Typography>
+                        <Typography gutterBottom variant="body2">
+                          The IZ Gateway does not read or store personally
+                          identifiable information (PII). It only transports
+                          immunization data between parties who have agreed to
+                          move the data through the IZ Gateway and who have
+                          signed legal agreements that ensure all users agree to
+                          the movement and use of the data by the receiving
+                          party.
+                        </Typography>
+                        <Typography variant="caption" fontWeight={700}>
+                          The IZ Gateway moves data; it does not store any
+                          immunization information and never acts as a database
+                          or data repository.
+                        </Typography>
+                      </>
+                    )}
+                    <Box>
+                      <Button
+                        onClick={() => setShowFullContent(!showFullContent)}
+                        color="primary"
+                        size="small"
+                      >
+                        {showFullContent ? 'Read Less' : 'Read More...'}
+                      </Button>
+                    </Box>
                   </CardContent>
                 </Card>
               </Slide>
@@ -215,7 +274,7 @@ function HomeComponent() {
                       fontWeight: '500',
                     }}
                     sx={{ pt: 2, pl: 2, pb: 0 }}
-                    title="Supoorting Documentation"
+                    title="Supporting Documentation"
                   />
                   <CardContent>
                     <Typography variant="body2">

@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
 import { ArrowForward, ExpandMore } from '@mui/icons-material'
 import {
   Accordion,
@@ -14,7 +13,6 @@ import {
   List,
   ListItem,
 } from '@mui/material'
-import palette from '../../styles/theme/palette'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
@@ -228,9 +226,6 @@ const UseCases = () => {
             </AccordionDetails>
           </Accordion>
         </DialogContent>
-        <DialogActions sx={{ mr: 1 }}>
-          <Button onClick={handleClose}>Close</Button>
-        </DialogActions>
       </Dialog>
     </div>
   )
