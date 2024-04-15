@@ -81,18 +81,16 @@ const ChangeRequestActionButtons = (props: {
             pathname: `/edit/${destTypeId}/${props.destId}`,
           }}
         >
-          <Tooltip arrow placement="left" title="Edit">
-            <span>
-              <IconButton
-                id={props.destTypeId + '_' + props.destId}
-                aria-label="edit"
-                color="primary"
-                disabled={!canEdit}
-                sx={actionButtonStyle}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </span>
+          <Tooltip arrow placement="bottom" title="Edit">
+            <IconButton
+              id={'edit_' + props.destTypeId + '_' + props.destId}
+              aria-label="edit"
+              color="primary"
+              disabled={!canEdit}
+              sx={actionButtonStyle}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
           </Tooltip>
         </Link>
       )}
@@ -130,7 +128,7 @@ const ChangeRequestActionButtons = (props: {
         >
           <Tooltip arrow placement="left" title="Change Request">
             <IconButton
-              id="changerequest"
+              id={'changerequest_' + props.destTypeId + '_' + props.destId}
               aria-label="changerequest"
               color="primary"
               sx={publishButtonStyle}

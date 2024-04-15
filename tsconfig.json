@@ -12,7 +12,8 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "types": ["cypress"]
   },
   "include": [
     "next-env.d.ts",
@@ -20,13 +21,8 @@
     "**/*.tsx",
     "./jest-setup.ts",
     "logger.ts",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "cypress/support/commands.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "./cypress.config.ts",
-    "cypress",
-    "**/*.cy.tsx",
-    ".next"
-  ]
+  "exclude": ["node_modules", "cypress", "**/*.cy.tsx", ".next"]
 }
