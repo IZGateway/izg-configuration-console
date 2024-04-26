@@ -1,7 +1,4 @@
 import React, { useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
 import { ArrowForward, ExpandMore } from '@mui/icons-material'
 import {
   Accordion,
@@ -10,9 +7,15 @@ import {
   Button,
   Typography,
   Divider,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   List,
   ListItem,
+  IconButton,
 } from '@mui/material'
+
+import Close from '@mui/icons-material/Close'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
@@ -54,7 +57,15 @@ const UseCases = () => {
         open={open}
         onClose={handleClose}
       >
-        <DialogTitle>Use Cases</DialogTitle>
+        <DialogTitle>
+          Use Cases
+          <IconButton
+            onClick={handleClose}
+            sx={{ float: 'right', color: 'grey' }}
+          >
+            <Close sx={{ float: 'right', color: 'grey' }} />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Explore various scenarios and applications where our

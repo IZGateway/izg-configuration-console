@@ -1,11 +1,13 @@
 import React, { useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import IconButton from '@mui/material/IconButton'
-import { PolicyOutlined } from '@mui/icons-material'
-import { Button, Typography, Box } from '@mui/material'
+import {
+  Box,
+  Typography,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+} from '@mui/material'
+import { Close, PolicyOutlined } from '@mui/icons-material'
 
 import palette from '../../styles/theme/palette'
 
@@ -49,7 +51,6 @@ const LegalDocumentation = () => {
           <PolicyOutlined color="primary" />
         </IconButton>
         <Typography align="center">
-          {' '}
           Legal
           <br />
           Documentation
@@ -62,7 +63,16 @@ const LegalDocumentation = () => {
         open={open}
         onClose={handleClose}
       >
-        <DialogTitle> Legal Documentation</DialogTitle>
+        <DialogTitle>
+          {' '}
+          Legal Documentation
+          <IconButton
+            onClick={handleClose}
+            sx={{ float: 'right', color: 'grey' }}
+          >
+            <Close sx={{ float: 'right', color: 'grey' }} />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Ownership: The Software, including all intellectual property rights
@@ -70,15 +80,16 @@ const LegalDocumentation = () => {
             Warranty
           </Typography>
           <Typography gutterBottom>
-            Disclaimer: THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
-            KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-            WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
-            NONINFRINGEMENT. LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE
-            ERROR-FREE OR UNINTERRUPTED. Limitation of Liability: IN NO EVENT
-            SHALL LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
-            CONSEQUENTIAL, OR EXEMPLARY DAMAGES ARISING OUT OF OR IN CONNECTION
-            WITH THE USE OR PERFORMANCE OF THE SOFTWARE, EVEN IF LICENSOR HAS
-            BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+            Disclaimer: THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT
+            WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+            TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+            PURPOSE, AND NONINFRINGEMENT. LICENSOR DOES NOT WARRANT THAT THE
+            SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED. Limitation of
+            Liability: IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY INDIRECT,
+            INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES ARISING OUT
+            OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE SOFTWARE,
+            EVEN IF LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+            DAMAGES.
           </Typography>
           <Typography gutterBottom>
             Governing Law: This Agreement shall be governed by and construed in
@@ -99,9 +110,6 @@ const LegalDocumentation = () => {
             provision of this Agreement, Licensee should not use the Software.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ mr: 1 }}>
-          <Button onClick={handleClose}>Close</Button>
-        </DialogActions>
       </Dialog>
     </div>
   )

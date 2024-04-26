@@ -1,8 +1,4 @@
 import React, { useState } from 'react'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
 import { ArrowForward, ExpandMore } from '@mui/icons-material'
 import {
   Accordion,
@@ -13,8 +9,13 @@ import {
   Divider,
   List,
   ListItem,
+  IconButton,
+  Dialog,
+  DialogContent,
+  DialogTitle,
 } from '@mui/material'
 import Link from 'next/link'
+import Close from '@mui/icons-material/Close'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
@@ -56,7 +57,15 @@ const SupportingDocumentation = () => {
         open={open}
         onClose={handleClose}
       >
-        <DialogTitle>Supporting Documentation</DialogTitle>
+        <DialogTitle>
+          Supporting Documentation
+          <IconButton
+            onClick={handleClose}
+            sx={{ float: 'right', color: 'grey' }}
+          >
+            <Close sx={{ float: 'right', color: 'grey' }} />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
             Access documentation now to streamline your operations and improve
@@ -162,9 +171,6 @@ const SupportingDocumentation = () => {
             </AccordionDetails>
           </Accordion>
         </DialogContent>
-        <DialogActions sx={{ mr: 1 }}>
-          <Button onClick={handleClose}>Close</Button>
-        </DialogActions>
       </Dialog>
     </div>
   )
