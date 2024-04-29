@@ -7,7 +7,6 @@ import {
   Button,
   Slide,
   Typography,
-  Divider,
   Box,
   IconButton,
 } from '@mui/material'
@@ -75,7 +74,6 @@ const MaintenanceDialog = (props: resetDialogProps) => {
               <CloseIcon sx={{ float: 'right', color: 'grey' }} />
             </IconButton>
           </DialogTitle>
-          <Divider />
           <DialogContent>
             <div>
               <Typography
@@ -88,7 +86,7 @@ const MaintenanceDialog = (props: resetDialogProps) => {
               </Typography>
             </div>
           </DialogContent>
-          <Box sx={{ paddingLeft: 4 }}>
+          <Box sx={{ padding: 2 }}>
             <LocalizationProvider dateAdapter={AdapterMoment}>
               <DateTimePicker
                 label="Start date and time"
@@ -101,7 +99,7 @@ const MaintenanceDialog = (props: resetDialogProps) => {
                     required: true,
                   },
                 }}
-                sx={{ marginRight: 4, marginTop: 2 }}
+                sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
                 label="Reinstatement date and time*"
@@ -109,24 +107,27 @@ const MaintenanceDialog = (props: resetDialogProps) => {
                 onChange={(date) => {
                   setReinstatementDateTime(date)
                 }}
-                sx={{ marginRight: 4, marginTop: 2 }}
+                sx={{ width: '100%' }}
               />
             </LocalizationProvider>
           </Box>
-          <Button
-            id="disable"
-            color="error"
-            variant="outlined"
-            onClick={handleDisableConnection}
-            disabled={isDisableConnectionButtonDisabled}
-            sx={{
-              alignItems: 'center',
-              borderRadius: '30px',
-              marginTop: 2,
-            }}
-          >
-            Disable connection
-          </Button>
+          <Box sx={{ padding: 2 }}>
+            <Button
+              id="disable"
+              fullWidth
+              variant="outlined"
+              color="inherit"
+              onClick={handleDisableConnection}
+              disabled={isDisableConnectionButtonDisabled}
+              sx={{
+                alignItems: 'center',
+                borderRadius: '30px',
+                color: palette.error,
+              }}
+            >
+              Disable connection
+            </Button>
+          </Box>
         </Dialog>
       </Container>
     </div>
