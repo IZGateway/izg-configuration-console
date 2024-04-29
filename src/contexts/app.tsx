@@ -2,8 +2,8 @@ import { createContext, useState } from 'react'
 
 interface Alert {
   level: string
-  jurisdiction: string
-  dest_type: string
+  jurisdiction?: string
+  dest_type?: string
   message: string
 }
 

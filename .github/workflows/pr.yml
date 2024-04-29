@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: '16.x'
       - name: Install Dependencies
-        run: npm install --force
+        run: npm ci --force
       - name: Run Jest Unit Tests
         run: npm run test
       - name: Lint

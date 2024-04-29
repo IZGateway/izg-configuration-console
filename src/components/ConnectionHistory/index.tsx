@@ -4,6 +4,9 @@ import TestHistory from './testHistory'
 import ChangeHistory from './changeHistory'
 import ConnectionInfo from './connectionInfo'
 import Close from '../Close'
+import ViewChangeRequest from './viewChangeRequest'
+import useSWR from 'swr'
+import _ from 'lodash'
 
 type connectionHistoryProps = {
   destId: string
@@ -11,6 +14,14 @@ type connectionHistoryProps = {
   status: string
 }
 const ConnectionHistory = (props: connectionHistoryProps) => {
+  const {
+    data: changeRequestData,
+    error: changeRequestError,
+    isLoading: ischangeRequestLoading,
+  } = useSWR(`/api/changerequest/${props.destTypeId}/${props.destId}`)
+  if (changeRequestError) return <div>failed to load</div>
+  if (ischangeRequestLoading) return <div>loading...</div>
+
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (
@@ -40,13 +51,20 @@ const ConnectionHistory = (props: connectionHistoryProps) => {
         </Typography>
       </Box>
       <Box sx={{ display: 'flex', gap: 4 }}>
-        <Item sx={{ width: '40%' }}>
+        <Item sx={{ width: '40%', display: 'flex', flexDirection: 'column' }}>
           <ConnectionInfo
             destId={props.destId}
             destTypeId={props.destTypeId}
             status={props.status}
           />
+          {!_.isEmpty(changeRequestData) && (
+            <ViewChangeRequest
+              destId={props.destId}
+              destTypeId={props.destTypeId}
+            />
+          )}
         </Item>
+
         <Item sx={{ flexGrow: 1 }}>
           <TestHistory destId={props.destId} />
           <ChangeHistory destId={props.destId} destTypeId={props.destTypeId} />

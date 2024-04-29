@@ -24,13 +24,15 @@ const updateDestination = async (
 
 const auditDestination = async (
   user: string,
-  oldValues: object,
+  oldValues: any,
   updatedData: object,
   isPasswordDifferent: object
 ) =>
   await prismacontext.prisma.audit_history.create({
     data: {
       tableName: 'destinations',
+      dest_id: oldValues.dest_id,
+      dest_type: oldValues.destination_type.type_id,
       userName: user,
       changeType: 'Update',
       oldValues: oldValues,

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import StepperComponent from './index'
 
 describe('Stepper component', () => {
-  const steps = ['SERVICE AGREEMENT', 'JURISDICTION', 'IDENTIFY', 'VERIFY']
+  const steps = ['SERVICE AGREEMENT', 'ORGANIZATION', 'IDENTIFY', 'VERIFY']
   it('renders without throwing any errors', () => {
     expect(() => {
       render(<StepperComponent activeStep={0} steps={[]} />)

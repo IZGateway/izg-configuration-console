@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import fetchDestinationchangerequest from '../../../lib/queries/fetch/destinationchangerequest'
+import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 import {
@@ -11,6 +11,8 @@ import {
 } from '../../../lib/queries/mutate/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
+import upsertDraftRecord from '../../../lib/queries/mutate/draftrecord'
+import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
 /**
  * @swagger
  * /api/changerequest:
@@ -70,24 +72,48 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
   if (hasAccessToDestId(requestBody.dest_id, session)) {
-    const { dest_id, dest_type_id } = requestBody
+    const { dest_id, dest_type_id, draft } = requestBody
     if (req.method === 'POST') {
-      try {
-        if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
-          res.status(409)
-          res.json(
-            'Conflict creating the requested resource because it already exists.'
-          )
-        } else {
-          await createChangeRequest(requestBody)
-          logger.info(
-            'change request created successfully for ' + requestBody.dest_uri
-          )
-          res.status(200)
-          res.json('The change request was created.')
+      if (draft === true) {
+        await upsertDraft(requestBody)
+        logger.info('Draft was saved successfully for ' + requestBody.dest_uri)
+        res.status(200)
+        res.json('Draft was saved.')
+      } else {
+        try {
+          if (await hasActiveDraft(dest_id, dest_type_id)) {
+            const draftRecord = await hasActiveDraft(dest_id, dest_type_id)
+            let changeRequestTicketResponse = null
+            try {
+              changeRequestTicketResponse = await createChangeRequestTicket({
+                ...requestBody,
+                changeRequestId: draftRecord.id,
+              })
+              await updateChangeRequestRecord({
+                ...draftRecord,
+                jira_id: changeRequestTicketResponse.key,
+              })
+            } catch (error) {
+              throw new Error(
+                `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
+              )
+            }
+          } else if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
+            res.status(409)
+            res.json(
+              'Conflict creating the requested resource because it already exists.'
+            )
+          } else {
+            await createChangeRequest(requestBody)
+            logger.info(
+              'change request created successfully for ' + requestBody.dest_uri
+            )
+            res.status(200)
+            res.json('The change request was created.')
+          }
+        } catch (error) {
+          throw new Error(`${error}`)
         }
-      } catch (error) {
-        throw new Error(`${error}`)
       }
     } else {
       throw new Error(
@@ -103,11 +129,13 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await fetchDestinationchangerequest(
-    dest_id,
-    dest_type_id
-  )
+  const changeRequest = await destinationChangeRequest(dest_id, dest_type_id)
   return !_.isEmpty(changeRequest)
+}
+
+const hasActiveDraft = async (dest_id: string, dest_type_id: number) => {
+  const changeRequest = await fetchDraftRecord(dest_id, dest_type_id)
+  return changeRequest
 }
 
 const createChangeRequest = async (changeRequestDetails: any) => {
@@ -134,6 +162,43 @@ const createChangeRequest = async (changeRequestDetails: any) => {
         deleteChangeRequestRecord(changeRequestRecord.id)
       }
     }
+  }
+}
+
+const upsertDraft = async (changeRequestDetails: any) => {
+  const activeDraftRecord = await hasActiveDraft(
+    changeRequestDetails.dest_id,
+    changeRequestDetails.dest_type_id
+  )
+  if (_.isEmpty(activeDraftRecord)) {
+    await upsertDraftRecord({
+      ..._.omit(changeRequestDetails.requested, [
+        'newPassword',
+        'confirmPassword',
+      ]),
+      password: changeRequestDetails.requested.newPassword,
+      jira_id: null,
+      dest_id: changeRequestDetails.dest_id,
+      dest_uri: changeRequestDetails.dest_uri,
+      dest_type: changeRequestDetails.dest_type_id,
+      scheduledAt: changeRequestDetails.scheduledAt,
+      requestedBy: changeRequestDetails.requestedBy,
+    })
+  } else {
+    await upsertDraftRecord({
+      ..._.omit(changeRequestDetails.requested, [
+        'newPassword',
+        'confirmPassword',
+      ]),
+      password: changeRequestDetails.requested.newPassword,
+      jira_id: null,
+      dest_id: changeRequestDetails.dest_id,
+      dest_uri: changeRequestDetails.dest_uri,
+      dest_type: changeRequestDetails.dest_type_id,
+      scheduledAt: changeRequestDetails.scheduledAt,
+      requestedBy: changeRequestDetails.requestedBy,
+      id: activeDraftRecord.id,
+    })
   }
 }
 

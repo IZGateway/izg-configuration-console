@@ -1,0 +1,27 @@
+---
+name: Create Image
+
+on:
+  workflow_dispatch:
+
+env:
+  GITHUB_REGISTRY_PREFIX: ghcr.io
+  GITHUB_REGISTRY_NAME: izgateway
+  IMAGE_NAME: ${{ github.repository }}
+  BUILD_ID: ${{ github.run_number}}
+  BRANCH: ${{ github.ref_name }}
+
+jobs:
+  generate-release-timestamp:
+    name: Generate release timestamp
+    runs-on: ubuntu-latest
+    outputs:
+      releaseDate: ${{ steps.exposeValue.outputs.releaseDate }}
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "RELEASE_DATE=$(date +'%d%b%Y%H%M%S')" >> "$GITHUB_ENV"
+      - name: Expose value
+        id: exposeValue
+        run: |
+          echo "::set-output name=releaseDate::${{ env.RELEASE_DATE }}"

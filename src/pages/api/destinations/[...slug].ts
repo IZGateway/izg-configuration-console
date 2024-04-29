@@ -6,7 +6,7 @@ import withMiddleware from '../api-middleware-helper'
  * @swagger
  * /api/destinations/{destTypeId}/{destId}:
  *   get:
- *     summary: Get destination information for a destination id for a given destination type (Development,Production,Staging,Onboarding,Testing,UNKNOWN).
+ *     summary: Get destination information for a destination id for a given destination type id
  *     parameters:
  *       - name: destTypeId
  *         in: path

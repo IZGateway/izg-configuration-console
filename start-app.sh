@@ -14,4 +14,5 @@ else
     echo MetricBeat logging not enabled
 fi
 
+./replace-variable.sh && 
 npm start
