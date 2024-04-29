@@ -9,14 +9,16 @@ import {
   Tooltip,
   CardHeader,
   CardContent,
+  Button,
 } from '@mui/material'
-import HistoryIcon from '@mui/icons-material/History'
+
 import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
 import ChangeRequestActionButtons from './ChangeRequestActionButtons'
 import palette from '../../styles/theme/palette'
+import PopOverActionButtons from './PopOverActionButtons'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -235,27 +237,11 @@ const ConnectionsTable = (props) => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link
-              tabIndex={params.tabIndex}
-              prefetch={false}
-              href={{
-                pathname: `/history/${params.row.destTypeId}/${params.id}`,
-                query: {
-                  status: params.row.status,
-                },
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="History">
-                <IconButton
-                  id={'history_' + params.row.destTypeId + '_' + params.id}
-                  aria-label="history"
-                  color="secondary"
-                  sx={actionButtonStyle}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            <PopOverActionButtons
+              destId={params.id}
+              destTypeId={params.row.destTypeId}
+              status={params.row.status}
+            />
           </div>
         )
       },
