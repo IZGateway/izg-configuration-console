@@ -19,6 +19,10 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { useContext, useState } from 'react'
 import CombinedContext from '../../contexts/app'
 import CloseIcon from '@mui/icons-material/Close'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import Select, { SelectChangeEvent } from '@mui/material/Select'
 interface resetDialogProps {
   open: boolean
   handleClose: any
@@ -46,9 +50,13 @@ const MaintenanceDialog = (props: resetDialogProps) => {
 
   const [reinstatementDateTime, setReinstatementDateTime] = useState(null)
   const [startDateTime, setStartDateTime] = useState(null)
+  const [message, setMessage] = React.useState('')
   const isDisableConnectionButtonDisabled =
     !reinstatementDateTime || !startDateTime
   const handleDisableConnection = () => {}
+  const handleChange = (event: SelectChangeEvent) => {
+    setMessage(event.target.value as string)
+  }
   return (
     <div>
       <Container>
@@ -112,6 +120,19 @@ const MaintenanceDialog = (props: resetDialogProps) => {
                 sx={{ marginRight: 4, marginTop: 2 }}
               />
             </LocalizationProvider>
+            <FormControl fullWidth>
+              <InputLabel id="message-select-label">Message</InputLabel>
+              <Select
+                labelId="message-select-label"
+                id="message-select"
+                value={message}
+                label="Message"
+                onChange={handleChange}
+              >
+                <MenuItem value={'Option 1'}>Option 1</MenuItem>
+                <MenuItem value={'Option 2'}>Option 2</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
           <Button
             id="disable"
