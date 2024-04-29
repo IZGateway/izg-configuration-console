@@ -115,7 +115,7 @@ const MaintenanceDialog = (props: resetDialogProps) => {
                 onChange={(date) => {
                   setReinstatementDateTime(date)
                 }}
-                sx={{ width: '100%' }}
+                sx={{ width: '100%', marginBottom: '32px' }}
               />
             </LocalizationProvider>
             <FormControl fullWidth>
