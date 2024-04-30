@@ -1,15 +1,12 @@
 import Container from '../components/Container'
 import type { NextPage } from 'next'
-
-const Home: NextPage = () => {
+import HomeComponent from '../components/Home'
+const HomePage: NextPage = () => {
   return (
     <Container title="IZ Gateway Configuration Console">
-      <div>
-        Ask Matt if we should have a landing page or go right to the connections
-        datatable
-      </div>
+      <HomeComponent />
     </Container>
   )
 }
 
-export default Home
+export default HomePage

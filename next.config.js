@@ -17,7 +17,7 @@ module.exports = async (phase, { defaultConfig }) => {
       return [
         {
           source: '/',
-          destination: '/manage',
+          destination: '/',
           permanent: true,
         },
       ]
