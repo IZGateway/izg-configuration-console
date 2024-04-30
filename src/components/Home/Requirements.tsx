@@ -16,12 +16,15 @@ import {
 } from '@mui/material'
 import Link from 'next/link'
 import Close from '@mui/icons-material/Close'
+import palette from '../../styles/theme/palette'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
   boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
   paddingBottom: '16px',
 }
+const documentationUrl =
+  'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/'
 
 const SupportingDocumentation = () => {
   const [open, setOpen] = useState(false)
@@ -94,9 +97,8 @@ const SupportingDocumentation = () => {
                     for Disease Control and Prevention (CDC), streamlining
                     reporting processes.{' '}
                     <Link
-                      href={
-                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20IIS-CDC%20Reporting%20(Automate%20Data%20Submissions)?csf=1&web=1&e=wZbFmh'
-                      }
+                      href={`${documentationUrl}IZG%20IIS-CDC%20Reporting%20(Automate%20Data%20Submissions)?csf=1&web=1&e=wZbFmh`}
+                      style={{ color: palette.primary }}
                     >
                       Access documentation
                     </Link>
@@ -126,9 +128,8 @@ const SupportingDocumentation = () => {
                     different Immunization Information Systems (IIS), promoting
                     interoperability.{' '}
                     <Link
-                      href={
-                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20IIS-to-IIS%20Data%20Exchange?csf=1&web=1&e=5UcDZG'
-                      }
+                      href={`${documentationUrl}IZG%20IIS-to-IIS%20Data%20Exchange?csf=1&web=1&e=5UcDZG`}
+                      style={{ color: palette.primary }}
                     >
                       Access documentation
                     </Link>
@@ -159,9 +160,8 @@ const SupportingDocumentation = () => {
                     Immunization Information Systems (IIS), enhancing public
                     health surveillance.{' '}
                     <Link
-                      href={
-                        'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA'
-                      }
+                      href={`${documentationUrl}IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA`}
+                      style={{ color: palette.primary }}
                     >
                       Access documentation
                     </Link>
