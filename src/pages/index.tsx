@@ -4,7 +4,7 @@ import HomeComponent from '../components/Home'
 const HomePage: NextPage = () => {
   return (
     <Container title="IZ Gateway Configuration Console">
-      <HomeComponent></HomeComponent>
+      <HomeComponent />
     </Container>
   )
 }
