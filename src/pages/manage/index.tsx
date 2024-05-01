@@ -17,6 +17,7 @@ import destinationChangeRequest from '../../lib/queries/fetch/destinationchanger
 import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
+const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -141,7 +142,7 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
 
   const responseData = await responses
   responseData.forEach((response) => {
-    if (response.status !== 'fulfilled') {
+    if (response.status !== ALL_SETTLED_SUCCESSFUL) {
       logger.error(
         'Error connecting to a configured statushistory endpoint: ' +
           JSON.stringify(response.reason.errors)
