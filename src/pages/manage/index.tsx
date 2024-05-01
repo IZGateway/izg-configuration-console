@@ -11,12 +11,12 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
-import logger from '../../../logger'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
+import logger from '../../../logger'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -110,8 +110,10 @@ export const getServerSideProps = async (context) => {
 }
 
 const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
-  const IZG_STATUS_ENDPOINT_URL =
-    process.env.IZG_STATUS_ENDPOINT_URL || 'unknown'
+  const IZG_STATUS_ENDPOINT_URL = _.split(
+    process.env.IZG_STATUS_ENDPOINT_URL,
+    ','
+  )
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
   const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
@@ -122,22 +124,33 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
     rejectUnauthorized: false,
     keepAlive: true,
   }
-  const endpoint = isAdmin
-    ? IZG_STATUS_ENDPOINT_URL
-    : IZG_STATUS_ENDPOINT_URL + '?include=' + `${jurisdictions?.join(',')}`
-  const responseData = await axios
-    .get(endpoint, {
-      httpsAgent: new https.Agent(httpsAgentOptions),
-      timeout: 30000,
-    })
-    .then((response) => {
-      return response.data
-    })
-    .catch((error) => {
-      logger.error('Something went wrong ' + endpoint, { err: error })
-      throw new Error('Error fetching destinations')
-    })
-  return responseData
+
+  if (!isAdmin) {
+    appendJurisdictionsAssignedToUser(IZG_STATUS_ENDPOINT_URL, jurisdictions)
+  }
+
+  let endpointStatuses = {}
+  const responses = Promise.allSettled(
+    IZG_STATUS_ENDPOINT_URL.map((endpoint) =>
+      axios.get(endpoint, {
+        httpsAgent: new https.Agent(httpsAgentOptions),
+        timeout: 30000,
+      })
+    )
+  )
+
+  const responseData = await responses
+  responseData.forEach((response) => {
+    if (response.status !== 'fulfilled') {
+      logger.error(
+        'Error connecting to a configured statushistory endpoint: ' +
+          JSON.stringify(response.reason.errors)
+      )
+    } else {
+      endpointStatuses = { ...endpointStatuses, ...response.value.data }
+    }
+  })
+  return endpointStatuses
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
@@ -146,4 +159,12 @@ const hasActiveChangeRequest = async (destId, destTypeId) => {
 
 const hasActiveDraft = async (destId, destTypeId) => {
   return (await fetchDraftRecord(destId, destTypeId)) ? true : false
+}
+function appendJurisdictionsAssignedToUser(
+  IZG_STATUS_ENDPOINT_URL: string[],
+  jurisdictions: any
+) {
+  return IZG_STATUS_ENDPOINT_URL.map(
+    (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`
+  )
 }
