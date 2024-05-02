@@ -1,4 +1,4 @@
-// This theme will be used in the future, do not use.// 
+// This theme will be used in the future, do not use.//
 
 import { ThemeOptions } from '@mui/material/styles'
 
@@ -100,6 +100,13 @@ const blueThemeOptions: ThemeOptions = {
     ].join(','),
   },
   components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: '30px',
+        },
+      },
+    },
     MuiDrawer: {
       styleOverrides: {
         paper: {

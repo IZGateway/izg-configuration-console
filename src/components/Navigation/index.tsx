@@ -40,7 +40,7 @@ const openMixin = () => ({
   background: palette.primaryDark,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
-  transition: 'width 0.8s ease',
+  transition: 'width 0.2s ease',
 })
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -95,21 +95,26 @@ const MiniDrawer = () => {
       <List
         sx={{
           padding: '0 0',
-          '&& .Mui-selected , && .Mui-selected:hover': {
+          backgroundColor: palette.primaryDark,
+          ' && .Mui-selected:focus': {
             backgroundColor: palette.primaryLight,
+
             '&, & .MuiListItemIcon-root': {
               color: palette.primaryDark,
             },
+
             '&, & .MuiListItemText-root': {
               color: palette.primaryDark,
             },
+
             'span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root':
               {
                 fontWeight: 700,
               },
           },
-          '& .MuiListItemButton-root:hover': {
+          '& .MuiListItem-root:hover': {
             bgcolor: 'rgb(255 255 255 / 10%)',
+            color: palette.white,
             '&, & .MuiListItemIcon-root': {
               color: palette.white,
             },
@@ -170,7 +175,7 @@ const MiniDrawer = () => {
         role="navigation"
       >
         <DrawerHeader
-          sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 1.5 }}
+          sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 2 }}
         >
           <IZGLogo />
           <IconButton
