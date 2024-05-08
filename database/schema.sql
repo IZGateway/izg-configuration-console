@@ -66,11 +66,13 @@ CREATE TABLE destinations (
     -- Password expiry date
     pass_expiry date,
     jurisdiction_id int NOT NULL,
+    maint_reason character varying(50),
+    maint_start DATETIME DEFAULT NULL,
+    maint_end DATETIME DEFAULT NULL,
     PRIMARY KEY (dest_id, dest_type),
     FOREIGN KEY (dest_type) REFERENCES destination_type (type_id) ON DELETE RESTRICT,
     FOREIGN KEY (jurisdiction_id) REFERENCES jurisdiction (jurisdiction_id) ON DELETE RESTRICT ON UPDATE CASCADE 
 );
-
 
 --
 -- DROP TABLE destination_change_request if exists;
@@ -241,18 +243,18 @@ TRUNCATE destinations;
 INSERT INTO destinations(dest_id,dest_type,dest_uri,username,password,facility_id,MSH3,MSH4,MSH5,MSH6,MSH22,RXA11,dest_version,pass_expiry,jurisdiction_id)
 VALUES
    ('404',2,'/dev/NotFound','NOT_FOUND_ENDPOINT','NONE','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
-('ak',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',3),
-('al',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',4),
-('ar',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',5),
-('as',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',6),
-('az',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',1),
+('ak',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',3),
+('al',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',4),
+('ar',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',5),
+('as',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',6),
+('az',5,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',1),
 ('azurite',2,'https://localhost:10000/devstoreaccount1/izgw','IZGW','sv=2018-03-28&st=2022-09-16T19%3A32%3A55Z&se=2023-09-07T19%3A32%3A00Z&sr=c&sp=racwdl&sig=SzCq1AFTf2kADcqb16gAb7b6lL0sm1QuHFXV8JEPCGE%3D','IZGW','IZGW','IZGW','IZGW','IZGW','','','V2022-12-31','2024-07-12',1),
 ('ca',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',7),
 ('co',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',8),
 ('ct',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',9),
 ('dc',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',10),
 ('de',2,'https://dev.izgateway.org/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','IZGW','','2024-08-12',11),
-('dev',2,'/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
+('dev',5,'/dev/IISService','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
 ('dev2011',2,'/dev/client_Service','user','pass','IZGW','IZGW','IZGW','IZGW','IZGW','','','2011','2024-07-12',1),
 ('devwup',2,'/dev/IISService','','','IZGW','IZGW','IZGW','IZGW','IZGW','','','','2024-07-12',1),
 ('dex-dev',2,'https://localhost/rest/upload/dex','dex-dev','dex-dev','IZGW','IZGW','IZGW','IZGW','IZGW','','','DEX1.0','2024-07-12',1),

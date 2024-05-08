@@ -9,6 +9,7 @@ import {
   Typography,
   Box,
   IconButton,
+  TextField,
 } from '@mui/material'
 import { TransitionProps } from '@mui/material/transitions'
 import palette from '../../styles/theme/palette'
@@ -22,7 +23,8 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select, { SelectChangeEvent } from '@mui/material/Select'
-interface resetDialogProps {
+import _ from 'lodash'
+interface maintenanceDialogProps {
   open: boolean
   handleClose: any
   destTypeId: any
@@ -44,17 +46,50 @@ const customPaperStyles = {
   paddingBottom: '16px',
 }
 
-const MaintenanceDialog = (props: resetDialogProps) => {
-  const { setAlert } = useContext(CombinedContext)
-
+const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const [reinstatementDateTime, setReinstatementDateTime] = useState(null)
   const [startDateTime, setStartDateTime] = useState(null)
-  const [message, setMessage] = React.useState('')
-  const isDisableConnectionButtonDisabled =
-    !reinstatementDateTime || !startDateTime
-  const handleDisableConnection = () => {}
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState(null)
+  const isDisableConnectionButtonDisabled = !startDateTime || !message
+  const handleDisableConnection = async () => {
+    try {
+      const response = await fetch(
+        `/api/maintenance/create/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            startDateTime,
+            reinstatementDateTime,
+            message,
+          }),
+        }
+      )
+      if (response.ok) {
+        console.log('hi')
+        props.handleClose
+      }
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
   const handleChange = (event: SelectChangeEvent) => {
     setMessage(event.target.value as string)
+  }
+  const handleStartDateChange = (date) => {
+    setStartDateTime(date)
+    if (reinstatementDateTime && date && date > reinstatementDateTime) {
+      setError('Start date must be before end date')
+    }
+  }
+  const handleReinstateDateChange = (date) => {
+    setReinstatementDateTime(date)
+    if (startDateTime && date && date < startDateTime) {
+      setError('End date must be before start date')
+    }
   }
   return (
     <div>
@@ -97,28 +132,33 @@ const MaintenanceDialog = (props: resetDialogProps) => {
           <Box sx={{ padding: 2 }}>
             <LocalizationProvider dateAdapter={AdapterMoment}>
               <DateTimePicker
-                label="Start date and time"
+                label="Start date and time*"
                 disablePast
-                onChange={(date) => {
-                  setStartDateTime(date)
-                }}
+                onChange={handleStartDateChange}
                 slotProps={{
                   textField: {
-                    required: true,
+                    variant: 'outlined',
+                    error: !!error,
+                    helperText: error,
                   },
                 }}
                 sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
-                label="Reinstatement date and time*"
+                label="Reinstatement date and time"
                 disablePast
-                onChange={(date) => {
-                  setReinstatementDateTime(date)
+                onChange={handleReinstateDateChange}
+                slotProps={{
+                  textField: {
+                    variant: 'outlined',
+                    error: !!error,
+                    helperText: error,
+                  },
                 }}
                 sx={{ width: '100%', marginBottom: '32px' }}
               />
             </LocalizationProvider>
-            <FormControl fullWidth>
+            <FormControl fullWidth required>
               <InputLabel id="message-select-label">Message</InputLabel>
               <Select
                 labelId="message-select-label"
@@ -127,8 +167,16 @@ const MaintenanceDialog = (props: resetDialogProps) => {
                 label="Message"
                 onChange={handleChange}
               >
-                <MenuItem value={'Option 1'}>Option 1</MenuItem>
-                <MenuItem value={'Option 2'}>Option 2</MenuItem>
+                <MenuItem value={'Maintenance'}>
+                  <strong>Maintenance : </strong> Endpoint and data sharing will
+                  be temporarily disabled for server maintenance and updates,
+                  including password changes.
+                </MenuItem>
+                <MenuItem value={'Troubleshooting'}>
+                  <strong>Troubleshooting : </strong> Endpoint and data sharing
+                  will be temporarily disabled for troubleshooting to isolate
+                  issues.
+                </MenuItem>
               </Select>
             </FormControl>
           </Box>

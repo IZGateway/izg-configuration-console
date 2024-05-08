@@ -17,6 +17,8 @@ import destinationChangeRequest from '../../lib/queries/fetch/destinationchanger
 import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
+import destination from '../../lib/queries/fetch/destination'
+
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -77,6 +79,7 @@ type DestDetails = [
     jurisdictionDesc: string
     hasChangeRequest?: boolean
     hasActiveDraft?: boolean
+    hasActiveMaint?: boolean
   }
 ]
 
@@ -102,9 +105,11 @@ export const getServerSideProps = async (context) => {
             x.destTypeId
           ),
           hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
+          hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
         }
       })
     )
+
     data[key] = await destArray
   }
   return { props: { data } }
@@ -161,6 +166,19 @@ const hasActiveChangeRequest = async (destId, destTypeId) => {
 const hasActiveDraft = async (destId, destTypeId) => {
   return (await fetchDraftRecord(destId, destTypeId)) ? true : false
 }
+
+const hasActiveMaintenance = async (destId, destTypeId) => {
+  const result = await destination(destId, destTypeId)
+  if (
+    result.maint_start <= new Date(Date.now()) &&
+    (_.isNull(result.maint_end) || result.maint_end >= new Date(Date.now()))
+  ) {
+    return true
+  } else {
+    return false
+  }
+}
+
 function appendJurisdictionsAssignedToUser(
   IZG_STATUS_ENDPOINT_URL: string[],
   jurisdictions: any

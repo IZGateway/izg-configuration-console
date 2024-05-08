@@ -9,7 +9,6 @@ import {
   Tooltip,
   CardHeader,
   CardContent,
-  Button,
 } from '@mui/material'
 
 import Link from 'next/link'
@@ -74,6 +73,9 @@ const dataGridCustom = {
     },
   '& .MuiDataGrid-virtualScroller': {
     overflow: 'hidden',
+  },
+  '.highlight': {
+    bgcolor: 'pink',
   },
 }
 
@@ -186,7 +188,15 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {!isConnected ? (
+              {params.row.hasActiveMaint ? (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography>
+                    This connection is under maintenance until{' '}
+                    {params.row.maint_end}
+                  </Typography>
+                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                </Box>
+              ) : !isConnected ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography>Not Connected</Typography>
                   <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -295,6 +305,9 @@ const ConnectionsTable = (props) => {
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
         getRowId={(row) => row.destId}
+        getRowClassName={(params) => {
+          return params.row.hasActiveMaint === true ? 'highlight' : ''
+        }}
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
