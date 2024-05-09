@@ -4,6 +4,8 @@ const palette = {
   black: '#000',
   divider: '#c2c6ca',
   error: '#B50E16',
+  errorLight: '#FFC8CA',
+  errorHighLight: '#FFC8CA40',
   errorDark: '#6D191D',
   grey: '#A7A7A7',
   greyLight: '#efefef',
@@ -21,7 +23,6 @@ const palette = {
   warningLight: '#F2D0A7',
   white: '#FFFFFF',
   border: '#BFBFBF',
-  };
-  
-  export default palette;
-  
+}
+
+export default palette
