@@ -168,14 +168,21 @@ const hasActiveDraft = async (destId, destTypeId) => {
 }
 
 const hasActiveMaintenance = async (destId, destTypeId) => {
-  const result = await destination(destId, destTypeId)
-  if (
-    result.maint_start <= new Date(Date.now()) &&
-    (_.isNull(result.maint_end) || result.maint_end >= new Date(Date.now()))
-  ) {
-    return true
-  } else {
-    return false
+  try {
+    const result = await destination(destId, destTypeId)
+    if (
+      _.isNull(result) ||
+      (_.isNull(result.maint_start) && _.isNull(result.maint_end))
+    ) {
+      return false
+    } else {
+      return (
+        result.maint_start <= new Date() &&
+        (_.isNull(result.maint_end) || result.maint_end >= new Date())
+      )
+    }
+  } catch (error) {
+    throw new Error(error.message)
   }
 }
 

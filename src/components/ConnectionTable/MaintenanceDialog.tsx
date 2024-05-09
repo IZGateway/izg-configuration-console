@@ -47,6 +47,7 @@ const customPaperStyles = {
 }
 
 const MaintenanceDialog = (props: maintenanceDialogProps) => {
+  const { setAlert } = useContext(CombinedContext)
   const [reinstatementDateTime, setReinstatementDateTime] = useState(null)
   const [startDateTime, setStartDateTime] = useState(null)
   const [message, setMessage] = useState('')
@@ -69,8 +70,19 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
         }
       )
       if (response.ok) {
-        console.log('hi')
-        props.handleClose
+        setStartDateTime(null)
+        setReinstatementDateTime(null)
+        setMessage('')
+        props.handleClose()
+        setAlert({
+          level: 'success',
+          message: `Maintenance request is created successfully!`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Maintenance request creation was not successful!. Please try again later!`,
+        })
       }
     } catch (error) {
       throw new Error(error)
@@ -88,7 +100,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const handleReinstateDateChange = (date) => {
     setReinstatementDateTime(date)
     if (startDateTime && date && date < startDateTime) {
-      setError('End date must be before start date')
+      setError('End date must be after start date')
     }
   }
   return (
