@@ -35,6 +35,9 @@ const dataGridCustom = {
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
   },
+  '& .MuiDataGrid-row:hover': {
+    bgcolor: '#00000010',
+  },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
       width: '32vw',
@@ -75,7 +78,7 @@ const dataGridCustom = {
     overflow: 'hidden',
   },
   '.highlight': {
-    bgcolor: 'pink',
+    bgcolor: palette.errorHighLight,
   },
 }
 
@@ -106,13 +109,13 @@ const ConnectionsTable = (props) => {
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
-      flex: 1,
-      minWidth: 100,
+      flex: 0.5,
+      minWidth: 50,
     },
     {
       field: 'status',
       headerName: 'STATUS',
-      flex: 0.5,
+      flex: 0.75,
       minWidth: 100,
       filterable: false,
       valueFormatter: ({ value }) =>
@@ -190,11 +193,14 @@ const ConnectionsTable = (props) => {
             <Typography gutterBottom variant="body1" component="div">
               {params.row.hasActiveMaint ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography>
+                  <Typography sx={{ color: palette.errorDark }}>
                     This connection is under maintenance until{' '}
                     {params.row.maint_end}
                   </Typography>
-                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                  <ErrorOutlineIcon
+                    fontSize="small"
+                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                  />
                 </Box>
               ) : !isConnected ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
