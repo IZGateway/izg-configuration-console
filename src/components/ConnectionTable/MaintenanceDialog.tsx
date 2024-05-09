@@ -9,7 +9,6 @@ import {
   Typography,
   Box,
   IconButton,
-  TextField,
 } from '@mui/material'
 import { TransitionProps } from '@mui/material/transitions'
 import palette from '../../styles/theme/palette'
@@ -179,15 +178,42 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
                 label="Message"
                 onChange={handleChange}
               >
-                <MenuItem value={'Maintenance'}>
-                  <strong>Maintenance : </strong> Endpoint and data sharing will
-                  be temporarily disabled for server maintenance and updates,
-                  including password changes.
+                <MenuItem
+                  sx={{
+                    p: 2,
+                    maxWidth: 'fit-content',
+                  }}
+                  divider
+                  disableGutters
+                  value={'Maintenance'}
+                >
+                  <Typography
+                    maxWidth={600}
+                    whiteSpace={'pre-wrap'}
+                    flexWrap={'wrap'}
+                  >
+                    <strong>Maintenance : </strong> Endpoint and data sharing
+                    will be temporarily disabled for server maintenance and
+                    updates, including password changes.
+                  </Typography>
                 </MenuItem>
-                <MenuItem value={'Troubleshooting'}>
-                  <strong>Troubleshooting : </strong> Endpoint and data sharing
-                  will be temporarily disabled for troubleshooting to isolate
-                  issues.
+                <MenuItem
+                  sx={{
+                    p: 2,
+                    maxWidth: 'fit-content',
+                  }}
+                  disableGutters
+                  value={'Troubleshooting'}
+                >
+                  <Typography
+                    maxWidth={600}
+                    whiteSpace={'pre-wrap'}
+                    flexWrap={'wrap'}
+                  >
+                    <strong>Troubleshooting : </strong> Endpoint and data
+                    sharing will be temporarily disabled for troubleshooting to
+                    isolate issues.
+                  </Typography>
                 </MenuItem>
               </Select>
             </FormControl>
