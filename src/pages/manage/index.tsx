@@ -20,6 +20,7 @@ import logger from '../../../logger'
 import destination from '../../lib/queries/fetch/destination'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
+let destinationResult = null
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -80,6 +81,7 @@ type DestDetails = [
     hasChangeRequest?: boolean
     hasActiveDraft?: boolean
     hasActiveMaint?: boolean
+    getMaintenaceValues: object
   }
 ]
 
@@ -106,6 +108,10 @@ export const getServerSideProps = async (context) => {
           ),
           hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
           hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
+          getMaintenaceValues: await getMaintenaceValues(
+            x.destId,
+            x.destTypeId
+          ),
         }
       })
     )
@@ -167,22 +173,48 @@ const hasActiveDraft = async (destId, destTypeId) => {
   return (await fetchDraftRecord(destId, destTypeId)) ? true : false
 }
 
-const hasActiveMaintenance = async (destId, destTypeId) => {
+const getDestinationResult = async (destId, destTypeId) => {
   try {
-    const result = await destination(destId, destTypeId)
-    if (
-      _.isNull(result) ||
-      (_.isNull(result.maint_start) && _.isNull(result.maint_end))
-    ) {
-      return false
-    } else {
-      return (
-        result.maint_start <= new Date() &&
-        (_.isNull(result.maint_end) || result.maint_end >= new Date())
-      )
-    }
+    destinationResult = await destination(destId, destTypeId)
   } catch (error) {
     throw new Error(error.message)
+  }
+}
+
+const getMaintenaceValues = async (destId, destTypeId) => {
+  await getDestinationResult(destId, destTypeId)
+
+  if (_.isNull(destinationResult)) {
+    return {
+      maint_start: null,
+      maint_end: null,
+    }
+  } else {
+    return {
+      maint_start: destinationResult.maint_start
+        ? destinationResult.maint_start.toISOString()
+        : null,
+      maint_end: destinationResult.maint_end
+        ? destinationResult.maint_end.toISOString()
+        : null,
+    }
+  }
+}
+
+const hasActiveMaintenance = async (destId, destTypeId) => {
+  await getDestinationResult(destId, destTypeId)
+  if (
+    _.isNull(destinationResult) ||
+    (_.isNull(destinationResult.maint_start) &&
+      _.isNull(destinationResult.maint_end))
+  ) {
+    return false
+  } else {
+    return (
+      destinationResult.maint_start <= new Date() &&
+      (_.isNull(destinationResult.maint_end) ||
+        destinationResult.maint_end >= new Date())
+    )
   }
 }
 

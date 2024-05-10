@@ -6,9 +6,9 @@ import logger from '../../../../../logger'
 
 /**
  * @swagger
- * /api/maintenance/create/{destTypeId}/{destId}:
+ * /api/maintenance/update/{destTypeId}/{destId}:
  *   delete:
- *     summary: create new request for connection maintenance
+ *     summary: Update maintenance start date, end date, reason for connection maintenance
  *       - name: destId
  *         in: path
  *         required: true

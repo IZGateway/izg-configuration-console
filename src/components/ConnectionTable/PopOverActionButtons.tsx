@@ -4,17 +4,18 @@ import {
   MenuItem,
   ListItemText,
   ListItemIcon,
-  Divider,
   Tooltip,
 } from '@mui/material'
 import Link from 'next/link'
-
 import palette from '../../styles/theme/palette'
 import WarningIcon from '@mui/icons-material/Warning'
 import HistoryIcon from '@mui/icons-material/History'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import React, { useState } from 'react'
-import MaintenanceDialog from './MaintenanceDialog'
+import MaintenanceDialog from './maintenanceDialog'
+import { useContext } from 'react'
+import CombinedContext from '../../contexts/app'
+
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
@@ -27,7 +28,11 @@ const PopOverActionButtons = (props: {
   destTypeId: any
   destId: any
   status: any
+  hasActiveMaintenance: any
+  jurisdictionName: any
+  destType: any
 }) => {
+  const { setAlert } = useContext(CombinedContext)
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -38,6 +43,44 @@ const PopOverActionButtons = (props: {
     setAnchorEl(null)
   }
 
+  const endMaintenance = async () => {
+    setAnchorEl(null)
+    try {
+      const response = await fetch(
+        `/api/maintenance/update/${props.destTypeId}/${props.destId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            startDateTime: null,
+            reinstatementDateTime: null,
+            message: null,
+          }),
+        }
+      )
+      if (response.ok) {
+        setAlert({
+          level: 'success',
+          message: `Maintenance for ${props.jurisdictionName} ${' '} ${
+            props.destType
+          } is ended successfully!`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Request to end maintenance for ${
+            props.jurisdictionName
+          } ${' '} ${
+            props.destType
+          } was not successful!. Please try again later!`,
+        })
+      }
+    } catch (error) {
+      throw new Error(error)
+    }
+  }
   const open = Boolean(anchorEl)
 
   const [openMaintenance, setOpenMaintenance] = useState(false)
@@ -98,18 +141,35 @@ const PopOverActionButtons = (props: {
           </ListItemIcon>
           <ListItemText>History</ListItemText>
         </MenuItem>
-        <MenuItem onClick={openMaintenanceDialog}>
-          <ListItemIcon>
-            <WarningIcon htmlColor={palette.error} fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Maintenance</ListItemText>
-        </MenuItem>
+        {props.hasActiveMaintenance ? (
+          <MenuItem
+            id={'end_Maintenance' + props.destTypeId + '_' + props.destId}
+            onClick={endMaintenance}
+          >
+            <ListItemIcon>
+              <WarningIcon htmlColor={palette.error} fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>End Maintenance</ListItemText>
+          </MenuItem>
+        ) : (
+          <MenuItem
+            id={'maintenance' + props.destTypeId + '_' + props.destId}
+            onClick={openMaintenanceDialog}
+          >
+            <ListItemIcon>
+              <WarningIcon htmlColor={palette.error} fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Maintenance</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
       <MaintenanceDialog
         open={openMaintenance}
         handleClose={closeMaintenanceDialog}
         destId={props.destId}
         destTypeId={props.destTypeId}
+        jurisdictionName={props.jurisdictionName}
+        destType={props.destType}
       />
     </>
   )

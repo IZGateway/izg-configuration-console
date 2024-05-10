@@ -15,19 +15,20 @@ import palette from '../../styles/theme/palette'
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
-import { useContext, useState } from 'react'
+import { useContext, useState, useEffect } from 'react'
 import CombinedContext from '../../contexts/app'
 import CloseIcon from '@mui/icons-material/Close'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select, { SelectChangeEvent } from '@mui/material/Select'
-import _ from 'lodash'
 interface maintenanceDialogProps {
   open: boolean
   handleClose: any
   destTypeId: any
   destId: any
+  jurisdictionName: any
+  destType: any
 }
 
 const Transition = React.forwardRef(function Transition(
@@ -51,11 +52,20 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const [startDateTime, setStartDateTime] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(null)
-  const isDisableConnectionButtonDisabled = !startDateTime || !message
+  const isDisableConnectionButtonDisabled = !startDateTime || !message || error
+  useEffect(() => {
+    if (props.open) {
+      setReinstatementDateTime(null)
+      setStartDateTime(null)
+      setMessage('')
+      setError(null)
+    }
+  }, [props.open])
+
   const handleDisableConnection = async () => {
     try {
       const response = await fetch(
-        `/api/maintenance/create/${props.destTypeId}/${props.destId}`,
+        `/api/maintenance/update/${props.destTypeId}/${props.destId}`,
         {
           method: 'POST',
           headers: {
@@ -69,18 +79,21 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
         }
       )
       if (response.ok) {
-        setStartDateTime(null)
-        setReinstatementDateTime(null)
-        setMessage('')
         props.handleClose()
         setAlert({
           level: 'success',
-          message: `Maintenance request is created successfully!`,
+          message: `Maintenance request for ${props.jurisdictionName} ${' '} ${
+            props.destType
+          } is created successfully!`,
         })
       } else {
         setAlert({
           level: 'error',
-          message: `Maintenance request creation was not successful!. Please try again later!`,
+          message: `Maintenance request creation for ${
+            props.jurisdictionName
+          } ${' '} ${
+            props.destType
+          } was not successful!. Please try again later!`,
         })
       }
     } catch (error) {
@@ -91,14 +104,13 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
     setMessage(event.target.value as string)
   }
   const handleStartDateChange = (date) => {
+    setError(null)
     setStartDateTime(date)
-    if (reinstatementDateTime && date && date > reinstatementDateTime) {
-      setError('Start date must be before end date')
-    }
   }
   const handleReinstateDateChange = (date) => {
+    setError(null)
     setReinstatementDateTime(date)
-    if (startDateTime && date && date < startDateTime) {
+    if (startDateTime && date && date <= startDateTime) {
       setError('End date must be after start date')
     }
   }
@@ -145,20 +157,17 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
               <DateTimePicker
                 label="Start date and time*"
                 disablePast
+                defaultValue={null}
                 onChange={handleStartDateChange}
-                slotProps={{
-                  textField: {
-                    variant: 'outlined',
-                    error: !!error,
-                    helperText: error,
-                  },
-                }}
+                value={startDateTime}
                 sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
                 label="Reinstatement date and time"
                 disablePast
                 onChange={handleReinstateDateChange}
+                defaultValue={null}
+                value={reinstatementDateTime}
                 slotProps={{
                   textField: {
                     variant: 'outlined',
@@ -174,6 +183,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
               <Select
                 labelId="message-select-label"
                 id="message-select"
+                data-testid="message-select"
                 value={message}
                 label="Message"
                 onChange={handleChange}
@@ -186,6 +196,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
                   divider
                   disableGutters
                   value={'Maintenance'}
+                  data-testid="maintenance-option"
                 >
                   <Typography
                     maxWidth={600}
@@ -204,6 +215,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
                   }}
                   disableGutters
                   value={'Troubleshooting'}
+                  data-testid="troubleshooting-option"
                 >
                   <Typography
                     maxWidth={600}

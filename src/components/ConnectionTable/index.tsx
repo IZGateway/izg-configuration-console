@@ -15,9 +15,11 @@ import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
-import ChangeRequestActionButtons from './ChangeRequestActionButtons'
+import ChangeRequestActionButtons from './changeRequestActionButtons'
 import palette from '../../styles/theme/palette'
-import PopOverActionButtons from './PopOverActionButtons'
+import PopOverActionButtons from './popOverActionButtons'
+import moment from 'moment'
+import _ from 'lodash'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -195,7 +197,11 @@ const ConnectionsTable = (props) => {
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography sx={{ color: palette.errorDark }}>
                     This connection is under maintenance until{' '}
-                    {params.row.maint_end}
+                    {_.isNull(params.row.getMaintenaceValues)
+                      ? 'ended by user'
+                      : moment(
+                          new Date(params.row.getMaintenaceValues.maint_end)
+                        ).format('MMM DD, YYYY [at] h:mm A')}
                   </Typography>
                   <ErrorOutlineIcon
                     fontSize="small"
@@ -257,6 +263,9 @@ const ConnectionsTable = (props) => {
               destId={params.id}
               destTypeId={params.row.destTypeId}
               status={params.row.status}
+              hasActiveMaintenance={params.row.hasActiveMaint}
+              jurisdictionName={params.row.jurisdictionName}
+              destType={params.row.destType}
             />
           </div>
         )
