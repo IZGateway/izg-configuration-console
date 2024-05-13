@@ -10,13 +10,16 @@ import {
   CardHeader,
   CardContent,
 } from '@mui/material'
-import HistoryIcon from '@mui/icons-material/History'
+
 import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
-import ChangeRequestActionButtons from './ChangeRequestActionButtons'
+import ChangeRequestActionButtons from './changeRequestActionButtons'
 import palette from '../../styles/theme/palette'
+import PopOverActionButtons from './popOverActionButtons'
+import moment from 'moment'
+import _ from 'lodash'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -33,6 +36,9 @@ const dataGridCustom = {
     border: `1px solid ${palette.border}`,
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+  },
+  '& .MuiDataGrid-row:hover': {
+    bgcolor: '#00000010',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
@@ -73,6 +79,9 @@ const dataGridCustom = {
   '& .MuiDataGrid-virtualScroller': {
     overflow: 'hidden',
   },
+  '.highlight': {
+    bgcolor: palette.errorHighLight,
+  },
 }
 
 const actionButtonStyle = {
@@ -102,13 +111,13 @@ const ConnectionsTable = (props) => {
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
-      flex: 1,
-      minWidth: 100,
+      flex: 0.5,
+      minWidth: 50,
     },
     {
       field: 'status',
       headerName: 'STATUS',
-      flex: 0.5,
+      flex: 0.75,
       minWidth: 100,
       filterable: false,
       valueFormatter: ({ value }) =>
@@ -184,7 +193,22 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {!isConnected ? (
+              {params.row.hasActiveMaint ? (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography sx={{ color: palette.errorDark }}>
+                    This connection is under maintenance until{' '}
+                    {_.isNull(params.row.getMaintenaceValues)
+                      ? 'ended by user'
+                      : moment(
+                          new Date(params.row.getMaintenaceValues.maint_end)
+                        ).format('MMM DD, YYYY [at] h:mm A')}
+                  </Typography>
+                  <ErrorOutlineIcon
+                    fontSize="small"
+                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                  />
+                </Box>
+              ) : !isConnected ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography>Not Connected</Typography>
                   <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -235,27 +259,14 @@ const ConnectionsTable = (props) => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link
-              tabIndex={params.tabIndex}
-              prefetch={false}
-              href={{
-                pathname: `/history/${params.row.destTypeId}/${params.id}`,
-                query: {
-                  status: params.row.status,
-                },
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="History">
-                <IconButton
-                  id={'history_' + params.row.destTypeId + '_' + params.id}
-                  aria-label="history"
-                  color="secondary"
-                  sx={actionButtonStyle}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            <PopOverActionButtons
+              destId={params.id}
+              destTypeId={params.row.destTypeId}
+              status={params.row.status}
+              hasActiveMaintenance={params.row.hasActiveMaint}
+              jurisdictionName={params.row.jurisdictionName}
+              destType={params.row.destType}
+            />
           </div>
         )
       },
@@ -309,6 +320,9 @@ const ConnectionsTable = (props) => {
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
         getRowId={(row) => row.destId}
+        getRowClassName={(params) => {
+          return params.row.hasActiveMaint === true ? 'highlight' : ''
+        }}
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}

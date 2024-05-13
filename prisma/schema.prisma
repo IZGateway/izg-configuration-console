@@ -52,10 +52,12 @@ model destinations {
   dest_version               String?                      @db.VarChar(50)
   pass_expiry                DateTime?                    @db.Date
   jurisdiction_id            Int
+  maint_reason               String?                      @db.VarChar(50)
+  maint_start                DateTime?                    @db.DateTime(0)
+  maint_end                  DateTime?                    @db.DateTime(0)
   destination_change_request destination_change_request[]
   destination_type           destination_type             @relation(fields: [dest_type], references: [type_id], onUpdate: Restrict, map: "destinations_ibfk_1")
   jurisdiction               jurisdiction                 @relation(fields: [jurisdiction_id], references: [jurisdiction_id], map: "destinations_ibfk_2")
-
   @@id([dest_id, dest_type])
   @@index([dest_type], map: "dest_type")
   @@index([jurisdiction_id], map: "jurisdiction_id")
