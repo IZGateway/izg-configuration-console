@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import ReleaseNotes from './ReleaseNotes'
 import LegalDocumentation from './LegalDocumentation'
 import { Slide } from '@mui/material'
+import RequestSupport from './RequestSupport'
 
 const HomeCircleCallouts = ({}) => {
   return (
@@ -21,6 +22,7 @@ const HomeCircleCallouts = ({}) => {
         <ReleaseNotes />
         <LegalDocumentation />
         {/* <FeedbackForm /> */}
+        <RequestSupport />
       </Box>
     </Slide>
   )

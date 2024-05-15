@@ -52,9 +52,9 @@ function HomeComponent() {
                 <Typography>Immunization (IZ) Gateway</Typography>
                 <Typography component={'h1'} variant="h5">
                   <strong>
-                    Exchanging of immunization data between immunization
-                    information systems (IISs), provider organizations, and
-                    consumer applications.
+                    The IZ Gateway is a program that includes a technology
+                    solution and infrastructure that facilitate immunization
+                    data exchange.
                   </strong>
                 </Typography>
                 <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
@@ -115,7 +115,7 @@ function HomeComponent() {
                       fontWeight: '500',
                     }}
                     sx={{ pt: 2, pl: 2, pb: 0 }}
-                    title="What is IZ Gateway"
+                    title="How does the IZ Gateway work?"
                     subheader="Here a breakdown from our team. "
                   />
                   <CardContent>
@@ -139,28 +139,20 @@ function HomeComponent() {
                       simplify making connections between the organizations
                       sending data and those receiving the data. These processes
                       and resources include centralized data use agreements that
-                      govern the datas movement and use, policy support to IZ
-                      Gateway users, and streamlined procedures for onboarding
-                      and testing connections.
+                      govern the data&apos;s movement and use, policy support to
+                      IZ Gateway users, and streamlined procedures for
+                      onboarding and testing connections.
                     </Typography>
 
                     {showFullContent && (
                       <>
                         <Typography gutterBottom variant="body2">
                           The movement of immunization data, also called data
-                          exchange, helps an individual’s vaccination record be
-                          more complete, accurate, and available to the
-                          individual and to their health care providers for use
-                          in health care recommendations and decision making.
-                        </Typography>
-                        <Typography gutterBottom variant="body2">
-                          The IZ Gateway technology is a router that moves
-                          immunization data among jurisdictional immunization
-                          information systems (IIS) and between IIS and public
-                          and private vaccine-providing organizations (e.g.,
-                          Veterans Health Administration, physician’s offices,
-                          pharmacies). The IZ Gateway also enables immunization
-                          data reporting to CDC.
+                          exchange, helps improve the completion and accuracy of
+                          an individual’s vaccination record as well as the
+                          availability of that record to their health care
+                          providers for use in health care recommendations and
+                          decision making.
                         </Typography>
                         <Typography gutterBottom variant="body2">
                           Data exchange also helps public health agencies have
@@ -225,7 +217,7 @@ function HomeComponent() {
                     <Typography variant="body2">
                       Explore the frequently asked questions (FAQs) section for
                       the IZ Gateway, where you can find detailed answers and
-                      insights into common queries
+                      insights into common queries.
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ mb: 2, ml: 1 }}>
@@ -250,10 +242,10 @@ function HomeComponent() {
                   />
                   <CardContent>
                     <Typography variant="body2">
-                      This page contains comprehensive content detailing various
-                      use cases related to four key elements: IIS-IIS
-                      interactions, Provider-IIS relationships, IIS-CDC
-                      scenarios, and Consumer Access functionalities,
+                      To learn more about the four primary IZ Gateway use cases,
+                      click the icon below. These use cases include IIS-to-IIS
+                      data exchange, Provider-to-IIS data exchange, IIS-CDC
+                      submission, and Consumer Access features.
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ mb: 2, ml: 1 }}>
@@ -279,10 +271,9 @@ function HomeComponent() {
                   <CardContent>
                     <Typography variant="body2">
                       For detailed information and guidance on implementation,
-                      integration, and utilization of these systems, access our
-                      comprehensive supporting documentation. Discover how these
-                      solutions can enhance your immunization data management
-                      and reporting processes.
+                      integration, and utilization of these systems, view our
+                      comprehensive supporting documentation below and follow
+                      the links provided.
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ mb: 2, ml: 1 }}>
