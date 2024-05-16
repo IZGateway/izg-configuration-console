@@ -84,18 +84,15 @@ const SupportingDocumentation = () => {
               aria-controls="panel1a-content"
               id="panel1a-header"
             >
-              <Typography variant="h6">
-                IZG IIS-CDC Reporting (Automate Data Submissions)
-              </Typography>
+              <Typography variant="h6">Data sharing with CDC</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <List>
                 <ListItem>
                   <Typography>
-                    The IZG IIS-CDC Reporting system automates data submissions
-                    from Immunization Information Systems (IIS) to the Centers
-                    for Disease Control and Prevention (CDC), streamlining
-                    reporting processes.{' '}
+                    The Data sharing with CDC enables jurisdiction IISs to
+                    submit record-level deidentified routine and aggregate flu
+                    vaccination data to CDC.{' '}
                     <Link
                       href={`${documentationUrl}IZG%20IIS-CDC%20Reporting%20(Automate%20Data%20Submissions)?csf=1&web=1&e=wZbFmh`}
                       style={{ color: palette.primary }}
@@ -117,16 +114,14 @@ const SupportingDocumentation = () => {
               aria-controls="panel2a-content"
               id="panel2a-header"
             >
-              <Typography variant="h6">IZG IIS-to-IIS Data Exchange</Typography>
+              <Typography variant="h6">Data exchange between IISs</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <List>
                 <ListItem>
                   <Typography>
-                    The IZG IIS-to-IIS Data Exchange facilitates secure and
-                    standardized transmission of immunization data among
-                    different Immunization Information Systems (IIS), promoting
-                    interoperability.{' '}
+                    The Data exchange between IISs enables IIS to send and
+                    receive immunization data to other IISs.{' '}
                     <Link
                       href={`${documentationUrl}IZG%20IIS-to-IIS%20Data%20Exchange?csf=1&web=1&e=5UcDZG`}
                       style={{ color: palette.primary }}
@@ -148,17 +143,16 @@ const SupportingDocumentation = () => {
               id="panel3a-header"
             >
               <Typography variant="h6">
-                IZG Provider-to-IIS Data Exchange
+                Data exchange with vaccine providers
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <List>
                 <ListItem>
                   <Typography>
-                    The IZG Provider-to-IIS Data Exchange enables healthcare
-                    providers to submit immunization data directly to
-                    Immunization Information Systems (IIS), enhancing public
-                    health surveillance.{' '}
+                    The reporting and querying of immunization data to a
+                    jurisdiction IIS by providers that serve more than
+                    one-jurisdiction through the IZ Gateway.{' '}
                     <Link
                       href={`${documentationUrl}IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA`}
                       style={{ color: palette.primary }}
