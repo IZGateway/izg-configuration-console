@@ -1,6 +1,6 @@
 import React from 'react'
 import { IconButton, Typography, Box } from '@mui/material'
-import ContactSupportIcon from '@mui/icons-material/ContactSupport'
+import ContactSupportOutlinedIcon from '@mui/icons-material/ContactSupportOutlined'
 import palette from '../../styles/theme/palette'
 
 const actionButtonStyle = {
@@ -29,7 +29,7 @@ const RequestSupport = () => {
           href="https://support.izgateway.org/plugins/servlet/desk/portal/3"
           target="_blank"
         >
-          <ContactSupportIcon color="primary" />
+          <ContactSupportOutlinedIcon color="primary" />
         </IconButton>
         <Typography align="center">
           Request <br /> Support

@@ -174,10 +174,10 @@ const UseCases = () => {
                   <Typography gutterBottom>
                     Example: A provider at the State B health dept. (who would
                     also be responsible for entering data into an IIS) would
-                    need to query the State A IIS for the child's immunization
-                    history to verify whether the child meets immunization
-                    requirements for day care entry in State B. Further
-                    immunization decisions can be made by State B health
+                    need to query the State A IIS for the child&apos;s
+                    immunization history to verify whether the child meets
+                    immunization requirements for day care entry in State B.
+                    Further immunization decisions can be made by State B health
                     department based on this information.
                   </Typography>
                 </ListItem>
@@ -186,12 +186,13 @@ const UseCases = () => {
                   <Typography gutterBottom>
                     Example: A family moves from state A to neighboring state B
                     while their child is 3 years old. State B identifies a need
-                    for the child's immunization record and queries the
-                    neighboring state's IIS via the IZ Gateway. In response,
-                    state A sends the child's record. Now providers in state B
-                    will have the child's full immunization history to reference
-                    for decisions and will add to the record in the IIS when the
-                    child receives additional vaccines.
+                    for the child&apos;s immunization record and queries the
+                    neighboring state&apos;s IIS via the IZ Gateway. In
+                    response, state A sends the child&apos;s record. Now
+                    providers in state B will have the child&apos;s full
+                    immunization history to reference for decisions and will add
+                    to the record in the IIS when the child receives additional
+                    vaccines.
                   </Typography>
                 </ListItem>
               </List>
@@ -239,8 +240,8 @@ const UseCases = () => {
                     their parent must provide immunization details. The parent
                     uses a smart phone application to access a consumer access
                     portal. The portal requests and receives the correct record
-                    via the IZ Gateway and provides that record to the parent's
-                    app for use.
+                    via the IZ Gateway and provides that record to the
+                    parent&apos;s app for use.
                   </Typography>
                 </ListItem>
               </List>
@@ -286,8 +287,8 @@ const UseCases = () => {
                 <ListItem>
                   <Typography gutterBottom>
                     Using the IZ Gateway for data sharing with CDC aligns with
-                    CDC's cloud-based, modernized data architecture designed to
-                    address future public health emergencies.
+                    CDC&apos;s cloud-based, modernized data architecture
+                    designed to address future public health emergencies.
                   </Typography>
                 </ListItem>
               </List>
