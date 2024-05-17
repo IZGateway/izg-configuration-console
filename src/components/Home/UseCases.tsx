@@ -89,25 +89,40 @@ const UseCases = () => {
               <List>
                 <ListItem>
                   <Typography>
-                    Example: A federal agency (e.g., Veterans Health
-                    Association) or multi-jurisdictional vaccine provider
-                    exchanges immunization data with the Mississippi IIS through
-                    the IZ Gateway.
+                    Data exchange with vaccine providers is the reporting and
+                    querying of immunization data to a jurisdiction IIS by
+                    providers that serve more than one-jurisdiction through the
+                    IZ Gateway.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography>
-                    Exchanging data with providers helps IIS have data from more
-                    providers, which enhances the completeness of IIS data.
+                    The IIS has vaccination records from a provider
+                    organization, which enhances the completeness of the data in
+                    the IIS and helps the IIS and public health agencies
+                    understand who in their state is protected from disease.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography gutterBottom>
-                    Enabling a connection between IISs and vaccine providers
-                    improves the provider access to immunization data, allowing
-                    them to make informed decisions about clinical care.
+                    Health care providers can get patients’ vaccination records
+                    from the IIS, even when patients received vaccine at another
+                    provider, allowing providers to make informed decisions
+                    about clinical care for more patients.
+                  </Typography>
+                </ListItem>
+                <Divider sx={{ marginY: 1 }} />
+                <ListItem>
+                  <Typography gutterBottom>
+                    Example: A nurse at a hospital system needs to understand
+                    what vaccines their patient has received to determine the
+                    best tests to run so they query the IIS. The nurse realizes
+                    the patient is protected from flu but should consider an RSV
+                    vaccine due to their age. The patient agrees to get the RSV
+                    shot that day, and the hospital submits the record of
+                    vaccination to the IIS.
                   </Typography>
                 </ListItem>
               </List>
@@ -129,9 +144,8 @@ const UseCases = () => {
               <List>
                 <ListItem>
                   <Typography>
-                    Example: Washington and New Mexico exchange immunization
-                    data from their IIS through the IZ Gateway for a citizen who
-                    moves between states.
+                    Data exchange between IISs enables IIS to send and receive
+                    immunization data to other IISs.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
@@ -155,6 +169,32 @@ const UseCases = () => {
                     health of their communities
                   </Typography>
                 </ListItem>
+                <Divider sx={{ marginY: 1 }} />
+                <ListItem>
+                  <Typography gutterBottom>
+                    Example: A provider at the State B health dept. (who would
+                    also be responsible for entering data into an IIS) would
+                    need to query the State A IIS for the child&apos;s
+                    immunization history to verify whether the child meets
+                    immunization requirements for day care entry in State B.
+                    Further immunization decisions can be made by State B health
+                    department based on this information.
+                  </Typography>
+                </ListItem>
+                <Divider sx={{ marginY: 1 }} />
+                <ListItem>
+                  <Typography gutterBottom>
+                    Example: A family moves from state A to neighboring state B
+                    while their child is 3 years old. State B identifies a need
+                    for the child&apos;s immunization record and queries the
+                    neighboring state&apos;s IIS via the IZ Gateway. In
+                    response, state A sends the child&apos;s record. Now
+                    providers in state B will have the child&apos;s full
+                    immunization history to reference for decisions and will add
+                    to the record in the IIS when the child receives additional
+                    vaccines.
+                  </Typography>
+                </ListItem>
               </List>
             </AccordionDetails>
           </Accordion>
@@ -173,24 +213,35 @@ const UseCases = () => {
               <List>
                 <ListItem>
                   <Typography>
-                    Example: New Jersey exchanges immunization data from their
-                    IIS with a patient portal (e.g., Docket or MyChart) through
-                    the IZ Gateway.
+                    Data sharing with patients provides individuals with
+                    electronic access to their immunization records through
+                    querying an IIS using a consumer access portal.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography>
-                    Patients have access to complete and accurate immunization
-                    records for proof of vaccination and vaccination schedule
-                    adherence.
+                    Patients have quick and easy access to complete and accurate
+                    immunization records for proof of vaccination and to help
+                    them adhere to vaccination schedules.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography gutterBottom>
                     Jurisdictions respond to fewer vaccination record requests
-                    via phone call and email.
+                    via phone call and email saving time and resources.
+                  </Typography>
+                </ListItem>
+                <Divider sx={{ marginY: 1 }} />
+                <ListItem>
+                  <Typography gutterBottom>
+                    Example: When the child goes to summer camp in state B,
+                    their parent must provide immunization details. The parent
+                    uses a smart phone application to access a consumer access
+                    portal. The portal requests and receives the correct record
+                    via the IZ Gateway and provides that record to the
+                    parent&apos;s app for use.
                   </Typography>
                 </ListItem>
               </List>
@@ -211,26 +262,33 @@ const UseCases = () => {
               <List>
                 <ListItem>
                   <Typography>
-                    Example: New York shares immunization data from their IIS
-                    with CDC through the IZ Gateway to improve CDC’s awareness
-                    of vaccination rates in New York.
+                    Data sharing with CDC enables jurisdiction IISs to submit
+                    record-level deidentified routine and aggregate flu
+                    vaccination data to CDC.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography>
-                    Jurisdictions send de-identified immunization data to CDC
-                    via the IZ Gateway routing service so CDC can assess
-                    nationwide coverage of flu and routine vaccinations.
+                    Jurisdictions can opt to automate sending the data to CDC
+                    via the IZ Gateway routing service to streamline processes
+                    and save time.
                   </Typography>
                 </ListItem>
                 <Divider sx={{ marginY: 1 }} />
                 <ListItem>
                   <Typography gutterBottom>
-                    Using the IZ Gateway for data sharing with CDC allows
-                    jurisdictions to replace the manual process of submitting
-                    routine and flu data via secure file transfer protocol
-                    (SFTP) with a partially of fully automated process.
+                    CDC uses deidentified IIS data to assess vaccination
+                    coverage of flu and routine vaccinations and inform public
+                    health decisions.
+                  </Typography>
+                </ListItem>
+                <Divider sx={{ marginY: 1 }} />
+                <ListItem>
+                  <Typography gutterBottom>
+                    Using the IZ Gateway for data sharing with CDC aligns with
+                    CDC&apos;s cloud-based, modernized data architecture
+                    designed to address future public health emergencies.
                   </Typography>
                 </ListItem>
               </List>
