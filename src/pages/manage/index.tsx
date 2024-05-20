@@ -18,6 +18,7 @@ import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
 import destination from '../../lib/queries/fetch/destination'
+import { getIZGHubURLs } from '../../lib/hubURLHelper'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 let destinationResult = null
@@ -122,10 +123,7 @@ export const getServerSideProps = async (context) => {
 }
 
 const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
-  const IZG_STATUS_ENDPOINT_URL = _.split(
-    process.env.IZG_STATUS_ENDPOINT_URL,
-    ','
-  )
+  const IZG_STATUS_ENDPOINT_URL = getIZGHubURLs()
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
   const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
