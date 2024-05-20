@@ -56,7 +56,8 @@
     "uuid": "^9.0.1",
     "waait": "^1.0.5",
     "winston": "^3.10.0",
-    "xml2js": "^0.6.0"
+    "xml2js": "^0.6.0",
+    "xmldom": "^0.6.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.6.5",
