@@ -97,6 +97,18 @@ const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const columns: GridColDef[] = [
     {
+      field: 'destId',
+      headerName: 'Dest ID',
+      flex: 0.5,
+      minWidth: 50,
+    },
+    {
+      field: 'destTypeId',
+      headerName: 'Dest Type ID',
+      flex: 0.5,
+      minWidth: 50,
+    },
+    {
       field: 'destType',
       headerName: 'ENVIRONMENT',
       flex: 0.5,
@@ -236,7 +248,7 @@ const ConnectionsTable = (props) => {
           <div>
             <ChangeRequestActionButtons
               tabIndex={params.tabIndex}
-              destId={params.id}
+              destId={params.row.destId}
               destTypeId={params.row.destTypeId}
               hasChangeRequest={params.row.hasChangeRequest}
               hasActiveDraft={params.row.hasActiveDraft}
@@ -245,12 +257,12 @@ const ConnectionsTable = (props) => {
               tabIndex={params.tabIndex}
               prefetch={false}
               href={{
-                pathname: `/test/${params.row.destTypeId}/${params.id}`,
+                pathname: `/test/${params.row.destTypeId}/${params.row.destId}`,
               }}
             >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
-                  id={'test_' + params.row.destTypeId + '_' + params.id}
+                  id={'test_' + params.row.destTypeId + '_' + params.row.destId}
                   aria-label="test"
                   color="primary"
                   sx={actionButtonStyle}
@@ -260,7 +272,7 @@ const ConnectionsTable = (props) => {
               </Tooltip>
             </Link>
             <PopOverActionButtons
-              destId={params.id}
+              destId={params.row.destId}
               destTypeId={params.row.destTypeId}
               status={params.row.status}
               hasActiveMaintenance={params.row.hasActiveMaint}
@@ -300,9 +312,9 @@ const ConnectionsTable = (props) => {
       <DataGrid
         experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
-        rows={Object.entries(props.data).map(([, x]: [any, any]) => {
-          return {
-            ...x[0],
+        rows={props.data.map((endpoint) => {
+          for (const [, value] of Object.entries(endpoint)) {
+            return value[0]
           }
         })}
         columns={columns}
@@ -313,13 +325,19 @@ const ConnectionsTable = (props) => {
             sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
           },
           pagination: { paginationModel: { pageSize } },
+          columns: {
+            columnVisibilityModel: {
+              destId: false,
+              destTypeId: false,
+            },
+          },
         }}
         disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-        getRowId={(row) => row.destId}
+        getRowId={(row) => row.destId + row.destTypeId}
         getRowClassName={(params) => {
           return params.row.hasActiveMaint === true ? 'highlight' : ''
         }}
