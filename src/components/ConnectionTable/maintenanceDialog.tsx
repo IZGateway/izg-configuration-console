@@ -52,7 +52,8 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const [startDateTime, setStartDateTime] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState(null)
-  const isDisableConnectionButtonDisabled = !startDateTime || !message || error
+  const isDisableConnectionButtonDisabled =
+    !startDateTime || !reinstatementDateTime || !message || error
   useEffect(() => {
     if (props.open) {
       setReinstatementDateTime(null)
@@ -163,7 +164,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
                 sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
-                label="Reinstatement date and time"
+                label="Reinstatement date and time*"
                 disablePast
                 onChange={handleReinstateDateChange}
                 defaultValue={null}
