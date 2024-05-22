@@ -61,7 +61,7 @@ const dataGridCustom = {
       color: palette.primary,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
-    width: '28em',
+    width: '30em',
     borderRadius: '60px',
     float: 'right',
     margin: '2em 0',
