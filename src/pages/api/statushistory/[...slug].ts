@@ -5,6 +5,8 @@ import https from 'https'
 import axios from 'axios'
 import logger from '../../../../logger'
 import withMiddleware from '../api-middleware-helper'
+import _ from 'lodash'
+import { getIZGHubURL } from '../../../lib/hubURLHelper'
 /**
  * @swagger
  * /api/statushistory/{id}:
@@ -22,8 +24,6 @@ import withMiddleware from '../api-middleware-helper'
  *         description: OK.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const IZG_STATUS_ENDPOINT_URL =
-    process.env.IZG_STATUS_ENDPOINT_URL || 'unknown'
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
   const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
@@ -37,9 +37,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const historyCount =
     parseInt(process.env.IZG_MAX_STATUS_HISTORY_RETURNED) || 4
 
-  const destId = req.query.id.toString()
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
   const fetchEndpointStatus = async (destId, count) => {
-    const endpoint = `${IZG_STATUS_ENDPOINT_URL}/${destId}`
+    const endpoint = `${getIZGHubURL(destTypeId)}/${destId}`
     const responseData = await axios
       .get(endpoint, {
         httpsAgent: new https.Agent(httpsAgentOptions),
@@ -65,4 +67,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('checkAccessToDestId')(handler)
+export default withMiddleware('checkAccessToDestIdSlug')(handler)

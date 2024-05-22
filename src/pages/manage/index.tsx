@@ -18,6 +18,7 @@ import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
 import destination from '../../lib/queries/fetch/destination'
+import { getIZGHubURLs } from '../../lib/hubURLHelper'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 let destinationResult = null
@@ -63,69 +64,48 @@ const Manage = (
 
 export default Manage
 
-type DestDetails = [
-  {
-    destId: string
-    destType: string
-    destTypeId: number
-    destUri: string
-    destVersion: string
-    status: string
-    statusAt: string
-    statusBy: string
-    detail?: string
-    diagnostics?: string
-    retryStrategy?: string
-    jurisdictionName: string
-    jurisdictionDesc: string
-    hasChangeRequest?: boolean
-    hasActiveDraft?: boolean
-    hasActiveMaint?: boolean
-    getMaintenaceValues: object
-  }
-]
-
-type DestEndpointStatusType = {
-  [key: string]: DestDetails
-}
-
 export const getServerSideProps = async (context) => {
+  type EndpointDetail = {
+    destId: string
+    destTypeId: number
+  }
+  type EndpointDetails = [EndpointDetail]
+  type Endpoints = { [key: string]: EndpointDetails }
   const session = await getServerSession(context.req, context.res, authOptions)
-  const endpointStatuses: DestEndpointStatusType = await fetchEndpointStatus(
+  const endpointStatuses = await fetchEndpointStatus(
     session.user.isAdmin,
     session.user.jurisdictions
   )
-
-  const data = {}
-  for (const [key, value] of Object.entries(endpointStatuses)) {
-    const destArray = Promise.all(
-      value.map(async (x) => {
-        return {
-          ...x,
-          hasChangeRequest: await hasActiveChangeRequest(
-            x.destId,
-            x.destTypeId
-          ),
-          hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
-          hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
-          getMaintenaceValues: await getMaintenaceValues(
-            x.destId,
-            x.destTypeId
-          ),
-        }
-      })
-    )
-
-    data[key] = await destArray
+  const endpoints = []
+  for (const endpoint of endpointStatuses) {
+    const data = {}
+    for (const [key, value] of Object.entries(endpoint as Endpoints)) {
+      const destArray = Promise.all(
+        value.map(async (x) => {
+          return {
+            ...x,
+            hasChangeRequest: await hasActiveChangeRequest(
+              x.destId,
+              x.destTypeId
+            ),
+            hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
+            hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
+            getMaintenaceValues: await getMaintenaceValues(
+              x.destId,
+              x.destTypeId
+            ),
+          }
+        })
+      )
+      data[key] = await destArray
+      endpoints.push(data)
+    }
   }
-  return { props: { data } }
+  return { props: { data: endpoints } }
 }
 
 const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
-  const IZG_STATUS_ENDPOINT_URL = _.split(
-    process.env.IZG_STATUS_ENDPOINT_URL,
-    ','
-  )
+  const IZG_STATUS_ENDPOINT_URL = getIZGHubURLs()
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
   const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
@@ -141,7 +121,6 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
     appendJurisdictionsAssignedToUser(IZG_STATUS_ENDPOINT_URL, jurisdictions)
   }
 
-  let endpointStatuses = {}
   const responses = Promise.allSettled(
     IZG_STATUS_ENDPOINT_URL.map((endpoint) =>
       axios.get(endpoint, {
@@ -152,17 +131,29 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
   )
 
   const responseData = await responses
-  responseData.forEach((response) => {
-    if (response.status !== ALL_SETTLED_SUCCESSFUL) {
-      logger.error(
-        'Error connecting to a configured statushistory endpoint: ' +
-          JSON.stringify(response.reason.errors)
-      )
-    } else {
-      endpointStatuses = { ...endpointStatuses, ...response.value.data }
-    }
-  })
-  return endpointStatuses
+
+  const endpointStatuses = [
+    ...responseData.map((response) => {
+      if (response.status !== ALL_SETTLED_SUCCESSFUL) {
+        logger.error(
+          'Error connecting to a configured statushistory endpoint: ' +
+            JSON.stringify(response.reason.errors)
+        )
+      } else {
+        const data = response.value.data
+        const resultCollector = []
+        for (const [key, value] of Object.entries(data)) {
+          const dest = {}
+          dest[key] = value
+          resultCollector.push(dest)
+        }
+        return resultCollector
+      }
+    }),
+  ]
+
+  const combinedResponses = [].concat(...endpointStatuses)
+  return combinedResponses
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
