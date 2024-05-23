@@ -18,7 +18,8 @@ import AppHeaderBar from '../../components/AppHeader'
 import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
 import destination from '../../lib/queries/fetch/destination'
-import { getIZGHubURLs } from '../../lib/hubURLHelper'
+import { Jurisdiction } from '../../lib/type/Jurisdiction'
+import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 let destinationResult = null
@@ -65,12 +66,6 @@ const Manage = (
 export default Manage
 
 export const getServerSideProps = async (context) => {
-  type EndpointDetail = {
-    destId: string
-    destTypeId: number
-  }
-  type EndpointDetails = [EndpointDetail]
-  type Endpoints = { [key: string]: EndpointDetails }
   const session = await getServerSession(context.req, context.res, authOptions)
   const endpointStatuses = await fetchEndpointStatus(
     session.user.isAdmin,
@@ -79,7 +74,7 @@ export const getServerSideProps = async (context) => {
   const endpoints = []
   for (const endpoint of endpointStatuses) {
     const data = {}
-    for (const [key, value] of Object.entries(endpoint as Endpoints)) {
+    for (const [key, value] of Object.entries(endpoint as Jurisdiction)) {
       const destArray = Promise.all(
         value.map(async (x) => {
           return {
@@ -105,7 +100,7 @@ export const getServerSideProps = async (context) => {
 }
 
 const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
-  const IZG_STATUS_ENDPOINT_URL = getIZGHubURLs()
+  const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
   const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
@@ -117,12 +112,17 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
     keepAlive: true,
   }
 
+  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
+    IZG_STATUS_ENDPOINT_URL
+  )
+  const hubURLS = configuredHubURLs.getIZGHubURLs()
+
   if (!isAdmin) {
-    appendJurisdictionsAssignedToUser(IZG_STATUS_ENDPOINT_URL, jurisdictions)
+    appendJurisdictionsAssignedToUser(hubURLS, jurisdictions)
   }
 
   const responses = Promise.allSettled(
-    IZG_STATUS_ENDPOINT_URL.map((endpoint) =>
+    hubURLS.map((endpoint) =>
       axios.get(endpoint, {
         httpsAgent: new https.Agent(httpsAgentOptions),
         timeout: 30000,
@@ -137,7 +137,7 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
       if (response.status !== ALL_SETTLED_SUCCESSFUL) {
         logger.error(
           'Error connecting to a configured statushistory endpoint: ' +
-            JSON.stringify(response.reason.errors)
+            JSON.stringify(response)
         )
       } else {
         const data = response.value.data
