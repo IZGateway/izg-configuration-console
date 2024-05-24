@@ -37,77 +37,76 @@ const customPaperStyles = {
 
 const ResetDialog = (props: resetDialogProps) => {
   return (
-    <div>
-      <Container maxWidth="sm">
-        <Dialog
-          PaperProps={{
-            style: customPaperStyles,
-          }}
-          open={props.open}
-          TransitionComponent={Transition}
-          onClose={props.handleClose}
-          keepMounted
-          aria-describedby="alert-dialog-slide-description"
-        >
-          <DialogTitle>
-            {
-              'Are you sure you want to revert to production values and lost this draft?'
-            }
-          </DialogTitle>
-          <Divider />
-          <DialogContent>
-            <DialogContentText>
-              <Typography
-                id="alert-dialog-slide-description"
-                variant="body1"
-                color={palette.greyDarkTypography}
-              >
-                All data fields will be reset to their orginial values once you
-                have confirmed. Please be sure you want to take this action.
-              </Typography>
-            </DialogContentText>
-          </DialogContent>
-          <Container maxWidth="sm">
-            <ButtonGroup
-              variant="contained"
+    <Container maxWidth="sm">
+      <Dialog
+        PaperProps={{
+          style: customPaperStyles,
+        }}
+        open={props.open}
+        TransitionComponent={Transition}
+        onClose={props.handleClose}
+        keepMounted
+        aria-describedby="alert-dialog-slide-description"
+      >
+        <DialogTitle>
+          {
+            'Are you sure you want to revert to production values and lost this draft?'
+          }
+        </DialogTitle>
+        <Divider />
+        <DialogContent>
+          <DialogContentText>
+            <Typography
+              id="alert-dialog-slide-description"
+              variant="body1"
+              color={palette.greyDarkTypography}
+              component={'span'}
+            >
+              All data fields will be reset to their orginial values once you
+              have confirmed. Please be sure you want to take this action.
+            </Typography>
+          </DialogContentText>
+        </DialogContent>
+        <Container maxWidth="sm">
+          <ButtonGroup
+            variant="contained"
+            fullWidth
+            size="large"
+            sx={{
+              alignItems: 'center',
+              borderRadius: '30px',
+            }}
+          >
+            <Button
+              id="no"
               fullWidth
-              size="large"
+              type="submit"
+              color="primary"
+              variant="outlined"
+              onClick={props.handleClose}
               sx={{
-                alignItems: 'center',
                 borderRadius: '30px',
               }}
             >
-              <Button
-                id="no"
-                fullWidth
-                type="submit"
-                color="primary"
-                variant="outlined"
-                onClick={props.handleClose}
-                sx={{
-                  borderRadius: '30px',
-                }}
-              >
-                No
-              </Button>
-              <Button
-                id="yes"
-                fullWidth
-                type="submit"
-                color="primary"
-                variant="contained"
-                onClick={props.resetDraft}
-                sx={{
-                  borderRadius: '30px',
-                }}
-              >
-                Yes
-              </Button>
-            </ButtonGroup>
-          </Container>
-        </Dialog>
-      </Container>
-    </div>
+              No
+            </Button>
+            <Button
+              id="yes"
+              fullWidth
+              type="submit"
+              color="primary"
+              variant="contained"
+              onClick={props.resetDraft}
+              sx={{
+                borderRadius: '30px',
+              }}
+            >
+              Yes
+            </Button>
+          </ButtonGroup>
+        </Container>
+      </Dialog>
+    </Container>
   )
 }
 
