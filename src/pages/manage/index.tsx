@@ -115,10 +115,10 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
-  const hubURLS = configuredHubURLs.getIZGHubURLs()
+  let hubURLS = configuredHubURLs.getIZGHubURLs()
 
   if (!isAdmin) {
-    appendJurisdictionsAssignedToUser(hubURLS, jurisdictions)
+    hubURLS = appendJurisdictionsAssignedToUser(hubURLS, jurisdictions)
   }
 
   const responses = Promise.allSettled(
@@ -210,10 +210,10 @@ const hasActiveMaintenance = async (destId, destTypeId) => {
 }
 
 function appendJurisdictionsAssignedToUser(
-  IZG_STATUS_ENDPOINT_URL: string[],
+  hubURLS: string[],
   jurisdictions: any
 ) {
-  return IZG_STATUS_ENDPOINT_URL.map(
+  return hubURLS.map(
     (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`
   )
 }
