@@ -6,34 +6,9 @@ import ViewChangeRequestTicket from './viewChangeRequestTicket'
 import DeployConfirmation from './deployConfirmation'
 import DetailsChangeRequest from './detailsChangeRequest'
 import MakeChanges from './makeChanges'
-import CombinedContext from '../../contexts/app'
-import { useEffect, useState, useContext } from 'react'
-import _ from 'lodash'
-import CustomSnackbar from '../SnackBar'
 
 const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 const DeployConnection = (props) => {
-  const { alert, setAlert } = useContext(CombinedContext)
-  const [showSnackbar, setShowSnackbar] = useState(false)
-
-  useEffect(() => {
-    if (!_.isEmpty(alert.level)) {
-      setShowSnackbar(true)
-    } else {
-      setShowSnackbar(false)
-    }
-  }, [alert])
-
-  const handleClose = () => {
-    setShowSnackbar(false)
-    setAlert({
-      level: '',
-      jurisdiction: '',
-      dest_type: '',
-      message: '',
-    })
-  }
-
   const {
     data: changerequestData,
     error: changerequestError,
@@ -112,12 +87,6 @@ const DeployConnection = (props) => {
             submittingValue={changerequestData}
           />
         </Box>
-        <CustomSnackbar
-          open={showSnackbar}
-          severity={alert.level}
-          message={alert.message}
-          onClose={handleClose}
-        />
       </Box>
     </>
   )
