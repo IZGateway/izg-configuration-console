@@ -13,6 +13,7 @@ import * as xml2js from 'xml2js'
 import { prismacontext } from '../../prismacontext'
 import logger from '../../../../logger'
 import _ from 'lodash'
+import { DOMParser } from 'xmldom'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -112,7 +113,6 @@ export default class QBP extends ConnectionTest {
         'Content-Type': 'application/xml',
       },
     }
-
     const isResponsecorrect = (message) => {
       const qakElement: string[] = message[2].split('|')
       const msaElement: string[] = message[1].split('|')
@@ -130,25 +130,6 @@ export default class QBP extends ConnectionTest {
         return false
       }
     }
-
-    const isHl7MessagePresent = (message) => {
-      if (destinationVersion === '2011') {
-        if (message.hasOwnProperty('ns3:return')) {
-          hl7Message = message['ns3:return']
-          return true
-        } else {
-          return false
-        }
-      } else {
-        if (message.hasOwnProperty('Hl7Message')) {
-          hl7Message = message.Hl7Message
-          return true
-        } else {
-          return false
-        }
-      }
-    }
-
     const isFaultPresent = (res) => {
       if (res['soap:Envelope']['soap:Body'][0].hasOwnProperty(['soap:Fault'])) {
         return true
@@ -167,78 +148,75 @@ export default class QBP extends ConnectionTest {
           })
 
           res.on('end', function () {
-            xml2js.parseString(data, (err, result) => {
-              if (err) {
-                logger.error('An error has occurred: ' + err)
-                return
-              }
-              if (destinationVersion === '2011') {
-                responseMessage =
-                  result['soap:Envelope']['soap:Body'][0][
-                    'ns3:submitSingleMessageResponse'
-                  ][0]
-              } else {
-                responseMessage =
-                  result['soap:Envelope']['soap:Body'][0]
-                    .SubmitSingleMessageResponse[0]
-              }
-              if (!isHl7MessagePresent(responseMessage)) {
-                resolve([
-                  {
-                    ...hl7QueryTestResult,
-                    detail: responseMessage,
-                    message: TestResponseMessages.HL7MESSAGE_NOT_PRESENT,
-                    status: TestStatus.FAIL,
-                  },
-                ])
-              } else {
-                try {
-                  const splitMessage: string[] = hl7Message
-                    .toString()
-                    .split('\r')
-                  let isError = false
-                  splitMessage.forEach((mes) => {
-                    if (mes.includes('ERR|') && mes.split('|')[4] === 'E') {
-                      isError = true
-                      resolve([
-                        {
-                          ...hl7QueryTestResult,
-                          detail: hl7Message,
-                          message: TestResponseMessages.ERROR_IN_HL7MESSAGE,
-                          status: TestStatus.FAIL,
-                        },
-                      ])
-                    }
-                  })
-                  if (!isError && isResponsecorrect(splitMessage)) {
+            const parser = new DOMParser()
+            const xmlDoc = parser.parseFromString(data, 'text/xml')
+            const elementName = 'SubmitSingleMessageResponse'
+            const result = xmlDoc.documentElement.getElementsByTagNameNS(
+              '*',
+              elementName
+            )[0]
+            let responseMessage: Element | null = null
+            if (result) {
+              responseMessage = result
+            }
+            logger.debug('HL7 Message: ' + responseMessage?.textContent)
+            if (!responseMessage?.textContent) {
+              resolve([
+                {
+                  ...hl7QueryTestResult,
+                  detail: responseMessage?.textContent,
+                  message: TestResponseMessages.HL7MESSAGE_NOT_PRESENT,
+                  status: TestStatus.FAIL,
+                },
+              ])
+            } else {
+              try {
+                const splitMessage: string[] =
+                  responseMessage.textContent?.split('\r') ?? []
+                let isError = false
+
+                for (const mes of splitMessage) {
+                  if (mes.includes('ERR|') && mes.split('|')[4] === 'E') {
+                    isError = true
                     resolve([
                       {
                         ...hl7QueryTestResult,
-                        status: TestStatus.PASS,
-                      },
-                    ])
-                  } else {
-                    resolve([
-                      {
-                        ...hl7QueryTestResult,
-                        detail: hl7Message,
+                        detail: responseMessage.textContent,
                         message: TestResponseMessages.ERROR_IN_HL7MESSAGE,
-                        status: TestStatus.PASS,
+                        status: TestStatus.FAIL,
                       },
                     ])
+                    break
                   }
-                } catch (error) {
+                }
+                if (!isError && isResponsecorrect(splitMessage)) {
                   resolve([
                     {
                       ...hl7QueryTestResult,
-                      detail: error?.message,
+                      status: TestStatus.PASS,
+                    },
+                  ])
+                } else {
+                  resolve([
+                    {
+                      ...hl7QueryTestResult,
+                      detail: hl7Message,
                       message: TestResponseMessages.HL7MESSAGE_CANNOT_PARSE,
                       status: TestStatus.FAIL,
                     },
                   ])
                 }
+              } catch (error) {
+                resolve([
+                  {
+                    ...hl7QueryTestResult,
+                    detail: error?.message,
+                    message: TestResponseMessages.HL7MESSAGE_CANNOT_PARSE,
+                    status: TestStatus.FAIL,
+                  },
+                ])
               }
-            })
+            }
 
             resolve([
               {

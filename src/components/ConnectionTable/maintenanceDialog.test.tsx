@@ -29,7 +29,7 @@ describe('MaintenanceDialog component', () => {
     )
     expect(getByText('Disable Traffic Request')).toBeInTheDocument()
     expect(getByLabelText('Start date and time*')).toBeInTheDocument()
-    expect(getByLabelText('Reinstatement date and time')).toBeInTheDocument()
+    expect(getByLabelText('Reinstatement date and time*')).toBeInTheDocument()
     expect(getByTestId('message-select')).toBeInTheDocument()
     expect(
       getByRole('button', { name: 'Disable connection' })

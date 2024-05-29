@@ -29,64 +29,70 @@ const FloatingActionButtons = (props: {
   return (
     <Box>
       <Tooltip arrow placement="left" title="Test">
-        <Fab
-          sx={{
-            position: 'absolute',
-            bottom: 160,
-            right: 16,
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="test"
-          onClick={props.toggleTestDrawer}
-          disabled={!props.isFormChanged}
-        >
-          <MonitorHeartOutlinedIcon color="primary" fontSize="small" />
-        </Fab>
+        <span>
+          <Fab
+            sx={{
+              position: 'absolute',
+              bottom: 160,
+              right: 16,
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="test"
+            onClick={props.toggleTestDrawer}
+            disabled={!props.isFormChanged}
+          >
+            <MonitorHeartOutlinedIcon color="primary" fontSize="small" />
+          </Fab>
+        </span>
       </Tooltip>
       <Tooltip arrow placement="left" title="Save">
-        <Fab
-          sx={{
-            position: 'absolute',
-            bottom: 96,
-            right: 16,
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="save"
-          onClick={props.saveDraft}
-          disabled={!props.isFormChanged}
-        >
-          <SaveIcon color="primary" fontSize="small" />
-        </Fab>
+        <span>
+          <Fab
+            sx={{
+              position: 'absolute',
+              bottom: 96,
+              right: 16,
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="save"
+            onClick={props.saveDraft}
+            disabled={!props.isFormChanged}
+          >
+            <SaveIcon color="primary" fontSize="small" />
+          </Fab>
+        </span>
       </Tooltip>
       <Tooltip arrow placement="left" title="Reset">
-        <Fab
-          sx={{
-            position: 'absolute',
-            bottom: 32,
-            right: 16,
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="reset"
-          onClick={handleClickOpenReset}
-          disabled={props.isResetButtonDisabled}
-        >
-          <CachedIcon color="primary" fontSize="small" />
-        </Fab>
+        <span>
+          <Fab
+            sx={{
+              position: 'absolute',
+              bottom: 32,
+              right: 16,
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="reset"
+            onClick={handleClickOpenReset}
+            disabled={props.isResetButtonDisabled}
+          >
+            <CachedIcon color="primary" fontSize="small" />
+          </Fab>
+        </span>
       </Tooltip>
 
       <ResetDialog
