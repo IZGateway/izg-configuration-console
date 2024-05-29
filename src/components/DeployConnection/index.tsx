@@ -8,6 +8,7 @@ import DetailsChangeRequest from './detailsChangeRequest'
 import MakeChanges from './makeChanges'
 
 const JIRA_STATUS_FOR_DEPLOY = 'Approved'
+
 const DeployConnection = (props) => {
   const {
     data: changerequestData,
