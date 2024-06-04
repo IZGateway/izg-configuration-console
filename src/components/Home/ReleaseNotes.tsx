@@ -8,6 +8,7 @@ import {
   Box,
   Divider,
 } from '@mui/material'
+import Link from 'next/link'
 import { Close, NotesOutlined } from '@mui/icons-material'
 
 import palette from '../../styles/theme/palette'
@@ -76,10 +77,14 @@ const ReleaseNotes = () => {
             <strong>Version 1.0</strong>{' '}
           </Typography>
           <Typography gutterBottom>
-            We are excited to announce the first release of IZ Gateway! This
-            release marks a significant milestone in our journey towards
-            providing a robust and scalable gateway solution for seamless
-            integration and communication within your network infrastructure.
+            To find the latest version and associated release notes, please
+            visit{' '}
+            <Link
+              href="https://github.com/IZGateway/phiz-public/releases"
+              target="_blank"
+            >
+              here
+            </Link>
           </Typography>
           <Divider sx={{ mt: 2, mb: 2 }} />
           <Typography gutterBottom>

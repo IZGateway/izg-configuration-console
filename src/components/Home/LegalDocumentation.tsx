@@ -10,6 +10,7 @@ import {
 import { Close, PolicyOutlined } from '@mui/icons-material'
 
 import palette from '../../styles/theme/palette'
+import Link from 'next/link'
 
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
@@ -51,9 +52,9 @@ const LegalDocumentation = () => {
           <PolicyOutlined color="primary" />
         </IconButton>
         <Typography align="center">
-          Legal
+          Policy
           <br />
-          Documentation
+          Infrastructure
         </Typography>
       </Box>
       <Dialog
@@ -65,7 +66,7 @@ const LegalDocumentation = () => {
       >
         <DialogTitle>
           {' '}
-          Legal Documentation
+          IZ Gateway Policy Infrastructure
           <IconButton
             onClick={handleClose}
             sx={{ float: 'right', color: 'grey' }}
@@ -75,39 +76,16 @@ const LegalDocumentation = () => {
         </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            Ownership: The Software, including all intellectual property rights
-            therein, is and shall remain the exclusive property of Licensor.
-            Warranty
-          </Typography>
-          <Typography gutterBottom>
-            Disclaimer: THE SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT
-            WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-            TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-            PURPOSE, AND NONINFRINGEMENT. LICENSOR DOES NOT WARRANT THAT THE
-            SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED. Limitation of
-            Liability: IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY INDIRECT,
-            INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR EXEMPLARY DAMAGES ARISING OUT
-            OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE SOFTWARE,
-            EVEN IF LICENSOR HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-            DAMAGES.
-          </Typography>
-          <Typography gutterBottom>
-            Governing Law: This Agreement shall be governed by and construed in
-            accordance with the laws of [Jurisdiction], without regard to its
-            conflict of law principles. Termination: This Agreement is effective
-            until terminated. Licensor may terminate this Agreement immediately
-            upon notice if Licensee breaches any provision of this Agreement.
-            Upon termination, Licensee must cease all use of the Software and
-            destroy all copies of the Software in its possession or control.
-          </Typography>
-          <Typography gutterBottom>
-            Entire Agreement: This Agreement constitutes the entire agreement
-            between the parties concerning the subject matter hereof and
-            supersedes all prior or contemporaneous agreements, representations,
-            warranties, and understandings, whether written or oral. By using
-            the Software, Licensee agrees to be bound by the terms and
-            conditions of this Agreement. If Licensee does not agree with any
-            provision of this Agreement, Licensee should not use the Software.
+            The IZ Gateway offers a standardized policy infrastructure for data
+            exchange between IIS and with multi-jurisdictional vaccine
+            providers. To find legal agreements and supporting policy
+            documentation, please visit{' '}
+            <Link
+              href="https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20Legal%20Agreements?csf=1&web=1&e=3UgLNm"
+              target="_blank"
+            >
+              IZG Legal Agreements
+            </Link>
           </Typography>
         </DialogContent>
       </Dialog>

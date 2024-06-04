@@ -51,11 +51,7 @@ function HomeComponent() {
               <Box>
                 <Typography>Immunization (IZ) Gateway</Typography>
                 <Typography component={'h1'} variant="h5">
-                  <strong>
-                    The IZ Gateway is a program that includes a technology
-                    solution and infrastructure that facilitate immunization
-                    data exchange.
-                  </strong>
+                  <strong>Configuration Console</strong>
                 </Typography>
                 <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
                   <Link href="/manage">
@@ -116,7 +112,7 @@ function HomeComponent() {
                     }}
                     sx={{ pt: 2, pl: 2, pb: 0 }}
                     title="How does the IZ Gateway work?"
-                    subheader="Here a breakdown from our team. "
+                    subheader="Here is a breakdown from our team. "
                   />
                   <CardContent>
                     <Typography gutterBottom>
@@ -216,8 +212,8 @@ function HomeComponent() {
                   <CardContent>
                     <Typography variant="body2">
                       Explore the frequently asked questions (FAQs) section for
-                      the IZ Gateway, where you can find detailed answers and
-                      insights into common queries.
+                      the Configuration Console, where you can find detailed
+                      answers and insights into common queries.
                     </Typography>
                   </CardContent>
                   <CardActions sx={{ mb: 2, ml: 1 }}>
@@ -306,7 +302,8 @@ function HomeComponent() {
               pb={1}
             >
               <Typography variant="caption">
-                Version 1.0 | Immunization (IZ) Gateway 2024
+                Version 1.0 | Immunization (IZ) Gateway Configuration Console
+                2024
               </Typography>
               <Box
                 display={'flex'}
