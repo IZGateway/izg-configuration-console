@@ -156,7 +156,9 @@ const Identify = (props: any) => {
           Passwords must have a length of 15 characters. Passwords must include
           at least 2 of each the following: Numbers (0 through 9), Lowercase
           letters (a through z), Uppercase letters (A through Z), and Special
-          Characters (!@#$%^()&)
+          Characters (!@#$%^()&). Passwords must not include recognizable words
+          or names. Passwords must not use words with simple substitutions
+          (e.g., W3lcom3_!n)
         </Typography>
         {formFields
           .filter((field) => field.group === 5)
