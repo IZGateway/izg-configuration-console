@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - develop
+      - 'release/**'
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -74,6 +75,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Login to the GitHub Container registry
+        if: ${{ github.ref == 'refs/heads/release/**' }}
+        id: login-ghcr
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
@@ -82,7 +92,6 @@ jobs:
           aws-region: us-east-1
 
       - name: Login to the Amazon ECR
-        if: ${{ github.ref == 'refs/heads/develop' }}
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -91,10 +100,12 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ github.ref == 'refs/heads/release/**' }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
           tags: |
             type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=snapshot
+            type=raw,value=release,enable=${{ github.ref == 'refs/heads/release/**' }}
+            type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
           flavor: |
             latest=true
 

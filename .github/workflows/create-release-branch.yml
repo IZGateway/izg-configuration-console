@@ -22,6 +22,20 @@ env:
   BRANCH: ${{ github.ref_name }}
 
 jobs:
+  generate-release-timestamp:
+    name: Generate release timestamp
+    runs-on: ubuntu-latest
+    outputs:
+      releaseDate: ${{ steps.exposeValue.outputs.releaseDate }}
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "RELEASE_DATE=$(date +'%d%b%Y%H%M%S')" >> "$GITHUB_ENV"
+      - name: Expose value
+        id: exposeValue
+        run: |
+          echo "::set-output name=releaseDate::${{ env.RELEASE_DATE }}"
+
   code-quality-check:
     name: Test and Lint
     runs-on: ubuntu-latest
@@ -39,7 +53,7 @@ jobs:
       - name: Lint
         run: npm run code-quality-check
 
-  release_workflow:
+  release-workflow:
     name: Create branch release/${{inputs.version}}
     runs-on: ubuntu-latest
     needs: [code-quality-check]
@@ -54,3 +68,61 @@ jobs:
           dry_run: ${{inputs.dry-run}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push-image-aws:
+    name: Build and push image to dev aws and github io
+    runs-on: ubuntu-latest
+    needs: [code-quality-check, generate-release-timestamp, release-workflow]
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          path: release/${{inputs.version}}
+
+      - name: Login to the GitHub Container registry
+        id: login-ghcr
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to the Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console
+            ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
+          tags: |
+            type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+            type=raw,value=release
+          flavor: |
+            latest=true
+
+      - name: Build and push Docker Config Console image
+        id: docker_build
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
