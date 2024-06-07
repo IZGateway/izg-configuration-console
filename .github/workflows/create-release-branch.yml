@@ -82,7 +82,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: release/${{inputs.version}}
+          ref: release/${{inputs.version}}
 
       - name: Login to the GitHub Container registry
         id: login-ghcr
