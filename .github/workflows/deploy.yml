@@ -100,11 +100,11 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ github.ref == 'refs/heads/release/**' }}
+            ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ startsWith(github.ref, 'ref/head/release/') }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
           tags: |
             type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=release,enable=${{ github.ref == 'refs/heads/release/**' }}
+            type=raw,value=release,enable=${{ startsWith(github.ref, 'ref/head/release/') }}
             type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
           flavor: |
             latest=true
