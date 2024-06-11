@@ -95,7 +95,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
       .then((response) => {
         const data = response.data
-        logger.debug('IZG Health Status', { data })
+        logger.info('IZG Health Status', { data })
         if (data.healthy) {
           izgwHealthCheck = {
             component: 'IZG',
