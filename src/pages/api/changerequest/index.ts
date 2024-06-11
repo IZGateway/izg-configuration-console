@@ -83,16 +83,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         try {
           if (await hasActiveDraft(dest_id, dest_type_id)) {
             const draftRecord = await hasActiveDraft(dest_id, dest_type_id)
+            const modifiedDraftRecord = _.omit(draftRecord, 'destinations')
             let changeRequestTicketResponse = null
             try {
               changeRequestTicketResponse = await createChangeRequestTicket({
                 ...requestBody,
                 changeRequestId: draftRecord.id,
               })
+
               await updateChangeRequestRecord({
-                ...draftRecord,
+                ...modifiedDraftRecord,
                 jira_id: changeRequestTicketResponse.key,
               })
+              res
+                .status(200)
+                .json('Change request ticket created successfully.')
             } catch (error) {
               throw new Error(
                 `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
