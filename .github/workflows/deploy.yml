@@ -115,6 +115,8 @@ jobs:
         with:
           context: .
           file: Dockerfile
+          build-args: |
+            BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
