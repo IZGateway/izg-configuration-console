@@ -10,9 +10,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
+ARG BUILD_ID=0.0.0
 #Strategy for using NEXT_PUBLIC variables found at https://phase.dev/blog/nextjs-public-runtime-variables/
 ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
 ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
+ARG NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
 RUN npx prisma generate
 RUN npm run build
 
