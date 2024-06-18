@@ -5,10 +5,15 @@ import { Box } from '@mui/material'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
+import DeployConnection from '../../components/DeployConnection/index'
+import AdminGuard from '../../components/AdminGuard'
+import Close from '../../components/Close'
+import { GetStaticPaths, GetStaticProps, InferGetStaticPropsType } from 'next'
 
-const Edit = (props) => {
+const Changerequest = (props) => {
   const router = useRouter()
   const { isReady, query } = router
+  const { jiraUrl } = props
 
   useEffect(() => {
     if (!isReady) return
@@ -21,8 +26,12 @@ const Edit = (props) => {
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
-            getting change request for {router?.query?.slug[0]} /
-            {router?.query?.slug[1]}
+            <Close />
+            <DeployConnection
+              destId={router?.query?.slug[1] as string}
+              destTypeId={router?.query?.slug[0] as string}
+              jiraUrl={jiraUrl}
+            />
           </div>
         </Box>
       </ErrorBoundary>
@@ -30,4 +39,19 @@ const Edit = (props) => {
   )
 }
 
-export default Edit
+export default AdminGuard(Changerequest)
+
+export const getStaticProps: GetStaticProps = async () => {
+  return {
+    props: {
+      jiraUrl: process.env.JIRA_BROWSER_URL.toString(),
+    },
+  }
+}
+
+export const getStaticPaths: GetStaticPaths<{ slug: string }> = async () => {
+  return {
+    paths: [], //indicates that no page needs be created at build time
+    fallback: 'blocking', //indicates the type of fallback
+  }
+}

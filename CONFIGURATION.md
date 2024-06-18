@@ -24,3 +24,5 @@
 | DATABASE_URL                    | Database endpoint to connect to the DB.                                                                                                                 |   undefined   |   true   |
 | SHOW_SQL_IN_CONSOLE             | Set to true enable logging of prisma sql queries. Not recommended for production unless necessary.                                                      |     false     |  false   |
 | LOG_LEVEL                       | Logging level, eg : error,warn,info,http,verbose,debug,silly                                                                                            |     info      |  false   |
+| JIRA_HEALTHCHECK_URL            | The healthcheck endpoint url for Jira connection                                                                                                        |   undefined   |   true   |
+| IZG_HEALTHCHECK_URL             | The healthcheck endpoint url for IZ Gateway                                                                                                             |   undefined   |   true   |

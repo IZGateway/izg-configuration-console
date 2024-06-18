@@ -57,8 +57,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       data.updatedData,
       data.user,
       data.oldValues,
-      data.newValues,
-      data.tableName
+      data.newValues
     )
     res.json(result)
   } else {

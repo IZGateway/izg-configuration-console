@@ -10,7 +10,6 @@ const TestConnection = (props) => {
         <Close />
         <Container maxWidth="md">
           <TestsList
-            numberOfTests={props.numberOfTests}
             testResults={props.connectionTestResult?.testResults}
             destination={props.connectionTestResult?.jurisdictionDescription}
             destinationType={props.connectionTestResult?.destType}

@@ -15,16 +15,19 @@ import TimelineDot from '@mui/lab/TimelineDot'
 import { TimelineOppositeContent } from '@mui/lab'
 import Status from '../Status'
 import useSWR from 'swr'
+import { useRouter } from 'next/router'
+import { useEffect } from 'react'
 
 interface TestHistoryProps {
   destId: string
+  destTypeId: string
 }
 
 const timeline = (data) => (
   <>
     <Timeline
       sx={{
-        margin: '0px 0px 16px 0px',
+        margin: '0px 0px 8px 0px',
         padding: '0px',
       }}
     >
@@ -81,11 +84,21 @@ const timeline = (data) => (
 )
 
 const TestHistory = (props: TestHistoryProps) => {
+  const router = useRouter()
+  const { isReady, query } = router
+
+  useEffect(() => {
+    if (!isReady) return
+  }, [isReady, query])
+
   const { data, error, isLoading } = useSWR(
-    props.destId ? `/api/statushistory/${props.destId}` : null
+    props.destId
+      ? `/api/statushistory/${props.destTypeId}/${props.destId}`
+      : null
   )
 
   if (error) {
+    console.log(`ERROR ---> ${error}`)
     throw new Error(error)
   }
 

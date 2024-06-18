@@ -156,7 +156,9 @@ const Identify = (props: any) => {
           Passwords must have a length of 15 characters. Passwords must include
           at least 2 of each the following: Numbers (0 through 9), Lowercase
           letters (a through z), Uppercase letters (A through Z), and Special
-          Characters (!@#$%^()&)
+          Characters (!@#$%^()&). Passwords must not include recognizable words
+          or names. Passwords must not use words with simple substitutions
+          (e.g., W3lcom3_!n)
         </Typography>
         {formFields
           .filter((field) => field.group === 5)
@@ -199,120 +201,191 @@ const Identify = (props: any) => {
   }
 
   return (
-    <form>
-      <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader
-          title={
-            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Configure Credentials
-            </Typography>
-          }
-        />
-        <Divider />
-        <CardContent>
-          <div>
-            When editing connection credentials, it is important to exercise
-            caution. Failure to do so can result in unauthorized access to
-            sensitive information, which can be detrimental to individuals or
-            organizations
-          </div>
-          <Box display="flex" flexDirection="column" gap="1rem">
-            <TextField
-              id="endpointURL"
-              label="Endpoint URL"
-              variant="filled"
-              fullWidth
-              disabled
-              defaultValue={props.dest_uri}
-              InputProps={{
-                readOnly: true,
-                endAdornment: (
-                  <InputAdornment position="start">
-                    <Tooltip
-                      placement="top"
-                      arrow
-                      title={
-                        'A specific URL or URI  that represents a particular resource or functionality provided by an API'
-                      }
-                    >
-                      <InfoOutlinedIcon />
-                    </Tooltip>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ marginTop: 1 }}
-            />
-            <Typography fontSize={'12px'}>
-              Username must be at least 8 characters, and contain one uppercase
-              letter and one number.
-            </Typography>
-            <TextField
-              id="username"
-              name="username"
-              label="Username"
-              variant="outlined"
-              fullWidth
-              value={props.value.username}
-              onChange={handleChange}
-              error={_.get(props.formErrors, 'username', null)}
-              helperText={_.get(props.formErrors, 'username', null)}
-              sx={{ marginTop: 1 }}
-            />
+    <>
+      <form>
+        <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
+          <CardHeader
+            title={
+              <Typography
+                component="h2"
+                sx={{ fontWeight: 'bold' }}
+                variant="h6"
+              >
+                Configure Credentials
+              </Typography>
+            }
+          />
+          <Divider />
+          <CardContent>
+            <div>
+              When editing connection credentials, it is important to exercise
+              caution. Failure to do so can result in unauthorized access to
+              sensitive information, which can be detrimental to individuals or
+              organizations
+            </div>
+            <Box display="flex" flexDirection="column" gap="1rem">
+              <TextField
+                id="endpointURL"
+                label="Endpoint URL"
+                variant="filled"
+                fullWidth
+                disabled
+                defaultValue={props.dest_uri}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="start">
+                      <Tooltip
+                        placement="top"
+                        arrow
+                        title={
+                          'A specific URL or URI  that represents a particular resource or functionality provided by an API'
+                        }
+                      >
+                        <InfoOutlinedIcon />
+                      </Tooltip>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ marginTop: 1 }}
+              />
+              <Typography fontSize={'12px'}>
+                Username must be at least 8 characters, and contain one
+                uppercase letter and one number.
+              </Typography>
+              <TextField
+                id="username"
+                name="username"
+                label="Username"
+                variant="outlined"
+                fullWidth
+                value={props.value.username}
+                onChange={handleChange}
+                error={_.get(props.formErrors, 'username', null)}
+                helperText={_.get(props.formErrors, 'username', null)}
+                sx={{ marginTop: 1 }}
+              />
 
-            {isChangePasswordClicked ? (
-              newPasswordFields()
-            ) : (
-              <div>
-                <Typography fontSize={'12px'}>
-                  To change password click on the change password button below.
-                </Typography>
-                <Button
-                  color="primary"
-                  variant="outlined"
-                  size="large"
-                  onClick={updatePassword}
-                  sx={{
-                    alignItems: 'center',
-                    borderRadius: '30px',
-                    marginTop: 0.5,
-                  }}
-                >
-                  CHANGE PASSWORD
-                  <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
-                </Button>
-              </div>
-            )}
-          </Box>
-        </CardContent>
-      </Card>
-      <Card
-        sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px', marginTop: 5 }}
-      >
-        <CardHeader
-          title={
-            <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              View Additional Data Configurations
-            </Typography>
-          }
-        />
-        <Divider />
-        <CardContent>
-          <div>
-            All MSH and facility ID values should be between 0-25 characters and
-            Should contain only A-Z, a-z, 0-9, _, -, and space characters. It
-            should not contain |^&~&quot;/ characters. If you think a value is
-            incorrect, please contact your administrator
-          </div>
-          <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              {isChangePasswordClicked ? (
+                newPasswordFields()
+              ) : (
+                <div>
+                  <Typography fontSize={'12px'}>
+                    To change password click on the change password button
+                    below.
+                  </Typography>
+                  <Button
+                    color="primary"
+                    variant="outlined"
+                    size="large"
+                    onClick={updatePassword}
+                    sx={{
+                      alignItems: 'center',
+                      borderRadius: '30px',
+                      marginTop: 0.5,
+                    }}
+                  >
+                    CHANGE PASSWORD
+                    <ModeEditIcon fontSize="small" sx={{ marginLeft: 1 }} />
+                  </Button>
+                </div>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+        <Card
+          sx={{
+            minWidth: 275,
+            borderRadius: '0px 0px 30px 30px',
+            marginTop: 5,
+          }}
+        >
+          <CardHeader
+            title={
+              <Typography
+                component="h2"
+                sx={{ fontWeight: 'bold' }}
+                variant="h6"
+              >
+                View Additional Data Configurations
+              </Typography>
+            }
+          />
+          <Divider />
+          <CardContent>
+            <div>
+              All MSH and facility ID values should be between 0-25 characters
+              and Should contain only A-Z, a-z, 0-9, _, -, and space characters.
+              It should not contain |^&~&quot;/ characters. If you think a value
+              is incorrect, please contact your administrator
+            </div>
+            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                {formFields
+                  .filter((field) => field.group === 1)
+                  .map((field) => (
+                    <TextField
+                      key={field.id}
+                      name={field.name}
+                      label={field.label}
+                      variant="outlined"
+                      value={field.value}
+                      onChange={handleChange}
+                      InputProps={getInputProps(field.title)}
+                      error={_.get(props.formErrors, field.name, null)}
+                      helperText={_.get(props.formErrors, field.name, null)}
+                    />
+                  ))}
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                {formFields
+                  .filter((field) => field.group === 2)
+                  .map((field) => (
+                    <TextField
+                      key={field.id}
+                      name={field.name}
+                      label={field.label}
+                      variant="outlined"
+                      value={field.value}
+                      onChange={handleChange}
+                      InputProps={getInputProps(field.title)}
+                      error={_.get(props.formErrors, field.name, null)}
+                      helperText={_.get(props.formErrors, field.name, null)}
+                    />
+                  ))}
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                {formFields
+                  .filter((field) => field.group === 3)
+                  .map((field) => (
+                    <TextField
+                      key={field.id}
+                      name={field.name}
+                      label={field.label}
+                      variant="outlined"
+                      value={field.value}
+                      onChange={handleChange}
+                      InputProps={getInputProps(field.title)}
+                      error={_.get(props.formErrors, field.name, null)}
+                      helperText={_.get(props.formErrors, field.name, null)}
+                    />
+                  ))}
+              </Box>
+            </Box>
+            <Box sx={{ marginTop: '1rem' }}>
               {formFields
-                .filter((field) => field.group === 1)
+                .filter((field) => field.group === 4)
                 .map((field) => (
                   <TextField
                     key={field.id}
                     name={field.name}
                     label={field.label}
                     variant="outlined"
+                    fullWidth
                     value={field.value}
                     onChange={handleChange}
                     InputProps={getInputProps(field.title)}
@@ -321,66 +394,11 @@ const Identify = (props: any) => {
                   />
                 ))}
             </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-              {formFields
-                .filter((field) => field.group === 2)
-                .map((field) => (
-                  <TextField
-                    key={field.id}
-                    name={field.name}
-                    label={field.label}
-                    variant="outlined"
-                    value={field.value}
-                    onChange={handleChange}
-                    InputProps={getInputProps(field.title)}
-                    error={_.get(props.formErrors, field.name, null)}
-                    helperText={_.get(props.formErrors, field.name, null)}
-                  />
-                ))}
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
-              {formFields
-                .filter((field) => field.group === 3)
-                .map((field) => (
-                  <TextField
-                    key={field.id}
-                    name={field.name}
-                    label={field.label}
-                    variant="outlined"
-                    value={field.value}
-                    onChange={handleChange}
-                    InputProps={getInputProps(field.title)}
-                    error={_.get(props.formErrors, field.name, null)}
-                    helperText={_.get(props.formErrors, field.name, null)}
-                  />
-                ))}
-            </Box>
-          </Box>
-          <Box sx={{ marginTop: '1rem' }}>
-            {formFields
-              .filter((field) => field.group === 4)
-              .map((field) => (
-                <TextField
-                  key={field.id}
-                  name={field.name}
-                  label={field.label}
-                  variant="outlined"
-                  fullWidth
-                  value={field.value}
-                  onChange={handleChange}
-                  InputProps={getInputProps(field.title)}
-                  error={_.get(props.formErrors, field.name, null)}
-                  helperText={_.get(props.formErrors, field.name, null)}
-                />
-              ))}
-          </Box>
-        </CardContent>
-      </Card>
-    </form>
+          </CardContent>
+        </Card>
+        {/* ${params.row.destTypeId}/${params.id}`, */}
+      </form>
+    </>
   )
 }
 

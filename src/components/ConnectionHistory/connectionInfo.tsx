@@ -15,6 +15,7 @@ import Status from '../Status'
 import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
 import desttypehelper from '../../lib/desttypehelper'
+import palette from '../../styles/theme/palette'
 
 const ConnectionInfo = (props) => {
   const [open, setOpen] = React.useState(false)
@@ -83,7 +84,7 @@ const ConnectionInfo = (props) => {
                   <Link
                     href={destData?.dest_uri.toString()}
                     target="_blank"
-                    style={{ color: '#015A2F', overflowWrap: 'anywhere' }}
+                    style={{ color: palette.primary, overflowWrap: 'anywhere' }}
                   >
                     {destData?.dest_uri.toString()}
                   </Link>
@@ -93,7 +94,7 @@ const ConnectionInfo = (props) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <Box>
                 <Typography variant="subtitle1" component="div">
-                  JURISDICTION
+                  ORGANIZATION
                 </Typography>
                 <Typography gutterBottom variant="body1">
                   {destData ? destData.jurisdiction.description : 'N/A'}

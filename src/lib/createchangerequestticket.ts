@@ -7,6 +7,7 @@ const JIRA_API_AUTH_BASE64 = process.env.JIRA_API_AUTH_BASE64 || undefined
 const CHANGE_REQUESTED_EMPTY_VALUE = '<OLD VALUE REMOVED>'
 const CURRENT_EMPTY_VALUE = ' '
 const CHANGE_REQUEST_UNCHANGED_VALUE = 'UNCHANGED'
+const CHANGE_REQUEST_URL = process.env.NEXTAUTH_URL || undefined
 
 const getRequestedValue = (
   requestedFields: any,
@@ -26,6 +27,7 @@ const createChangeRequestTicket = async (changeRequestData) => {
     requested,
     dest_id,
     dest_type,
+    dest_type_id,
     requestedBy,
     scheduledAt,
     isAsap,
@@ -60,7 +62,7 @@ const createChangeRequestTicket = async (changeRequestData) => {
   }|${getRequestedValue(
     requested,
     'RXA11'
-  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: link coming soon`
+  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: ${CHANGE_REQUEST_URL}/changerequest/${dest_type_id}/${dest_id}`
   const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
     method: 'POST',
     headers: new Headers({

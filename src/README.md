@@ -22,8 +22,8 @@ yarn dev
 
 5. Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-
 ## E2E tests
-1. Running test through cmd, yarn cypress run
 
-2. Opening Cypress and running specific tests, yarn run cypress open
+1. Update cypress/config/cypress-dev-config.ts with credentials
+2. Run npm run cypress:open which will open cypress window -> choose E2E testing -> Choose browser to run the tests against -> choose test files to run
+3. Running test through cmd, npm cypress run

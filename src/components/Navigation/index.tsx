@@ -5,7 +5,6 @@ import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
-import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import {
   Collapse,
@@ -18,27 +17,30 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
+  Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
-import AppHeaderBar from '../AppHeader'
+import palette from '../../styles/theme/palette'
 
-const drawerWidthOpen = '20em'
+const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
 
 const closedMixin = () => ({
   width: drawerWidthClosed,
   overflowX: 'hidden',
-  background: '#1E4D3B',
-  color: '#FFFFFF',
+  background: palette.primaryDark,
+  color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+  transition: 'width 0.8s ease',
 })
 
 const openMixin = () => ({
   width: drawerWidthOpen,
   overflowX: 'hidden',
-  background: '#1E4D3B',
-  color: '#FFFFFF',
+  background: palette.primaryDark,
+  color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
+  transition: 'width 0.2s ease',
 })
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -93,23 +95,28 @@ const MiniDrawer = () => {
       <List
         sx={{
           padding: '0 0',
-          '&& .Mui-selected , && .Mui-selected:hover': {
-            backgroundColor: 'white',
+          backgroundColor: palette.primaryDark,
+          ' && .Mui-selected:focus': {
+            backgroundColor: palette.primaryLight,
+
             '&, & .MuiListItemIcon-root': {
-              color: '#015A2F',
+              color: palette.primaryDark,
             },
+
             '&, & .MuiListItemText-root': {
-              color: 'black',
+              color: palette.primaryDark,
             },
+
             'span.MuiTypography-root.MuiTypography-body1.MuiListItemText-primary.css-8dlta7-MuiTypography-root':
               {
                 fontWeight: 700,
               },
           },
-          '& .MuiListItemButton-root:hover': {
+          '& .MuiListItem-root:hover': {
             bgcolor: 'rgb(255 255 255 / 10%)',
+            color: palette.white,
             '&, & .MuiListItemIcon-root': {
-              color: 'white',
+              color: palette.white,
             },
           },
         }}
@@ -131,7 +138,7 @@ const MiniDrawer = () => {
               <ListItemButton
                 sx={{
                   padding: '1rem 1.5rem',
-                  borderBottom: '1px solid #00D998',
+                  borderBottom: `1px solid ${palette.primaryLight}`,
                   '&& .Mui-selected , && .Mui-selected:hover': {
                     fontWeight: '700',
                   },
@@ -152,7 +159,7 @@ const MiniDrawer = () => {
                 <ListItemText primary={item.label} />
               </ListItemButton>
             </NextLink>
-            <Divider color="#00D998" />
+            <Divider color={palette.primaryLight} />
           </ListItem>
         ))}
       </List>
@@ -160,25 +167,33 @@ const MiniDrawer = () => {
   )
   return (
     <>
-      <AppHeaderBar open={open} />
-      <Drawer variant="permanent" open={open} id="navigation" role="navigation">
-        <DrawerHeader>
+      <Drawer
+        variant="permanent"
+        transitionDuration={2000000 | 100}
+        open={open}
+        id="navigation"
+        role="navigation"
+      >
+        <DrawerHeader
+          sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 2 }}
+        >
+          <IZGLogo />
           <IconButton
             onClick={handleClick}
             name="toggle navigation drawer"
             aria-label="toggle navigation drawer"
           >
             {!open ? (
-              <ChevronRightIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+              <ChevronRightIcon
+                fontSize="large"
+                sx={{ color: palette.white }}
+              />
             ) : (
-              <ChevronLeftIcon fontSize="large" sx={{ color: '#FFFFFF' }} />
+              <ChevronLeftIcon fontSize="large" sx={{ color: palette.white }} />
             )}
           </IconButton>
         </DrawerHeader>
-        <div>
-          <IZGLogo />
-        </div>
-        <Divider color="#00D998" />
+        <Divider color={palette.primaryLight} />
         {list()}
         {session?.user.isAdmin && (
           <Link href="/api-doc">
@@ -186,12 +201,14 @@ const MiniDrawer = () => {
               variant="text"
               name="swagger api"
               sx={{
-                color: '#FFFFFF',
+                color: palette.white,
                 textDecoration: 'underline',
                 position: 'absolute',
                 left: '5px',
                 bottom: '50px',
                 textTransform: 'capitalize',
+                textWrap: 'wrap',
+                textAlign: 'left',
               }}
             >
               Swagger API
@@ -199,6 +216,7 @@ const MiniDrawer = () => {
           </Link>
         )}
         <Button
+          id="logout"
           variant="text"
           onClick={() => {
             signOut().then(() => {
@@ -206,10 +224,12 @@ const MiniDrawer = () => {
             })
           }}
           sx={{
-            color: '#FFFFFF',
+            textWrap: 'wrap',
+            textAlign: 'center',
+            color: palette.white,
             textDecoration: 'underline',
             position: 'absolute',
-            left: '10px',
+            left: '8px',
             bottom: '20px',
             textTransform: 'capitalize',
           }}
@@ -222,7 +242,7 @@ const MiniDrawer = () => {
         variant="contained"
         size="large"
         sx={{
-          background: "#00D998",
+          background: color={palette.primaryLight},
           borderRadius: "37.5px",
           margin: "1em",
           //marginTop:"700px", TODO fix this with a better positioning option

@@ -10,13 +10,16 @@ import {
   CardHeader,
   CardContent,
 } from '@mui/material'
-import HistoryIcon from '@mui/icons-material/History'
+
 import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-
 import SessionContext from '../../contexts/app'
-import EditButton from './EditButton'
+import ChangeRequestActionButtons from './ChangeRequestActionButtons'
+import palette from '../../styles/theme/palette'
+import PopOverActionButtons from './popOverActionButtons'
+import moment from 'moment'
+import _ from 'lodash'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -28,53 +31,62 @@ const dataGridCustom = {
     },
   '& .MuiDataGrid-main': {
     marginTop: '-8px',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
     borderRadius: '0 0 30px 30px',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+  },
+  '& .MuiDataGrid-row:hover': {
+    bgcolor: '#00000010',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
       width: '32vw',
     },
   '& .MuiDataGrid-columnHeaders': {
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
   },
   '& .MuiDataGrid-toolbarContainer': {
     display: 'flex',
     flexDirection: 'row-reverse',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
     padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    border: '1px solid rgba(224, 224, 224, 1)',
+    border: `1px solid ${palette.border}`,
     marginBottom: '8px',
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
     {
-      color: '#00D998',
+      color: palette.primary,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
-    width: '28em',
+    width: '30em',
     borderRadius: '60px',
     float: 'right',
     margin: '2em 0',
     justifyContent: 'center',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    backgroundColor: '#FFF',
+    backgroundColor: palette.white,
   },
   '& .MuiTablePagination-actions': {
-    color: '#015A2F',
+    color: palette.primary,
   },
   '& .MuiTablePagination-selectIcon.MuiSelect-icon.MuiSelect-iconStandard.css-pqjvzy-MuiSvgIcon-root-MuiSelect-icon':
     {
-      color: '#015A2F',
+      color: palette.primary,
     },
+  '& .MuiDataGrid-virtualScroller': {
+    overflow: 'hidden',
+  },
+  '.highlight': {
+    bgcolor: palette.errorHighLight,
+  },
 }
 
 const actionButtonStyle = {
   borderRadius: 90,
-  background: '#FFFFF',
+  background: palette.white,
   boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
   width: 35,
   height: 35,
@@ -85,24 +97,40 @@ const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const columns: GridColDef[] = [
     {
+      field: 'destId',
+      headerName: 'Dest ID',
+      flex: 0.5,
+      minWidth: 50,
+    },
+    {
+      field: 'destTypeId',
+      headerName: 'Dest Type ID',
+      flex: 0.5,
+      minWidth: 50,
+    },
+    {
       field: 'destType',
       headerName: 'ENVIRONMENT',
-      width: 150,
+      flex: 0.5,
+      minWidth: 50,
     },
     {
       field: 'jurisdictionName',
-      headerName: 'JURISDICTION',
-      width: 200,
+      headerName: 'ORGANIZATION',
+      flex: 0.5,
+      minWidth: 25,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
-      width: 550,
+      flex: 0.5,
+      minWidth: 50,
     },
     {
       field: 'status',
       headerName: 'STATUS',
-      width: 200,
+      flex: 0.75,
+      minWidth: 100,
       filterable: false,
       valueFormatter: ({ value }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -119,11 +147,11 @@ const ConnectionsTable = (props) => {
             componentsProps={{
               tooltip: {
                 sx: {
-                  backgroundColor: '#ffffff',
+                  backgroundColor: palette.white,
                   boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                  border: '1px solid #BFBFBF',
+                  border: `1px solid ${palette.border}`,
                   '& .MuiTooltip-arrow': {
-                    color: '#BFBFBF',
+                    color: palette.border,
                   },
                 },
               },
@@ -133,15 +161,22 @@ const ConnectionsTable = (props) => {
                 <Card elevation={0}>
                   <CardHeader
                     title={
-                      <Typography sx={{ fontWeight: 'bold' }} color="#212121">
+                      <Typography
+                        sx={{
+                          fontWeight: 'bold',
+                          color: palette.greyDarkTypography,
+                        }}
+                      >
                         {params.row.status?.toUpperCase()}
                       </Typography>
                     }
                     subheader={
                       <Typography
-                        sx={{ fontWeight: 'regular' }}
+                        sx={{
+                          fontWeight: 'regular',
+                          color: palette.greyDarkTypography,
+                        }}
                         variant="body2"
-                        color="#212121"
                       >
                         {asOfDate}
                       </Typography>
@@ -170,7 +205,22 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {!isConnected ? (
+              {params.row.hasActiveMaint ? (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography sx={{ color: palette.errorDark }}>
+                    This connection is under maintenance until{' '}
+                    {_.isNull(params.row.getMaintenaceValues)
+                      ? 'ended by user'
+                      : moment(
+                          new Date(params.row.getMaintenaceValues.maint_end)
+                        ).format('MMM DD, YYYY [at] h:mm A')}
+                  </Typography>
+                  <ErrorOutlineIcon
+                    fontSize="small"
+                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                  />
+                </Box>
+              ) : !isConnected ? (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography>Not Connected</Typography>
                   <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -191,27 +241,28 @@ const ConnectionsTable = (props) => {
       headerName: 'ACTION',
       sortable: false,
       filterable: false,
-      width: 200,
+      flex: 0.5,
+      minWidth: 100,
       renderCell: (params) => {
         return (
           <div>
-            <EditButton
+            <ChangeRequestActionButtons
               tabIndex={params.tabIndex}
-              destId={params.id}
+              destId={params.row.destId}
               destTypeId={params.row.destTypeId}
               hasChangeRequest={params.row.hasChangeRequest}
+              hasActiveDraft={params.row.hasActiveDraft}
             />
             <Link
               tabIndex={params.tabIndex}
               prefetch={false}
               href={{
-                pathname: `/test/${params.id}`,
-                query: { destType: params.row.destType },
+                pathname: `/test/${params.row.destTypeId}/${params.row.destId}`,
               }}
             >
               <Tooltip arrow placement="bottom" title="Test">
                 <IconButton
-                  id={'test_' + params.row.destTypeId + '_' + params.id}
+                  id={'test_' + params.row.destTypeId + '_' + params.row.destId}
                   aria-label="test"
                   color="primary"
                   sx={actionButtonStyle}
@@ -220,27 +271,14 @@ const ConnectionsTable = (props) => {
                 </IconButton>
               </Tooltip>
             </Link>
-            <Link
-              tabIndex={params.tabIndex}
-              prefetch={false}
-              href={{
-                pathname: `/history/${params.row.destTypeId}/${params.id}`,
-                query: {
-                  status: params.row.status,
-                },
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="History">
-                <IconButton
-                  id={'history_' + params.row.destTypeId + '_' + params.id}
-                  aria-label="history"
-                  color="secondary"
-                  sx={actionButtonStyle}
-                >
-                  <HistoryIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            <PopOverActionButtons
+              destId={params.row.destId}
+              destTypeId={params.row.destTypeId}
+              status={params.row.status}
+              hasActiveMaintenance={params.row.hasActiveMaint}
+              jurisdictionName={params.row.jurisdictionName}
+              destType={params.row.destType}
+            />
           </div>
         )
       },
@@ -274,9 +312,9 @@ const ConnectionsTable = (props) => {
       <DataGrid
         experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
-        rows={Object.entries(props.data).map(([, x]: [any, any]) => {
-          return {
-            ...x[0],
+        rows={props.data.map((endpoint) => {
+          for (const [, value] of Object.entries(endpoint)) {
+            return value[0]
           }
         })}
         columns={columns}
@@ -284,16 +322,25 @@ const ConnectionsTable = (props) => {
         autoHeight
         initialState={{
           sorting: {
-            sortModel: [{ field: 'jurisdiction', sort: 'asc' }],
+            sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
           },
           pagination: { paginationModel: { pageSize } },
+          columns: {
+            columnVisibilityModel: {
+              destId: false,
+              destTypeId: false,
+            },
+          },
         }}
         disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector
         disableDensitySelector
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-        getRowId={(row) => row.destId}
+        getRowId={(row) => row.destId + row.destTypeId}
+        getRowClassName={(params) => {
+          return params.row.hasActiveMaint === true ? 'highlight' : ''
+        }}
         density={'comfortable'}
         pagination
         components={{ Toolbar: GridToolbar }}
@@ -331,7 +378,7 @@ const ConnectionsTable = (props) => {
                 paddingRight: '1vh',
                 paddingLeft: '1vh',
                 borderRadius: '0 0 30px 30px',
-                border: '1px solid rgba(224, 224, 224, 1)',
+                border: `1px solid ${palette.border}`,
                 width: 'fit-content',
               },
               '& .MuiDataGrid-filterFormDeleteIcon': {

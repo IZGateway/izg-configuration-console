@@ -1,5 +1,5 @@
 import { Box, Typography, Button, List, ListItem } from '@mui/material'
-import generalError from '../public/GeneralError.png'
+import generalError from '../public/IZG_GeneralError_Graphic.png'
 import Image from 'next/image'
 import { useRouter } from 'next/router'
 

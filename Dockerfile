@@ -10,9 +10,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
+ARG BUILD_ID=0.0.0
 #Strategy for using NEXT_PUBLIC variables found at https://phase.dev/blog/nextjs-public-runtime-variables/
 ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
 ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
+ARG NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
 RUN npx prisma generate
 RUN npm run build
 
@@ -31,6 +33,8 @@ RUN  npm ci --omit=dev --force
 RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
+COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
+COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
@@ -47,7 +51,13 @@ RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBE
     rm -rf /filebeat/filebeat.yml && \
     cp ../filebeat.yml ./filebeat.yml
 
+# Replace default metricbeat config with custom config file
+RUN cd ../metricbeat && \
+    rm -rf /metricbeat/metricbeat.yml && \
+    cp ../app/metricbeat.yml ./metricbeat.yml
+
 #USER nextjs
+RUN chmod a+x replace-variable.sh
 RUN chmod a+x start-app.sh
 EXPOSE 3000
 

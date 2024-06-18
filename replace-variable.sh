@@ -1,5 +1,5 @@
 #!/bin/bash
-# replace-variables.sh
+# replace-variable.sh
 
 # Define a list of environment variables to check and replace
 VARIABLES=("NEXT_PUBLIC_OKTA_ISSUER" "NEXT_PUBLIC_GA_ID")

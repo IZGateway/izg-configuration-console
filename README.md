@@ -37,6 +37,33 @@ IZG_ENDPOINT_CRT_PATH=<path/to/your/certificate.crt>
 IZG_ENDPOINT_KEY_PATH=<path/to/your/key.key>
 IZG_ENDPOINT_PASSCODE=<your certificate passcode>
 NEXTAUTH_DEBUG=true
+IZG_STATUS_ENDPOINT_URL=<statushistory endpoint>
+AUTOMATED_TEST_RUN_DURATION=900000
+USERNAME_JIRA=<Jira username>
+PASSWORD_JIRA=<Jira password>
+JIRA_API_URL=<Jira url>
+JIRA_API_AUTH_BASE64=<Jira auth>
+JIRA_API_PROJECT_ID=<Jira project id>
+JIRA_API_ISSUE_TYPE=<Jira issue type>
+```
+
+NOTE: the IZG_STATUS_ENDPOINT_URL must be an array of objects
+
+For example:
+
+```
+[
+ {
+   "typeId":5,
+   "desc":"dev",
+   "url":"https://dev.izgateway.org/rest/statushistory"
+ },
+ {
+   "typeId":2,
+   "desc":"test",
+   "url":"https://dev.izgateway.org:444/rest/statushistory"
+   }
+ ]
 ```
 
 the .env file is needed for Prisma to connect and inspect the database schema in order to generate a prisma.schema and prisma client. The .env file only needs to contain the database url connection string.

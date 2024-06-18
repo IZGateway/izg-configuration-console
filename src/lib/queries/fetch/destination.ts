@@ -16,6 +16,9 @@ const destination = async (destId: string, destType: number) =>
       RXA11: true,
       facility_id: true,
       pass_expiry: true,
+      maint_reason: true,
+      maint_start: true,
+      maint_end: true,
       destination_type: {
         select: {
           type: true,
