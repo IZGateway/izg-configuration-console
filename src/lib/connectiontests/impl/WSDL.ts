@@ -1,7 +1,7 @@
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
-import https from 'https'
+import { https } from 'follow-redirects'
 import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
