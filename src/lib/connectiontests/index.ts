@@ -14,7 +14,7 @@ const connectionTest = async (destination: any, userId: string) => {
     'cipher',
     'wsdl',
     'connectivity',
-    'qbp',
+    // 'qbp',
   }
 
   const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
