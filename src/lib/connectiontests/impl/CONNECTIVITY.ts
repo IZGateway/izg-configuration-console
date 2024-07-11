@@ -3,21 +3,17 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
+import { prismacontext } from '../../prismacontext'
 import * as fs from 'fs'
+import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
 import { StatusCodes } from 'http-status-codes'
-import * as xml2js from 'xml2js'
+import { DOMParser } from 'xmldom'
 
-const pasrseOptions = {
-  explicitArray: false,
-  tagNameProcessors: [xml2js.processors.stripPrefix],
-}
-
-const parser = new xml2js.Parser(pasrseOptions)
-
+const randomUUID = uuidv4()
 const TEST_NAME = 'Connectivity Test'
 export default class CONNECTIVITY extends ConnectionTest {
-  run = (): Promise<ConnectionTestResult[]> => {
+  run = async (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -25,25 +21,53 @@ export default class CONNECTIVITY extends ConnectionTest {
       detail: null,
       status: this.status,
     }
+    const destination = this.connectionTestRequest.destinationData
+    const destinationVersion = await lookupDestinationVersion(
+      destination,
+      this.connectionTestRequest.id,
+      this.connectionTestRequest.desttypeid
+    )
+    const setRequestBody = (version: string) => {
+      if (version === '2011') {
+        return `<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:cdc:iisb:2011">
+        <soap:Header>
+        <Action xmlns="http://www.w3.org/2005/08/addressing">urn:cdc:iisb:2011:connectivityTest</Action>
+        <MessageID xmlns="http://www.w3.org/2005/08/addressing">${randomUUID}</MessageID>
+        <To xmlns="http://www.w3.org/2005/08/addressing">http://www.w3.org/2005/08/addressing/anonymous</To>
+        </soap:Header>
+        <soap:Body>
+        <connectivityTest xmlns="urn:cdc:iisb:2011">
+            <echoBack>Wishing ${this.connectionTestRequest.hostname} : ${
+          this.connectionTestRequest.port
+        } an Audacious Hello at ${new Date()} !</echoBack>
+        </connectivityTest>
+        </soap:Body>
+        </soap:Envelope>`
+      } else {
+        return `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+        <soap:Header>
+        <Action xmlns="http://www.w3.org/2005/08/addressing">urn:cdc:iisb:2014:IISPortType:ConnectivityTestRequest</Action>
+        <MessageID xmlns="http://www.w3.org/2005/08/addressing">${randomUUID}</MessageID>
+        <To xmlns="http://www.w3.org/2005/08/addressing">http://www.w3.org/2005/08/addressing/anonymous</To>
+        </soap:Header>
+        <soap:Body>
+        <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014" xmlns:ns2="urn:cdc:iisb:hub:2014" xmlns:ns3="urn:cdc:iisb:2011">
+            <echoBack>Wishing ${this.connectionTestRequest.hostname} : ${
+          this.connectionTestRequest.port
+        } an Audacious Hello at ${new Date()} !</echoBack>
+        </ConnectivityTestRequest>
+        </soap:Body>
+        </soap:Envelope>`
+      }
+    }
 
-    const requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
-      <soap:Header>
-      <Action xmlns="http://www.w3.org/2005/08/addressing">urn:cdc:iisb:2014:IISPortType:ConnectivityTestRequest</Action>
-      <MessageID xmlns="http://www.w3.org/2005/08/addressing">{{testMessageId}}</MessageID>
-      <To xmlns="http://www.w3.org/2005/08/addressing">http://www.w3.org/2005/08/addressing/anonymous</To>
-      </soap:Header>
-      <soap:Body>
-      <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014" xmlns:ns2="urn:cdc:iisb:hub:2014" xmlns:ns3="urn:cdc:iisb:2011">
-      <EchoBack>Wishing 
-      ${this.connectionTestRequest.hostname} 
-      :
-      ${this.connectionTestRequest.port}
-       an Audacious Hello at
-      ${new Date()} 
-      !</EchoBack>
-      </ConnectivityTestRequest>
-      </soap:Body>
-      </soap:Envelope>`
+    const setContentType = (version: string) => {
+      if (version === '2011') {
+        return `text/xml`
+      } else {
+        return `application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2014:IISPortType:ConnectivityTestRequest"`
+      }
+    }
 
     const httpsAgentOptions = {
       cert: fs.readFileSync(
@@ -67,83 +91,101 @@ export default class CONNECTIVITY extends ConnectionTest {
       agent: new https.Agent(httpsAgentOptions),
       headers: {
         Host: this.connectionTestRequest.hostname,
-        'Content-Type': 'application/xml',
+        'Content-Type': setContentType(destinationVersion),
       },
     }
 
     return new Promise((resolve) => {
       const req = https.request(options, (res) => {
         let data = ''
-        let requestEchoback: string
-        let responseEchoback: string
+        if (res.statusCode === StatusCodes.OK) {
+          res.on('data', (chunk) => {
+            data = data + chunk.toString()
+          })
 
-        res.on('data', (chunk) => {
-          data = data + chunk.toString()
-        })
+          res.on('end', function () {
+            const parser = new DOMParser()
+            const resXmlDoc = parser.parseFromString(data, 'text/xml')
+            const reqXmlDoc = parser.parseFromString(
+              setRequestBody(destinationVersion),
+              'text/xml'
+            )
+            if (resXmlDoc.documentElement.getElementsByTagName('Body')) {
+              try {
+                const responseEchoback = resXmlDoc.documentElement
+                  .getElementsByTagNameNS('*', 'Body')[0]
+                  .textContent.trim()
+                const requestEchoback = reqXmlDoc.documentElement
+                  .getElementsByTagNameNS('*', 'Body')[0]
+                  .textContent.trim()
 
-        res.on('end', function () {
-          if (res.statusCode === StatusCodes.OK) {
-            parser.parseString(data, function (err: Error, result) {
-              if (err) {
+                if (requestEchoback === responseEchoback) {
+                  resolve([
+                    {
+                      ...connectivityTestResult,
+                      detail: responseEchoback,
+                      message: null,
+                      status: TestStatus.PASS,
+                    },
+                  ])
+                } else if (responseEchoback?.includes(requestEchoback)) {
+                  resolve([
+                    {
+                      ...connectivityTestResult,
+                      detail: responseEchoback,
+                      message: TestResponseMessages.CONNECTIVITY_WARNING(
+                        requestEchoback,
+                        responseEchoback
+                      ),
+                      status: TestStatus.WARNING,
+                    },
+                  ])
+                } else if (
+                  requestEchoback !== responseEchoback ||
+                  !responseEchoback?.includes(requestEchoback)
+                ) {
+                  resolve([
+                    {
+                      ...connectivityTestResult,
+                      detail: responseEchoback,
+                      message:
+                        TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+                      status: TestStatus.FAIL,
+                    },
+                  ])
+                }
+              } catch (err) {
                 resolve([
-                  this.unknownErrorResult(connectivityTestResult, err, options),
+                  {
+                    ...connectivityTestResult,
+                    detail: err,
+                    message:
+                      TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+                    status: TestStatus.FAIL,
+                  },
                 ])
-              } else {
-                responseEchoback =
-                  result.Envelope.Body.ConnectivityTestResponse.EchoBack.toString()
               }
-            })
-            parser.parseString(requestBody, function (_err, result) {
-              requestEchoback =
-                result.Envelope.Body.ConnectivityTestRequest.EchoBack.toString()
-            })
-
-            if (requestEchoback === responseEchoback) {
+            } else {
               resolve([
                 {
                   ...connectivityTestResult,
-                  detail: responseEchoback,
-                  message: null,
-                  status: TestStatus.PASS,
-                },
-              ])
-            } else if (responseEchoback?.includes(requestEchoback)) {
-              resolve([
-                {
-                  ...connectivityTestResult,
-                  detail: responseEchoback,
-                  message: TestResponseMessages.CONNECTIVITY_WARNING(
-                    requestEchoback,
-                    responseEchoback
-                  ),
-                  status: TestStatus.WARNING,
-                },
-              ])
-            } else if (
-              requestEchoback !== responseEchoback ||
-              !responseEchoback?.includes(requestEchoback)
-            ) {
-              resolve([
-                {
-                  ...connectivityTestResult,
-                  detail: responseEchoback,
-                  message:
-                    TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+                  detail: data,
+                  message: TestResponseMessages.CONNECTIVITY_NO_BODY,
                   status: TestStatus.FAIL,
                 },
               ])
             }
-          } else {
-            resolve([
-              {
-                ...connectivityTestResult,
-                detail: res.statusCode + ': ' + res.statusMessage,
-                message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
-                status: TestStatus.FAIL,
-              },
-            ])
-          }
-        })
+          })
+        } else {
+          resolve([
+            {
+              ...connectivityTestResult,
+              detail: res.statusCode + ': ' + res.statusMessage,
+              message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
+              status: TestStatus.FAIL,
+            },
+          ])
+        }
       })
 
       req.on('error', (error) => {
@@ -151,7 +193,7 @@ export default class CONNECTIVITY extends ConnectionTest {
           this.unknownErrorResult(connectivityTestResult, error, options),
         ])
       })
-      req.write(requestBody)
+      req.write(setRequestBody(destinationVersion))
       req.end()
     })
   }
@@ -173,6 +215,26 @@ export default class CONNECTIVITY extends ConnectionTest {
       detail: err.message,
       message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
       status: TestStatus.FAIL,
+    }
+  }
+}
+
+async function lookupDestinationVersion(
+  destination: any,
+  destId: any,
+  destType: any
+) {
+  if (destination.dest_version) {
+    return destination.dest_version
+  } else {
+    const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
+    FROM destinations d
+    WHERE d.dest_id = ${destId}
+    AND d.dest_type = ${destType}`
+    if (result[0].dest_version === '') {
+      return '2014'
+    } else {
+      return result[0].dest_version
     }
   }
 }

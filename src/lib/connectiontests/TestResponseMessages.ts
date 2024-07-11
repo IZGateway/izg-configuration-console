@@ -31,6 +31,8 @@ export class TestResponseMessages {
 
   public static readonly CONNECTIVITY_NOT_CONNECT =
     'We cannot connect to the url right now. Please try again later'
+  public static readonly CONNECTIVITY_NO_BODY =
+    'Response does not contain soap Body'
 
   public static readonly CONNECTIVITY_WARNING = (
     testEchoback: string,
