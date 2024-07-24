@@ -20,6 +20,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { useContext, useState } from 'react'
 import CombinedContext from '../../contexts/app'
+import { useRouter } from 'next/router'
 interface resetDialogProps {
   open: boolean
   handleClose: any
@@ -44,6 +45,7 @@ const customPaperStyles = {
 
 const RescheduleDialog = (props: resetDialogProps) => {
   const { setAlert } = useContext(CombinedContext)
+  const router = useRouter()
 
   const [isDateTimePickerOpen, setIsDateTimePickerOpen] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
@@ -78,6 +80,7 @@ const RescheduleDialog = (props: resetDialogProps) => {
     )
     if (response.ok) {
       props.handleClose()
+      router.push('/manage')
       setAlert({
         level: 'success',
         message: `New scheduled Date Time is updated successfully!`,

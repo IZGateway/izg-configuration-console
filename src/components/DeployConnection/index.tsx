@@ -6,10 +6,12 @@ import ViewChangeRequestTicket from './viewChangeRequestTicket'
 import DeployConfirmation from './deployConfirmation'
 import DetailsChangeRequest from './detailsChangeRequest'
 import MakeChanges from './makeChanges'
+import { useSession } from 'next-auth/react'
 
 const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 
 const DeployConnection = (props) => {
+  const { data: session } = useSession()
   const {
     data: changerequestData,
     error: changerequestError,
@@ -69,11 +71,13 @@ const DeployConnection = (props) => {
             />
           ) : (
             <>
-              <ViewChangeRequestTicket
-                {...changerequestData}
-                status={status}
-                jiraUrl={props.jiraUrl}
-              />
+              {session?.user.isAdmin && (
+                <ViewChangeRequestTicket
+                  {...changerequestData}
+                  status={status}
+                  jiraUrl={props.jiraUrl}
+                />
+              )}
               <MakeChanges
                 destId={props.destId}
                 destTypeId={props.destTypeId}

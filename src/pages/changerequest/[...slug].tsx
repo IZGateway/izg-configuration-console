@@ -6,9 +6,8 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
 import DeployConnection from '../../components/DeployConnection/index'
-import AdminGuard from '../../components/AdminGuard'
 import Close from '../../components/Close'
-import { GetStaticPaths, GetStaticProps, InferGetStaticPropsType } from 'next'
+import { GetStaticPaths, GetStaticProps } from 'next'
 
 const Changerequest = (props) => {
   const router = useRouter()
@@ -39,7 +38,7 @@ const Changerequest = (props) => {
   )
 }
 
-export default AdminGuard(Changerequest)
+export default Changerequest
 
 export const getStaticProps: GetStaticProps = async () => {
   return {

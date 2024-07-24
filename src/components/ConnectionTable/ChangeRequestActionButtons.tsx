@@ -1,7 +1,6 @@
 import { Tooltip, IconButton } from '@mui/material'
 import Link from 'next/link'
 import EditIcon from '@mui/icons-material/Edit'
-import { useSession } from 'next-auth/react'
 import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 import palette from '../../styles/theme/palette'
 import SaveIcon from '@mui/icons-material/Save'
@@ -52,10 +51,6 @@ const ChangeRequestActionButtons = (props: {
 }) => {
   const { destId, destTypeId, hasChangeRequest, hasActiveDraft } = props
   const canEdit = !hasChangeRequest && !hasActiveDraft
-
-  const { data: session } = useSession()
-  const isAdmin = session?.user.isAdmin
-
   const {
     data: draftData,
     error: draftError,
@@ -120,7 +115,7 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
 
-      {!canEdit && !hasActiveDraft && isAdmin && (
+      {!canEdit && !hasActiveDraft && (
         <Link
           href={{
             pathname: `/changerequest/${destTypeId}/${destId}`,
@@ -137,21 +132,6 @@ const ChangeRequestActionButtons = (props: {
             </IconButton>
           </Tooltip>
         </Link>
-      )}
-      {!canEdit && !hasActiveDraft && !isAdmin && (
-        <Tooltip arrow placement="left" title="Change request in process">
-          <span>
-            <IconButton
-              id={props.destTypeId + '_' + props.destId}
-              aria-label="edit"
-              color="primary"
-              disabled={!canEdit}
-              sx={draftButtonStyle}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
       )}
     </>
   )
