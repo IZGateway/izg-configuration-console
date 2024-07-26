@@ -62,27 +62,34 @@ const DeployConnection = (props) => {
       >
         <Box sx={{ width: '33%' }}>
           <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
-          {status === JIRA_STATUS_FOR_DEPLOY ? (
-            <DeployConfirmation
-              destId={props.destId}
-              destTypeId={props.destTypeId}
-              submittingValue={changerequestData}
-              status={status}
-            />
-          ) : (
-            <>
-              {session?.user.isAdmin && (
+          {session?.user.isAdmin ? (
+            status === JIRA_STATUS_FOR_DEPLOY ? (
+              <DeployConfirmation
+                destId={props.destId}
+                destTypeId={props.destTypeId}
+                submittingValue={changerequestData}
+                status={status}
+              />
+            ) : (
+              <>
                 <ViewChangeRequestTicket
                   {...changerequestData}
                   status={status}
                   jiraUrl={props.jiraUrl}
                 />
-              )}
+                <MakeChanges
+                  destId={props.destId}
+                  destTypeId={props.destTypeId}
+                />
+              </>
+            )
+          ) : (
+            status !== JIRA_STATUS_FOR_DEPLOY && (
               <MakeChanges
                 destId={props.destId}
                 destTypeId={props.destTypeId}
               />
-            </>
+            )
           )}
         </Box>
         <Box sx={{ width: '66%' }}>
