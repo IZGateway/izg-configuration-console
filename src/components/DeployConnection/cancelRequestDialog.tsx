@@ -54,7 +54,7 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
     )
     if (response.ok) {
       props.handleClose()
-      router.push('/manage')
+      router.push('/manageconnections')
       setAlert({
         level: 'success',
         message: `Change request is cancelled successfully!`,

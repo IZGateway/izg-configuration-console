@@ -9,7 +9,7 @@ const Close = () => {
   const router = useRouter()
   const handleClose = () => {
     clearValue()
-    router.push('/manage')
+    router.push('/manageconnections')
   }
 
   return (
