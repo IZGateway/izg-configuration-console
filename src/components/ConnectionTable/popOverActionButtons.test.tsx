@@ -2,7 +2,6 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
 import PopOverActionButtons from './popOverActionButtons'
 import CombinedContext from '../../contexts/app'
-import { useSession } from 'next-auth/react'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 
 jest.mock('next-auth/react', () => {
