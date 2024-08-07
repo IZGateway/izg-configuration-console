@@ -1,7 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { SessionProvider } from 'next-auth/react'
-import { Session } from 'next-auth'
-import type { AppProps } from 'next/app'
+import { SessionProvider, getSession } from 'next-auth/react'
 import { CacheProvider, EmotionCache } from '@emotion/react'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
 import Layout from '../components/Layout'
@@ -17,21 +15,22 @@ import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
 import NavigationLoader from '../components/NavigationLoader'
+import App from 'next/app'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')
   const axe = require('@axe-core/react')
   axe(React, ReactDOM, 1000)
 }
-interface MyAppProps extends AppProps {
-  emotionCache?: EmotionCache
-  pageProps: { session: Session; pageProps: any }
-}
 
 const clientSideEmotionCache = createEmotionCache()
 const blueTheme = createTheme(blueThemeOptions)
 
-const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
+const MyApp = (props: {
+  Component: any
+  emotionCache?: EmotionCache
+  pageProps: { [x: string]: any; session: any }
+}) => {
   const {
     Component,
     emotionCache = clientSideEmotionCache,
@@ -58,4 +57,12 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
   )
 }
 
+MyApp.getInitialProps = async (appContext) => {
+  const pageProps = App.getInitialProps(appContext)
+  const session = await getSession(appContext)
+
+  return {
+    pageProps: { session, ...pageProps },
+  }
+}
 export default MyApp

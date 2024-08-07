@@ -6,6 +6,8 @@ import palette from '../../styles/theme/palette'
 import SaveIcon from '@mui/icons-material/Save'
 import useSWR from 'swr'
 import moment from 'moment'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
@@ -51,6 +53,7 @@ const ChangeRequestActionButtons = (props: {
 }) => {
   const { destId, destTypeId, hasChangeRequest, hasActiveDraft } = props
   const canEdit = !hasChangeRequest && !hasActiveDraft
+  const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
   const {
     data: draftData,
     error: draftError,
@@ -68,7 +71,7 @@ const ChangeRequestActionButtons = (props: {
 
   return (
     <>
-      {canEdit && (
+      {canEdit && accessLevels.canEditConnection && (
         <Link
           prefetch={false}
           tabIndex={props.tabIndex}
@@ -90,7 +93,7 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
 
-      {!canEdit && hasActiveDraft && (
+      {!canEdit && hasActiveDraft && accessLevels.canEditConnection && (
         <Link
           prefetch={false}
           tabIndex={props.tabIndex}
@@ -115,7 +118,7 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
 
-      {!canEdit && !hasActiveDraft && (
+      {!canEdit && !hasActiveDraft && accessLevels.canViewChangeRequest && (
         <Link
           href={{
             pathname: `/changerequest/${destTypeId}/${destId}`,
