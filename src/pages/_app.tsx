@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { SessionProvider, getSession } from 'next-auth/react'
-import { CacheProvider, EmotionCache } from '@emotion/react'
+import { SessionProvider, useSession } from 'next-auth/react'
+import { CacheProvider } from '@emotion/react'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
 import Layout from '../components/Layout'
 import '@fontsource/ubuntu/300.css'
@@ -15,7 +15,6 @@ import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
 import NavigationLoader from '../components/NavigationLoader'
-import App from 'next/app'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')
@@ -26,11 +25,7 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
 const clientSideEmotionCache = createEmotionCache()
 const blueTheme = createTheme(blueThemeOptions)
 
-const MyApp = (props: {
-  Component: any
-  emotionCache?: EmotionCache
-  pageProps: { [x: string]: any; session: any }
-}) => {
+const MyApp = (props) => {
   const {
     Component,
     emotionCache = clientSideEmotionCache,
@@ -39,30 +34,33 @@ const MyApp = (props: {
 
   return (
     <SessionProvider session={session}>
-      <CacheProvider value={emotionCache}>
-        <ThemeProvider theme={blueTheme}>
-          <CssBaseline />
-          <Layout>
-            <AppProvider>
-              <SWRConfig value={{ fetcher: fetch }}>
-                <GoogleAnalytics />
-                <NavigationLoader />
-                <Component {...pageProps} />
-              </SWRConfig>
-            </AppProvider>
-          </Layout>
-        </ThemeProvider>
-      </CacheProvider>
+      <Auth>
+        <CacheProvider value={emotionCache}>
+          <ThemeProvider theme={blueTheme}>
+            <CssBaseline />
+            <Layout>
+              <AppProvider>
+                <SWRConfig value={{ fetcher: fetch }}>
+                  <GoogleAnalytics />
+                  <NavigationLoader />
+                  <Component {...pageProps} />
+                </SWRConfig>
+              </AppProvider>
+            </Layout>
+          </ThemeProvider>
+        </CacheProvider>
+      </Auth>
     </SessionProvider>
   )
 }
 
-MyApp.getInitialProps = async (appContext) => {
-  const pageProps = App.getInitialProps(appContext)
-  const session = await getSession(appContext)
+function Auth({ children }) {
+  const { status } = useSession({ required: true })
 
-  return {
-    pageProps: { session, ...pageProps },
+  if (status === 'loading') {
+    return <div>Loading...</div>
   }
+  return children
 }
+
 export default MyApp
