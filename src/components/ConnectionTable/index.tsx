@@ -1,17 +1,13 @@
 import React, { useContext } from 'react'
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
-import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 import {
   Box,
-  IconButton,
   Typography,
   Card,
   Tooltip,
   CardHeader,
   CardContent,
 } from '@mui/material'
-
-import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
@@ -20,6 +16,9 @@ import palette from '../../styles/theme/palette'
 import PopOverActionButtons from './popOverActionButtons'
 import moment from 'moment'
 import _ from 'lodash'
+import TestConnectionButton from './TestConnectionButton'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -84,17 +83,10 @@ const dataGridCustom = {
   },
 }
 
-const actionButtonStyle = {
-  borderRadius: 90,
-  background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-  width: 35,
-  height: 35,
-  marginRight: 2,
-}
-
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
+
   const columns: GridColDef[] = [
     {
       field: 'destId',
@@ -253,24 +245,14 @@ const ConnectionsTable = (props) => {
               hasChangeRequest={params.row.hasChangeRequest}
               hasActiveDraft={params.row.hasActiveDraft}
             />
-            <Link
-              tabIndex={params.tabIndex}
-              prefetch={false}
-              href={{
-                pathname: `/test/${params.row.destTypeId}/${params.row.destId}`,
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="Test">
-                <IconButton
-                  id={'test_' + params.row.destTypeId + '_' + params.row.destId}
-                  aria-label="test"
-                  color="primary"
-                  sx={actionButtonStyle}
-                >
-                  <MonitorHeartOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            {accessLevels.canRunConnectionTest && (
+              <TestConnectionButton
+                tabIndex={params.tabIndex}
+                destId={params.row.destId}
+                destTypeId={params.row.destTypeId}
+              />
+            )}
+
             <PopOverActionButtons
               destId={params.row.destId}
               destTypeId={params.row.destTypeId}

@@ -54,7 +54,7 @@ function HomeComponent() {
                   <strong>Configuration Console</strong>
                 </Typography>
                 <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
-                  <Link href="/manage">
+                  <Link href="/manageconnections">
                     <Button variant="contained" color="primary">
                       Manage Connections
                     </Button>

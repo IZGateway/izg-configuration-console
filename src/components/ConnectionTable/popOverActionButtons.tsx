@@ -15,6 +15,8 @@ import React, { useState } from 'react'
 import MaintenanceDialog from './maintenanceDialog'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 
 const actionButtonStyle = {
   borderRadius: 90,
@@ -33,6 +35,7 @@ const PopOverActionButtons = (props: {
   destType: any
 }) => {
   const { setAlert } = useContext(CombinedContext)
+  const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -129,38 +132,44 @@ const PopOverActionButtons = (props: {
           root: { sx: { '.MuiList-root': { padding: '0px' } } },
         }}
       >
-        <MenuItem
-          id={'history_' + props.destTypeId + '_' + props.destId}
-          component={Link}
-          href={`/history/${props.destTypeId}/${props.destId}`}
-          onClick={handleClose}
-          sx={{ borderBottom: `1px solid ${palette.divider}` }}
-        >
-          <ListItemIcon>
-            <HistoryIcon htmlColor={palette.secondary} fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>History</ListItemText>
-        </MenuItem>
-        {props.hasActiveMaintenance ? (
+        {accessLevels.canViewHistory && (
           <MenuItem
-            id={'end_Maintenance' + props.destTypeId + '_' + props.destId}
-            onClick={endMaintenance}
+            id={'history_' + props.destTypeId + '_' + props.destId}
+            component={Link}
+            href={`/history/${props.destTypeId}/${props.destId}`}
+            onClick={handleClose}
+            sx={{ borderBottom: `1px solid ${palette.divider}` }}
           >
             <ListItemIcon>
-              <WarningIcon htmlColor={palette.error} fontSize="small" />
+              <HistoryIcon htmlColor={palette.secondary} fontSize="small" />
             </ListItemIcon>
-            <ListItemText>End Maintenance</ListItemText>
+            <ListItemText>History</ListItemText>
           </MenuItem>
-        ) : (
-          <MenuItem
-            id={'maintenance' + props.destTypeId + '_' + props.destId}
-            onClick={openMaintenanceDialog}
-          >
-            <ListItemIcon>
-              <WarningIcon htmlColor={palette.error} fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Maintenance</ListItemText>
-          </MenuItem>
+        )}
+        {accessLevels.canScheduleMaintainance && (
+          <>
+            {props.hasActiveMaintenance ? (
+              <MenuItem
+                id={'end_Maintenance' + props.destTypeId + '_' + props.destId}
+                onClick={endMaintenance}
+              >
+                <ListItemIcon>
+                  <WarningIcon htmlColor={palette.error} fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>End Maintenance</ListItemText>
+              </MenuItem>
+            ) : (
+              <MenuItem
+                id={'maintenance' + props.destTypeId + '_' + props.destId}
+                onClick={openMaintenanceDialog}
+              >
+                <ListItemIcon>
+                  <WarningIcon htmlColor={palette.error} fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Maintenance</ListItemText>
+              </MenuItem>
+            )}
+          </>
         )}
       </Menu>
       <MaintenanceDialog

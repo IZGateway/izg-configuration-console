@@ -1,0 +1,33 @@
+import {
+  ManageConnectionsPageAccessControl,
+  TestPageAccessControl,
+  EditPageAccessControl,
+  ChangeRequestPageAccessControl,
+  HistoryPageAccessControl,
+} from '../type/PageAccessControls'
+import {
+  IZGOperationsAccess,
+  JurisdictionOperationsAccess,
+  IZGSupportAccess,
+  JurisdictionSupportAccess,
+} from './accessdefinitions'
+
+const accessLevel: AccessLevel = {
+  'IZG Operations': IZGOperationsAccess,
+  'IZG Support': IZGSupportAccess,
+  'Jurisdiction Support': JurisdictionSupportAccess,
+  'Jurisdiction Operations': JurisdictionOperationsAccess,
+}
+export default accessLevel
+
+type AccessLevel = {
+  [role: string]: PageControls
+}
+
+export type PageControls = {
+  manageconnections: ManageConnectionsPageAccessControl
+  test: TestPageAccessControl
+  edit: EditPageAccessControl
+  changerequest: ChangeRequestPageAccessControl
+  history: HistoryPageAccessControl
+}

@@ -3,6 +3,15 @@ import { render, fireEvent } from '@testing-library/react'
 import RescheduleDialog from './reScheduleDialog'
 import CombinedContext from '../../contexts/app'
 
+jest.mock('next/router', () => ({
+  useRouter() {
+    return {
+      pathname: '',
+      // ... whatever else you you call on `router`
+    }
+  },
+}))
+
 describe('RescheduleDialog', () => {
   const handleCloseMock = jest.fn()
   const props = {

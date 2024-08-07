@@ -6,18 +6,14 @@ import ViewChangeRequestTicket from './viewChangeRequestTicket'
 import DeployConfirmation from './deployConfirmation'
 import DetailsChangeRequest from './detailsChangeRequest'
 import MakeChanges from './makeChanges'
-import { useSession } from 'next-auth/react'
+import { ChangeRequestPageAccessControl } from '../../lib/type/PageAccessControls'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 
 const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 
 const DeployConnection = (props) => {
-  const { data: session } = useSession()
-  const {
-    data: changerequestData,
-    error: changerequestError,
-    isLoading: changerequestLoading,
-  } = useSWR(`/api/changerequest/${props.destTypeId}/${props.destId}`)
-
+  const { changerequestData } = props
+  const accessLevels: ChangeRequestPageAccessControl = useRoleAccess()
   const {
     data: changerequestStatusData,
     error: changerequestStatusError,
@@ -28,12 +24,9 @@ const DeployConnection = (props) => {
       : null
   )
 
-  if (changerequestError || changerequestStatusError)
-    throw new Error(
-      changerequestError.message || changerequestStatusError.message
-    )
-  if (changerequestLoading || changerequestStatusLoading)
-    return <div>loading...</div>
+  if (changerequestStatusError)
+    throw new Error(changerequestStatusError.message)
+  if (changerequestStatusLoading) return <div>loading...</div>
 
   const status = changerequestStatusData.fields.status.name
 
@@ -61,8 +54,10 @@ const DeployConnection = (props) => {
         }}
       >
         <Box sx={{ width: '33%' }}>
-          <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
-          {session?.user.isAdmin ? (
+          {accessLevels.canRunHealthCheck && (
+            <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
+          )}
+          {accessLevels.canDeployChange ? (
             status === JIRA_STATUS_FOR_DEPLOY ? (
               <DeployConfirmation
                 destId={props.destId}
@@ -72,19 +67,24 @@ const DeployConnection = (props) => {
               />
             ) : (
               <>
-                <ViewChangeRequestTicket
-                  {...changerequestData}
-                  status={status}
-                  jiraUrl={props.jiraUrl}
-                />
-                <MakeChanges
-                  destId={props.destId}
-                  destTypeId={props.destTypeId}
-                />
+                {accessLevels.canViewJiraTicket && (
+                  <ViewChangeRequestTicket
+                    {...changerequestData}
+                    status={status}
+                    jiraUrl={props.jiraUrl}
+                  />
+                )}
+                {accessLevels.canRescheduleRequest && (
+                  <MakeChanges
+                    destId={props.destId}
+                    destTypeId={props.destTypeId}
+                  />
+                )}
               </>
             )
           ) : (
-            status !== JIRA_STATUS_FOR_DEPLOY && (
+            status !== JIRA_STATUS_FOR_DEPLOY &&
+            accessLevels.canRescheduleRequest && (
               <MakeChanges
                 destId={props.destId}
                 destTypeId={props.destTypeId}
@@ -93,11 +93,13 @@ const DeployConnection = (props) => {
           )}
         </Box>
         <Box sx={{ width: '66%' }}>
-          <DetailsChangeRequest
-            destId={props.destId}
-            destTypeId={props.destTypeId}
-            submittingValue={changerequestData}
-          />
+          {accessLevels.canViewDetails && (
+            <DetailsChangeRequest
+              destId={props.destId}
+              destTypeId={props.destTypeId}
+              submittingValue={changerequestData}
+            />
+          )}
         </Box>
       </Box>
     </>
