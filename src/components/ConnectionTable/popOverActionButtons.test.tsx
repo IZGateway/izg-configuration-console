@@ -2,6 +2,44 @@ import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
 import PopOverActionButtons from './popOverActionButtons'
 import CombinedContext from '../../contexts/app'
+import { useSession } from 'next-auth/react'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+
+jest.mock('next-auth/react', () => {
+  const originalModule = jest.requireActual('next-auth/react')
+  const mockSession = {
+    expires: new Date(Date.now() + 2 * 86400).toISOString(),
+    user: { username: 'admin', role: 'IZG Operations' },
+  }
+  return {
+    __esModule: true,
+    ...originalModule,
+    useSession: jest.fn(() => {
+      return { data: mockSession, status: 'authenticated' } // return type is [] in v3 but changed to {} in v4
+    }),
+  }
+})
+
+jest.mock('next/router', () => ({
+  useRouter() {
+    return {
+      pathname: '',
+      // ... whatever else you you call on `router`
+    }
+  },
+}))
+
+jest.mock('../../lib/security/useRoleAccess', () => {
+  return jest.fn(() => {
+    return {
+      canRunConnectionTest: true,
+      canScheduleMaintainance: true,
+      canViewHistory: true,
+      canEditConnection: true,
+      canViewChangeRequest: true,
+    } as ManageConnectionsPageAccessControl
+  })
+})
 
 describe('PopOverActionButtons component', () => {
   const combinedContextValueMock = {
@@ -12,9 +50,10 @@ describe('PopOverActionButtons component', () => {
     clearValue: jest.fn(),
     alert: { level: '', message: '' },
     setAlert: jest.fn(),
+    accessLevels: { canViewHistory: true }, // Add the 'canViewHistory' property
   }
 
-  it('renders correctly', () => {
+  it('renders correctly', async () => {
     const { getByLabelText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
         <PopOverActionButtons
