@@ -35,6 +35,11 @@ const IZGSupportAccess: PageControls = {
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,
+    canViewChangeHistory: true,
+    canViewChangeRequest: true,
+    canViewConnectionInfo: true,
+    canViewConnectionInfoDetails: true,
+    canViewHubStatusHistory: true,
   } as HistoryPageAccessControl,
 }
 

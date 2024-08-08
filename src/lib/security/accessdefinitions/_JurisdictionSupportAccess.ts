@@ -23,6 +23,7 @@ const JurisdictionSupportAccess: PageControls = {
   } as ManageConnectionsPageAccessControl,
   test: {
     ...defaultTestPageAccessControl,
+    canRunConnectionTest: true,
   } as TestPageAccessControl,
   edit: {
     ...defaultEditPageAccessControl,
@@ -34,6 +35,11 @@ const JurisdictionSupportAccess: PageControls = {
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,
+    canViewChangeHistory: true,
+    canViewChangeRequest: true,
+    canViewConnectionInfo: true,
+    canViewConnectionInfoDetails: true,
+    canViewHubStatusHistory: true,
   } as HistoryPageAccessControl,
 }
 
