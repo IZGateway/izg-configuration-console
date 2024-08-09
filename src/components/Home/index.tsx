@@ -24,9 +24,12 @@ import Requirements from './Requirements'
 import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
 import Slide from '@mui/material/Slide'
+import { useSession } from 'next-auth/react'
+import isOperationsRole from '../../lib/security/accessutils'
 
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
+  const { data: session } = useSession()
   return (
     <>
       <AppHeaderBar open />
@@ -59,11 +62,13 @@ function HomeComponent() {
                       Manage Connections
                     </Button>
                   </Link>
-                  <Link href="/api-doc">
-                    <Button variant="outlined" color="primary">
-                      OUR API
-                    </Button>
-                  </Link>
+                  {isOperationsRole(session?.user.role) && (
+                    <Link href="/api-doc">
+                      <Button variant="outlined" color="primary">
+                        OUR API
+                      </Button>
+                    </Link>
+                  )}
                 </Box>
               </Box>
             </Slide>
