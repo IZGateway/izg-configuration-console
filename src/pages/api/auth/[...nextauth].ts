@@ -3,6 +3,7 @@ import NextAuth from 'next-auth'
 import OktaProvider from 'next-auth/providers/okta'
 import logger from '../../../../logger'
 import _ from 'lodash'
+import roles from '../../../lib/security/roles'
 
 const userInfoEndpoint = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/oauth2/v1/userinfo`
 const isDebugging =
@@ -28,6 +29,7 @@ export const authOptions = {
         session.user.id = token.id
         session.accessToken = token.accessToken
         session.user.groups = token.groups
+        session.user.role = _.intersection(token.groups, roles)[0]
         session.user.isAdmin = token?.groups?.includes(
           process.env.OPERATIONS_GROUP
         )

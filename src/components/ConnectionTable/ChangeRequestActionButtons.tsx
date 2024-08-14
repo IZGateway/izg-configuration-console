@@ -1,12 +1,13 @@
 import { Tooltip, IconButton } from '@mui/material'
 import Link from 'next/link'
 import EditIcon from '@mui/icons-material/Edit'
-import { useSession } from 'next-auth/react'
 import PublishedWithChangesIcon from '@mui/icons-material/PublishedWithChanges'
 import palette from '../../styles/theme/palette'
 import SaveIcon from '@mui/icons-material/Save'
 import useSWR from 'swr'
 import moment from 'moment'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
@@ -52,10 +53,7 @@ const ChangeRequestActionButtons = (props: {
 }) => {
   const { destId, destTypeId, hasChangeRequest, hasActiveDraft } = props
   const canEdit = !hasChangeRequest && !hasActiveDraft
-
-  const { data: session } = useSession()
-  const isAdmin = session?.user.isAdmin
-
+  const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
   const {
     data: draftData,
     error: draftError,
@@ -73,7 +71,7 @@ const ChangeRequestActionButtons = (props: {
 
   return (
     <>
-      {canEdit && (
+      {canEdit && accessLevels.canEditConnection && (
         <Link
           prefetch={false}
           tabIndex={props.tabIndex}
@@ -95,7 +93,7 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
 
-      {!canEdit && hasActiveDraft && (
+      {!canEdit && hasActiveDraft && accessLevels.canEditConnection && (
         <Link
           prefetch={false}
           tabIndex={props.tabIndex}
@@ -120,7 +118,7 @@ const ChangeRequestActionButtons = (props: {
         </Link>
       )}
 
-      {!canEdit && !hasActiveDraft && isAdmin && (
+      {!canEdit && !hasActiveDraft && accessLevels.canViewChangeRequest && (
         <Link
           href={{
             pathname: `/changerequest/${destTypeId}/${destId}`,
@@ -137,21 +135,6 @@ const ChangeRequestActionButtons = (props: {
             </IconButton>
           </Tooltip>
         </Link>
-      )}
-      {!canEdit && !hasActiveDraft && !isAdmin && (
-        <Tooltip arrow placement="left" title="Change request in process">
-          <span>
-            <IconButton
-              id={props.destTypeId + '_' + props.destId}
-              aria-label="edit"
-              color="primary"
-              disabled={!canEdit}
-              sx={draftButtonStyle}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
       )}
     </>
   )

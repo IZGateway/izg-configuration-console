@@ -40,7 +40,7 @@ const DeployConfirmation = (props) => {
       })
       // manually trigger revalidation to fetch the latest data from the server without refresh
       mutate(`/api/destinations/${props.destId}`)
-      router.push('/manage')
+      router.push('/manageconnections')
     } else {
       setAlert({
         level: 'error',

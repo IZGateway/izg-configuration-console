@@ -258,10 +258,10 @@ const EditConnection = (props: editConnectionProps) => {
         dest_type: destData.destination_type.type,
         message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}!`,
       })
-      router.push('/manage')
+      router.push('/manageconnections')
     } else {
       setHasCreateChangeRequestTicketError(true)
-      router.push('/manage')
+      router.push('/manageconnections')
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
       )

@@ -20,6 +20,7 @@ import logger from '../../../logger'
 import destination from '../../lib/queries/fetch/destination'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
+import isOperationsRole from '../../lib/security/accessutils'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 let destinationResult = null
@@ -68,7 +69,7 @@ export default Manage
 export const getServerSideProps = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions)
   const endpointStatuses = await fetchEndpointStatus(
-    session.user.isAdmin,
+    session.user.role,
     session.user.jurisdictions
   )
   const endpoints = []
@@ -99,7 +100,7 @@ export const getServerSideProps = async (context) => {
   return { props: { data: endpoints } }
 }
 
-const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
+const fetchEndpointStatus = async (role, jurisdictions) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
@@ -117,7 +118,7 @@ const fetchEndpointStatus = async (isAdmin, jurisdictions) => {
   )
   let hubURLS = configuredHubURLs.getIZGHubURLs()
 
-  if (!isAdmin) {
+  if (!isOperationsRole(role)) {
     hubURLS = appendJurisdictionsAssignedToUser(hubURLS, jurisdictions)
   }
 

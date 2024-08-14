@@ -17,6 +17,6 @@ export const menuItems: MenuItem[] = [
         fontSize="large"
       />
     ),
-    path: '/manage',
+    path: '/manageconnections',
   },
 ]
