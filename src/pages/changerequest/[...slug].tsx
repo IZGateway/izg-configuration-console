@@ -3,8 +3,6 @@ import * as React from 'react'
 import Container from '../../components/Container'
 import { Box } from '@mui/material'
 import ErrorBoundary from '../../components/ErrorBoundary'
-import { useRouter } from 'next/router'
-import { useEffect } from 'react'
 import DeployConnection from '../../components/DeployConnection/index'
 import Close from '../../components/Close'
 import { InferGetServerSidePropsType } from 'next'
@@ -17,28 +15,15 @@ import { authOptions } from '../api/auth/[...nextauth]'
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
-  const router = useRouter()
-  const { isReady, query } = router
-  const [destId, setDestId] = React.useState('')
-  const [destTypeId, setDestTypeId] = React.useState('')
-
-  useEffect(() => {
-    if (!isReady) return
-    setDestId(query.slug[1] as string)
-    setDestTypeId(query.slug[0] as string)
-  }, [isReady, query])
-
-  return !isReady ? (
-    <>Loading....</>
-  ) : (
+  return (
     <Container title="Change Request">
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
             <Close />
             <DeployConnection
-              destId={destId}
-              destTypeId={destTypeId}
+              destId={props.destId}
+              destTypeId={props.destTypeId}
               changerequestData={props.changerequestData}
               jiraUrl={props.jiraUrl}
             />
@@ -63,6 +48,8 @@ export const getServerSideProps = async (context) => {
       props: {
         changerequestData: JSON.parse(JSON.stringify(result)),
         jiraUrl: jiraUrl,
+        destId: destId as string,
+        destTypeId: destTypeId as unknown as string,
       },
     }
   }

@@ -17,7 +17,7 @@ describe('ResetDialog', () => {
     )
     expect(
       screen.getByText(
-        'Are you sure you want to revert to production values and lost this draft?'
+        'Are you sure you want to delete this draft and revert all data fields to their current production values?'
       )
     ).toBeInTheDocument()
     expect(

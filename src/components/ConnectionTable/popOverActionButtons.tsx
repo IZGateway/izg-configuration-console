@@ -5,6 +5,7 @@ import {
   ListItemText,
   ListItemIcon,
   Tooltip,
+  Box,
 } from '@mui/material'
 import Link from 'next/link'
 import palette from '../../styles/theme/palette'
@@ -147,7 +148,7 @@ const PopOverActionButtons = (props: {
           </MenuItem>
         )}
         {accessLevels.canScheduleMaintainance && (
-          <>
+          <Box>
             {props.hasActiveMaintenance ? (
               <MenuItem
                 id={'end_Maintenance' + props.destTypeId + '_' + props.destId}
@@ -169,7 +170,7 @@ const PopOverActionButtons = (props: {
                 <ListItemText>Maintenance</ListItemText>
               </MenuItem>
             )}
-          </>
+          </Box>
         )}
       </Menu>
       <MaintenanceDialog

@@ -1,5 +1,13 @@
 import React, { useContext } from 'react'
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
+import {
+  DataGrid,
+  GridColDef,
+  GridSlots,
+  GridToolbarContainer,
+  GridToolbarExport,
+  GridToolbarFilterButton,
+  GridToolbarQuickFilter,
+} from '@mui/x-data-grid'
 import {
   Box,
   Typography,
@@ -47,8 +55,6 @@ const dataGridCustom = {
     backgroundColor: palette.white,
   },
   '& .MuiDataGrid-toolbarContainer': {
-    display: 'flex',
-    flexDirection: 'row-reverse',
     backgroundColor: palette.white,
     padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
@@ -83,8 +89,32 @@ const dataGridCustom = {
   },
 }
 
+interface CustomToolbarProps {
+  setFilterButtonEl: React.Dispatch<
+    React.SetStateAction<HTMLButtonElement | null>
+  >
+}
+function CustomToolbar({ setFilterButtonEl }: CustomToolbarProps) {
+  return (
+    <GridToolbarContainer>
+      <GridToolbarQuickFilter />
+      <div style={{ marginLeft: 'auto' }}>
+        <GridToolbarExport
+          printOptions={{ disableToolbarButton: true }}
+          csvOptions={{
+            fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
+          }}
+        />
+        <GridToolbarFilterButton ref={setFilterButtonEl} />
+      </div>
+    </GridToolbarContainer>
+  )
+}
+
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const [filterButtonEl, setFilterButtonEl] =
+    React.useState<HTMLButtonElement | null>(null)
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
 
   const columns: GridColDef[] = [
@@ -124,7 +154,7 @@ const ConnectionsTable = (props) => {
       flex: 0.75,
       minWidth: 100,
       filterable: false,
-      valueFormatter: ({ value }) =>
+      valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
       renderCell: (params) => {
         const isConnected =
@@ -292,7 +322,6 @@ const ConnectionsTable = (props) => {
       </Box>
 
       <DataGrid
-        experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
         rows={props.data.map((endpoint) => {
           for (const [, value] of Object.entries(endpoint)) {
@@ -325,19 +354,16 @@ const ConnectionsTable = (props) => {
         }}
         density={'comfortable'}
         pagination
-        components={{ Toolbar: GridToolbar }}
+        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
         slotProps={{
           toolbar: {
+            setFilterButtonEl,
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
-            printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
-            csvOptions: {
-              fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
-            },
           },
           panel: {
-            placement: 'bottom-end',
+            anchorEl: filterButtonEl,
             sx: {
               '& .MuiTypography-root': {
                 fontSize: 20,
@@ -354,7 +380,7 @@ const ConnectionsTable = (props) => {
                 width: '100%',
               },
               '& .MuiDataGrid-paper': {
-                marginTop: '-73px',
+                marginTop: '16px',
                 paddingBottom: '3vh',
                 paddingTop: '1vh',
                 paddingRight: '1vh',
