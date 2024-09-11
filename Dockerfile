@@ -41,7 +41,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-var
 # Install filebeat
 
 RUN apk add curl libc6-compat
-ENV FILEBEAT_VERSION=8.9.0
+ENV FILEBEAT_VERSION=8.15.0
 RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz -o ./filebeat.tar.gz && \
     tar xzvf filebeat.tar.gz && \
     rm filebeat.tar.gz && \
