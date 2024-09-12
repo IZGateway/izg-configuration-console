@@ -307,8 +307,8 @@ function HomeComponent() {
               pb={1}
             >
               <Typography variant="caption">
-                Version 1.0.2-{process.env.NEXT_PUBLIC_BUILD_ID} | Immunization
-                (IZ) Gateway Configuration Console 2024
+                Version 1.2.0-SNAPSHOT-{process.env.NEXT_PUBLIC_BUILD_ID} |
+                Immunization (IZ) Gateway Configuration Console 2024
               </Typography>
               <Box
                 display={'flex'}
