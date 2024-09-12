@@ -105,7 +105,7 @@ jobs:
           tags: |
             type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
             type=raw,value=release,enable=${{ contains(github.ref, 'refs/heads/release/') }}
-            type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/develop' }}
           flavor: |
             latest=true
 
