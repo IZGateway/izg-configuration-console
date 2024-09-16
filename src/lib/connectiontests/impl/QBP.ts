@@ -13,7 +13,7 @@ import * as xml2js from 'xml2js'
 import { prismacontext } from '../../prismacontext'
 import logger from '../../../../logger'
 import _ from 'lodash'
-import { DOMParser } from 'xmldom'
+import { DOMParser } from '@xmldom/xmldom'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -157,7 +157,7 @@ export default class QBP extends ConnectionTest {
             )[0]
             let responseMessage: Element | null = null
             if (result) {
-              responseMessage = result
+              responseMessage = result as unknown as Element
             }
             logger.debug('HL7 Message: ' + responseMessage?.textContent)
             if (!responseMessage?.textContent) {
