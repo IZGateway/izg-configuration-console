@@ -8,7 +8,7 @@ import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
 import { StatusCodes } from 'http-status-codes'
-import { DOMParser } from 'xmldom'
+import { DOMParser } from '@xmldom/xmldom'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Connectivity Test'
@@ -98,6 +98,7 @@ export default class CONNECTIVITY extends ConnectionTest {
     return new Promise((resolve) => {
       const req = https.request(options, (res) => {
         let data = ''
+
         if (res.statusCode === StatusCodes.OK) {
           res.on('data', (chunk) => {
             data = data + chunk.toString()
@@ -112,12 +113,18 @@ export default class CONNECTIVITY extends ConnectionTest {
             )
             if (resXmlDoc.documentElement.getElementsByTagName('Body')) {
               try {
-                const responseEchoback = resXmlDoc.documentElement
-                  .getElementsByTagNameNS('*', 'Body')[0]
-                  .textContent.trim()
-                const requestEchoback = reqXmlDoc.documentElement
-                  .getElementsByTagNameNS('*', 'Body')[0]
-                  .textContent.trim()
+                const responseEchoback = (
+                  resXmlDoc.documentElement.getElementsByTagNameNS(
+                    '*',
+                    'Body'
+                  )[0] as unknown as Element
+                ).textContent.trim()
+                const requestEchoback = (
+                  reqXmlDoc.documentElement.getElementsByTagNameNS(
+                    '*',
+                    'Body'
+                  )[0] as unknown as Element
+                ).textContent.trim()
 
                 if (requestEchoback === responseEchoback) {
                   resolve([
