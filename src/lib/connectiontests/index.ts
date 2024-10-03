@@ -147,7 +147,7 @@ const connectionTest = async (destination: any, userId: string) => {
     let skipTests = false
     for (const test in testSuiteKeys) {
       ++testCounter
-
+      logger.debug(`Running test number ${testCounter} : ${TestSuite[test]}`)
       let result: ConnectionTestResult[] = [
         {
           name: TestSuite[test],
@@ -173,6 +173,7 @@ const connectionTest = async (destination: any, userId: string) => {
         }
         connectionTestRequest.ip = result[0]?.detail
       }
+      logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
 
     connectionTestResult.destId = destination.dest_id || 'unknown'

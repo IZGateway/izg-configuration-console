@@ -7,8 +7,7 @@ import { prismacontext } from '../../prismacontext'
 import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
-import { StatusCodes } from 'http-status-codes'
-import { DOMParser } from '@xmldom/xmldom'
+import { DOMParser, Document } from '@xmldom/xmldom'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Connectivity Test'
@@ -51,10 +50,10 @@ export default class CONNECTIVITY extends ConnectionTest {
         <To xmlns="http://www.w3.org/2005/08/addressing">http://www.w3.org/2005/08/addressing/anonymous</To>
         </soap:Header>
         <soap:Body>
-        <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014" xmlns:ns2="urn:cdc:iisb:hub:2014" xmlns:ns3="urn:cdc:iisb:2011">
-            <echoBack>Wishing ${this.connectionTestRequest.hostname} : ${
+        <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014">
+            <EchoBack>Wishing ${this.connectionTestRequest.hostname} : ${
           this.connectionTestRequest.port
-        } an Audacious Hello at ${new Date()} !</echoBack>
+        } an Audacious Hello at ${new Date()} !</EchoBack>
         </ConnectivityTestRequest>
         </soap:Body>
         </soap:Envelope>`
@@ -99,100 +98,31 @@ export default class CONNECTIVITY extends ConnectionTest {
       const req = https.request(options, (res) => {
         let data = ''
 
-        if (res.statusCode === StatusCodes.OK) {
-          res.on('data', (chunk) => {
-            data = data + chunk.toString()
-          })
+        //if (res.statusCode === StatusCodes.OK) {
+        res.on('data', (chunk) => {
+          data = data + chunk.toString()
+        })
 
-          res.on('end', function () {
-            const parser = new DOMParser()
-            const resXmlDoc = parser.parseFromString(data, 'text/xml')
-            const reqXmlDoc = parser.parseFromString(
-              setRequestBody(destinationVersion),
-              'text/xml'
-            )
-            if (resXmlDoc.documentElement.getElementsByTagName('Body')) {
-              try {
-                const responseEchoback = (
-                  resXmlDoc.documentElement.getElementsByTagNameNS(
-                    '*',
-                    'Body'
-                  )[0] as unknown as Element
-                ).textContent.trim()
-                const requestEchoback = (
-                  reqXmlDoc.documentElement.getElementsByTagNameNS(
-                    '*',
-                    'Body'
-                  )[0] as unknown as Element
-                ).textContent.trim()
-
-                if (requestEchoback === responseEchoback) {
-                  resolve([
-                    {
-                      ...connectivityTestResult,
-                      detail: responseEchoback,
-                      message: null,
-                      status: TestStatus.PASS,
-                    },
-                  ])
-                } else if (responseEchoback?.includes(requestEchoback)) {
-                  resolve([
-                    {
-                      ...connectivityTestResult,
-                      detail: responseEchoback,
-                      message: TestResponseMessages.CONNECTIVITY_WARNING(
-                        requestEchoback,
-                        responseEchoback
-                      ),
-                      status: TestStatus.WARNING,
-                    },
-                  ])
-                } else if (
-                  requestEchoback !== responseEchoback ||
-                  !responseEchoback?.includes(requestEchoback)
-                ) {
-                  resolve([
-                    {
-                      ...connectivityTestResult,
-                      detail: responseEchoback,
-                      message:
-                        TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
-                      status: TestStatus.FAIL,
-                    },
-                  ])
-                }
-              } catch (err) {
-                resolve([
-                  {
-                    ...connectivityTestResult,
-                    detail: err,
-                    message:
-                      TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
-                    status: TestStatus.FAIL,
-                  },
-                ])
-              }
-            } else {
-              resolve([
-                {
-                  ...connectivityTestResult,
-                  detail: data,
-                  message: TestResponseMessages.CONNECTIVITY_NO_BODY,
-                  status: TestStatus.FAIL,
-                },
-              ])
-            }
-          })
-        } else {
-          resolve([
-            {
-              ...connectivityTestResult,
-              detail: res.statusCode + ': ' + res.statusMessage,
-              message: TestResponseMessages.CONNECTIVITY_NOT_CONNECT,
-              status: TestStatus.FAIL,
-            },
-          ])
-        }
+        res.on('end', function () {
+          const parser = new DOMParser()
+          const resXmlDoc = parser.parseFromString(data, 'text/xml')
+          const reqXmlDoc = parser.parseFromString(
+            setRequestBody(destinationVersion),
+            'text/xml'
+          )
+          if (docHasBody(resXmlDoc)) {
+            processBody(resXmlDoc, reqXmlDoc, resolve, connectivityTestResult)
+          } else {
+            resolve([
+              {
+                ...connectivityTestResult,
+                detail: data,
+                message: TestResponseMessages.CONNECTIVITY_NO_BODY,
+                status: TestStatus.FAIL,
+              },
+            ])
+          }
+        })
       })
 
       req.on('error', (error) => {
@@ -200,6 +130,7 @@ export default class CONNECTIVITY extends ConnectionTest {
           this.unknownErrorResult(connectivityTestResult, error, options),
         ])
       })
+
       req.write(setRequestBody(destinationVersion))
       req.end()
     })
@@ -223,6 +154,80 @@ export default class CONNECTIVITY extends ConnectionTest {
       message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
       status: TestStatus.FAIL,
     }
+  }
+}
+
+function docHasBody(resXmlDoc: Document) {
+  return (
+    resXmlDoc.documentElement.getElementsByTagNameNS('*', 'Body').length > 0
+  )
+}
+
+function processBody(
+  resXmlDoc: Document,
+  reqXmlDoc: Document,
+  resolve: (
+    value: ConnectionTestResult[] | PromiseLike<ConnectionTestResult[]>
+  ) => void,
+  connectivityTestResult: ConnectionTestResult
+) {
+  try {
+    const responseEchoback = (
+      resXmlDoc.documentElement.getElementsByTagNameNS(
+        '*',
+        'Body'
+      )[0] as unknown as Element
+    ).textContent.trim()
+    const requestEchoback = (
+      reqXmlDoc.documentElement.getElementsByTagNameNS(
+        '*',
+        'Body'
+      )[0] as unknown as Element
+    ).textContent.trim()
+
+    if (requestEchoback === responseEchoback) {
+      resolve([
+        {
+          ...connectivityTestResult,
+          detail: responseEchoback,
+          message: null,
+          status: TestStatus.PASS,
+        },
+      ])
+    } else if (responseEchoback?.includes(requestEchoback)) {
+      resolve([
+        {
+          ...connectivityTestResult,
+          detail: responseEchoback,
+          message: TestResponseMessages.CONNECTIVITY_WARNING(
+            requestEchoback,
+            responseEchoback
+          ),
+          status: TestStatus.WARNING,
+        },
+      ])
+    } else if (
+      requestEchoback !== responseEchoback ||
+      !responseEchoback?.includes(requestEchoback)
+    ) {
+      resolve([
+        {
+          ...connectivityTestResult,
+          detail: responseEchoback,
+          message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+          status: TestStatus.FAIL,
+        },
+      ])
+    }
+  } catch (err) {
+    resolve([
+      {
+        ...connectivityTestResult,
+        detail: err,
+        message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
+        status: TestStatus.FAIL,
+      },
+    ])
   }
 }
 

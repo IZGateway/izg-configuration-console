@@ -1,14 +1,11 @@
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
-import https from 'https'
-import { TestResponseMessages } from '../TestResponseMessages'
-import path from 'path'
-import * as fs from 'fs'
+import * as tls from 'tls'
 
 const TEST_NAME = 'Cipher Suites Appropriate'
 export default class CIPHER extends ConnectionTest {
-  private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string[] = [
+  private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string = [
     'TLS_AES_256_GCM_SHA384',
     'TLS_AES_128_GCM_SHA256',
     'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384',
@@ -19,7 +16,7 @@ export default class CIPHER extends ConnectionTest {
     'TLS_DHE_DSS_WITH_AES_256_GCM_SHA384',
     'TLS_DHE_RSA_WITH_AES_128_GCM_SHA256',
     'TLS_DHE_DSS_WITH_AES_128_GCM_SHA256',
-  ]
+  ].join(':')
 
   run = (): Promise<ConnectionTestResult[]> => {
     const cipherConnectionTestResult: ConnectionTestResult = {
@@ -30,75 +27,62 @@ export default class CIPHER extends ConnectionTest {
       status: this.status,
     }
 
-    const httpsAgentOptions = {
-      cert: fs.readFileSync(
-        path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`
-      ),
-      key: fs.readFileSync(
-        path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8'
-      ),
-      passphrase: this.connectionTestRequest.passphrase,
-      rejectUnauthorized: false,
-      keepAlive: true,
-    }
-
-    const options = {
-      hostname: this.connectionTestRequest.hostname,
-      port: this.connectionTestRequest.port,
-      path: this.connectionTestRequest.path,
-      agent: new https.Agent(httpsAgentOptions),
-    }
-
     return new Promise((resolve) => {
-      const req = https.request(options, (res) => {
-        resolve([
+      tls
+        .connect(
           {
-            ...cipherConnectionTestResult,
-            detail: JSON.stringify((res.socket as any).getCipher()),
-            status: this.isAcceptableCipher(
-              (res.socket as any).getCipher().standardName
-            )
-              ? TestStatus.PASS
-              : TestStatus.FAIL,
+            host: this.connectionTestRequest.hostname,
+            port: this.connectionTestRequest.port,
+            //path: this.connectionTestRequest.path,
+            rejectUnauthorized: false,
+            ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
+            secureProtocol: 'TLSv1_2_method',
+            // // or for node v10.16.0+:
+            // minVersion: 'TLSv1.2',
+            // maxVersion: 'TLSv1.2',
           },
-        ])
-      })
-
-      req.on('error', (error) => {
-        resolve([
-          {
-            ...cipherConnectionTestResult,
-            detail: error.message,
-            message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
-            status: TestStatus.FAIL,
-          },
-        ])
-      })
-
-      req.end()
+          function () {
+            resolve([
+              {
+                ...cipherConnectionTestResult,
+                detail: `Cipher Suites Appropriate test passed`,
+                status: TestStatus.PASS,
+              },
+            ])
+          }
+        )
+        .on('error', function (err) {
+          resolve([
+            {
+              ...cipherConnectionTestResult,
+              detail: `${err.message}`,
+              message: `Cipher Suites Appropriate test failed with error: ${err.message}`,
+              status: TestStatus.FAIL,
+            },
+          ])
+        })
+        .on('secureConnect', function () {
+          console.log(
+            `DEBUG ---> Cipher Suites Appropriate test connected successfully using ciphers: ${JSON.stringify(
+              this.getCipher()
+            )}`
+          )
+        })
+        .on('close', function () {
+          console.log(
+            `DEBUG ---> Cipher Suites Appropriate test connection closed`
+          )
+        })
+        .on('data', function (data) {
+          console.log(
+            `DEBUG ---> Cipher Suites Appropriate test received data: ${data}`
+          )
+        })
+        .on('message', function (msg) {
+          console.log(
+            `DEBUG ---> Cipher Suites Appropriate test received message: ${msg}`
+          )
+        })
     })
-  }
-
-  isAcceptableCipher(cipher: string) {
-    if (this.isFIPSCipher(cipher) && !this.isCBCCipher(cipher)) {
-      return true
-    }
-    return false
-  }
-
-  isFIPSCipher(cipher: string) {
-    if (CIPHER.IZG_ACCEPTED_FIPS_CIPHERS.includes(cipher)) {
-      return true
-    }
-    return false
-  }
-
-  isCBCCipher(cipher: string) {
-    if (cipher.toLocaleLowerCase().includes('cbc')) {
-      return true
-    }
-    return false
   }
 }

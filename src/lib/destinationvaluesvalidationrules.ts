@@ -2,11 +2,6 @@ const facilityAndMSHValidationMessage =
   'Value must be between 0-25 characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters'
 
 const validationRules = {
-  username: {
-    regex: /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/,
-    message:
-      'Username must be at least 8 characters, and contain one uppercase letter and one number',
-  },
   newPassword: {
     regex:
       /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,

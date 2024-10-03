@@ -52,7 +52,7 @@ module.exports = async (phase, { defaultConfig }) => {
   }
 
   const logger = winston.createLogger({
-    level: process.env.LOG_LEVEL || 'info',
+    level: process.env.LOG_LEVEL || 'debug',
     format: ecsFormat({ convertReqRes: true, apmIntegration: false }),
     transports: [new winston.transports.Console()],
     exitOnError: false,

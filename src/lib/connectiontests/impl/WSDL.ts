@@ -64,24 +64,43 @@ export default class WSDL extends ConnectionTest {
                   },
                 ])
               } else {
-                targetNameSpace =
-                  result.definitions.$.targetNamespace.toString()
-                if (
-                  targetNameSpace === 'urn:cdc:iisb:2014' ||
-                  targetNameSpace === 'urn:cdc:iisb:2011'
-                ) {
+                try {
+                  if (result['definitions']?.$.targetNamespace) {
+                    targetNameSpace =
+                      result['definitions']?.$.targetNamespace.toString()
+                  } else if (result['wsdl:definitions']?.$.targetNamespace) {
+                    targetNameSpace =
+                      result['wsdl:definitions']?.$.targetNamespace.toString()
+                  }
+                  if (
+                    targetNameSpace === 'urn:cdc:iisb:2014' ||
+                    targetNameSpace === 'urn:cdc:iisb:2011'
+                  ) {
+                    resolve([
+                      {
+                        ...wsdlConnectionTestResult,
+                        detail: targetNameSpace,
+                        status: TestStatus.PASS,
+                      },
+                    ])
+                  } else {
+                    resolve([
+                      {
+                        ...wsdlConnectionTestResult,
+                        detail: targetNameSpace,
+                        message:
+                          TestResponseMessages.WSDL_NOT_SUPPORTED(
+                            targetNameSpace
+                          ),
+                        status: TestStatus.FAIL,
+                      },
+                    ])
+                  }
+                } catch (err) {
                   resolve([
                     {
                       ...wsdlConnectionTestResult,
-                      detail: targetNameSpace,
-                      status: TestStatus.PASS,
-                    },
-                  ])
-                } else {
-                  resolve([
-                    {
-                      ...wsdlConnectionTestResult,
-                      detail: targetNameSpace,
+                      detail: 'Unable to parse targetNamespace',
                       message:
                         TestResponseMessages.WSDL_NOT_SUPPORTED(
                           targetNameSpace
