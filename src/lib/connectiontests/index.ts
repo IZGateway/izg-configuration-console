@@ -98,13 +98,17 @@ const connectionTest = async (destination: any, userId: string) => {
     connectionTestResult.testResults = [
       {
         name: '',
-        detail:
-          "No tests were run because the requested destination's URL is malformed.",
+        detail: `No tests were run because the requested destination's URL [ ${destination.dest_uri} ]is malformed.`,
         status: null,
         order: -1,
         message: `The URL retrieved for ${destination.dest_id} is malformed`,
       },
     ]
+    logger.error(
+      `URL for destination is malformed: ${JSON.stringify(
+        connectionTestResult.testResults
+      )}`
+    )
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else {
     const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
@@ -167,6 +171,9 @@ const connectionTest = async (destination: any, userId: string) => {
       }
 
       testResults.push(...result)
+      logger.debug(
+        `${TestSuite[test]} results: ${JSON.stringify(result, null, 3)}`
+      )
       if (TestSuite.dns || TestSuite.tcp) {
         if (result[0]?.status === TestStatus.FAIL) {
           skipTests = true
@@ -218,7 +225,7 @@ const getHostNameFromCert = () => {
       }
     }
   } catch (error) {
-    console.error('Error reading certificate for hostname:', error)
+    logger.error('Error reading certificate for hostname:', error)
   }
   return hostname
 }

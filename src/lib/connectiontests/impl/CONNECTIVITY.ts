@@ -189,7 +189,7 @@ function processBody(
       resolve([
         {
           ...connectivityTestResult,
-          detail: responseEchoback,
+          detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
           message: null,
           status: TestStatus.PASS,
         },
@@ -198,7 +198,7 @@ function processBody(
       resolve([
         {
           ...connectivityTestResult,
-          detail: responseEchoback,
+          detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
           message: TestResponseMessages.CONNECTIVITY_WARNING(
             requestEchoback,
             responseEchoback
@@ -213,7 +213,7 @@ function processBody(
       resolve([
         {
           ...connectivityTestResult,
-          detail: responseEchoback,
+          detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
           message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
           status: TestStatus.FAIL,
         },

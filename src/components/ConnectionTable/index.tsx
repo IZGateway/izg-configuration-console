@@ -338,7 +338,6 @@ const ConnectionsTable = (props) => {
           pagination: { paginationModel: { pageSize } },
           columns: {
             columnVisibilityModel: {
-              destId: false,
               destTypeId: false,
             },
           },
