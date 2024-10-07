@@ -45,7 +45,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   const fetchEndpointStatus = async (destId, count) => {
-    const endpoint = `${configuredHubURLs.getIZGHubURL(destTypeId)}/${destId}`
+    const configuredEndpoint = configuredHubURLs.getIZGHubURL(destTypeId)
+    const endpoint = `${configuredEndpoint}/${destId}`
     const responseData = await axios
       .get(endpoint, {
         httpsAgent: new https.Agent(httpsAgentOptions),
