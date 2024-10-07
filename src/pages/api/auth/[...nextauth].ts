@@ -52,7 +52,7 @@ export const authOptions = {
             },
           })
           const data = await response.json()
-          token.jurisdictions = data?.jurisdictions?.map((j) => _.lowerCase(j))
+          token.jurisdictions = data?.jurisdictions?.map((j) => j.toLowerCase())
         } catch (err) {
           logger.error('ERROR FETCHING USER INFO FROM OKTA: ' + err)
         }
