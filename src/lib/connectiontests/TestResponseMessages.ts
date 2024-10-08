@@ -39,6 +39,7 @@ export class TestResponseMessages {
     responseEchoback: string
   ) => `IZ Gateway expected ${testEchoback} but got back ${responseEchoback}.`
 
+  public static readonly STATUS_NOT_OK = `Response from the server was not OK`
   public static readonly SERVER_ERROR = `We cannot connect right now. Please try again later`
   public static readonly HL7MESSAGE_NOT_PRESENT = `Response message did not contain any HL7 message`
   public static readonly HL7MESSAGE_CANNOT_PARSE = `There is an error parsing HL7 message from response message`

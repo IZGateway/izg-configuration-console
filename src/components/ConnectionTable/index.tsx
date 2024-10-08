@@ -120,9 +120,10 @@ const ConnectionsTable = (props) => {
   const columns: GridColDef[] = [
     {
       field: 'destId',
-      headerName: 'Dest ID',
+      headerName: 'DESTINATION ID',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 200,
     },
     {
       field: 'destTypeId',
@@ -135,24 +136,28 @@ const ConnectionsTable = (props) => {
       headerName: 'ENVIRONMENT',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 200,
     },
     {
       field: 'jurisdictionName',
       headerName: 'ORGANIZATION',
       flex: 0.5,
       minWidth: 25,
+      maxWidth: 250,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 1000,
     },
     {
       field: 'status',
       headerName: 'STATUS',
       flex: 0.75,
       minWidth: 100,
+      maxWidth: 1000,
       filterable: false,
       valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -338,7 +343,6 @@ const ConnectionsTable = (props) => {
           pagination: { paginationModel: { pageSize } },
           columns: {
             columnVisibilityModel: {
-              destId: false,
               destTypeId: false,
             },
           },

@@ -249,10 +249,7 @@ const Identify = (props: any) => {
                 }}
                 sx={{ marginTop: 1 }}
               />
-              <Typography fontSize={'12px'}>
-                Username must be at least 8 characters, and contain one
-                uppercase letter and one number.
-              </Typography>
+
               <TextField
                 id="username"
                 name="username"

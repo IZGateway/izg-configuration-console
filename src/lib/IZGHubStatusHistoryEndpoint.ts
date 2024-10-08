@@ -16,11 +16,28 @@ export default class IZGHubStatusHistoryEndpoint {
   }
 
   getIZGHubURL(id: number | string) {
+    let url = null
     if (_.isNumber(id)) {
-      return this.statusHistoryURLs.find((endpoint) => endpoint.typeId === id)
-        .url
+      url =
+        this.statusHistoryURLs.find((endpoint) => endpoint.typeId === id)
+          ?.url || null
+    } else {
+      url =
+        this.statusHistoryURLs.find((endpoint) => endpoint.desc === id)?.url ||
+        null
     }
-    return this.statusHistoryURLs.find((endpoint) => endpoint.desc === id).url
+
+    if (!url) {
+      throw new Error(
+        `The configured IZG_STATUS_ENDPOINT_URL environment variable does not have a URL for dest type ${id}. Configured URLs: ${JSON.stringify(
+          this.statusHistoryURLs,
+          null,
+          2
+        )}`
+      )
+    }
+
+    return url
   }
 
   getIZGHubURLs() {
