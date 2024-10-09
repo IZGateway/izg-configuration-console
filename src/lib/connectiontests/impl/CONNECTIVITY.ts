@@ -218,7 +218,7 @@ function processBody(
             requestEchoback,
             responseEchoback
           ),
-          status: TestStatus.WARNING,
+          status: TestStatus.PASS,
         },
       ])
     } else if (
