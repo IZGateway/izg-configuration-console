@@ -42,7 +42,7 @@ const DeployConnection = (props) => {
         >
           {changerequestData.destinations.jurisdiction.description}{' '}
           {changerequestData.destinations.destination_type.type} changes
-          scheduled for {humanReadableScheduledTime.toLocaleString()}
+          requested for {humanReadableScheduledTime.toLocaleString()}
         </Typography>
       </Box>
       <Box
