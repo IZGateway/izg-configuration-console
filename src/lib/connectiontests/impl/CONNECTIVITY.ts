@@ -105,19 +105,30 @@ export default class CONNECTIVITY extends ConnectionTest {
 
         res.on('end', function () {
           const parser = new DOMParser()
-          const resXmlDoc = parser.parseFromString(data, 'text/xml')
-          const reqXmlDoc = parser.parseFromString(
-            setRequestBody(destinationVersion),
-            'text/xml'
-          )
-          if (docHasBody(resXmlDoc)) {
-            processBody(resXmlDoc, reqXmlDoc, resolve, connectivityTestResult)
-          } else {
+          try {
+            const resXmlDoc = parser.parseFromString(data, 'text/xml')
+            const reqXmlDoc = parser.parseFromString(
+              setRequestBody(destinationVersion),
+              'text/xml'
+            )
+            if (docHasBody(resXmlDoc)) {
+              processBody(resXmlDoc, reqXmlDoc, resolve, connectivityTestResult)
+            } else {
+              resolve([
+                {
+                  ...connectivityTestResult,
+                  detail: data,
+                  message: TestResponseMessages.CONNECTIVITY_NO_BODY,
+                  status: TestStatus.FAIL,
+                },
+              ])
+            }
+          } catch (err) {
             resolve([
               {
                 ...connectivityTestResult,
                 detail: data,
-                message: TestResponseMessages.CONNECTIVITY_NO_BODY,
+                message: `Error parsing response: ${err}`,
                 status: TestStatus.FAIL,
               },
             ])
@@ -158,9 +169,13 @@ export default class CONNECTIVITY extends ConnectionTest {
 }
 
 function docHasBody(resXmlDoc: Document) {
-  return (
-    resXmlDoc.documentElement.getElementsByTagNameNS('*', 'Body').length > 0
-  )
+  try {
+    return (
+      resXmlDoc.documentElement.getElementsByTagNameNS('*', 'Body').length > 0
+    )
+  } catch (err) {
+    return false
+  }
 }
 
 function processBody(
