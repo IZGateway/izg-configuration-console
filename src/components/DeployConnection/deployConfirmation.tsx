@@ -5,9 +5,6 @@ import {
   Card,
   CardContent,
   Divider,
-  Button,
-  Tooltip,
-  Chip,
   Box,
 } from '@mui/material'
 import { mutate } from 'swr'
@@ -65,24 +62,6 @@ const DeployConfirmation = (props) => {
         }}
       >
         <CardHeader title="Confirmation" />
-        {/* <Tooltip
-          title={
-            <div>
-              To be deployed on <br />
-              {humanReadableScheduledTime.toLocaleString()}
-            </div>
-          }
-          placement="bottom"
-        >
-          <Chip
-            label={props.status}
-            variant="filled"
-            color="secondary"
-            sx={{
-              borderRadius: '4px',
-            }}
-          />
-        </Tooltip> */}
       </Box>
 
       <Divider />
