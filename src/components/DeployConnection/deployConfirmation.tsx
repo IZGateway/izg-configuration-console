@@ -65,7 +65,7 @@ const DeployConfirmation = (props) => {
         }}
       >
         <CardHeader title="Confirmation" />
-        <Tooltip
+        {/* <Tooltip
           title={
             <div>
               To be deployed on <br />
@@ -82,7 +82,7 @@ const DeployConfirmation = (props) => {
               borderRadius: '4px',
             }}
           />
-        </Tooltip>
+        </Tooltip> */}
       </Box>
 
       <Divider />
@@ -117,7 +117,7 @@ const DeployConfirmation = (props) => {
             <LaunchIcon sx={{ marginLeft: 1 }} />
           </Button>
           <Typography variant="subtitle2" align="right">
-            <strong>Scheduled On:</strong>
+            <strong>To be deployed on:</strong>
             <br />
             {humanReadableScheduledTime.toLocaleString()}
           </Typography>

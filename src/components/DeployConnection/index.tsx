@@ -14,6 +14,7 @@ const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 const DeployConnection = (props) => {
   const { changerequestData } = props
   const accessLevels: ChangeRequestPageAccessControl = useRoleAccess()
+  const humanReadableScheduledTime = new Date(changerequestData.scheduledAt)
   const {
     data: changerequestStatusData,
     error: changerequestStatusError,
@@ -39,9 +40,9 @@ const DeployConnection = (props) => {
           fontSize="32px"
           id="title-change-request"
         >
-          View Change Request for{' '}
           {changerequestData.destinations.jurisdiction.description}{' '}
-          {changerequestData.destinations.destination_type.type}
+          {changerequestData.destinations.destination_type.type} changes
+          scheduled for {humanReadableScheduledTime.toLocaleString()}
         </Typography>
       </Box>
       <Box
@@ -57,40 +58,30 @@ const DeployConnection = (props) => {
           {accessLevels.canRunHealthCheck && (
             <HealthCheck destId={props.destId} destTypeId={props.destTypeId} />
           )}
-          {accessLevels.canDeployChange ? (
-            status === JIRA_STATUS_FOR_DEPLOY ? (
+          {accessLevels.canDeployChange &&
+            status === JIRA_STATUS_FOR_DEPLOY && (
               <DeployConfirmation
                 destId={props.destId}
                 destTypeId={props.destTypeId}
                 submittingValue={changerequestData}
                 status={status}
               />
-            ) : (
-              <>
-                {accessLevels.canViewJiraTicket && (
-                  <ViewChangeRequestTicket
-                    {...changerequestData}
-                    status={status}
-                    jiraUrl={props.jiraUrl}
-                  />
-                )}
-                {accessLevels.canRescheduleRequest && (
-                  <MakeChanges
-                    destId={props.destId}
-                    destTypeId={props.destTypeId}
-                  />
-                )}
-              </>
-            )
-          ) : (
-            status !== JIRA_STATUS_FOR_DEPLOY &&
+            )}
+          {/* {accessLevels.canViewJiraTicket && ( */}
+          <ViewChangeRequestTicket
+            {...changerequestData}
+            status={status}
+            jiraUrl={props.jiraUrl}
+          />
+          {/* )} */}
+
+          {status !== JIRA_STATUS_FOR_DEPLOY &&
             accessLevels.canRescheduleRequest && (
               <MakeChanges
                 destId={props.destId}
                 destTypeId={props.destTypeId}
               />
-            )
-          )}
+            )}
         </Box>
         <Box sx={{ width: '66%' }}>
           {accessLevels.canViewDetails && (
