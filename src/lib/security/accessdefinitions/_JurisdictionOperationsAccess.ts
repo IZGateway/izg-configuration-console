@@ -39,7 +39,6 @@ const JurisdictionOperationsAccess: PageControls = {
   changerequest: {
     ...defaultChangeRequestPageAccessControl,
     canRunHealthCheck: true,
-    canViewJiraTicket: true,
     canRescheduleRequest: true,
     canCancelRequest: true,
     canViewDetails: true,

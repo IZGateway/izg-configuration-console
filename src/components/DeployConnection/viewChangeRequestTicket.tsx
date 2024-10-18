@@ -31,7 +31,7 @@ const ViewChangeRequestTicket = (props: any) => {
           marginRight: 4,
         }}
       >
-        <CardHeader title="JIRA Ticket Status" />
+        <CardHeader title="Change Request Status" />
         <Tooltip
           title={
             <div>
