@@ -232,7 +232,32 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {params.row.hasActiveMaint ? (
+              {params.row.hasFutureMaint && !params.row.hasActiveMaint && (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography sx={{ color: palette.warningDark }}>
+                    This connection will be under maintenance from{' '}
+                    {moment(
+                      new Date(params.row.getMaintenaceValues.maint_start)
+                    ).format('MMM DD, YYYY [at] h:mm A')}{' '}
+                    {_.isNull(params.row.getMaintenaceValues) ? (
+                      'ended by user'
+                    ) : (
+                      <>
+                        <br />
+                        until{' '}
+                        {moment(
+                          new Date(params.row.getMaintenaceValues.maint_end)
+                        ).format('MMM DD, YYYY [at] h:mm A')}
+                      </>
+                    )}
+                  </Typography>
+                  <ErrorOutlineIcon
+                    fontSize="small"
+                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                  />
+                </Box>
+              )}
+              {params.row.hasActiveMaint && !params.row.hasFutureMaint && (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography sx={{ color: palette.errorDark }}>
                     This connection is under maintenance until{' '}
@@ -247,17 +272,26 @@ const ConnectionsTable = (props) => {
                     sx={{ marginLeft: 0.5, color: palette.errorDark }}
                   />
                 </Box>
-              ) : !isConnected ? (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography>Not Connected</Typography>
-                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography>Connected</Typography>
-                  <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
-                </Box>
               )}
+              {!isConnected &&
+                !params.row.hasActiveMaint &&
+                !params.row.hasFutureMaint && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography>Not Connected</Typography>
+                    <ErrorOutlineIcon
+                      fontSize="small"
+                      sx={{ marginLeft: 0.5 }}
+                    />
+                  </Box>
+                )}
+              {isConnected &&
+                !params.row.hasActiveMaint &&
+                !params.row.hasFutureMaint && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography>Connected</Typography>
+                    <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                  </Box>
+                )}
             </Typography>
           </Tooltip>
         )
