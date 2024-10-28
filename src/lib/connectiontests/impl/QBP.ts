@@ -98,7 +98,7 @@ export default class QBP extends ConnectionTest {
       rejectUnauthorized: false,
       keepAlive: true,
     }
-    const isVersion2014 = destination.dest_version === '2014'
+    const isVersion2014 = destination.dest_version !== '2011'
     const options = {
       hostname: this.connectionTestRequest.hostname,
       port: this.connectionTestRequest.port,
@@ -151,15 +151,16 @@ export default class QBP extends ConnectionTest {
             const xmlDoc = parser.parseFromString(data, 'text/xml')
             const elementName = isVersion2014 ? 'Hl7Message' : 'hl7Message'
             const namespace = isVersion2014 ? 'urn:cdc:iisb:2014' : 'urn:cdc:iisb:2011'
-            const result = xmlDoc.documentElement.getElementsByTagNameNS(
+            const results = xmlDoc.documentElement.getElementsByTagNameNS(
               namespace,
               elementName
-            )[0]
+            )
+            const result = results.length == 0 ? null : results[0]
             let responseMessage: Element | null = null
             if (result) {
               responseMessage = result as unknown as Element
             }
-            logger.debug('HL7 Message: ' + responseMessage?.textContent)
+            logger.info('SOAP Message: ' + data)
             if (!responseMessage?.textContent) {
               resolve([
                 {
