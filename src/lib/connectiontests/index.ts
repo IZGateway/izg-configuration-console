@@ -1,4 +1,5 @@
 import logger from '../../../logger'
+import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
@@ -14,7 +15,7 @@ const connectionTest = async (destination: any, userId: string) => {
     'cipher',
     'wsdl',
     'connectivity',
-    // 'qbp',
+    'qbp',
   }
 
   const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
@@ -46,13 +47,13 @@ const connectionTest = async (destination: any, userId: string) => {
     }
   }
 
-  const setHostnameIfNull = (url) => {
+  const setHostnameIfNull = (dest) => {
     let hostname
-    if (!hasHostname(url)) {
-      hostname = 'https://' + getHostNameFromCert()
-      return hostname + url
+    if (!hasHostname(dest?.dest_uri)) {
+      hostname = 'https://' + getHostNameFromType(dest)
+      return hostname + dest?.dest_uri
     } else {
-      return url
+      return dest?.dest_uri
     }
   }
 
@@ -77,7 +78,7 @@ const connectionTest = async (destination: any, userId: string) => {
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else if (
     destination &&
-    !isValidUrl(setHostnameIfNull(destination.dest_uri))
+    !isValidUrl(setHostnameIfNull(destination))
   ) {
     if (changeRequestDestination) {
       destType = destination?.destinations.destination_type.type
@@ -126,7 +127,7 @@ const connectionTest = async (destination: any, userId: string) => {
       jurisdictionDescription = destination.jurisdiction.description
     }
     const destIdURL = convertUrlStringToUrlObject(
-      setHostnameIfNull(destination?.dest_uri)
+      setHostnameIfNull(destination)
     )
 
     const connectionTestRequest: ConnectionTestRequest = {
@@ -211,21 +212,12 @@ const isValidUrl = (urlString: string) => {
   }
 }
 
-const getHostNameFromCert = () => {
-  let hostname = ''
-  try {
-    const certPem = fs.readFileSync(process.env.IZG_ENDPOINT_CRT_PATH, 'utf8')
-    const cert = forge.pki.certificateFromPem(certPem)
-
-    const subjectAttributes = cert.subject.attributes
-    for (const attribute of subjectAttributes) {
-      if (attribute.shortName === 'CN') {
-        hostname = attribute.value
-        break
-      }
-    }
-  } catch (error) {
-    logger.error('Error reading certificate for hostname:', error)
-  }
-  return hostname
+const getHostNameFromType = (dest: any) => {
+  const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
+  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(IZG_STATUS_ENDPOINT_URL)
+    // if there is no hostname, then the URL is local, and so the endpoint 
+    // is where you would get status history from for the same destination
+  let base = new URL(configuredHubURLs.getIZGHubURL(dest.destination_type.type_id))
+  let url = new URL(dest.dest_uri, base)
+  return url.host
 }

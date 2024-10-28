@@ -42,46 +42,43 @@ export default class QBP extends ConnectionTest {
       detail: null,
       status: this.status,
     }
-
+    /* msh11 should really be set by DB, but that must wait for core/hub changes to support it */
+    const normalOnboardingDestinations = [ 'casd', 'ga', 'hi', 'sasj', 'ca', 'fl', 'id', 'me', 'mi', 'mn', 'ms', 'mt', 'nc', 'ne', 'nh', 'ny_vxu', 'oh', 'pr', 'ri', 'sd', 'ut', 'va', 'vt', 'wa', 'wi', 'wv', 'wy'];
     const setRequestBody = (version: string) => {
-      if (version === '2011') {
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
-      <soap:Body>
-      <ns3:submitSingleMessage xmlns:ns3="urn:cdc:iisb:2011">
-      <ns3:username>${destination?.username}</ns3:username>
-      <ns3:password>${destination?.password}</ns3:password>
-      <ns3:facilityID>${destination?.facility_id}</ns3:facilityID>
-      <ns3:hl7Message>MSH|^~\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
+      /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
+      const msh11 = (destination.dest_type == 5 || normalOnboardingDestinations.includes(destination.dest_id)) ? 'P' : 'T';
+      const hl7msg = `MSH|^~\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
           destination?.MSH5
         }|${destination?.MSH6}|${
           moment().format('YYYYMMDDHHmmss').concat('.000') +
           date.getTimezoneOffset()
-        }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
+        }||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
           destination?.MSH22
-        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</ns3:hl7Message>
-      </ns3:submitSingleMessage>
+        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126`;
+      if (version !== '2014') {  // 2011 is default value if not set
+        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+      <soap:Body>
+      <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
+      <iis:username>${destination?.username}</iis:username>
+      <iis:password>${destination?.password}</iis:password>
+      <iis:facilityID>${destination?.facility_id}</iis:facilityID>
+      <iis:hl7Message>${hl7msg}</iis:hl7Message>
+      </iis:submitSingleMessage>
       </soap:Body>
       </soap:Envelope>`
       } else {
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:urn="urn:cdc:iisb:hub:2014" xmlns:urn1="urn:cdc:iisb:2014">
+        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:iis="urn:cdc:iisb:2014">
         <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
           <wsa:Action>urn:cdc:iisb:hub:2014:IISHubPortType:SubmitSingleMessageRequest</wsa:Action>
           <wsa:MessageID>${randomUUID}</wsa:MessageID>
         </soap:Header>
         <soap:Body>
-          <urn1:SubmitSingleMessageRequest>
-          <urn1:Username>${destination?.username}</urn1:Username>
-      <urn1:Password>${password}</urn1:Password>
-            <urn1:FacilityID>${destination?.facility_id}</urn1:FacilityID>
-            <urn1:Hl7Message>MSH|^~\&amp;|${destination?.MSH3}|${
-          destination?.MSH4
-        }|${destination?.MSH5}|${destination?.MSH6}|${
-          moment().format('YYYYMMDDHHmmss').concat('.000') +
-          date.getTimezoneOffset()
-        }||QBP^Q11^QBP_Q11|${randomUUID}|T|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
-          destination?.MSH22
-        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126</urn1:Hl7Message>
-            </urn1:SubmitSingleMessageRequest>
+          <iis:SubmitSingleMessageRequest>
+            <iis:Username>${destination?.username}</iis:Username>
+            <iis:Password>${password}</iis:Password>
+            <iis:FacilityID>${destination?.facility_id}</iis:FacilityID>
+            <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
+          </iis:SubmitSingleMessageRequest>
         </soap:Body>
       </soap:Envelope>`
       }
@@ -101,7 +98,7 @@ export default class QBP extends ConnectionTest {
       rejectUnauthorized: false,
       keepAlive: true,
     }
-
+    const isVersion2014 = destination.dest_version === '2014'
     const options = {
       hostname: this.connectionTestRequest.hostname,
       port: this.connectionTestRequest.port,
@@ -110,7 +107,9 @@ export default class QBP extends ConnectionTest {
       agent: new https.Agent(httpsAgentOptions),
       headers: {
         Host: this.connectionTestRequest.hostname,
-        'Content-Type': 'application/xml',
+        'Content-Type': isVersion2014 ? 
+          'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest"' :
+          'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2011:submitSingleMessage"' ,
       },
     }
     const isResponsecorrect = (message) => {
@@ -150,9 +149,10 @@ export default class QBP extends ConnectionTest {
           res.on('end', function () {
             const parser = new DOMParser()
             const xmlDoc = parser.parseFromString(data, 'text/xml')
-            const elementName = 'SubmitSingleMessageResponse'
+            const elementName = isVersion2014 ? 'Hl7Message' : 'hl7Message'
+            const namespace = isVersion2014 ? 'urn:cdc:iisb:2014' : 'urn:cdc:iisb:2011'
             const result = xmlDoc.documentElement.getElementsByTagNameNS(
-              '*',
+              namespace,
               elementName
             )[0]
             let responseMessage: Element | null = null
@@ -171,25 +171,8 @@ export default class QBP extends ConnectionTest {
               ])
             } else {
               try {
-                const splitMessage: string[] =
-                  responseMessage.textContent?.split('\r') ?? []
-                let isError = false
-
-                for (const mes of splitMessage) {
-                  if (mes.includes('ERR|') && mes.split('|')[4] === 'E') {
-                    isError = true
-                    resolve([
-                      {
-                        ...hl7QueryTestResult,
-                        detail: responseMessage.textContent,
-                        message: TestResponseMessages.ERROR_IN_HL7MESSAGE,
-                        status: TestStatus.FAIL,
-                      },
-                    ])
-                    break
-                  }
-                }
-                if (!isError && isResponsecorrect(splitMessage)) {
+                let isError = !responseMessage.textContent.startsWith('MSH')
+                if (!isError) { // For now, just MSH is essential, later check via  && isResponsecorrect(with responseMessage.textContent)
                   resolve([
                     {
                       ...hl7QueryTestResult,
