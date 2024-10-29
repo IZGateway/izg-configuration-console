@@ -42,5 +42,9 @@ const validationRules = {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
     message: facilityAndMSHValidationMessage,
   },
+  username: {
+    regex: /^[A-Za-z0-9_-]{0,25}$/,
+    message: facilityAndMSHValidationMessage,
+  },
 }
 export default validationRules

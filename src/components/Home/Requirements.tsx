@@ -96,6 +96,7 @@ const SupportingDocumentation = () => {
                     <Link
                       href={`${documentationUrl}IZG%20IIS-CDC%20Reporting%20(Automate%20Data%20Submissions)?csf=1&web=1&e=wZbFmh`}
                       style={{ color: palette.primary }}
+                      target="_blank"
                     >
                       Access documentation
                     </Link>
@@ -125,6 +126,7 @@ const SupportingDocumentation = () => {
                     <Link
                       href={`${documentationUrl}IZG%20IIS-to-IIS%20Data%20Exchange?csf=1&web=1&e=5UcDZG`}
                       style={{ color: palette.primary }}
+                      target="_blank"
                     >
                       Access documentation
                     </Link>
@@ -156,6 +158,7 @@ const SupportingDocumentation = () => {
                     <Link
                       href={`${documentationUrl}IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA`}
                       style={{ color: palette.primary }}
+                      target="_blank"
                     >
                       Access documentation
                     </Link>
