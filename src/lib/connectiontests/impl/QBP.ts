@@ -14,14 +14,12 @@ import { prismacontext } from '../../prismacontext'
 import logger from '../../../../logger'
 import _ from 'lodash'
 import { DOMParser } from '@xmldom/xmldom'
+import { json2xml } from 'xml-js'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
-const date = new Date()
 let hl7Message: string
 let requestBody: string
-let responseMessage: string
-
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
@@ -43,42 +41,84 @@ export default class QBP extends ConnectionTest {
       status: this.status,
     }
     /* msh11 should really be set by DB, but that must wait for core/hub changes to support it */
-    const normalOnboardingDestinations = [ 'casd', 'ga', 'hi', 'sasj', 'ca', 'fl', 'id', 'me', 'mi', 'mn', 'ms', 'mt', 'nc', 'ne', 'nh', 'ny_vxu', 'oh', 'pr', 'ri', 'sd', 'ut', 'va', 'vt', 'wa', 'wi', 'wv', 'wy'];
+    const normalOnboardingDestinations = [
+      'casd',
+      'ga',
+      'hi',
+      'sasj',
+      'ca',
+      'fl',
+      'id',
+      'me',
+      'mi',
+      'mn',
+      'ms',
+      'mt',
+      'nc',
+      'ne',
+      'nh',
+      'ny_vxu',
+      'oh',
+      'pr',
+      'ri',
+      'sd',
+      'ut',
+      'va',
+      'vt',
+      'wa',
+      'wi',
+      'wv',
+      'wy',
+    ]
     const setRequestBody = (version: string) => {
       /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
-      const msh11 = (destination.dest_type == 5 || normalOnboardingDestinations.includes(destination.dest_id)) ? 'P' : 'T';
-      const hl7msg = `MSH|^~\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
-          destination?.MSH5
-        }|${destination?.MSH6}|${
-          moment().format('YYYYMMDDHHmmss').concat('.000') +
-          date.getTimezoneOffset()
-        }||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
-          destination?.MSH22
-        }|QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1RCP|I|10^RD&amp;Records&amp;HL70126`;
-      if (version !== '2014') {  // 2011 is default value if not set
+      const msh11 =
+        destination.dest_type == 5 ||
+        normalOnboardingDestinations.includes(destination.dest_id)
+          ? 'P'
+          : 'T'
+
+      const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
+        destination?.MSH5
+      }|${destination?.MSH6}|${moment().format(
+        'YYYYMMDDHHmmssZZ'
+      )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
+        destination?.MSH22
+      }|
+QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID.replace(
+        /-/g,
+        ''
+      )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
+RCP|I|10^RD&amp;Records&amp;HL70126`
+
+      if (version !== '2014') {
+        // 2011 is default value if not set
         requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
       <soap:Body>
       <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
       <iis:username>${destination?.username}</iis:username>
-      <iis:password>${destination?.password}</iis:password>
+      <iis:password>${password}</iis:password>
       <iis:facilityID>${destination?.facility_id}</iis:facilityID>
       <iis:hl7Message>${hl7msg}</iis:hl7Message>
       </iis:submitSingleMessage>
       </soap:Body>
       </soap:Envelope>`
       } else {
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:iis="urn:cdc:iisb:2014">
+        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:urn="urn:cdc:iisb:hub:2014" xmlns:urn1="urn:cdc:iisb:2014">
         <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
+          <urn:HubRequestHeader>
+            <urn:DestinationId>${this.connectionTestRequest.id}</urn:DestinationId>
+          </urn:HubRequestHeader>
           <wsa:Action>urn:cdc:iisb:hub:2014:IISHubPortType:SubmitSingleMessageRequest</wsa:Action>
           <wsa:MessageID>${randomUUID}</wsa:MessageID>
         </soap:Header>
         <soap:Body>
-          <iis:SubmitSingleMessageRequest>
-            <iis:Username>${destination?.username}</iis:Username>
-            <iis:Password>${password}</iis:Password>
-            <iis:FacilityID>${destination?.facility_id}</iis:FacilityID>
-            <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
-          </iis:SubmitSingleMessageRequest>
+          <urn1:SubmitSingleMessageRequest>
+            <urn1:Username>${destination?.username}</urn1:Username>
+            <urn1:Password>${password}</urn1:Password>
+            <urn1:FacilityID>${destination?.facility_id}</urn1:FacilityID>
+            <urn1:Hl7Message>${hl7msg}</urn1:Hl7Message>
+          </urn1:SubmitSingleMessageRequest>
         </soap:Body>
       </soap:Envelope>`
       }
@@ -107,34 +147,10 @@ export default class QBP extends ConnectionTest {
       agent: new https.Agent(httpsAgentOptions),
       headers: {
         Host: this.connectionTestRequest.hostname,
-        'Content-Type': isVersion2014 ? 
-          'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest"' :
-          'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2011:submitSingleMessage"' ,
+        'Content-Type': isVersion2014
+          ? 'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest"'
+          : 'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2011:submitSingleMessage"',
       },
-    }
-    const isResponsecorrect = (message) => {
-      const qakElement: string[] = message[2].split('|')
-      const msaElement: string[] = message[1].split('|')
-      const msa1Values = ['AA', 'AE', 'CA', 'CE']
-
-      if (
-        qakElement[0] === 'QAK' &&
-        qakElement[2] === 'NF' &&
-        qakElement[3].includes('Z34^Request Complete') &&
-        message[3].includes('QPD') &&
-        msa1Values.includes(msaElement[1])
-      ) {
-        return true
-      } else {
-        return false
-      }
-    }
-    const isFaultPresent = (res) => {
-      if (res['soap:Envelope']['soap:Body'][0].hasOwnProperty(['soap:Fault'])) {
-        return true
-      } else {
-        return false
-      }
     }
 
     return new Promise((resolve) => {
@@ -149,8 +165,10 @@ export default class QBP extends ConnectionTest {
           res.on('end', function () {
             const parser = new DOMParser()
             const xmlDoc = parser.parseFromString(data, 'text/xml')
-            const elementName = isVersion2014 ? 'Hl7Message' : 'hl7Message'
-            const namespace = isVersion2014 ? 'urn:cdc:iisb:2014' : 'urn:cdc:iisb:2011'
+            const elementName = isVersion2014 ? 'Hl7Message' : 'return'
+            const namespace = isVersion2014
+              ? 'urn:cdc:iisb:2014'
+              : 'urn:cdc:iisb:2011'
             const results = xmlDoc.documentElement.getElementsByTagNameNS(
               namespace,
               elementName
@@ -165,15 +183,15 @@ export default class QBP extends ConnectionTest {
               resolve([
                 {
                   ...hl7QueryTestResult,
-                  detail: responseMessage?.textContent,
-                  message: TestResponseMessages.HL7MESSAGE_NOT_PRESENT,
+                  detail: null,
+                  message: `${data}`,
                   status: TestStatus.FAIL,
                 },
               ])
             } else {
               try {
-                let isError = !responseMessage.textContent.startsWith('MSH')
-                if (!isError) { // For now, just MSH is essential, later check via  && isResponsecorrect(with responseMessage.textContent)
+                const isError = !responseMessage.textContent.startsWith('MSH')
+                if (!isError) {
                   resolve([
                     {
                       ...hl7QueryTestResult,
@@ -212,44 +230,26 @@ export default class QBP extends ConnectionTest {
               },
             ])
           })
-        } else if (res.statusCode === 500) {
-          try {
-            res.on('data', (chunk) => {
-              data = data + chunk.toString()
-            })
-
-            res.on('end', function () {
-              xml2js.parseString(data, (_err, result) => {
-                if (isFaultPresent(result)) {
-                  resolve([
-                    {
-                      ...hl7QueryTestResult,
-                      detail: responseMessage,
-                      message: TestResponseMessages.FAULT_IN_RESPONSE,
-                      status: TestStatus.FAIL,
-                    },
-                  ])
-                }
-              })
-            })
-          } catch (error) {
-            resolve([
-              {
-                ...hl7QueryTestResult,
-                detail: error?.message,
-                message: TestResponseMessages.SERVER_ERROR,
-                status: TestStatus.FAIL,
-              },
-            ])
-          }
         } else {
-          resolve([
-            {
-              ...hl7QueryTestResult,
-              message: TestResponseMessages.SERVER_ERROR,
-              status: TestStatus.FAIL,
-            },
-          ])
+          res.on('data', (chunk) => {
+            data = data + chunk.toString()
+          })
+          res.on('end', function () {
+            xml2js.parseString(data, (_err, result) => {
+              resolve([
+                {
+                  ...hl7QueryTestResult,
+                  detail: result,
+                  message: `Server responded with HTTP status code ${
+                    res.statusCode
+                  }. Response is: ${json2xml(result, {
+                    compact: true,
+                  })}`,
+                  status: TestStatus.FAIL,
+                },
+              ])
+            })
+          })
         }
       })
 
