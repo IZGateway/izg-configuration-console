@@ -104,21 +104,18 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       </soap:Body>
       </soap:Envelope>`
       } else {
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:urn="urn:cdc:iisb:hub:2014" xmlns:urn1="urn:cdc:iisb:2014">
+        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:iis="urn:cdc:iisb:2014">
         <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
-          <urn:HubRequestHeader>
-            <urn:DestinationId>${this.connectionTestRequest.id}</urn:DestinationId>
-          </urn:HubRequestHeader>
-          <wsa:Action>urn:cdc:iisb:hub:2014:IISHubPortType:SubmitSingleMessageRequest</wsa:Action>
+          <wsa:Action>urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest</wsa:Action>
           <wsa:MessageID>${randomUUID}</wsa:MessageID>
         </soap:Header>
         <soap:Body>
-          <urn1:SubmitSingleMessageRequest>
-            <urn1:Username>${destination?.username}</urn1:Username>
-            <urn1:Password>${password}</urn1:Password>
-            <urn1:FacilityID>${destination?.facility_id}</urn1:FacilityID>
-            <urn1:Hl7Message>${hl7msg}</urn1:Hl7Message>
-          </urn1:SubmitSingleMessageRequest>
+          <iis:SubmitSingleMessageRequest>
+            <iis:Username>${destination?.username}</iis:Username>
+            <iis:Password>${password}</iis:Password>
+            <iis:FacilityID>${destination?.facility_id}</iis:FacilityID>
+            <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
+          </iis:SubmitSingleMessageRequest>
         </soap:Body>
       </soap:Envelope>`
       }
