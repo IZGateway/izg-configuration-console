@@ -86,6 +86,7 @@ export const getServerSideProps = async (context) => {
             ),
             hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
             hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
+            hasFutureMaint: await hasFutureMaintenance(x.destId, x.destTypeId),
             getMaintenaceValues: await getMaintenaceValues(
               x.destId,
               x.destTypeId
@@ -204,6 +205,23 @@ const hasActiveMaintenance = async (destId, destTypeId) => {
   } else {
     return (
       destinationResult.maint_start <= new Date() &&
+      (_.isNull(destinationResult.maint_end) ||
+        destinationResult.maint_end >= new Date())
+    )
+  }
+}
+
+const hasFutureMaintenance = async (destId, destTypeId) => {
+  await getDestinationResult(destId, destTypeId)
+  if (
+    _.isNull(destinationResult) ||
+    (_.isNull(destinationResult.maint_start) &&
+      _.isNull(destinationResult.maint_end))
+  ) {
+    return false
+  } else {
+    return (
+      destinationResult.maint_start >= new Date() &&
       (_.isNull(destinationResult.maint_end) ||
         destinationResult.maint_end >= new Date())
     )
