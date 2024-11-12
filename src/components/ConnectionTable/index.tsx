@@ -326,7 +326,9 @@ const ConnectionsTable = (props) => {
               destId={params.row.destId}
               destTypeId={params.row.destTypeId}
               status={params.row.status}
-              hasActiveMaintenance={params.row.hasActiveMaint}
+              hasActiveMaintenance={
+                params.row.hasActiveMaint || params.row.hasFutureMaint
+              }
               jurisdictionName={params.row.jurisdictionName}
               destType={params.row.destType}
             />
