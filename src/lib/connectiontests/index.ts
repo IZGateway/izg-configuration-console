@@ -4,8 +4,6 @@ import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
-import fs from 'fs'
-import forge from 'node-forge'
 
 const connectionTest = async (destination: any, userId: string) => {
   enum TestSuite {
@@ -76,10 +74,7 @@ const connectionTest = async (destination: any, userId: string) => {
       },
     ]
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
-  } else if (
-    destination &&
-    !isValidUrl(setHostnameIfNull(destination))
-  ) {
+  } else if (destination && !isValidUrl(setHostnameIfNull(destination))) {
     if (changeRequestDestination) {
       destType = destination?.destinations.destination_type.type
       jurisdictionDescription =
@@ -214,10 +209,14 @@ const isValidUrl = (urlString: string) => {
 
 const getHostNameFromType = (dest: any) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
-  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(IZG_STATUS_ENDPOINT_URL)
-    // if there is no hostname, then the URL is local, and so the endpoint 
-    // is where you would get status history from for the same destination
-  let base = new URL(configuredHubURLs.getIZGHubURL(dest.destination_type.type_id))
-  let url = new URL(dest.dest_uri, base)
+  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
+    IZG_STATUS_ENDPOINT_URL
+  )
+  // if there is no hostname, then the URL is local, and so the endpoint
+  // is where you would get status history from for the same destination
+  const base = new URL(
+    configuredHubURLs.getIZGHubURL(dest.destination_type.type_id)
+  )
+  const url = new URL(dest.dest_uri, base)
   return url.host
 }
