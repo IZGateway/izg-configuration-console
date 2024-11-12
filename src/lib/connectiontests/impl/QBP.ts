@@ -175,7 +175,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
             if (result) {
               responseMessage = result as unknown as Element
             }
-            logger.info('SOAP Message: ' + data)
+            logger.debug('Response SOAP Message: ' + data)
             if (!responseMessage?.textContent) {
               resolve([
                 {
