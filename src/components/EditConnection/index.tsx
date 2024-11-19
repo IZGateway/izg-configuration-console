@@ -403,7 +403,7 @@ const EditConnection = (props: editConnectionProps) => {
               fontSize="32px"
               id="add-connecton"
             >
-              Editing {destData?.jurisdiction.description}{' '}
+              Editing {destData?.jurisdiction.description} ({destData?.dest_id}){' '}
               {destData.destination_type.type}
             </Typography>
             <Typography gutterBottom align="center" variant="body1">
