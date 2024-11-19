@@ -157,7 +157,7 @@ const PopOverActionButtons = (props: {
                 <ListItemIcon>
                   <WarningIcon htmlColor={palette.error} fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>End Maintenance</ListItemText>
+                <ListItemText>Cancel Maintenance</ListItemText>
               </MenuItem>
             ) : (
               <MenuItem
