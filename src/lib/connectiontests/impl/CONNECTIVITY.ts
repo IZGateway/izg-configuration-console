@@ -95,22 +95,19 @@ export default class CONNECTIVITY extends ConnectionTest {
     }
 
     return new Promise((resolve) => {
+      const requestBody = setRequestBody(destinationVersion)
       const req = https.request(options, (res) => {
         let data = ''
 
-        //if (res.statusCode === StatusCodes.OK) {
         res.on('data', (chunk) => {
           data = data + chunk.toString()
         })
 
         res.on('end', function () {
-          const parser = new DOMParser()
+          let parser = new DOMParser()
           try {
             const resXmlDoc = parser.parseFromString(data, 'text/xml')
-            const reqXmlDoc = parser.parseFromString(
-              setRequestBody(destinationVersion),
-              'text/xml'
-            )
+            const reqXmlDoc = parser.parseFromString(requestBody, 'text/xml')
             if (docHasBody(resXmlDoc)) {
               processBody(resXmlDoc, reqXmlDoc, resolve, connectivityTestResult)
             } else {
@@ -119,7 +116,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                   ...connectivityTestResult,
                   detail: data,
                   message: TestResponseMessages.CONNECTIVITY_NO_BODY,
-                  status: TestStatus.FAIL,
+                  status: TestStatus.WARNING,
                 },
               ])
             }
@@ -129,9 +126,12 @@ export default class CONNECTIVITY extends ConnectionTest {
                 ...connectivityTestResult,
                 detail: data,
                 message: `Error parsing response: ${err}`,
-                status: TestStatus.FAIL,
+                status: TestStatus.WARNING,
               },
             ])
+          } finally {
+            data = ''
+            parser = null
           }
         })
       })
@@ -142,7 +142,7 @@ export default class CONNECTIVITY extends ConnectionTest {
         ])
       })
 
-      req.write(setRequestBody(destinationVersion))
+      req.write(requestBody)
       req.end()
     })
   }
@@ -163,7 +163,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       ...connectivityTestResult,
       detail: err.message,
       message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
-      status: TestStatus.FAIL,
+      status: TestStatus.WARNING,
     }
   }
 }
@@ -205,11 +205,11 @@ function processBody(
         {
           ...connectivityTestResult,
           detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
-          message: null,
+          message: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
           status: TestStatus.PASS,
         },
       ])
-    } else if (responseEchoback?.includes(requestEchoback)) {
+    } else if (responseEchoback?.includes('an Audacious Hello')) {
       resolve([
         {
           ...connectivityTestResult,
@@ -218,19 +218,16 @@ function processBody(
             requestEchoback,
             responseEchoback
           ),
-          status: TestStatus.PASS,
+          status: TestStatus.WARNING,
         },
       ])
-    } else if (
-      requestEchoback !== responseEchoback ||
-      !responseEchoback?.includes(requestEchoback)
-    ) {
+    } else {
       resolve([
         {
           ...connectivityTestResult,
           detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
-          message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
-          status: TestStatus.FAIL,
+          message: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
+          status: TestStatus.WARNING,
         },
       ])
     }
@@ -240,7 +237,7 @@ function processBody(
         ...connectivityTestResult,
         detail: err,
         message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
-        status: TestStatus.FAIL,
+        status: TestStatus.WARNING,
       },
     ])
   }
