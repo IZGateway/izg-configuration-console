@@ -14,7 +14,11 @@ const actionButtonStyle = {
     transform: 'scale3d(1.15, 1.15, 1)',
   },
 }
+
 const RequestSupport = () => {
+  const mailToLink = `mailto:izgateway@cdc.gov?subject=${encodeURIComponent(
+    ''
+  )}&body=${encodeURIComponent('')}`
   return (
     <div>
       <Box
@@ -24,11 +28,7 @@ const RequestSupport = () => {
         justifyContent={'center'}
         gap={2}
       >
-        <IconButton
-          sx={actionButtonStyle}
-          href="https://support.izgateway.org/plugins/servlet/desk/portal/3"
-          target="_blank"
-        >
+        <IconButton sx={actionButtonStyle} href={mailToLink} target="_blank">
           <ContactSupportOutlinedIcon color="primary" />
         </IconButton>
         <Typography align="center">
