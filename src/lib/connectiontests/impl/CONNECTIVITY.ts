@@ -116,7 +116,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                   ...connectivityTestResult,
                   detail: data,
                   message: TestResponseMessages.CONNECTIVITY_NO_BODY,
-                  status: TestStatus.FAIL,
+                  status: TestStatus.WARNING,
                 },
               ])
             }
@@ -126,7 +126,7 @@ export default class CONNECTIVITY extends ConnectionTest {
                 ...connectivityTestResult,
                 detail: data,
                 message: `Error parsing response: ${err}`,
-                status: TestStatus.FAIL,
+                status: TestStatus.WARNING,
               },
             ])
           } finally {
@@ -163,7 +163,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       ...connectivityTestResult,
       detail: err.message,
       message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
-      status: TestStatus.FAIL,
+      status: TestStatus.WARNING,
     }
   }
 }
@@ -227,7 +227,7 @@ function processBody(
           ...connectivityTestResult,
           detail: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
           message: `Request Echoback: ${requestEchoback} | Response Echoback ${responseEchoback}`,
-          status: TestStatus.FAIL,
+          status: TestStatus.WARNING,
         },
       ])
     }
@@ -237,7 +237,7 @@ function processBody(
         ...connectivityTestResult,
         detail: err,
         message: TestResponseMessages.CONNECTIVITY_ECHOBACK_NOT_EXPECTED,
-        status: TestStatus.FAIL,
+        status: TestStatus.WARNING,
       },
     ])
   }
