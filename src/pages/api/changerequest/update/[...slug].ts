@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import updateChangeRequest from '../../../../lib/queries/mutate/updateChangeRequest'
-import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
+import dbInterface from '../../../../lib/dbInterface'
+// import updateChangeRequest from '../../../../lib/queries/mutate/updateChangeRequest'
+// import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import changeRequestTicketComment from '../../../../lib/changerequestticketcomment'
 /**
  * @swagger
@@ -32,14 +33,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const updatedData = JSON.parse(req.body)
   if (req.method === 'POST') {
     try {
-      const changeRequest = await destinationChangeRequest(destId, destTypeId)
+      const changeRequest = await dbInterface.destinationChangeRequest(destId, destTypeId)
       await changeRequestTicketComment(
         changeRequest.jira_id,
         updatedData.requestedAt,
         updatedData.scheduledAt,
         updatedData.isAsap
       )
-      await updateChangeRequest(destId, destTypeId, updatedData)
+      await dbInterface.updateChangeRequest(destId, destTypeId, updatedData)
       res.status(200).json('Change Request is updated')
     } catch (error) {
       console.error(error)

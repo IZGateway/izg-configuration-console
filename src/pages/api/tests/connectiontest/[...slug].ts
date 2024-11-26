@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
-import destination from '../../../../lib/queries/fetch/destination'
+import dbInterface from '../../../../lib/dbInterface'
+// import destination from '../../../../lib/queries/fetch/destination'
+// import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
-import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
@@ -56,19 +57,17 @@ const getFetchedDestination = async (
     fetchedDestination = { ...values, configuration: 'edit' }
     destTypeValue = values.type
     jurisdictionDescriptionValue = values.jurisdiction
-  } else {
-    if (configuration === 'test') {
-      data = await destination(destId?.toString(), destTypeId)
+  } else if (configuration === 'test') {
+      data = await dbInterface.destination(destId?.toString(), destTypeId)
       fetchedDestination = { ...data, configuration: 'test' }
       destTypeValue = fetchedDestination.destination_type.type
       jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
-    } else if (configuration === 'deploy') {
-      data = await destinationChangeRequest(destId?.toString(), destTypeId)
-      fetchedDestination = { ...data, configuration: 'deploy' }
-      destTypeValue = fetchedDestination.destinations.destination_type.type
-      jurisdictionDescriptionValue =
-        fetchedDestination.destinations.jurisdiction.description
-    }
+  } else if (configuration === 'deploy') {
+    data = await dbInterface.destinationChangeRequest(destId?.toString(), destTypeId)
+    fetchedDestination = { ...data, configuration: 'deploy' }
+    destTypeValue = fetchedDestination.destinations.destination_type.type
+    jurisdictionDescriptionValue =
+      fetchedDestination.destinations.jurisdiction.description
   }
   return {
     fetchedDestination,

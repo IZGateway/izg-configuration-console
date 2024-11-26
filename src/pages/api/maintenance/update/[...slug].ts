@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import maintenanceRequest from '../../../../lib/queries/mutate/maintenanceRequest'
+import dbInterface from '../../../../lib/dbInterface'
+//import maintenanceRequest from '../../../../lib/queries/mutate/maintenanceRequest'
 import logger from '../../../../../logger'
 
 /**
@@ -31,7 +32,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
   const maintData = req.body
   if (req.method === 'POST') {
-    const result = await maintenanceRequest(destId, destTypeId, maintData)
+    const result = await dbInterface.maintenanceRequest(destId, destTypeId, maintData)
     res.json(result)
     logger.info('Created maintenance request for ' + destId)
   } else {

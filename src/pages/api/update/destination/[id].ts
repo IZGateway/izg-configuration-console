@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
+import dbInterface from '../../../../lib/dbInterface'
+// import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
+// import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import desttypehelper from '../../../../lib/desttypehelper'
-import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import withMiddleware from '../../api-middleware-helper'
 /**
  * @swagger
@@ -48,10 +49,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     req.query.destType.toString()
   )
 
-  const destination_type = await destinationType(destType)
+  const destination_type = await dbInterface.destinationType(destType)
   if (req.method === 'POST') {
     const data = JSON.parse(req.body)
-    const result = await updatedAuditedDestination(
+    const result = await dbInterface.updatedAuditedDestination(
       destId,
       destination_type?.type_id,
       data.updatedData,

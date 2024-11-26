@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
-import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
+import dbInterface from '../../../../lib/dbInterface'
+// import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
 /**
  * @swagger
  * /api/destinationdraft/{destTypeId}/{destId}:
@@ -29,7 +30,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (req.method === 'GET') {
-    const result = await fetchDraftRecord(destId, destTypeId)
+    const result = await dbInterface.fetchDraftRecord(destId, destTypeId)
     res.json(result)
   } else {
     throw new Error(
