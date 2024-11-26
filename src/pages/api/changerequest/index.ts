@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../lib/dbInterface'
 // import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 // import {
 //   upsertDestinationChangeRequest,

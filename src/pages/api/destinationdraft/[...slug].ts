@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../lib/dbInterface'
 // import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
 /**
  * @swagger

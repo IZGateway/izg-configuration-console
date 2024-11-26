@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../lib/dbInterface'
 // import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
