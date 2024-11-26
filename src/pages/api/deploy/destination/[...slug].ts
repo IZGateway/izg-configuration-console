@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
-import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
+import dbInterface from '../../../../lib/dbInterface'
+// import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
+// import destination from '../../../../lib/queries/fetch/destination'
+// import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
+// import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
+
 import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
-import destination from '../../../../lib/queries/fetch/destination'
-import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
-import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
 import logger from '../../../../../logger'
 /**
  * @swagger
@@ -55,9 +57,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (session.user.isAdmin) {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
-      const oldValues = await destination(destId, destTypeId)
-      const isPasswordDifferent = await passwordComparison(destId, destTypeId)
-      const result = await updatedAuditedDestination(
+      const oldValues = await dbInterface.destination(destId, destTypeId)
+      const isPasswordDifferent = await dbInterface.passwordComparison(destId, destTypeId)
+      const result = await dbInterface.updatedAuditedDestination(
         destId,
         destTypeId,
         data,
@@ -87,7 +89,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             createdAt: new Date(),
           }
         )
-        await deleteDestinationChangeRequest(data.id)
+        await dbInterface.deleteDestinationChangeRequest(data.id)
       }
     } else {
       throw new Error(

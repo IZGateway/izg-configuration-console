@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import deleteDraftValues from '../../../../lib/queries/mutate/deletedraftvalues'
+import dbInterface from '../../../../lib/dbInterface'
+// import deleteDraftValues from '../../../../lib/queries/mutate/deletedraftvalues'
 /**
  * @swagger
  * /api/changerequest/draft/{destTypeId}/{destId}/{draftID}:
@@ -37,7 +38,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'DELETE') {
     try {
-      await deleteDraftValues(id, destId, destTypeId)
+      await dbInterface.deleteDraftValues(id, destId, destTypeId)
       res.status(200).json('Draft was deleted')
     } catch (error) {
       console.error(error)

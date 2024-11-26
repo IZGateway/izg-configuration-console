@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
+import dbInterface from '../../../../lib/dbInterface'
+// import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
 /**
  * @swagger
  * /api/changerequest/checkPasswordDifference/{destTypeId}/{destId}:
@@ -31,7 +32,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'GET') {
     try {
-      const result = await passwordComparison(destId, destTypeId)
+      const result = await dbInterface.passwordComparison(destId, destTypeId)
       let isPasswordDifferent
       if (Number(result.is_password_different) === 1) {
         isPasswordDifferent = true
