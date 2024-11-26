@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../lib/dbInterface'
 // import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
 import withMiddleware from '../api-middleware-helper'
 /**
