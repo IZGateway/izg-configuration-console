@@ -2,10 +2,10 @@
  *	The dbInterface object represents the interface to the database.  
  */
 import { upsertDestinationChangeRequest, deleteDestinationChangeRequest } from './queries/mutate/destinationchangerequest' 
-import deleteDraftValues from './queries/mutate/deleteDraftValues'
+import deleteDraftValues from './queries/mutate/deletedraftvalues'
 import cancelChangeRequest from './queries/mutate/cancelChangeRequest'
 import updatedAuditedDestination from './queries/mutate/destination'
-import upsertDraftRecord from './queries/mutate/upsertDraftRecord'
+import upsertDraftRecord from './queries/mutate/draftrecord'
 import maintenanceRequest from './queries/mutate/maintenanceRequest'
 import updateChangeRequest from './queries/mutate/updateChangeRequest'
 
@@ -13,13 +13,27 @@ import destination from './queries/fetch/destination'
 import destinations from './queries/fetch/destinations'
 import destinationaudithistory from './queries/fetch/destinationaudithistory'
 import destinationChangeRequest from './queries/fetch/destinationchangerequest'
-import destinationType from './queries/fetch/destinationType'
+import destinationType from './queries/fetch/destinationtype'
 import fetchDraftRecord from './queries/fetch/draftrecord'
 import jurisdiction from './queries/fetch/jurisdiction'
 import passwordComparison from './queries/fetch/passwordComparison'
 
 
-export const dbInterface = {
+async function lookupDestinationVersion(
+  destination,
+  destId,
+  destType
+) {
+  if (!destination.dest_version) {
+	destination = dbInterface.destination(destId, destType)
+  }
+  if (!destination.dest_version) {
+	return '2014'
+  }
+  return destination.dest_version
+}
+
+const dbInterface = {
 	destination: destination,
 	destinations: destinations,
 	destinationaudithistory: destinationaudithistory,
@@ -36,6 +50,9 @@ export const dbInterface = {
 	updatedAuditedDestination: updatedAuditedDestination,
 	upsertDraftRecord: upsertDraftRecord,
 	maintenanceRequest: maintenanceRequest,
-	updateChangeRequest: updateChangeRequest
+	updateChangeRequest: updateChangeRequest,
+	
+	lookupDestinationVersion: lookupDestinationVersion
 }
 
+export default dbInterface

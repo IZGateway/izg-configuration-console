@@ -193,7 +193,7 @@ const upsertDraft = async (changeRequestDetails: any) => {
       requestedBy: changeRequestDetails.requestedBy,
     })
   } else {
-    await upsertDraftRecord({
+    await dbInterface.upsertDraftRecord({
       ..._.omit(changeRequestDetails.requested, [
         'newPassword',
         'confirmPassword',
