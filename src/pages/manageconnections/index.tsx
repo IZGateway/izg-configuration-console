@@ -13,11 +13,14 @@ import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
-import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import AppHeaderBar from '../../components/AppHeader'
-import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
-import destination from '../../lib/queries/fetch/destination'
+
+import dbInterface from '../../lib/dbInterface'
+// import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
+// import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
+// import destination from '../../lib/queries/fetch/destination'
+
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
@@ -159,16 +162,16 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await destinationChangeRequest(destId, destTypeId)) ? true : false
+  return (await dbInterface.destinationChangeRequest(destId, destTypeId)) ? true : false
 }
 
 const hasActiveDraft = async (destId, destTypeId) => {
-  return (await fetchDraftRecord(destId, destTypeId)) ? true : false
+  return (await dbInterface.fetchDraftRecord(destId, destTypeId)) ? true : false
 }
 
 const getDestinationResult = async (destId, destTypeId) => {
   try {
-    destinationResult = await destination(destId, destTypeId)
+    destinationResult = await dbInterface.destination(destId, destTypeId)
   } catch (error) {
     throw new Error(error.message)
   }

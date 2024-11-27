@@ -3,7 +3,7 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
-import { prismacontext } from '../../prismacontext'
+import dbInterface from '../../dbInterface'
 import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
@@ -21,7 +21,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       status: this.status,
     }
     const destination = this.connectionTestRequest.destinationData
-    const destinationVersion = await lookupDestinationVersion(
+    const destinationVersion = await dbInterface.lookupDestinationVersion(
       destination,
       this.connectionTestRequest.id,
       this.connectionTestRequest.desttypeid
@@ -240,25 +240,5 @@ function processBody(
         status: TestStatus.WARNING,
       },
     ])
-  }
-}
-
-async function lookupDestinationVersion(
-  destination: any,
-  destId: any,
-  destType: any
-) {
-  if (destination.dest_version) {
-    return destination.dest_version
-  } else {
-    const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
-    FROM destinations d
-    WHERE d.dest_id = ${destId}
-    AND d.dest_type = ${destType}`
-    if (result[0].dest_version === '') {
-      return '2014'
-    } else {
-      return result[0].dest_version
-    }
   }
 }

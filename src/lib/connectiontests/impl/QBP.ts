@@ -5,6 +5,7 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
+import dbInterface from '../../dbInterface'
 import * as fs from 'fs'
 import path from 'path'
 import moment from 'moment'
@@ -28,7 +29,7 @@ export default class QBP extends ConnectionTest {
       this.connectionTestRequest.id,
       this.connectionTestRequest.desttypeid
     )
-    const destinationVersion = await lookupDestinationVersion(
+    const destinationVersion = await dbInterface.lookupDestinationVersion(
       destination,
       this.connectionTestRequest.id,
       this.connectionTestRequest.desttypeid
@@ -294,22 +295,3 @@ async function lookupDestinationPassword(
   }
 }
 
-async function lookupDestinationVersion(
-  destination: any,
-  destId: any,
-  destType: any
-) {
-  if (destination.dest_version) {
-    return destination.dest_version
-  } else {
-    const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
-    FROM destinations d
-    WHERE d.dest_id = ${destId}
-    AND d.dest_type = ${destType}`
-    if (result[0].dest_version === '') {
-      return '2014'
-    } else {
-      return result[0].dest_version
-    }
-  }
-}
