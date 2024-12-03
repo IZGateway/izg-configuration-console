@@ -4,6 +4,7 @@ import dbInterface from '../../../../lib/dbInterface'
 // import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import desttypehelper from '../../../../lib/desttypehelper'
 import withMiddleware from '../../api-middleware-helper'
+import logger from '../../../../../logger'
 /**
  * @swagger
  * /api/update/destination/{id}:
@@ -60,6 +61,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       data.oldValues,
       data.newValues
     )
+    try {
+      dbInterface.refreshHub(destination_type?.type_id);
+    } catch (error) {
+      // If refresh fails, just keep going.
+      logger.warn(`Error during update refresh: ${JSON.stringify(error)}`)
+    }
     res.json(result)
   } else {
     throw new Error(

@@ -32,7 +32,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
   const maintData = req.body
   if (req.method === 'POST') {
-    const result = await dbInterface.maintenanceRequest(destId, destTypeId, maintData)
+    const result = await dbInterface.maintenanceRequest(
+      destId,
+      destTypeId,
+      maintData
+    )
     res.json(result)
     if (maintData.startDateTime === null) {
       logger.info(
