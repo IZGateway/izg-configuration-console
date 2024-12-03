@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../lib/dbInterface'
 // import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
 /**

@@ -137,7 +137,7 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await destinationChangeRequest(dest_id, dest_type_id)
+  const changeRequest = await dbInterface.destinationChangeRequest(dest_id, dest_type_id)
   return !_.isEmpty(changeRequest)
 }
 
