@@ -33,7 +33,7 @@ async function lookupDestinationVersion(
   return destination.dest_version
 }
 
-const dbInterface = {
+const jdbcDbInterface = {
 	destination: destination,
 	destinations: destinations,
 	destinationaudithistory: destinationaudithistory,
@@ -55,4 +55,5 @@ const dbInterface = {
 	lookupDestinationVersion: lookupDestinationVersion
 }
 
+const dbInterface = jdbcDbInterface
 export default dbInterface

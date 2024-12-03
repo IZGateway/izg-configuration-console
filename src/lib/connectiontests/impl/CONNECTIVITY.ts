@@ -200,7 +200,8 @@ function processBody(
       )[0] as unknown as Element
     ).textContent.trim()
 
-    if (requestEchoback === responseEchoback) {
+    // If it includes "an Audacious Hello", it is good enough"
+    if (responseEchoback?.includes('an Audacious Hello')) {
       resolve([
         {
           ...connectivityTestResult,
@@ -209,7 +210,7 @@ function processBody(
           status: TestStatus.PASS,
         },
       ])
-    } else if (responseEchoback?.includes('an Audacious Hello')) {
+    } else if (responseEchoback != null) {  // It has a value, but does not contain our message
       resolve([
         {
           ...connectivityTestResult,
@@ -221,7 +222,7 @@ function processBody(
           status: TestStatus.WARNING,
         },
       ])
-    } else {
+    } else {  // It has no value
       resolve([
         {
           ...connectivityTestResult,
