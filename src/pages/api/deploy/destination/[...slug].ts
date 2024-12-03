@@ -67,6 +67,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         oldValues,
         isPasswordDifferent
       )
+      try {
+        dbInterface.refreshHub(destTypeId);
+      } catch (error) {
+        // If refresh fails, just keep going.
+        logger.warn(`Error during deployment refresh: ${JSON.stringify(error)}`)
+      }
       res.json(result)
       if (res.statusCode === 200) {
         const passwordChanged =

@@ -35,6 +35,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const result = await dbInterface.maintenanceRequest(destId, destTypeId, maintData)
     res.json(result)
     logger.info('Created maintenance request for ' + destId)
+    try {
+      dbInterface.refreshHub(destTypeId);
+    } catch (error) {
+      // If refresh fails, just keep going.
+      logger.warn(`Error during maintenance refresh: ${JSON.stringify(error)}`)
+    }
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`
