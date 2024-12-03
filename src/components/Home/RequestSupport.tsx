@@ -16,9 +16,11 @@ const actionButtonStyle = {
 }
 
 const RequestSupport = () => {
-  const mailToLink = `mailto:izgateway@cdc.gov?subject=${encodeURIComponent(
-    ''
-  )}&body=${encodeURIComponent('')}`
+  const subject = null
+  const body = ''
+  const mailToLink = `mailto:izgateway@cdc.gov${
+    subject ? `?subject=${encodeURIComponent(subject)}` : ''
+  }${body ? `${subject ? '&' : '?'}body=${encodeURIComponent(body)}` : ''}`
   return (
     <div>
       <Box
