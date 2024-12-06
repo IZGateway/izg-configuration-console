@@ -13,7 +13,7 @@ import {
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { TimePicker } from '@mui/x-date-pickers/TimePicker'
+import { DesktopTimePicker } from '@mui/x-date-pickers/DesktopTimePicker'
 import Link from 'next/link'
 
 const Schedule = (props: any) => {
@@ -38,6 +38,7 @@ const Schedule = (props: any) => {
   const mailToLink = `mailto:izgateway@cdc.gov${
     subject ? `?subject=${encodeURIComponent(subject)}` : ''
   }${body ? `${subject ? '&' : '?'}body=${encodeURIComponent(body)}` : ''}`
+
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
@@ -129,11 +130,32 @@ const Schedule = (props: any) => {
                         props.setScheduledDateTime(date)
                       }}
                     />
-                    <TimePicker
+                    <DesktopTimePicker
                       label="Time"
                       value={props.scheduledDateTime}
                       onChange={(date) => {
                         props.setScheduledDateTime(date)
+                      }}
+                      slotProps={{
+                        popper: {
+                          sx: {
+                            '& .MuiPaper-root': {
+                              minWidth: '300px', // Set the minimum width for the pop-up
+                            },
+                            '& .css-bmoxj4-MuiList-root-MuiMultiSectionDigitalClockSection-root':
+                              {
+                                width: '100px',
+                              },
+                            '& .css-kjsgzp-MuiButtonBase-root-MuiMenuItem-root-MuiMultiSectionDigitalClockSection-item':
+                              {
+                                minWidth: '95%',
+                              },
+                            '& .css-1ed1o9w-MuiList-root-MuiMultiSectionDigitalClockSection-root':
+                              {
+                                width: '100%',
+                              },
+                          },
+                        },
                       }}
                     />
                   </Box>
