@@ -415,7 +415,7 @@ const EditConnection = (props: editConnectionProps) => {
   return (
     <div>
       <Close />
-      <Container maxWidth="sm">
+      <Container sx={{ mb: 16 }} maxWidth="sm">
         <Box sx={{ marginTop: 4 }}>
           <Typography
             align="center"
