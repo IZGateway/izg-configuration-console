@@ -33,7 +33,7 @@ const Schedule = (props: any) => {
     const isWeekend = date.day() === 0 || date.day() === 6 // Sunday = 0, Saturday = 6
     return isWeekend
   }
-  const subject = null
+  const subject = 'Urgent | Scheduling Change Request Assistance'
   const body = ''
   const mailToLink = `mailto:izgateway@cdc.gov${
     subject ? `?subject=${encodeURIComponent(subject)}` : ''
@@ -65,7 +65,7 @@ const Schedule = (props: any) => {
             <ol>
               <li>
                 <Typography variant="body1">
-                  <strong>Custom Scheduler:</strong>
+                  <strong>Future Time & Date:</strong>
                 </Typography>
                 <ul>
                   <li>Specify a preferred date and time for your changes.</li>
@@ -137,6 +137,10 @@ const Schedule = (props: any) => {
                         props.setScheduledDateTime(date)
                       }}
                       slotProps={{
+                        textField: {
+                          helperText:
+                            '*Required with Date. Eastern Time Zone(ET)',
+                        },
                         popper: {
                           sx: {
                             '& .MuiPaper-root': {
@@ -163,14 +167,6 @@ const Schedule = (props: any) => {
               )}
             </RadioGroup>
           </Box>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            gutterBottom
-            fontStyle="italic"
-          >
-            *Required with Date. Eastern Time Zone(ET)
-          </Typography>
           <Typography variant="body2" gutterBottom sx={{ pt: 2 }}>
             Need help? Or have a urgent requests, please contact:
             <Link href={mailToLink}> izgateway@cdc.gov</Link>
