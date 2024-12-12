@@ -16,7 +16,7 @@ const actionButtonStyle = {
 }
 
 const RequestSupport = () => {
-  const subject = null
+  const subject = 'Configuration Console Support Request'
   const body = ''
   const mailToLink = `mailto:izgateway@cdc.gov${
     subject ? `?subject=${encodeURIComponent(subject)}` : ''
