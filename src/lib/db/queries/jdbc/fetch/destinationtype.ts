@@ -13,7 +13,7 @@ const fetchDestinationType = async (
     },
   })
   if (!result) {
-    logger.error(`Destination Type not found: ${destType}`)
+    logger.debug(`Destination Type not found: ${destType}`)
     return null
   }
   return {

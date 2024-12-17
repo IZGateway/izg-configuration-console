@@ -18,12 +18,24 @@ export default interface ConfigConsoleRepository {
   ): Promise<DestinationAudit[]>
   fetchDestinationChangeRequestByIdAndType(
     destId: string,
-    dest_type: number
+    destTypeId: number
   ): Promise<DestinationChangeRequest>
-  destinationType(destType: string): Promise<DestinationType>
+  fetchDestinationType(destType: string): Promise<DestinationType>
+  fetchChangeRequestPasswordByIdAndType(
+    destId: string,
+    destType: number
+  ): Promise<string>
+  fetchDestinationPasswordByIdAndType(
+    destId: string,
+    destType: number
+  ): Promise<string>
   fetchDraftRecord(destId: string, dest_type: number): Promise<any>
-  jurisdiction(destId: string): Promise<any>
-  passwordComparison(destId: string, dest_type: number): Promise<any>
+  fetchJurisdictionByDestId(destId: string): Promise<any>
+  isPasswordChangedForIdAndType(
+    destId: string,
+    dest_type: number
+  ): Promise<boolean>
+
   upsertDestinationChangeRequest(changeRequestData: any): Promise<any>
   deleteDestinationChangeRequest(id: any): Promise<any>
   deleteDraftValues(id: number, destId: string, dest_type: number): Promise<any>

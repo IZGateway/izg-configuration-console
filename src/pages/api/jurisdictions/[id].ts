@@ -21,7 +21,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
 
   if (req.method === 'GET') {
-    const result = await dbClient.jurisdiction(destId)
+    const result = await dbClient.fetchJurisdictionByDestId(destId)
     res.json(result)
   } else {
     throw new Error(

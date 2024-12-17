@@ -1,5 +1,5 @@
-import { Destinations } from './Destinations'
-
 export type Jurisdiction = {
-  [key: string]: Destinations
+  jurisdiction_id: number
+  name: string
+  description: string
 }

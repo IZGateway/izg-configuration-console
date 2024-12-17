@@ -1,10 +1,13 @@
 import {
   fetchDestinationByIdAndType,
-  destinations,
+  fetchLoggedInUsersDestinations,
   destinationaudithistory,
-  destinationChangeRequest,
+  fetchDestinationChangeRequestByIdAndType,
+  fetchChangeRequestPasswordByIdAndType,
   destinationType,
   fetchDraftRecord,
+  fetchDestinationPasswordByIdAndType,
+  fetchJurisdictionByDestId,
 } from './queries/jdbc/fetch'
 import {
   deleteDraftValues,
@@ -15,22 +18,26 @@ import {
   upsertDestinationChangeRequest,
   deleteDestinationChangeRequest,
 } from './queries/jdbc/mutate'
-import jurisdiction from './queries/jdbc/fetch/jurisdiction'
 import passwordComparison from './queries/jdbc/fetch/passwordComparison'
 import upsertDraftRecord from './queries/jdbc/mutate/draftrecord'
 import ConfigConsoleRepository from './ConfigConsoleRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
 
 class JDBC implements ConfigConsoleRepository {
+  //fetch
   fetchDestinationByIdAndType = fetchDestinationByIdAndType //done
-  fetchLoggedInUsersDestinations = destinations //done
+  fetchLoggedInUsersDestinations = fetchLoggedInUsersDestinations //done
   fetchDestinationAuditHistoryByIdAndType = destinationaudithistory //done
-  fetchDestinationChangeRequestByIdAndType = destinationChangeRequest
-  destinationType = destinationType
+  fetchDestinationChangeRequestByIdAndType =
+    fetchDestinationChangeRequestByIdAndType //done
+  fetchDestinationType = destinationType //done
   fetchDraftRecord = fetchDraftRecord
-  jurisdiction = jurisdiction
-  passwordComparison = passwordComparison
+  fetchJurisdictionByDestId = fetchJurisdictionByDestId //done
+  isPasswordChangedForIdAndType = passwordComparison //done
+  fetchChangeRequestPasswordByIdAndType = fetchChangeRequestPasswordByIdAndType //done
+  fetchDestinationPasswordByIdAndType = fetchDestinationPasswordByIdAndType //done
 
+  //mutate
   upsertDestinationChangeRequest = upsertDestinationChangeRequest
   deleteDestinationChangeRequest = deleteDestinationChangeRequest
   deleteDraftValues = deleteDraftValues

@@ -15,7 +15,7 @@ const fetchDestinationaudithistoryByIdAndType = async (
     orderBy: { createdAt: 'desc' },
   })
   if (!result) {
-    logger.error(`Destination Audit not found: ${destId} and ${destType}`)
+    logger.debug(`Destination Audit not found: ${destId} and ${destType}`)
     return null
   }
 

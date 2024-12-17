@@ -45,7 +45,7 @@ const fetchDestinations = async (
     },
   })
   if (!result) {
-    logger.error(`Error fetching destinations`)
+    logger.debug(`Error fetching logged in users destinations`)
     return null
   }
   return result.map((dest) => ({

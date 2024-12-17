@@ -39,7 +39,7 @@ const fetchDestination = async (
     },
   })
   if (!result) {
-    logger.error(`Destination not found: ${destId} and ${destType}`)
+    logger.debug(`Destination not found: ${destId} and ${destType}`)
     return null
   }
   return {
@@ -70,7 +70,7 @@ const fetchDestination = async (
   }
 }
 
-const fetchDestinationByIdAndType = async (
+export const fetchDestinationByIdAndType = async (
   destId: string,
   destType: number
 ) => {
@@ -78,4 +78,12 @@ const fetchDestinationByIdAndType = async (
   return destination
 }
 
-export default fetchDestinationByIdAndType
+export const fetchDestinationPasswordByIdAndType = async (
+  destId: string,
+  destType: number
+): Promise<string> => {
+  const result = await prismacontext.prisma.$queryRaw<
+    { password: string }[]
+  >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
+  return result[0].password
+}

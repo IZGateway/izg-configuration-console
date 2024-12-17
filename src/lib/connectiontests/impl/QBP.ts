@@ -1,5 +1,3 @@
-/* eslint-disable no-useless-escape */
-/* eslint-disable no-prototype-builtins */
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
@@ -8,13 +6,13 @@ import { TestResponseMessages } from '../TestResponseMessages'
 import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
-import { prismacontext } from '../../prismacontext'
 import logger from '../../../../logger'
 import _ from 'lodash'
 import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { IZGHubHttpsAgent } from '../../utils/izghubhttpsagent'
+import { dbClient } from '../../utils/dbclient'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -23,11 +21,17 @@ let requestBody: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
-    const password = await lookupDestinationPassword(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
-    )
+    let password: string
+    if (_.isEmpty(destination.newPassword)) {
+      password = await lookupDestinationPassword(
+        destination.configuration,
+        this.connectionTestRequest.id,
+        this.connectionTestRequest.desttypeid
+      )
+    } else {
+      password = destination.newPassword
+    }
+
     const destinationVersion = await lookupDestinationVersion(
       destination,
       this.connectionTestRequest.id,
@@ -255,29 +259,27 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
 }
 
 async function lookupDestinationPassword(
-  destination: any,
-  destId: any,
-  destType: any
+  configType: string,
+  destId: string,
+  destType: number
 ) {
-  let data
-  if (destination.configuration === 'deploy') {
-    data = await prismacontext.prisma
-      .$queryRaw`SELECT password FROM destination_change_request where dest_id=${destId} and dest_type=${destType}`
-    return data[0].password
-  } else if (destination.configuration === 'edit') {
-    if (_.isEmpty(destination.newPassword)) {
-      data = await prismacontext.prisma.$queryRaw<
-        any[]
-      >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
-      return data[0].password
-    } else {
-      return destination.newPassword
-    }
+  let password: string
+  if (configType === 'deploy') {
+    password = await dbClient.fetchChangeRequestPasswordByIdAndType(
+      destId,
+      destType
+    )
+  } else if (configType === 'edit') {
+    password = await dbClient.fetchDestinationPasswordByIdAndType(
+      destId,
+      destType
+    )
   } else {
     //Request from test connection page
-    data = await prismacontext.prisma.$queryRaw<
-      any[]
-    >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
-    return data[0].password
+    password = await dbClient.fetchDestinationPasswordByIdAndType(
+      destId,
+      destType
+    )
   }
+  return password
 }

@@ -1,15 +1,25 @@
-import destinations from './destinations'
+import fetchLoggedInUsersDestinations from './destinations'
 import destinationaudithistory from './destinationaudithistory'
-import destinationChangeRequest from './destinationchangerequest'
+import {
+  fetchDestinationChangeRequestByIdAndType,
+  fetchChangeRequestPasswordByIdAndType,
+} from './destinationchangerequest'
 import destinationType from './destinationtype'
 import fetchDraftRecord from './draftrecord'
-import fetchDestinationByIdAndType from './destination'
+import {
+  fetchDestinationByIdAndType,
+  fetchDestinationPasswordByIdAndType,
+} from './destination'
+import fetchJurisdictionByDestId from './jurisdiction'
 
 export {
+  fetchJurisdictionByDestId,
   fetchDestinationByIdAndType,
-  destinations,
+  fetchDestinationPasswordByIdAndType,
+  fetchLoggedInUsersDestinations,
   destinationaudithistory,
-  destinationChangeRequest,
+  fetchDestinationChangeRequestByIdAndType,
+  fetchChangeRequestPasswordByIdAndType,
   destinationType,
   fetchDraftRecord,
 }

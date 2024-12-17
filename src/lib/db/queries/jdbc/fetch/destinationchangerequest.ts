@@ -45,7 +45,7 @@ const fetchDestinationChangeRequest = async (
       },
     })
   if (!result) {
-    logger.error(
+    logger.debug(
       `Destination Change Request not found: ${destId} and ${destType}`
     )
     return null
@@ -80,7 +80,7 @@ const fetchDestinationChangeRequest = async (
   }
 }
 
-const fetchDestinationChangeRequestByIdAndType = async (
+export const fetchDestinationChangeRequestByIdAndType = async (
   destId: string,
   destType: number
 ) => {
@@ -90,4 +90,13 @@ const fetchDestinationChangeRequestByIdAndType = async (
   )
   return destinationChangeRequest
 }
-export default fetchDestinationChangeRequestByIdAndType
+
+export const fetchChangeRequestPasswordByIdAndType = async (
+  destId: string,
+  destType: number
+): Promise<string> => {
+  const data = await prismacontext.prisma.$queryRaw<
+    { password: string }[]
+  >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
+  return data[0].password
+}
