@@ -52,7 +52,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (session.user.isAdmin) {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
-      const oldValues = await dbClient.destination(destId, destTypeId)
+      const oldValues = await dbClient.fetchDestinationByIdAndType(
+        destId,
+        destTypeId
+      )
       const isPasswordDifferent = await dbClient.passwordComparison(
         destId,
         destTypeId
@@ -76,7 +79,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           'Changes for ' +
             oldValues.jurisdiction.description +
             ' endpoint ' +
-            oldValues.dest_uri +
+            oldValues.destUri +
             ' deployed by ' +
             session.user.name,
           {

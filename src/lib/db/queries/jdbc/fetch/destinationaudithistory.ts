@@ -1,13 +1,45 @@
+import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
+import { DestinationAudit } from '../../../../type/DestinationAudit'
 
-const destinationaudithistory = async (destId: string, destTypeId: number) =>
-  await prismacontext.prisma.audit_history.findMany({
+const fetchDestinationaudithistoryByIdAndType = async (
+  destId: string,
+  destType: number
+): Promise<DestinationAudit[]> => {
+  const result = await prismacontext.prisma.audit_history.findMany({
     where: {
       tableName: 'destinations',
       dest_id: destId,
-      dest_type: destTypeId,
+      dest_type: destType,
     },
     orderBy: { createdAt: 'desc' },
   })
+  if (!result) {
+    logger.error(`Destination Audit not found: ${destId} and ${destType}`)
+    return null
+  }
 
-export default destinationaudithistory
+  return result.map((audit) => ({
+    id: audit.id,
+    destId: audit.dest_id,
+    destType: audit.dest_type,
+    tableName: audit.tableName,
+    changeType: audit.changeType.valueOf(),
+    oldValues: JSON.stringify(audit.oldValues),
+    newValues: JSON.stringify(audit.newValues),
+    userName: audit.userName,
+    createdAt: audit.createdAt,
+  }))
+}
+
+const fetchDesinationAuditHistory = async (
+  destId: string,
+  destType: number
+) => {
+  const history = await fetchDestinationaudithistoryByIdAndType(
+    destId,
+    destType
+  )
+  return history
+}
+export default fetchDesinationAuditHistory

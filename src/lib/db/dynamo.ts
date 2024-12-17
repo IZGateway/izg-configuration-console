@@ -4,7 +4,7 @@ class Dynamo implements ConfigConsoleRepository {
   lookupDestinationVersion: null
   refreshHub: null
   destinationChangeRequestId = null
-  destination = null
+  fetchDestinationByIdAndType = null
   destinations = null
   destinationaudithistory = null
   destinationChangeRequest = null

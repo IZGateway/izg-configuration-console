@@ -2,7 +2,7 @@ import { dbClient } from './dbclient'
 
 export async function lookupDestinationVersion(destination, destId, destType) {
   if (!destination.dest_version) {
-    destination = dbClient.destination(destId, destType)
+    destination = dbClient.fetchDestinationByIdAndType(destId, destType)
   }
   if (!destination.dest_version) {
     return '2014'

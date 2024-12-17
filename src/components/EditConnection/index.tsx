@@ -20,6 +20,7 @@ import moment from 'moment-timezone'
 import FloatingActionButtons from './floatingActionButtons'
 import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
+import { Destination } from '../../lib/type/Destination'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -65,7 +66,9 @@ const EditConnection = (props: editConnectionProps) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
+  } = useSWR<Destination>(
+    `/api/destinations/${props.destTypeId}/${props.destId}`
+  )
   const {
     data: draftData,
     error: draftError,
@@ -100,8 +103,8 @@ const EditConnection = (props: editConnectionProps) => {
       setAlert({
         level: 'error',
         jurisdiction: destData.jurisdiction.description,
-        dest_type: destData.destination_type.type,
-        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}. Please try again later!`,
+        dest_type: destData.destinationType.type,
+        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}. Please try again later!`,
       })
     }
   }, [hasCreateChangeRequestTicketError])
@@ -112,7 +115,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: draftData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facility_id,
+        facility_id: draftData?.facilityId,
         MSH3: draftData?.MSH3,
         MSH4: draftData?.MSH4,
         MSH5: draftData?.MSH5,
@@ -124,7 +127,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: draftData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facility_id,
+        facility_id: draftData?.facilityId,
         MSH3: draftData?.MSH3,
         MSH4: draftData?.MSH4,
         MSH5: draftData?.MSH5,
@@ -137,7 +140,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facility_id,
+        facility_id: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -149,7 +152,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facility_id,
+        facility_id: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -255,10 +258,10 @@ const EditConnection = (props: editConnectionProps) => {
           current: {
             ...defaultFormValues,
           },
-          dest_id: destData.dest_id,
-          dest_uri: destData.dest_uri,
-          dest_type_id: destData.destination_type.type_id,
-          dest_type: destData.destination_type.type,
+          dest_id: destData.destId,
+          dest_uri: destData.destUri,
+          dest_type_id: destData.destinationType.typeId,
+          dest_type: destData.destinationType.type,
           jira_id: null,
           isAsap: asapSelected,
           scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
@@ -276,8 +279,8 @@ const EditConnection = (props: editConnectionProps) => {
       setAlert({
         level: 'success',
         jurisdiction: destData.jurisdiction.description,
-        dest_type: destData.destination_type.type,
-        message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}!`,
+        dest_type: destData.destinationType.type,
+        message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}!`,
       })
       router.push('/manageconnections')
     } else {
@@ -340,10 +343,10 @@ const EditConnection = (props: editConnectionProps) => {
         current: {
           ...defaultFormValues,
         },
-        dest_id: destData.dest_id,
-        dest_uri: destData.dest_uri,
-        dest_type_id: destData.destination_type.type_id,
-        dest_type: destData.destination_type.type,
+        dest_id: destData.destId,
+        dest_uri: destData.destUri,
+        dest_type_id: destData.destinationType.typeId,
+        dest_type: destData.destinationType.type,
         jira_id: null,
         isAsap: true,
         scheduledAt: scheduleAt,
@@ -371,7 +374,7 @@ const EditConnection = (props: editConnectionProps) => {
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facility_id,
+      facility_id: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
@@ -383,7 +386,7 @@ const EditConnection = (props: editConnectionProps) => {
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facility_id,
+      facility_id: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
@@ -436,11 +439,11 @@ const EditConnection = (props: editConnectionProps) => {
             </thead>
             <tr style={{ fontWeight: 'bold' }}>
               <td colSpan={2} align="center">
-                {destData?.dest_id} ({destData?.jurisdiction.description})
+                {destData?.destId} ({destData?.jurisdiction.description})
               </td>
 
               <td colSpan={2} align="center">
-                {destData.destination_type.type}
+                {destData.destinationType.type}
               </td>
             </tr>
           </table>
@@ -463,7 +466,7 @@ const EditConnection = (props: editConnectionProps) => {
         {activeStep === 1 && (
           <Jurisdiction
             jurisdictionName={destData?.jurisdiction.description}
-            destType={destData?.destination_type.type}
+            destType={destData?.destinationType.type}
           />
         )}
         {activeStep === 2 && (

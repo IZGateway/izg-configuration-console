@@ -155,7 +155,10 @@ const hasActiveDraft = async (destId, destTypeId) => {
 
 const getDestinationResult = async (destId, destTypeId) => {
   try {
-    destinationResult = await dbClient.destination(destId, destTypeId)
+    destinationResult = await dbClient.fetchDestinationByIdAndType(
+      destId,
+      destTypeId
+    )
   } catch (error) {
     throw new Error(error.message)
   }
@@ -217,7 +220,7 @@ const hasFutureMaintenance = async (destId, destTypeId) => {
 
 function appendJurisdictionsAssignedToUser(
   hubURLS: string[],
-  jurisdictions: any
+  jurisdictions: Array<string>
 ) {
   return hubURLS.map(
     (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`

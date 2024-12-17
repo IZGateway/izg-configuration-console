@@ -1,7 +1,19 @@
+import { Destination } from '../type/Destination'
+import { DestinationAudit } from '../type/DestinationAudit'
+
 export default interface ConfigConsoleRepository {
-  destination(destId: string, destType: number): Promise<any>
-  destinations(isAdmin: boolean, jurisdictions: any): Promise<any>
-  destinationaudithistory(destId: string, destTypeId: any): Promise<any>
+  fetchDestinationByIdAndType(
+    destId: string,
+    destType: number
+  ): Promise<Destination>
+  destinations(
+    isAdmin: boolean,
+    jurisdictions: Array<string>
+  ): Promise<Destination[]>
+  destinationaudithistory(
+    destId: string,
+    destTypeId: number
+  ): Promise<DestinationAudit[]>
   destinationChangeRequest(destId: string, dest_type: number): Promise<any>
   destinationType(destType: string): Promise<any>
   fetchDraftRecord(destId: string, dest_type: number): Promise<any>
