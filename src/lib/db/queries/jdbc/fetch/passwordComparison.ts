@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const passwordComparison = async (destId: string, dest_type: number) => {
   const result = await prismacontext.prisma

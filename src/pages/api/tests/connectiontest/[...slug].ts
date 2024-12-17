@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
 // import destination from '../../../../lib/queries/fetch/destination'
 // import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
@@ -58,12 +58,15 @@ const getFetchedDestination = async (
     destTypeValue = values.type
     jurisdictionDescriptionValue = values.jurisdiction
   } else if (configuration === 'test') {
-      data = await dbInterface.destination(destId?.toString(), destTypeId)
-      fetchedDestination = { ...data, configuration: 'test' }
-      destTypeValue = fetchedDestination.destination_type.type
-      jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
+    data = await dbInterface.destination(destId?.toString(), destTypeId)
+    fetchedDestination = { ...data, configuration: 'test' }
+    destTypeValue = fetchedDestination.destination_type.type
+    jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
   } else if (configuration === 'deploy') {
-    data = await dbInterface.destinationChangeRequest(destId?.toString(), destTypeId)
+    data = await dbInterface.destinationChangeRequest(
+      destId?.toString(),
+      destTypeId
+    )
     fetchedDestination = { ...data, configuration: 'deploy' }
     destTypeValue = fetchedDestination.destinations.destination_type.type
     jurisdictionDescriptionValue =

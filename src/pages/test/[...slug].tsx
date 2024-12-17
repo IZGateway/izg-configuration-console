@@ -7,7 +7,7 @@ import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import connectionTest from '../../lib/connectiontests'
-import destination from '../../lib/queries/fetch/destination'
+import destination from '../../lib/queries/jdbc/fetch/destination'
 
 export async function getServerSideProps(context) {
   const { req, res } = context

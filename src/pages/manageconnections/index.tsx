@@ -16,7 +16,7 @@ import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
 import logger from '../../../logger'
 
-import dbInterface from '../../lib/dbInterface'
+import dbInterface from '../../lib/db/ConfigConsoleRepository'
 // import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 // import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 // import destination from '../../lib/queries/fetch/destination'
@@ -162,7 +162,9 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await dbInterface.destinationChangeRequest(destId, destTypeId)) ? true : false
+  return (await dbInterface.destinationChangeRequest(destId, destTypeId))
+    ? true
+    : false
 }
 
 const hasActiveDraft = async (destId, destTypeId) => {

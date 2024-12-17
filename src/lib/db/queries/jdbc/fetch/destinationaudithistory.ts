@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const destinationaudithistory = async (destId: string, destTypeId: number) =>
   await prismacontext.prisma.audit_history.findMany({

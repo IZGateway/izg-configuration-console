@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
 // import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
 // import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import desttypehelper from '../../../../lib/desttypehelper'
@@ -62,7 +62,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       data.newValues
     )
     try {
-      dbInterface.refreshHub(destination_type?.type_id);
+      dbInterface.refreshHub(destination_type?.type_id)
     } catch (error) {
       // If refresh fails, just keep going.
       logger.warn(`Error during update refresh: ${JSON.stringify(error)}`)

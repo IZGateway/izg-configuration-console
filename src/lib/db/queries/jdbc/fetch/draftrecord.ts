@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const fetchDraftRecord = async (destId: string, dest_type: number) =>
   await prismacontext.prisma.destination_change_request.findFirst({

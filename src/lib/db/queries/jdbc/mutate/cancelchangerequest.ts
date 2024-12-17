@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const cancelChangeRequest = async (destId: string, destType: number) => {
   const id = await prismacontext.prisma

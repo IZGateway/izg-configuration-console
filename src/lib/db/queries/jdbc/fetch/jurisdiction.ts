@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const jurisdiction = async (destId: string) =>
   await prismacontext.prisma.jurisdiction.findFirst({

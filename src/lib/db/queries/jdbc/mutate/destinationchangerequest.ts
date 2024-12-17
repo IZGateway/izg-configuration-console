@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const upsertDestinationChangeRequest = async (changeRequestData: any) => {
   if (_.isEmpty(changeRequestData.password)) {

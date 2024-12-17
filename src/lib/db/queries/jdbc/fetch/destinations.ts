@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const destinations = async (isAdmin: boolean, jurisdictions: any) =>
   await prismacontext.prisma.destinations.findMany({

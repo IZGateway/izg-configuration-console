@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const destinationType = async (destType: string) =>
   await prismacontext.prisma.destination_type.findFirst({

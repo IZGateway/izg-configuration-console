@@ -1,4 +1,4 @@
-import { prismacontext } from '../../prismacontext'
+import { prismacontext } from '../../../../prismacontext'
 
 const destination = async (destId: string, destType: number) =>
   await prismacontext.prisma.destinations.findUnique({

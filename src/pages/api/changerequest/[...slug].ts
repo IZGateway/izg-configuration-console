@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import dbInterface from '../../../lib/dbInterface'
+import dbInterface from '../../../lib/db/ConfigConsoleRepository'
 // import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
 /**
@@ -29,7 +29,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (req.method === 'GET') {
-    const result = await dbInterface.destinationChangeRequest(destId, destTypeId)
+    const result = await dbInterface.destinationChangeRequest(
+      destId,
+      destTypeId
+    )
     res.json(result)
   } else {
     throw new Error(

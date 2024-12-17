@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
-import dbInterface from '../../../../lib/dbInterface'
+import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
 // import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
 // import destination from '../../../../lib/queries/fetch/destination'
 // import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
@@ -58,7 +58,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
       const oldValues = await dbInterface.destination(destId, destTypeId)
-      const isPasswordDifferent = await dbInterface.passwordComparison(destId, destTypeId)
+      const isPasswordDifferent = await dbInterface.passwordComparison(
+        destId,
+        destTypeId
+      )
       const result = await dbInterface.updatedAuditedDestination(
         destId,
         destTypeId,
@@ -68,7 +71,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         isPasswordDifferent
       )
       try {
-        dbInterface.refreshHub(destTypeId);
+        dbInterface.refreshHub(destTypeId)
       } catch (error) {
         // If refresh fails, just keep going.
         logger.warn(`Error during deployment refresh: ${JSON.stringify(error)}`)

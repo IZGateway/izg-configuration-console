@@ -3,7 +3,7 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
-import dbInterface from '../../dbInterface'
+import dbInterface from '../../db/ConfigConsoleRepository'
 import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
@@ -210,7 +210,8 @@ function processBody(
           status: TestStatus.PASS,
         },
       ])
-    } else if (responseEchoback != null) {  // It has a value, but does not contain our message
+    } else if (responseEchoback != null) {
+      // It has a value, but does not contain our message
       resolve([
         {
           ...connectivityTestResult,
@@ -222,7 +223,8 @@ function processBody(
           status: TestStatus.WARNING,
         },
       ])
-    } else {  // It has no value
+    } else {
+      // It has no value
       resolve([
         {
           ...connectivityTestResult,

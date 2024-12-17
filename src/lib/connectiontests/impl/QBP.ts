@@ -5,7 +5,7 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
-import dbInterface from '../../dbInterface'
+import dbInterface from '../../db/ConfigConsoleRepository'
 import * as fs from 'fs'
 import path from 'path'
 import moment from 'moment'
@@ -294,4 +294,3 @@ async function lookupDestinationPassword(
     return data[0].password
   }
 }
-

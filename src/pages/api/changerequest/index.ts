@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import dbInterface from '../../../lib/dbInterface'
+import dbInterface from '../../../lib/db/ConfigConsoleRepository'
 // import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 // import {
 //   upsertDestinationChangeRequest,
@@ -137,12 +137,18 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await dbInterface.destinationChangeRequest(dest_id, dest_type_id)
+  const changeRequest = await dbInterface.destinationChangeRequest(
+    dest_id,
+    dest_type_id
+  )
   return !_.isEmpty(changeRequest)
 }
 
 const hasActiveDraft = async (dest_id: string, dest_type_id: number) => {
-  const changeRequest = await dbInterface.fetchDraftRecord(dest_id, dest_type_id)
+  const changeRequest = await dbInterface.fetchDraftRecord(
+    dest_id,
+    dest_type_id
+  )
   return changeRequest
 }
 
@@ -211,19 +217,20 @@ const upsertDraft = async (changeRequestDetails: any) => {
 }
 
 const insertChangeRequestRecord = async (changeRequestDetails: any) => {
-  const createdChangeRequestDBRecord = await dbInterface.upsertDestinationChangeRequest({
-    ..._.omit(changeRequestDetails.requested, [
-      'newPassword',
-      'confirmPassword',
-    ]),
-    password: changeRequestDetails.requested.newPassword,
-    jira_id: null,
-    dest_id: changeRequestDetails.dest_id,
-    dest_uri: changeRequestDetails.dest_uri,
-    dest_type: changeRequestDetails.dest_type_id,
-    scheduledAt: changeRequestDetails.scheduledAt,
-    requestedBy: changeRequestDetails.requestedBy,
-  })
+  const createdChangeRequestDBRecord =
+    await dbInterface.upsertDestinationChangeRequest({
+      ..._.omit(changeRequestDetails.requested, [
+        'newPassword',
+        'confirmPassword',
+      ]),
+      password: changeRequestDetails.requested.newPassword,
+      jira_id: null,
+      dest_id: changeRequestDetails.dest_id,
+      dest_uri: changeRequestDetails.dest_uri,
+      dest_type: changeRequestDetails.dest_type_id,
+      scheduledAt: changeRequestDetails.scheduledAt,
+      requestedBy: changeRequestDetails.requestedBy,
+    })
   return createdChangeRequestDBRecord
 }
 
