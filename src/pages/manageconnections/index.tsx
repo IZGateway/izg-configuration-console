@@ -6,24 +6,17 @@ import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
 import _ from 'lodash'
-import * as fs from 'fs'
-import path from 'path'
-import https from 'https'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
 import logger from '../../../logger'
-
-import dbInterface from '../../lib/db/ConfigConsoleRepository'
-// import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
-// import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
-// import destination from '../../lib/queries/fetch/destination'
-
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
+import { dbClient } from '../../lib/utils/dbclient'
+import { IZGHubHttpsAgent } from '../../lib/utils/izghubhttpsagent'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 let destinationResult = null
@@ -106,17 +99,6 @@ export const getServerSideProps = async (context) => {
 
 const fetchEndpointStatus = async (role, jurisdictions) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
-  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
-  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
-  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
-  const httpsAgentOptions = {
-    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
-    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
-    passphrase: IZG_ENDPOINT_PASSCODE,
-    rejectUnauthorized: false,
-    keepAlive: true,
-  }
-
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
@@ -129,7 +111,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const responses = Promise.allSettled(
     hubURLS.map((endpoint) =>
       axios.get(endpoint, {
-        httpsAgent: new https.Agent(httpsAgentOptions),
+        httpsAgent: IZGHubHttpsAgent,
         timeout: 30000,
       })
     )
@@ -162,18 +144,18 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await dbInterface.destinationChangeRequest(destId, destTypeId))
+  return (await dbClient.destinationChangeRequest(destId, destTypeId))
     ? true
     : false
 }
 
 const hasActiveDraft = async (destId, destTypeId) => {
-  return (await dbInterface.fetchDraftRecord(destId, destTypeId)) ? true : false
+  return (await dbClient.fetchDraftRecord(destId, destTypeId)) ? true : false
 }
 
 const getDestinationResult = async (destId, destTypeId) => {
   try {
-    destinationResult = await dbInterface.destination(destId, destTypeId)
+    destinationResult = await dbClient.destination(destId, destTypeId)
   } catch (error) {
     throw new Error(error.message)
   }

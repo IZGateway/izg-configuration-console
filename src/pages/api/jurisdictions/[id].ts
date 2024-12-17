@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import dbInterface from '../../../lib/db/ConfigConsoleRepository'
-// import jurisdiction from '../../../lib/queries/fetch/jurisdiction'
 import withMiddleware from '../api-middleware-helper'
+import { dbClient } from '../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/jurisdictions/{id}:
@@ -22,7 +21,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = req.query.id.toString()
 
   if (req.method === 'GET') {
-    const result = await dbInterface.jurisdiction(destId)
+    const result = await dbClient.jurisdiction(destId)
     res.json(result)
   } else {
     throw new Error(

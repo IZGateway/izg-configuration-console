@@ -6,11 +6,11 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import DeployConnection from '../../components/DeployConnection/index'
 import Close from '../../components/Close'
 import { InferGetServerSidePropsType } from 'next'
-import destinationChangeRequest from '../../lib/queries/jdbc/fetch/destinationchangerequest'
 import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
+import { dbClient } from '../../lib/utils/dbclient'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -43,7 +43,7 @@ export const getServerSideProps = async (context) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (hasAccessToDestId(destId, session)) {
-    const result = await destinationChangeRequest(destId, destTypeId)
+    const result = await dbClient.destinationChangeRequest(destId, destTypeId)
     return {
       props: {
         changerequestData: JSON.parse(JSON.stringify(result)),

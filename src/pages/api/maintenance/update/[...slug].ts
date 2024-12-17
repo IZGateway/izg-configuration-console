@@ -1,9 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
-//import maintenanceRequest from '../../../../lib/queries/mutate/maintenanceRequest'
 import logger from '../../../../../logger'
+import { dbClient } from '../../../../lib/utils/dbclient'
 
 /**
  * @swagger
@@ -32,7 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
   const maintData = req.body
   if (req.method === 'POST') {
-    const result = await dbInterface.maintenanceRequest(
+    const result = await dbClient.maintenanceRequest(
       destId,
       destTypeId,
       maintData

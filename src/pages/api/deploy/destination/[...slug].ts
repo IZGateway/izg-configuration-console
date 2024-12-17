@@ -1,15 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
-import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
-// import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
-// import destination from '../../../../lib/queries/fetch/destination'
-// import { deleteDestinationChangeRequest } from '../../../../lib/queries/mutate/destinationchangerequest'
-// import passwordComparison from '../../../../lib/queries/fetch/passwordComparison'
-
 import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
 import logger from '../../../../../logger'
+import { dbClient } from '../../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/deploy/destination/{destTypeId}/{destId}:
@@ -57,12 +52,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (session.user.isAdmin) {
     if (req.method === 'POST') {
       const data = JSON.parse(req.body)
-      const oldValues = await dbInterface.destination(destId, destTypeId)
-      const isPasswordDifferent = await dbInterface.passwordComparison(
+      const oldValues = await dbClient.destination(destId, destTypeId)
+      const isPasswordDifferent = await dbClient.passwordComparison(
         destId,
         destTypeId
       )
-      const result = await dbInterface.updatedAuditedDestination(
+      const result = await dbClient.updatedAuditedDestination(
         destId,
         destTypeId,
         data,
@@ -70,12 +65,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         oldValues,
         isPasswordDifferent
       )
-      try {
-        dbInterface.refreshHub(destTypeId)
-      } catch (error) {
-        // If refresh fails, just keep going.
-        logger.warn(`Error during deployment refresh: ${JSON.stringify(error)}`)
-      }
       res.json(result)
       if (res.statusCode === 200) {
         const passwordChanged =
@@ -98,7 +87,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             createdAt: new Date(),
           }
         )
-        await dbInterface.deleteDestinationChangeRequest(data.id)
+        await dbClient.deleteDestinationChangeRequest(data.id)
       }
     } else {
       throw new Error(

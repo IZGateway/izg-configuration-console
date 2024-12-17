@@ -1,14 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
-import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
-// import destination from '../../../../lib/queries/fetch/destination'
-// import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
+import { dbClient } from '../../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/tests/connectiontest/{destTypeId}/{destId}:
@@ -58,12 +56,12 @@ const getFetchedDestination = async (
     destTypeValue = values.type
     jurisdictionDescriptionValue = values.jurisdiction
   } else if (configuration === 'test') {
-    data = await dbInterface.destination(destId?.toString(), destTypeId)
+    data = await dbClient.destination(destId?.toString(), destTypeId)
     fetchedDestination = { ...data, configuration: 'test' }
     destTypeValue = fetchedDestination.destination_type.type
     jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
   } else if (configuration === 'deploy') {
-    data = await dbInterface.destinationChangeRequest(
+    data = await dbClient.destinationChangeRequest(
       destId?.toString(),
       destTypeId
     )

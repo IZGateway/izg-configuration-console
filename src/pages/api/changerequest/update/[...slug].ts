@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
-// import updateChangeRequest from '../../../../lib/queries/mutate/updateChangeRequest'
-// import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import changeRequestTicketComment from '../../../../lib/changerequestticketcomment'
+import { dbClient } from '../../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/changerequest/update/{destTypeId}/{destId}:
@@ -33,7 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const updatedData = JSON.parse(req.body)
   if (req.method === 'POST') {
     try {
-      const changeRequest = await dbInterface.destinationChangeRequest(
+      const changeRequest = await dbClient.destinationChangeRequest(
         destId,
         destTypeId
       )
@@ -43,7 +41,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         updatedData.scheduledAt,
         updatedData.isAsap
       )
-      await dbInterface.updateChangeRequest(destId, destTypeId, updatedData)
+      await dbClient.updateChangeRequest(destId, destTypeId, updatedData)
       res.status(200).json('Change Request is updated')
     } catch (error) {
       console.error(error)

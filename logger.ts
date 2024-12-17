@@ -3,7 +3,11 @@ import ecsFormat from '@elastic/ecs-winston-format'
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'debug',
-  format: ecsFormat({ convertReqRes: true, apmIntegration: false }),
+  format: winston.format.combine(
+    winston.format.uncolorize(),
+    winston.format.errors({ stack: true }),
+    ecsFormat({ convertReqRes: true, apmIntegration: false })
+  ),
   transports: [new winston.transports.Console()],
   exitOnError: false,
 })

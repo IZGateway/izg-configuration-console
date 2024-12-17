@@ -1,10 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
-import dbInterface from '../../../../lib/db/ConfigConsoleRepository'
-// import cancelChangeRequest from '../../../../lib/queries/mutate/cancelChangeRequest'
-// import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import changeRequestTicketComment from '../../../../lib/changerequestticketcomment'
+import { dbClient } from '../../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/changerequest/cancel/{destTypeId}/{destId}:
@@ -33,12 +31,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const body = JSON.parse(req.body)
   if (req.method === 'POST') {
     try {
-      const changeRequest = await dbInterface.destinationChangeRequest(
+      const changeRequest = await dbClient.destinationChangeRequest(
         destId,
         destTypeId
       )
       await changeRequestTicketComment(changeRequest.jira_id, body.requestedAt)
-      await dbInterface.cancelChangeRequest(destId, destTypeId)
+      await dbClient.cancelChangeRequest(destId, destTypeId)
       res.status(200).json('Change Request is cancelled')
     } catch (error) {
       console.error(error)

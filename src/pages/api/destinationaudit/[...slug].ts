@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import dbInterface from '../../../lib/db/ConfigConsoleRepository'
-// import destinationaudithistory from '../../../lib/queries/fetch/destinationaudithistory'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
+import { dbClient } from '../../../lib/utils/dbclient'
 
 /**
  * @swagger
@@ -32,7 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
 
   if (req.method === 'GET') {
-    const result = await dbInterface.destinationaudithistory(destId, destTypeId)
+    const result = await dbClient.destinationaudithistory(destId, destTypeId)
     res.json(result)
   } else {
     throw new Error(

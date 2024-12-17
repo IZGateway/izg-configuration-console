@@ -2,20 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import dbInterface from '../../../lib/db/ConfigConsoleRepository'
-// import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
-// import {
-//   upsertDestinationChangeRequest,
-//   deleteDestinationChangeRequest,
-// } from '../../../lib/queries/mutate/destinationchangerequest'
-// import upsertDraftRecord from '../../../lib/queries/mutate/draftrecord'
-// import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
-
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
-
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
+import { dbClient } from '../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/changerequest:
@@ -137,7 +128,7 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await dbInterface.destinationChangeRequest(
+  const changeRequest = await dbClient.destinationChangeRequest(
     dest_id,
     dest_type_id
   )
@@ -145,10 +136,7 @@ const hasActiveChangeRequest = async (
 }
 
 const hasActiveDraft = async (dest_id: string, dest_type_id: number) => {
-  const changeRequest = await dbInterface.fetchDraftRecord(
-    dest_id,
-    dest_type_id
-  )
+  const changeRequest = await dbClient.fetchDraftRecord(dest_id, dest_type_id)
   return changeRequest
 }
 
@@ -185,7 +173,7 @@ const upsertDraft = async (changeRequestDetails: any) => {
     changeRequestDetails.dest_type_id
   )
   if (_.isEmpty(activeDraftRecord)) {
-    await dbInterface.upsertDraftRecord({
+    await dbClient.upsertDraftRecord({
       ..._.omit(changeRequestDetails.requested, [
         'newPassword',
         'confirmPassword',
@@ -199,7 +187,7 @@ const upsertDraft = async (changeRequestDetails: any) => {
       requestedBy: changeRequestDetails.requestedBy,
     })
   } else {
-    await dbInterface.upsertDraftRecord({
+    await dbClient.upsertDraftRecord({
       ..._.omit(changeRequestDetails.requested, [
         'newPassword',
         'confirmPassword',
@@ -218,7 +206,7 @@ const upsertDraft = async (changeRequestDetails: any) => {
 
 const insertChangeRequestRecord = async (changeRequestDetails: any) => {
   const createdChangeRequestDBRecord =
-    await dbInterface.upsertDestinationChangeRequest({
+    await dbClient.upsertDestinationChangeRequest({
       ..._.omit(changeRequestDetails.requested, [
         'newPassword',
         'confirmPassword',
@@ -235,10 +223,10 @@ const insertChangeRequestRecord = async (changeRequestDetails: any) => {
 }
 
 const updateChangeRequestRecord = async (changeRequestRecord: any) => {
-  await dbInterface.upsertDestinationChangeRequest(changeRequestRecord)
+  await dbClient.upsertDestinationChangeRequest(changeRequestRecord)
 }
 
 const deleteChangeRequestRecord = async (id: any) => {
-  await dbInterface.deleteDestinationChangeRequest(id)
+  await dbClient.deleteDestinationChangeRequest(id)
 }
 export default withMiddleware('logRequest')(handler)
