@@ -128,7 +128,7 @@ const hasActiveChangeRequest = async (
   dest_id: string,
   dest_type_id: number
 ) => {
-  const changeRequest = await dbClient.destinationChangeRequest(
+  const changeRequest = await dbClient.fetchDestinationChangeRequestByIdAndType(
     dest_id,
     dest_type_id
   )
@@ -226,7 +226,7 @@ const updateChangeRequestRecord = async (changeRequestRecord: any) => {
   await dbClient.upsertDestinationChangeRequest(changeRequestRecord)
 }
 
-const deleteChangeRequestRecord = async (id: any) => {
+const deleteChangeRequestRecord = async (id: number) => {
   await dbClient.deleteDestinationChangeRequest(id)
 }
 export default withMiddleware('logRequest')(handler)

@@ -31,12 +31,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const updatedData = JSON.parse(req.body)
   if (req.method === 'POST') {
     try {
-      const changeRequest = await dbClient.destinationChangeRequest(
-        destId,
-        destTypeId
-      )
+      const changeRequest =
+        await dbClient.fetchDestinationChangeRequestByIdAndType(
+          destId,
+          destTypeId
+        )
       await changeRequestTicketComment(
-        changeRequest.jira_id,
+        changeRequest.jiraId,
         updatedData.requestedAt,
         updatedData.scheduledAt,
         updatedData.isAsap

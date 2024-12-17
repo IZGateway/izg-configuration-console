@@ -28,7 +28,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (req.method === 'GET') {
-    const result = await dbClient.destinationChangeRequest(destId, destTypeId)
+    const result = await dbClient.fetchDestinationChangeRequestByIdAndType(
+      destId,
+      destTypeId
+    )
     res.json(result)
   } else {
     throw new Error(

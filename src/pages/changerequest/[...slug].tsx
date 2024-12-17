@@ -43,7 +43,10 @@ export const getServerSideProps = async (context) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (hasAccessToDestId(destId, session)) {
-    const result = await dbClient.destinationChangeRequest(destId, destTypeId)
+    const result = await dbClient.fetchDestinationChangeRequestByIdAndType(
+      destId,
+      destTypeId
+    )
     return {
       props: {
         changerequestData: JSON.parse(JSON.stringify(result)),

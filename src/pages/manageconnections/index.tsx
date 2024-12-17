@@ -144,7 +144,10 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await dbClient.destinationChangeRequest(destId, destTypeId))
+  return (await dbClient.fetchDestinationChangeRequestByIdAndType(
+    destId,
+    destTypeId
+  ))
     ? true
     : false
 }

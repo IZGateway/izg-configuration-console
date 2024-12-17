@@ -52,7 +52,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const data = JSON.parse(req.body)
     const result = await dbClient.updatedAuditedDestination(
       destId,
-      destination_type?.type_id,
+      destination_type?.typeId,
       data.updatedData,
       data.user,
       data.oldValues,

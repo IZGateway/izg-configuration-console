@@ -1,21 +1,26 @@
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
+import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
+import { DestinationType } from '../type/DestinationType'
 
 export default interface ConfigConsoleRepository {
   fetchDestinationByIdAndType(
     destId: string,
     destType: number
   ): Promise<Destination>
-  destinations(
+  fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: Array<string>
   ): Promise<Destination[]>
-  destinationaudithistory(
+  fetchDestinationAuditHistoryByIdAndType(
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]>
-  destinationChangeRequest(destId: string, dest_type: number): Promise<any>
-  destinationType(destType: string): Promise<any>
+  fetchDestinationChangeRequestByIdAndType(
+    destId: string,
+    dest_type: number
+  ): Promise<DestinationChangeRequest>
+  destinationType(destType: string): Promise<DestinationType>
   fetchDraftRecord(destId: string, dest_type: number): Promise<any>
   jurisdiction(destId: string): Promise<any>
   passwordComparison(destId: string, dest_type: number): Promise<any>

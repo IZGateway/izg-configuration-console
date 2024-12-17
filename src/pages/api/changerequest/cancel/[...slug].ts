@@ -31,11 +31,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const body = JSON.parse(req.body)
   if (req.method === 'POST') {
     try {
-      const changeRequest = await dbClient.destinationChangeRequest(
-        destId,
-        destTypeId
-      )
-      await changeRequestTicketComment(changeRequest.jira_id, body.requestedAt)
+      const changeRequest =
+        await dbClient.fetchDestinationChangeRequestByIdAndType(
+          destId,
+          destTypeId
+        )
+      await changeRequestTicketComment(changeRequest.jiraId, body.requestedAt)
       await dbClient.cancelChangeRequest(destId, destTypeId)
       res.status(200).json('Change Request is cancelled')
     } catch (error) {

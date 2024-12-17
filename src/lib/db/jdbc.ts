@@ -22,10 +22,10 @@ import ConfigConsoleRepository from './ConfigConsoleRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
 
 class JDBC implements ConfigConsoleRepository {
-  fetchDestinationByIdAndType = fetchDestinationByIdAndType
-  destinations = destinations
-  destinationaudithistory = destinationaudithistory
-  destinationChangeRequest = destinationChangeRequest
+  fetchDestinationByIdAndType = fetchDestinationByIdAndType //done
+  fetchLoggedInUsersDestinations = destinations //done
+  fetchDestinationAuditHistoryByIdAndType = destinationaudithistory //done
+  fetchDestinationChangeRequestByIdAndType = destinationChangeRequest
   destinationType = destinationType
   fetchDraftRecord = fetchDraftRecord
   jurisdiction = jurisdiction

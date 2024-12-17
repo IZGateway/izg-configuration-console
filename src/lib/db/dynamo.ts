@@ -1,13 +1,31 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Destination } from '../type/Destination'
+import { DestinationAudit } from '../type/DestinationAudit'
+import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import ConfigConsoleRepository from './ConfigConsoleRepository'
 
 class Dynamo implements ConfigConsoleRepository {
+  fetchLoggedInUsersDestinations(
+    isAdmin: boolean,
+    jurisdictions: string[]
+  ): Promise<Destination[]> {
+    throw new Error('Method not implemented.')
+  }
+  fetchDestinationAuditHistoryByIdAndType(
+    destId: string,
+    destTypeId: number
+  ): Promise<DestinationAudit[]> {
+    throw new Error('Method not implemented.')
+  }
+  fetchDestinationChangeRequestByIdAndType(
+    destId: string,
+    dest_type: number
+  ): Promise<DestinationChangeRequest> {
+    throw new Error('Method not implemented.')
+  }
   lookupDestinationVersion: null
-  refreshHub: null
   destinationChangeRequestId = null
   fetchDestinationByIdAndType = null
-  destinations = null
-  destinationaudithistory = null
-  destinationChangeRequest = null
   destinationType = null
   fetchDraftRecord = null
   jurisdiction = null

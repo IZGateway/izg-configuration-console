@@ -8,10 +8,26 @@ import DetailsChangeRequest from './detailsChangeRequest'
 import MakeChanges from './makeChanges'
 import { ChangeRequestPageAccessControl } from '../../lib/type/PageAccessControls'
 import useRoleAccess from '../../lib/security/useRoleAccess'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 
 const JIRA_STATUS_FOR_DEPLOY = 'Approved'
 
-const DeployConnection = (props) => {
+interface DeployConnectionProps {
+  changerequestData: DestinationChangeRequest
+  destId: string
+  destTypeId: string
+  jiraUrl: string
+}
+
+interface ChangeRequestStatusData {
+  fields: {
+    status: {
+      name: string
+    }
+  }
+}
+
+const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
   const { changerequestData } = props
   const accessLevels: ChangeRequestPageAccessControl = useRoleAccess()
   const humanReadableScheduledTime = new Date(changerequestData.scheduledAt)
@@ -19,9 +35,9 @@ const DeployConnection = (props) => {
     data: changerequestStatusData,
     error: changerequestStatusError,
     isLoading: changerequestStatusLoading,
-  } = useSWR(
+  } = useSWR<ChangeRequestStatusData>(
     changerequestData
-      ? `/api/changerequeststatus/${changerequestData.jira_id}`
+      ? `/api/changerequeststatus/${changerequestData.jiraId}`
       : null
   )
 
