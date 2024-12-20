@@ -30,7 +30,7 @@ const DetailsChangeRequest = (params: {
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
-        <CardHeader title="Details Change Request" />
+        <CardHeader title="Change Request Details" />
         <Divider />
         <CardContent>
           <Details

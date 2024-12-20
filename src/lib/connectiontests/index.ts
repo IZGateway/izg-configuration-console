@@ -1,10 +1,9 @@
 import logger from '../../../logger'
+import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
-import fs from 'fs'
-import forge from 'node-forge'
 
 const connectionTest = async (destination: any, userId: string) => {
   enum TestSuite {
@@ -46,13 +45,13 @@ const connectionTest = async (destination: any, userId: string) => {
     }
   }
 
-  const setHostnameIfNull = (url) => {
+  const setHostnameIfNull = (dest) => {
     let hostname
-    if (!hasHostname(url)) {
-      hostname = 'https://' + getHostNameFromCert()
-      return hostname + url
+    if (!hasHostname(dest?.dest_uri)) {
+      hostname = 'https://' + getHostNameFromType(dest)
+      return hostname + dest?.dest_uri
     } else {
-      return url
+      return dest?.dest_uri
     }
   }
 
@@ -75,10 +74,7 @@ const connectionTest = async (destination: any, userId: string) => {
       },
     ]
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
-  } else if (
-    destination &&
-    !isValidUrl(setHostnameIfNull(destination.dest_uri))
-  ) {
+  } else if (destination && !isValidUrl(setHostnameIfNull(destination))) {
     if (changeRequestDestination) {
       destType = destination?.destinations.destination_type.type
       jurisdictionDescription =
@@ -98,13 +94,17 @@ const connectionTest = async (destination: any, userId: string) => {
     connectionTestResult.testResults = [
       {
         name: '',
-        detail:
-          "No tests were run because the requested destination's URL is malformed.",
+        detail: `No tests were run because the requested destination's URL [ ${destination.dest_uri} ]is malformed.`,
         status: null,
         order: -1,
         message: `The URL retrieved for ${destination.dest_id} is malformed`,
       },
     ]
+    logger.error(
+      `URL for destination is malformed: ${JSON.stringify(
+        connectionTestResult.testResults
+      )}`
+    )
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else {
     const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
@@ -122,7 +122,7 @@ const connectionTest = async (destination: any, userId: string) => {
       jurisdictionDescription = destination.jurisdiction.description
     }
     const destIdURL = convertUrlStringToUrlObject(
-      setHostnameIfNull(destination?.dest_uri)
+      setHostnameIfNull(destination)
     )
 
     const connectionTestRequest: ConnectionTestRequest = {
@@ -147,7 +147,7 @@ const connectionTest = async (destination: any, userId: string) => {
     let skipTests = false
     for (const test in testSuiteKeys) {
       ++testCounter
-
+      logger.debug(`Running test number ${testCounter} : ${TestSuite[test]}`)
       let result: ConnectionTestResult[] = [
         {
           name: TestSuite[test],
@@ -167,12 +167,16 @@ const connectionTest = async (destination: any, userId: string) => {
       }
 
       testResults.push(...result)
+      logger.debug(
+        `${TestSuite[test]} results: ${JSON.stringify(result, null, 3)}`
+      )
       if (TestSuite.dns || TestSuite.tcp) {
         if (result[0]?.status === TestStatus.FAIL) {
           skipTests = true
         }
         connectionTestRequest.ip = result[0]?.detail
       }
+      logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
 
     connectionTestResult.destId = destination.dest_id || 'unknown'
@@ -203,21 +207,16 @@ const isValidUrl = (urlString: string) => {
   }
 }
 
-const getHostNameFromCert = () => {
-  let hostname = ''
-  try {
-    const certPem = fs.readFileSync(process.env.IZG_ENDPOINT_CRT_PATH, 'utf8')
-    const cert = forge.pki.certificateFromPem(certPem)
-
-    const subjectAttributes = cert.subject.attributes
-    for (const attribute of subjectAttributes) {
-      if (attribute.shortName === 'CN') {
-        hostname = attribute.value
-        break
-      }
-    }
-  } catch (error) {
-    console.error('Error reading certificate for hostname:', error)
-  }
-  return hostname
+const getHostNameFromType = (dest: any) => {
+  const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
+  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
+    IZG_STATUS_ENDPOINT_URL
+  )
+  // if there is no hostname, then the URL is local, and so the endpoint
+  // is where you would get status history from for the same destination
+  const base = new URL(
+    configuredHubURLs.getIZGHubURL(dest.destination_type.type_id)
+  )
+  const url = new URL(dest.dest_uri, base)
+  return url.host
 }

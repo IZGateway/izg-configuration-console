@@ -1,10 +1,10 @@
-FROM node:alpine AS deps
+FROM node:21-alpine3.20 AS deps
 #RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN  npm ci --force
 
-FROM node:alpine AS builder
+FROM node:21-alpine3.20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -41,7 +41,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-var
 # Install filebeat
 
 RUN apk add curl libc6-compat
-ENV FILEBEAT_VERSION=8.9.0
+ENV FILEBEAT_VERSION=8.15.0
 RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz -o ./filebeat.tar.gz && \
     tar xzvf filebeat.tar.gz && \
     rm filebeat.tar.gz && \

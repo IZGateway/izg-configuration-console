@@ -1,12 +1,11 @@
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
-import https from 'https'
+import { https } from 'follow-redirects'
 import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
-import xml2js from 'xml2js'
-const parser = new xml2js.Parser()
+import { DOMParser } from '@xmldom/xmldom'
 
 const TEST_NAME = 'WSDL Test'
 export default class WSDL extends ConnectionTest {
@@ -44,54 +43,49 @@ export default class WSDL extends ConnectionTest {
     return new Promise((resolve) => {
       const req = https.request(options, (res) => {
         let data = ''
-        let targetNameSpace = ''
         if (res.statusCode === 200) {
           res.on('data', (chunk) => {
             data = data + chunk.toString()
           })
 
           res.on('end', function () {
-            parser.parseString(data, function (err, result) {
-              if (err) {
+            const parser = new DOMParser()
+            try {
+              const resXmlDoc = parser.parseFromString(data, 'text/xml')
+              if (
+                resXmlDoc.documentElement.localName == 'definitions' &&
+                resXmlDoc.documentElement.namespaceURI ==
+                  'http://schemas.xmlsoap.org/wsdl/'
+              ) {
                 resolve([
                   {
                     ...wsdlConnectionTestResult,
-                    detail: err?.message,
-                    message: TestResponseMessages.UNKNOWN_ERROR(
-                      options.hostname
+                    detail: resXmlDoc.documentElement.namespaceURI,
+                    status: TestStatus.PASS,
+                  },
+                ])
+              } else {
+                resolve([
+                  {
+                    ...wsdlConnectionTestResult,
+                    detail: resXmlDoc.documentElement.namespaceURI,
+                    message: TestResponseMessages.WSDL_NOT_SUPPORTED(
+                      resXmlDoc.documentElement.namespaceURI
                     ),
                     status: TestStatus.FAIL,
                   },
                 ])
-              } else {
-                targetNameSpace =
-                  result.definitions.$.targetNamespace.toString()
-                if (
-                  targetNameSpace === 'urn:cdc:iisb:2014' ||
-                  targetNameSpace === 'urn:cdc:iisb:2011'
-                ) {
-                  resolve([
-                    {
-                      ...wsdlConnectionTestResult,
-                      detail: targetNameSpace,
-                      status: TestStatus.PASS,
-                    },
-                  ])
-                } else {
-                  resolve([
-                    {
-                      ...wsdlConnectionTestResult,
-                      detail: targetNameSpace,
-                      message:
-                        TestResponseMessages.WSDL_NOT_SUPPORTED(
-                          targetNameSpace
-                        ),
-                      status: TestStatus.FAIL,
-                    },
-                  ])
-                }
               }
-            })
+            } catch (e) {
+              resolve([
+                {
+                  ...wsdlConnectionTestResult,
+                  detail: e,
+                  message: TestResponseMessages.UNKNOWN_ERROR(options.hostname),
+                  status: TestStatus.FAIL,
+                },
+              ])
+            }
           })
         } else {
           resolve([
@@ -100,7 +94,7 @@ export default class WSDL extends ConnectionTest {
               message: TestResponseMessages.WSDL_NOT_ACCESSED(
                 options.hostname + ':' + options.port + options.path
               ),
-              status: TestStatus.FAIL,
+              status: TestStatus.WARNING,
             },
           ])
         }

@@ -74,13 +74,10 @@ const ReleaseNotes = () => {
         </DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            <strong>Version 1.0</strong>{' '}
-          </Typography>
-          <Typography gutterBottom>
             To find the latest version and associated release notes, please
             visit{' '}
             <Link
-              href="https://github.com/IZGateway/phiz-public/releases"
+              href="https://github.com/IZGateway/izgw-hub/releases"
               target="_blank"
             >
               here

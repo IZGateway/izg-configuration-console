@@ -41,24 +41,18 @@ const Verify = (props: any) => {
         <CardHeader
           title={
             <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
-              Review & Submit Changes
+              Review Changes
             </Typography>
           }
         />
         <Divider />
         <CardContent>
           <div>
-            Before you submit your edits, it&apos;s important to double-check
-            that you&apos;ve made all the changes you intended to make. Once you
-            hit the &quot;submit&quot; button, your changes will be saved and it
-            may not be possible to undo them. Take a moment to review your edits
-            and make sure they accurately reflect your intended changes. If
-            you&apos;re unsure about any of the edits, you may want to consult
-            with a colleague or supervisor before submitting them. Remember, the
-            changes you make can have a significant impact on the content, so
-            it&apos;s essential to ensure that they are correct and appropriate.
-            Thank you for taking the time to review your edits before
-            submitting.
+            Please double-check that all changes are accurate. If unsure,
+            consult with a colleague or supervisor. Your changes can
+            significantly impact this endpoint&apos;s connectivity, so it is
+            important to get them right. Thank you for reviewing your changes
+            before submission.
           </div>
           <Details
             existingValue={existingValue}

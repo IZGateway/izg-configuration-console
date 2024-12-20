@@ -3,34 +3,29 @@ import * as React from 'react'
 import Container from '../../components/Container'
 import { Box } from '@mui/material'
 import ErrorBoundary from '../../components/ErrorBoundary'
-import { useRouter } from 'next/router'
-import { useEffect } from 'react'
 import DeployConnection from '../../components/DeployConnection/index'
-import AdminGuard from '../../components/AdminGuard'
 import Close from '../../components/Close'
-import { GetStaticPaths, GetStaticProps, InferGetStaticPropsType } from 'next'
+import { InferGetServerSidePropsType } from 'next'
+import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
+import _ from 'lodash'
+import hasAccessToDestId from '../../lib/accesshelper'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../api/auth/[...nextauth]'
 
-const Changerequest = (props) => {
-  const router = useRouter()
-  const { isReady, query } = router
-  const { jiraUrl } = props
-
-  useEffect(() => {
-    if (!isReady) return
-  }, [isReady, query])
-
-  return !isReady ? (
-    <>Loading....</>
-  ) : (
+const Changerequest = (
+  props: InferGetServerSidePropsType<typeof getServerSideProps>
+) => {
+  return (
     <Container title="Change Request">
       <ErrorBoundary>
         <Box sx={{ position: 'relative' }}>
           <div>
             <Close />
             <DeployConnection
-              destId={router?.query?.slug[1] as string}
-              destTypeId={router?.query?.slug[0] as string}
-              jiraUrl={jiraUrl}
+              destId={props.destId}
+              destTypeId={props.destTypeId}
+              changerequestData={props.changerequestData}
+              jiraUrl={props.jiraUrl}
             />
           </div>
         </Box>
@@ -39,19 +34,24 @@ const Changerequest = (props) => {
   )
 }
 
-export default AdminGuard(Changerequest)
+export default Changerequest
 
-export const getStaticProps: GetStaticProps = async () => {
-  return {
-    props: {
-      jiraUrl: process.env.JIRA_BROWSER_URL.toString(),
-    },
+export const getServerSideProps = async (context) => {
+  const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
+  const session = await getServerSession(context.req, context.res, authOptions)
+  const slug = context.params?.slug || {}
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
+  if (hasAccessToDestId(destId, session)) {
+    const result = await destinationChangeRequest(destId, destTypeId)
+    return {
+      props: {
+        changerequestData: JSON.parse(JSON.stringify(result)),
+        jiraUrl: jiraUrl,
+        destId: destId as string,
+        destTypeId: destTypeId as unknown as string,
+      },
+    }
   }
-}
-
-export const getStaticPaths: GetStaticPaths<{ slug: string }> = async () => {
-  return {
-    paths: [], //indicates that no page needs be created at build time
-    fallback: 'blocking', //indicates the type of fallback
-  }
+  return {}
 }

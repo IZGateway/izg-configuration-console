@@ -11,8 +11,11 @@ import {
   Box,
 } from '@mui/material'
 import Link from 'next/link'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ChangeRequestPageAccessControl } from '../../lib/type/PageAccessControls'
 
 const ViewChangeRequestTicket = (props: any) => {
+  const accessLevels: ChangeRequestPageAccessControl = useRoleAccess()
   const humanReadableScheduledTime = new Date(props.scheduledAt)
   const { jiraUrl } = props
   return (
@@ -28,7 +31,7 @@ const ViewChangeRequestTicket = (props: any) => {
           marginRight: 4,
         }}
       >
-        <CardHeader title="View JIRA Ticket" />
+        <CardHeader title="Change Request Status" />
         <Tooltip
           title={
             <div>
@@ -49,25 +52,27 @@ const ViewChangeRequestTicket = (props: any) => {
         </Tooltip>
       </Box>
       <Divider />
-      <CardContent>
-        <Typography variant="body1" component="div">
-          To update the status of this change request, please click on the link
-          below. Something how Jira is the source of truth and you may need to
-          login additional systems.
-        </Typography>
-        <Link href={jiraUrl + props.jira_id} target="_blank">
-          <Button
-            id="run"
-            color="primary"
-            data-testid="CRTicket"
-            sx={{
-              marginTop: 4,
-            }}
-          >
-            Access Change Request Ticket
-          </Button>
-        </Link>
-      </CardContent>
+      {accessLevels.canViewJiraTicket && (
+        <CardContent>
+          <Typography variant="body1" component="div">
+            To update the status of this change request, please click on the
+            link below. Something how Jira is the source of truth and you may
+            need to login additional systems.
+          </Typography>
+          <Link href={jiraUrl + props.jira_id} target="_blank">
+            <Button
+              id="run"
+              color="primary"
+              data-testid="CRTicket"
+              sx={{
+                marginTop: 4,
+              }}
+            >
+              Access Change Request Ticket
+            </Button>
+          </Link>
+        </CardContent>
+      )}
     </Card>
   )
 }

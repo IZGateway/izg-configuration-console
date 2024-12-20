@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import pack from '../../../package.json'
 import {
   Container,
   Typography,
@@ -24,9 +25,12 @@ import Requirements from './Requirements'
 import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
 import Slide from '@mui/material/Slide'
+import { useSession } from 'next-auth/react'
+import isOperationsRole from '../../lib/security/accessutils'
 
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
+  const { data: session } = useSession()
   return (
     <>
       <AppHeaderBar open />
@@ -54,16 +58,18 @@ function HomeComponent() {
                   <strong>Configuration Console</strong>
                 </Typography>
                 <Box display={'flex'} flexDirection={'row'} gap={2} mt={4}>
-                  <Link href="/manage">
+                  <Link href="/manageconnections">
                     <Button variant="contained" color="primary">
                       Manage Connections
                     </Button>
                   </Link>
-                  <Link href="/api-doc">
-                    <Button variant="outlined" color="primary">
-                      OUR API
-                    </Button>
-                  </Link>
+                  {isOperationsRole(session?.user.role) && (
+                    <Link href="/api-doc">
+                      <Button variant="outlined" color="primary">
+                        OUR API
+                      </Button>
+                    </Link>
+                  )}
                 </Box>
               </Box>
             </Slide>
@@ -302,8 +308,8 @@ function HomeComponent() {
               pb={1}
             >
               <Typography variant="caption">
-                Version 1.0.0-{process.env.NEXT_PUBLIC_BUILD_ID} | Immunization
-                (IZ) Gateway Configuration Console 2024
+                Version {pack.version}-{process.env.NEXT_PUBLIC_BUILD_ID} |
+                Immunization (IZ) Gateway Configuration Console 2024
               </Typography>
               <Box
                 display={'flex'}

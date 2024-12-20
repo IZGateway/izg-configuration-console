@@ -1,17 +1,21 @@
 import React, { useContext } from 'react'
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid'
-import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
+import {
+  DataGrid,
+  GridColDef,
+  GridSlots,
+  GridToolbarContainer,
+  GridToolbarExport,
+  GridToolbarFilterButton,
+  GridToolbarQuickFilter,
+} from '@mui/x-data-grid'
 import {
   Box,
-  IconButton,
   Typography,
   Card,
   Tooltip,
   CardHeader,
   CardContent,
 } from '@mui/material'
-
-import Link from 'next/link'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import SessionContext from '../../contexts/app'
@@ -20,6 +24,9 @@ import palette from '../../styles/theme/palette'
 import PopOverActionButtons from './popOverActionButtons'
 import moment from 'moment'
 import _ from 'lodash'
+import TestConnectionButton from './TestConnectionButton'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -48,8 +55,6 @@ const dataGridCustom = {
     backgroundColor: palette.white,
   },
   '& .MuiDataGrid-toolbarContainer': {
-    display: 'flex',
-    flexDirection: 'row-reverse',
     backgroundColor: palette.white,
     padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
@@ -84,23 +89,41 @@ const dataGridCustom = {
   },
 }
 
-const actionButtonStyle = {
-  borderRadius: 90,
-  background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-  width: 35,
-  height: 35,
-  marginRight: 2,
+interface CustomToolbarProps {
+  setFilterButtonEl: React.Dispatch<
+    React.SetStateAction<HTMLButtonElement | null>
+  >
+}
+function CustomToolbar({ setFilterButtonEl }: CustomToolbarProps) {
+  return (
+    <GridToolbarContainer>
+      <GridToolbarQuickFilter />
+      <div style={{ marginLeft: 'auto' }}>
+        <GridToolbarExport
+          printOptions={{ disableToolbarButton: true }}
+          csvOptions={{
+            fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
+          }}
+        />
+        <GridToolbarFilterButton ref={setFilterButtonEl} />
+      </div>
+    </GridToolbarContainer>
+  )
 }
 
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const [filterButtonEl, setFilterButtonEl] =
+    React.useState<HTMLButtonElement | null>(null)
+  const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
+
   const columns: GridColDef[] = [
     {
       field: 'destId',
-      headerName: 'Dest ID',
+      headerName: 'DESTINATION ID',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 200,
     },
     {
       field: 'destTypeId',
@@ -113,26 +136,30 @@ const ConnectionsTable = (props) => {
       headerName: 'ENVIRONMENT',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 200,
     },
     {
       field: 'jurisdictionName',
       headerName: 'ORGANIZATION',
       flex: 0.5,
       minWidth: 25,
+      maxWidth: 250,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
       flex: 0.5,
       minWidth: 50,
+      maxWidth: 1000,
     },
     {
       field: 'status',
       headerName: 'STATUS',
       flex: 0.75,
       minWidth: 100,
+      maxWidth: 1000,
       filterable: false,
-      valueFormatter: ({ value }) =>
+      valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
       renderCell: (params) => {
         const isConnected =
@@ -205,7 +232,32 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {params.row.hasActiveMaint ? (
+              {params.row.hasFutureMaint && !params.row.hasActiveMaint && (
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Typography sx={{ color: palette.warningDark }}>
+                    This connection will be under maintenance from{' '}
+                    {moment(
+                      new Date(params.row.getMaintenaceValues.maint_start)
+                    ).format('MMM DD, YYYY [at] h:mm A')}{' '}
+                    {_.isNull(params.row.getMaintenaceValues) ? (
+                      'ended by user'
+                    ) : (
+                      <>
+                        <br />
+                        until{' '}
+                        {moment(
+                          new Date(params.row.getMaintenaceValues.maint_end)
+                        ).format('MMM DD, YYYY [at] h:mm A')}
+                      </>
+                    )}
+                  </Typography>
+                  <ErrorOutlineIcon
+                    fontSize="small"
+                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                  />
+                </Box>
+              )}
+              {params.row.hasActiveMaint && !params.row.hasFutureMaint && (
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Typography sx={{ color: palette.errorDark }}>
                     This connection is under maintenance until{' '}
@@ -220,17 +272,26 @@ const ConnectionsTable = (props) => {
                     sx={{ marginLeft: 0.5, color: palette.errorDark }}
                   />
                 </Box>
-              ) : !isConnected ? (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography>Not Connected</Typography>
-                  <ErrorOutlineIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography>Connected</Typography>
-                  <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
-                </Box>
               )}
+              {!isConnected &&
+                !params.row.hasActiveMaint &&
+                !params.row.hasFutureMaint && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography>Not Connected</Typography>
+                    <ErrorOutlineIcon
+                      fontSize="small"
+                      sx={{ marginLeft: 0.5 }}
+                    />
+                  </Box>
+                )}
+              {isConnected &&
+                !params.row.hasActiveMaint &&
+                !params.row.hasFutureMaint && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography>Connected</Typography>
+                    <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                  </Box>
+                )}
             </Typography>
           </Tooltip>
         )
@@ -253,29 +314,21 @@ const ConnectionsTable = (props) => {
               hasChangeRequest={params.row.hasChangeRequest}
               hasActiveDraft={params.row.hasActiveDraft}
             />
-            <Link
-              tabIndex={params.tabIndex}
-              prefetch={false}
-              href={{
-                pathname: `/test/${params.row.destTypeId}/${params.row.destId}`,
-              }}
-            >
-              <Tooltip arrow placement="bottom" title="Test">
-                <IconButton
-                  id={'test_' + params.row.destTypeId + '_' + params.row.destId}
-                  aria-label="test"
-                  color="primary"
-                  sx={actionButtonStyle}
-                >
-                  <MonitorHeartOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Link>
+            {accessLevels.canRunConnectionTest && (
+              <TestConnectionButton
+                tabIndex={params.tabIndex}
+                destId={params.row.destId}
+                destTypeId={params.row.destTypeId}
+              />
+            )}
+
             <PopOverActionButtons
               destId={params.row.destId}
               destTypeId={params.row.destTypeId}
               status={params.row.status}
-              hasActiveMaintenance={params.row.hasActiveMaint}
+              hasActiveMaintenance={
+                params.row.hasActiveMaint || params.row.hasFutureMaint
+              }
               jurisdictionName={params.row.jurisdictionName}
               destType={params.row.destType}
             />
@@ -310,7 +363,6 @@ const ConnectionsTable = (props) => {
       </Box>
 
       <DataGrid
-        experimentalFeatures={{ ariaV7: true }}
         sx={dataGridCustom}
         rows={props.data.map((endpoint) => {
           for (const [, value] of Object.entries(endpoint)) {
@@ -327,7 +379,6 @@ const ConnectionsTable = (props) => {
           pagination: { paginationModel: { pageSize } },
           columns: {
             columnVisibilityModel: {
-              destId: false,
               destTypeId: false,
             },
           },
@@ -343,19 +394,16 @@ const ConnectionsTable = (props) => {
         }}
         density={'comfortable'}
         pagination
-        components={{ Toolbar: GridToolbar }}
+        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
         slotProps={{
           toolbar: {
+            setFilterButtonEl,
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
-            printOptions: { disableToolbarButton: true },
             columns: { field: 'action', filterable: false },
-            csvOptions: {
-              fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
-            },
           },
           panel: {
-            placement: 'bottom-end',
+            anchorEl: filterButtonEl,
             sx: {
               '& .MuiTypography-root': {
                 fontSize: 20,
@@ -372,7 +420,7 @@ const ConnectionsTable = (props) => {
                 width: '100%',
               },
               '& .MuiDataGrid-paper': {
-                marginTop: '-73px',
+                marginTop: '16px',
                 paddingBottom: '3vh',
                 paddingTop: '1vh',
                 paddingRight: '1vh',

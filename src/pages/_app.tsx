@@ -1,8 +1,6 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
-import { SessionProvider } from 'next-auth/react'
-import { Session } from 'next-auth'
-import type { AppProps } from 'next/app'
-import { CacheProvider, EmotionCache } from '@emotion/react'
+import { SessionProvider, useSession } from 'next-auth/react'
+import { CacheProvider } from '@emotion/react'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
 import Layout from '../components/Layout'
 import '@fontsource/ubuntu/300.css'
@@ -23,15 +21,11 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const axe = require('@axe-core/react')
   axe(React, ReactDOM, 1000)
 }
-interface MyAppProps extends AppProps {
-  emotionCache?: EmotionCache
-  pageProps: { session: Session; pageProps: any }
-}
 
 const clientSideEmotionCache = createEmotionCache()
 const blueTheme = createTheme(blueThemeOptions)
 
-const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
+const MyApp = (props) => {
   const {
     Component,
     emotionCache = clientSideEmotionCache,
@@ -40,22 +34,33 @@ const MyApp: React.FunctionComponent<MyAppProps> = (props) => {
 
   return (
     <SessionProvider session={session}>
-      <CacheProvider value={emotionCache}>
-        <ThemeProvider theme={blueTheme}>
-          <CssBaseline />
-          <Layout>
-            <AppProvider>
-              <SWRConfig value={{ fetcher: fetch }}>
-                <GoogleAnalytics />
-                <NavigationLoader />
-                <Component {...pageProps} />
-              </SWRConfig>
-            </AppProvider>
-          </Layout>
-        </ThemeProvider>
-      </CacheProvider>
+      <Auth>
+        <CacheProvider value={emotionCache}>
+          <ThemeProvider theme={blueTheme}>
+            <CssBaseline />
+            <Layout>
+              <AppProvider>
+                <SWRConfig value={{ fetcher: fetch }}>
+                  <GoogleAnalytics />
+                  <NavigationLoader />
+                  <Component {...pageProps} />
+                </SWRConfig>
+              </AppProvider>
+            </Layout>
+          </ThemeProvider>
+        </CacheProvider>
+      </Auth>
     </SessionProvider>
   )
+}
+
+function Auth({ children }) {
+  const { status } = useSession({ required: true })
+
+  if (status === 'loading') {
+    return <div>Loading...</div>
+  }
+  return children
 }
 
 export default MyApp

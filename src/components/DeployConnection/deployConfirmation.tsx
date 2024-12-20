@@ -6,8 +6,6 @@ import {
   CardContent,
   Divider,
   Button,
-  Tooltip,
-  Chip,
   Box,
 } from '@mui/material'
 import { mutate } from 'swr'
@@ -40,7 +38,7 @@ const DeployConfirmation = (props) => {
       })
       // manually trigger revalidation to fetch the latest data from the server without refresh
       mutate(`/api/destinations/${props.destId}`)
-      router.push('/manage')
+      router.push('/manageconnections')
     } else {
       setAlert({
         level: 'error',
@@ -65,24 +63,6 @@ const DeployConfirmation = (props) => {
         }}
       >
         <CardHeader title="Confirmation" />
-        <Tooltip
-          title={
-            <div>
-              To be deployed on <br />
-              {humanReadableScheduledTime.toLocaleString()}
-            </div>
-          }
-          placement="bottom"
-        >
-          <Chip
-            label={props.status}
-            variant="filled"
-            color="secondary"
-            sx={{
-              borderRadius: '4px',
-            }}
-          />
-        </Tooltip>
       </Box>
 
       <Divider />
@@ -117,7 +97,7 @@ const DeployConfirmation = (props) => {
             <LaunchIcon sx={{ marginLeft: 1 }} />
           </Button>
           <Typography variant="subtitle2" align="right">
-            <strong>Scheduled On:</strong>
+            <strong>To be deployed on:</strong>
             <br />
             {humanReadableScheduledTime.toLocaleString()}
           </Typography>

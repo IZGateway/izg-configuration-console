@@ -13,7 +13,7 @@ const AdminGuard = (Component: any) => {
         if (session?.user.isAdmin) {
           setIsLoading(false)
         } else {
-          router.push('/manage')
+          router.push('/manageconnections')
         }
       }
     }, [router, session, status])

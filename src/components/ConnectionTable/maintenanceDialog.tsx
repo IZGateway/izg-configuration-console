@@ -76,6 +76,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
             startDateTime,
             reinstatementDateTime,
             message,
+            destType: props.destType,
           }),
         }
       )

@@ -12,6 +12,7 @@ const updateDestination = async (
     data: {
       username: updatedData.username,
       password: submittedDestPassword[0].password,
+      facility_id: updatedData.facility_id,
       MSH3: updatedData.MSH3,
       MSH4: updatedData.MSH4,
       MSH5: updatedData.MSH5,

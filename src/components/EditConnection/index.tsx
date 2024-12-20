@@ -258,10 +258,10 @@ const EditConnection = (props: editConnectionProps) => {
         dest_type: destData.destination_type.type,
         message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}!`,
       })
-      router.push('/manage')
+      router.push('/manageconnections')
     } else {
       setHasCreateChangeRequestTicketError(true)
-      router.push('/manage')
+      router.push('/manageconnections')
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.message}`
       )
@@ -394,82 +394,99 @@ const EditConnection = (props: editConnectionProps) => {
     <div>
       <Close />
       <Container maxWidth="sm">
-        <div>
-          <Box sx={{ marginTop: 4 }}>
-            <Typography
-              align="center"
-              variant="h1"
-              fontWeight={700}
-              fontSize="32px"
-              id="add-connecton"
-            >
-              Editing {destData?.jurisdiction.description}{' '}
-              {destData.destination_type.type}
-            </Typography>
-            <Typography gutterBottom align="center" variant="body1">
-              Use the stepper to edit & manage sections of your connection
-            </Typography>
-          </Box>
-          <Box mt={4} mb={4}>
-            <StepperComponent activeStep={activeStep} steps={steps} />
-          </Box>
-
-          {activeStep === 0 && (
-            <ServiceAgreement
-              clickOnAgree={handleIAgreeButton}
-              agreed={agreed}
-            />
-          )}
-          {activeStep === 1 && (
-            <Jurisdiction
-              jurisdictionName={destData?.jurisdiction.description}
-              destType={destData?.destination_type.type}
-            />
-          )}
-          {activeStep === 2 && (
-            <Identify
-              {...destData}
-              handleChange={handleFormFieldChange}
-              value={formValues}
-              formErrors={formErrors}
-            />
-          )}
-
-          {activeStep === 3 && <Verify {...destData} value={formValues} />}
-          {activeStep === 4 && (
-            <Schedule
-              scheduledDateTime={scheduledDateTime}
-              setScheduledDateTime={setScheduledDateTime}
-              setAsapSelected={setAsapSelected}
-            />
-          )}
-          <Container
-            maxWidth="sm"
-            sx={{
-              marginTop: 4,
-            }}
+        <Box sx={{ marginTop: 4 }}>
+          <Typography
+            align="center"
+            variant="h1"
+            fontWeight={700}
+            fontSize="32px"
+            id="add-connecton"
+            paddingBottom={2}
           >
-            {activeStep === 0 ? (
-              <AcceptButton handleAccept={handleAccept} agreed={agreed} />
-            ) : (
-              <ActionButtons
-                activeStep={activeStep}
-                handlePrevious={handlePrevious}
-                steps={steps}
-                isScheduleButtonDisabled={isScheduleButtonDisabled}
-                handleSchedule={handleSchedule}
-                handleNext={handleNext}
-                isNextButtonDisabled={isNextButtonDisabled}
-              />
-            )}
-          </Container>
-          <CustomSnackbar
-            open={showSnackbar}
-            severity={alert.level}
-            message={alert.message}
-            onClose={handleCloseSnackBar}
+            Create Change Request
+          </Typography>
+          <table border={0} cellPadding={5} width={'100%'}>
+            <thead style={{ background: '#005daa', color: 'white' }}>
+              <tr>
+                <th colSpan={2}>DESTINATION ID</th>
+                <th colSpan={2}>ENVIRONMENT</th>
+              </tr>
+            </thead>
+            <tr style={{ fontWeight: 'bold' }}>
+              <td colSpan={2} align="center">
+                {destData?.dest_id} ({destData?.jurisdiction.description})
+              </td>
+
+              <td colSpan={2} align="center">
+                {destData.destination_type.type}
+              </td>
+            </tr>
+          </table>
+          <Typography
+            gutterBottom
+            align="center"
+            variant="body1"
+            paddingTop={2}
+          >
+            Use the stepper to edit & manage sections of your connection
+          </Typography>
+        </Box>
+        <Box mt={4} mb={4}>
+          <StepperComponent activeStep={activeStep} steps={steps} />
+        </Box>
+
+        {activeStep === 0 && (
+          <ServiceAgreement clickOnAgree={handleIAgreeButton} agreed={agreed} />
+        )}
+        {activeStep === 1 && (
+          <Jurisdiction
+            jurisdictionName={destData?.jurisdiction.description}
+            destType={destData?.destination_type.type}
           />
-        </div>
+        )}
+        {activeStep === 2 && (
+          <Identify
+            {...destData}
+            handleChange={handleFormFieldChange}
+            value={formValues}
+            formErrors={formErrors}
+          />
+        )}
+
+        {activeStep === 3 && <Verify {...destData} value={formValues} />}
+        {activeStep === 4 && (
+          <Schedule
+            scheduledDateTime={scheduledDateTime}
+            setScheduledDateTime={setScheduledDateTime}
+            setAsapSelected={setAsapSelected}
+          />
+        )}
+        <Container
+          maxWidth="sm"
+          sx={{
+            marginTop: 4,
+          }}
+        >
+          {activeStep === 0 ? (
+            <AcceptButton handleAccept={handleAccept} agreed={agreed} />
+          ) : (
+            <ActionButtons
+              activeStep={activeStep}
+              handlePrevious={handlePrevious}
+              steps={steps}
+              isScheduleButtonDisabled={isScheduleButtonDisabled}
+              handleSchedule={handleSchedule}
+              handleNext={handleNext}
+              isNextButtonDisabled={isNextButtonDisabled}
+            />
+          )}
+        </Container>
+        <CustomSnackbar
+          open={showSnackbar}
+          severity={alert.level}
+          message={alert.message}
+          onClose={handleCloseSnackBar}
+        />
       </Container>
       {activeStep === 2 && !open ? (
         <FloatingActionButtons
