@@ -61,6 +61,7 @@ const PopOverActionButtons = (props: {
             startDateTime: null,
             reinstatementDateTime: null,
             message: null,
+            destType: props.destType,
           }),
         }
       )
