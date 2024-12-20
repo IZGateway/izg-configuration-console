@@ -35,7 +35,8 @@ const Schedule = (props: any) => {
   }
   const subject = 'Urgent | Scheduling Change Request Assistance'
   const body = ''
-  const mailToLink = `mailto:izgateway@cdc.gov${
+  const email = 'izgateway@cdc.gov'
+  const mailToLink = `mailto:${email}${
     subject ? `?subject=${encodeURIComponent(subject)}` : ''
   }${body ? `${subject ? '&' : '?'}body=${encodeURIComponent(body)}` : ''}`
 
