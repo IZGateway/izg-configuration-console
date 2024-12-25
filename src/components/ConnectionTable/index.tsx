@@ -1,7 +1,8 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import {
   DataGrid,
   GridColDef,
+  GridFooterContainer,
   GridSlots,
   GridToolbarContainer,
   GridToolbarExport,
@@ -15,6 +16,8 @@ import {
   Tooltip,
   CardHeader,
   CardContent,
+  Button,
+  Checkbox,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -22,11 +25,15 @@ import SessionContext from '../../contexts/app'
 import ChangeRequestActionButtons from './ChangeRequestActionButtons'
 import palette from '../../styles/theme/palette'
 import PopOverActionButtons from './popOverActionButtons'
+import Cookies from 'js-cookie'
 import moment from 'moment'
 import _ from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
+import Link from 'next/link'
+import { useRouter } from 'next/router'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -66,7 +73,7 @@ const dataGridCustom = {
       color: palette.primary,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
-    width: '30em',
+    width: 'auto',
     borderRadius: '60px',
     float: 'right',
     margin: '2em 0',
@@ -89,22 +96,28 @@ const dataGridCustom = {
   },
 }
 
-interface CustomToolbarProps {
-  setFilterButtonEl: React.Dispatch<
-    React.SetStateAction<HTMLButtonElement | null>
-  >
-}
-function CustomToolbar({ setFilterButtonEl }: CustomToolbarProps) {
+const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
       <div style={{ marginLeft: 'auto' }}>
-        <GridToolbarExport
-          printOptions={{ disableToolbarButton: true }}
-          csvOptions={{
-            fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
+        <Button
+          variant="contained"
+          onClick={onTestReportsClick}
+          sx={{
+            borderRadius: '24px',
+            padding: '8px 16px',
+            textTransform: 'none',
+            fontWeight: 500,
+            backgroundColor: palette.primary,
+            color: palette.white,
+            ':hover': {
+              backgroundColor: palette.primaryDark,
+            },
           }}
-        />
+        >
+          Test Report(s)
+        </Button>
         <GridToolbarFilterButton ref={setFilterButtonEl} />
       </div>
     </GridToolbarContainer>
@@ -115,7 +128,72 @@ const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
+  const [showCheckbox, setShowCheckbox] = useState(false)
+  const [selectedRows, setSelectedRows] = useState([])
+
+  const handleSelectionChange = (selection) => {
+    console.log(selection)
+    setSelectedRows(selection)
+    console.log('type : ', typeof selectedRows)
+  }
+
+  const handleTestReportsClick = () => {
+    console.log('hello')
+    setShowCheckbox(true)
+  }
+
+  // const encodedArray = encodeURIComponent(JSON.stringify(selectedRows))
+
+  const router = useRouter()
+
+  const handleGenerateReport = (dataArray) => {
+    //  console.log("dataarray: ", type of dataArray)
+    Cookies.set('data', JSON.stringify(dataArray), { path: '/' })
+    router.push('/testreport')
+  }
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
+
+  function CustomFooter({ selectedRow }) {
+    const selectedRowCount = selectedRow.length
+    return (
+      <GridFooterContainer
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '8px 16px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 'bold', color: '#005763' }}
+          >
+            {selectedRowCount} Connections Selected
+          </Typography>
+          <Typography variant="body2">For Test Report</Typography>
+          {/* <Link href={`/testreport/${encodedArray}`}> */}
+          <Button
+            variant="contained"
+            onClick={() => handleGenerateReport(selectedRow)}
+            disabled={selectedRowCount === 0}
+            sx={{
+              backgroundColor: '#6c757d',
+              color: '#fff',
+              '&:hover': { backgroundColor: '#5a6268' },
+            }}
+          >
+            Generate Report
+          </Button>
+          {/* </Link> */}
+        </div>
+        <div>
+          {/* This ensures that the default pagination controls remain on the right */}
+          <GridFooterContainer />
+        </div>
+      </GridFooterContainer>
+    )
+  }
 
   const columns: GridColDef[] = [
     {
@@ -370,6 +448,7 @@ const ConnectionsTable = (props) => {
           }
         })}
         columns={columns}
+        checkboxSelection={showCheckbox}
         pageSizeOptions={[5, 25, 50, 100]}
         autoHeight
         initialState={{
@@ -383,6 +462,7 @@ const ConnectionsTable = (props) => {
             },
           },
         }}
+        onRowSelectionModelChange={handleSelectionChange}
         disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector
@@ -394,13 +474,17 @@ const ConnectionsTable = (props) => {
         }}
         density={'comfortable'}
         pagination
-        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
+        slots={{
+          toolbar: CustomToolbar as GridSlots['toolbar'],
+          // footer: () => <CustomFooter selectedRow={selectedRows} />,
+        }}
         slotProps={{
           toolbar: {
-            setFilterButtonEl,
+            setFilterButtonEl: null,
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
             columns: { field: 'action', filterable: false },
+            onTestReportsClick: handleTestReportsClick,
           },
           panel: {
             anchorEl: filterButtonEl,
@@ -442,6 +526,24 @@ const ConnectionsTable = (props) => {
           },
         }}
       />
+      <Button
+        variant="contained"
+        onClick={() => handleGenerateReport(selectedRows)}
+        disabled={_.isEmpty(selectedRows)}
+        sx={{
+          borderRadius: '24px',
+          padding: '8px 16px',
+          textTransform: 'none',
+          fontWeight: 500,
+          backgroundColor: palette.primary,
+          color: palette.white,
+          ':hover': {
+            backgroundColor: palette.primaryDark,
+          },
+        }}
+      >
+        Generate Report
+      </Button>
     </div>
   )
 }
