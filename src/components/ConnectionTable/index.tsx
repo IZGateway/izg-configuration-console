@@ -61,7 +61,7 @@ const dataGridCustom = {
   },
   '& .MuiDataGrid-toolbarContainer': {
     backgroundColor: palette.white,
-    padding: '24px 16px 16px 16px',
+    padding: '32px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
     border: `1px solid ${palette.border}`,
     marginBottom: '8px',
