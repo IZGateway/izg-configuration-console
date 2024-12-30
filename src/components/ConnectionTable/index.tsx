@@ -2,10 +2,10 @@ import React, { useContext, useState } from 'react'
 import {
   DataGrid,
   GridColDef,
-  GridFooter,
   GridFooterContainer,
   GridSlots,
   GridToolbarContainer,
+  GridToolbarExport,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardContent,
   Button,
+  Checkbox,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -30,27 +31,28 @@ import _ from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
-// import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
-// import Link from 'next/link'
+import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 
 const dataGridCustom = {
+  '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
+    {
+      marginTop: '-8px',
+      zIndex: 1,
+      paddingTop: '1em',
+      border: 'none',
+    },
   '& .MuiDataGrid-main': {
     marginTop: '-8px',
     backgroundColor: palette.white,
     borderRadius: '0 0 30px 30px',
-    paddingBottom: '1em',
     border: `1px solid ${palette.border}`,
+    paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-  },
-  '& .MuiDataGrid-row': {
-    borderBottom: `1px solid ${palette.border}`,
   },
   '& .MuiDataGrid-row:hover': {
     bgcolor: '#00000010',
-  },
-  '& .MuiDataGrid-row:last-child': {
-    borderBottom: 'none',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
@@ -61,7 +63,7 @@ const dataGridCustom = {
   },
   '& .MuiDataGrid-toolbarContainer': {
     backgroundColor: palette.white,
-    padding: '32px 16px 16px 16px',
+    padding: '24px 16px 16px 16px',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
     border: `1px solid ${palette.border}`,
     marginBottom: '8px',
@@ -78,7 +80,6 @@ const dataGridCustom = {
     justifyContent: 'center',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
     backgroundColor: palette.white,
-    border: `1px solid ${palette.border}`,
   },
   '& .MuiTablePagination-actions': {
     color: palette.primary,
@@ -93,11 +94,6 @@ const dataGridCustom = {
   '.highlight': {
     bgcolor: palette.errorHighLight,
   },
-  '& .MuiDataGrid-selectedRowCount': {
-    visibility: 'hidden',
-    width: 0,
-    marginLeft: '-8px',
-  },
 }
 
 const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
@@ -108,11 +104,9 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
         <Button
           variant="contained"
           onClick={onTestReportsClick}
-          size="small"
           sx={{
             borderRadius: '24px',
             padding: '8px 16px',
-            mr: 2,
             textTransform: 'none',
             fontWeight: 500,
             backgroundColor: palette.primary,
@@ -158,56 +152,46 @@ const ConnectionsTable = (props) => {
     router.push('/testreport')
   }
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
-  function IZGReportFooter({ selectedRow }) {
+
+  function CustomFooter({ selectedRow }) {
     const selectedRowCount = selectedRow.length
     return (
-      <div
-        style={{
+      <GridFooterContainer
+        sx={{
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0px',
+          alignItems: 'center',
+          padding: '8px 16px',
         }}
       >
-        <GridFooterContainer
-          sx={{
-            display: 'flex',
-            gap: '32px',
-            alignItems: 'center',
-            padding: '8px 16px',
-            borderTop: '1px solid #ddd', // Optional: Adds a border to the footer for separation
-          }}
-        >
-          <div>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 'bold', color: '#005763' }}
-            >
-              {selectedRowCount} Connections Selected
-            </Typography>
-            <Typography variant="body2">For Test Report</Typography>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Typography
+            variant="body1"
+            sx={{ fontWeight: 'bold', color: '#005763' }}
+          >
+            {selectedRowCount} Connections Selected
+          </Typography>
+          <Typography variant="body2">For Test Report</Typography>
+          {/* <Link href={`/testreport/${encodedArray}`}> */}
           <Button
             variant="contained"
-            onClick={() => handleGenerateReport(selectedRows)}
-            disabled={_.isEmpty(selectedRows)}
+            onClick={() => handleGenerateReport(selectedRow)}
+            disabled={selectedRowCount === 0}
             sx={{
-              borderRadius: '24px',
-              padding: '8px 16px',
-              textTransform: 'none',
-              fontWeight: 500,
-              backgroundColor: palette.primary,
-              color: palette.white,
-              ':hover': {
-                backgroundColor: palette.primaryDark,
-              },
+              backgroundColor: '#6c757d',
+              color: '#fff',
+              '&:hover': { backgroundColor: '#5a6268' },
             }}
           >
             Generate Report
           </Button>
-        </GridFooterContainer>
-        <GridFooter />
-      </div>
+          {/* </Link> */}
+        </div>
+        <div>
+          {/* This ensures that the default pagination controls remain on the right */}
+          <GridFooterContainer />
+        </div>
+      </GridFooterContainer>
     )
   }
 
@@ -370,13 +354,7 @@ const ConnectionsTable = (props) => {
               {!isConnected &&
                 !params.row.hasActiveMaint &&
                 !params.row.hasFutureMaint && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      mt: 2,
-                    }}
-                  >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography>Not Connected</Typography>
                     <ErrorOutlineIcon
                       fontSize="small"
@@ -387,13 +365,7 @@ const ConnectionsTable = (props) => {
               {isConnected &&
                 !params.row.hasActiveMaint &&
                 !params.row.hasFutureMaint && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      mt: 3,
-                    }}
-                  >
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography>Connected</Typography>
                     <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
                   </Box>
@@ -452,9 +424,8 @@ const ConnectionsTable = (props) => {
             position: 'relative',
             zIndex: 10,
             height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.13)',
+            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
             marginBottom: '-16px',
-            border: `1px solid ${palette.border}`,
           }}
         >
           <Typography
@@ -470,10 +441,7 @@ const ConnectionsTable = (props) => {
       </Box>
 
       <DataGrid
-        sx={{
-          '&, [class^=MuiDataGrid]': { border: 'none' },
-          ...dataGridCustom,
-        }}
+        sx={dataGridCustom}
         rows={props.data.map((endpoint) => {
           for (const [, value] of Object.entries(endpoint)) {
             return value[0]
@@ -482,6 +450,7 @@ const ConnectionsTable = (props) => {
         columns={columns}
         checkboxSelection={showCheckbox}
         pageSizeOptions={[5, 25, 50, 100]}
+        autoHeight
         initialState={{
           sorting: {
             sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
@@ -504,9 +473,10 @@ const ConnectionsTable = (props) => {
           return params.row.hasActiveMaint === true ? 'highlight' : ''
         }}
         density={'comfortable'}
+        pagination
         slots={{
           toolbar: CustomToolbar as GridSlots['toolbar'],
-          footer: () => <IZGReportFooter selectedRow={selectedRows} />,
+          // footer: () => <CustomFooter selectedRow={selectedRows} />,
         }}
         slotProps={{
           toolbar: {
@@ -540,6 +510,7 @@ const ConnectionsTable = (props) => {
                 paddingRight: '1vh',
                 paddingLeft: '1vh',
                 borderRadius: '0 0 30px 30px',
+                border: `1px solid ${palette.border}`,
                 width: 'fit-content',
               },
               '& .MuiDataGrid-filterFormDeleteIcon': {
@@ -555,6 +526,24 @@ const ConnectionsTable = (props) => {
           },
         }}
       />
+      <Button
+        variant="contained"
+        onClick={() => handleGenerateReport(selectedRows)}
+        disabled={_.isEmpty(selectedRows)}
+        sx={{
+          borderRadius: '24px',
+          padding: '8px 16px',
+          textTransform: 'none',
+          fontWeight: 500,
+          backgroundColor: palette.primary,
+          color: palette.white,
+          ':hover': {
+            backgroundColor: palette.primaryDark,
+          },
+        }}
+      >
+        Generate Report
+      </Button>
     </div>
   )
 }
