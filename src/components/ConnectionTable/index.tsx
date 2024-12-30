@@ -112,6 +112,7 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
           sx={{
             borderRadius: '24px',
             padding: '8px 16px',
+            mr: '8px',
             textTransform: 'none',
             fontWeight: 500,
             backgroundColor: palette.primary,
