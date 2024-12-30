@@ -131,8 +131,7 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
 
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
-  const [filterButtonEl, setFilterButtonEl] =
-    React.useState<HTMLButtonElement | null>(null)
+  const [filterButtonEl] = React.useState<HTMLButtonElement | null>(null)
   const [showCheckbox, setShowCheckbox] = useState(false)
   const [selectedRows, setSelectedRows] = useState([])
 
