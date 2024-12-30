@@ -1,40 +1,42 @@
-// import React, { useContext, useState } from 'react'
+import React, { useContext, useState } from 'react'
 import {
   DataGrid,
-  // GridColDef,
-  // GridFooterContainer,
+  GridColDef,
+  GridFooterContainer,
   GridSlots,
   GridFooter,
   GridToolbarContainer,
   GridToolbarExport,
+  GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
-// import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import ErrorIcon from '@mui/icons-material/Error'
 import {
   Box,
   Typography,
   Card,
-  // Tooltip,
-  // CardHeader,
-  // CardContent,
+  Tooltip,
+  CardHeader,
+  CardContent,
   Button,
+  Checkbox,
   Chip,
 } from '@mui/material'
-// import CheckIcon from '@mui/icons-material/Check'
-// import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-// import SessionContext from '../../contexts/app'
+import CheckIcon from '@mui/icons-material/Check'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import SessionContext from '../../contexts/app'
 
 import palette from '../../styles/theme/palette'
 
-// import Cookies from 'js-cookie'
-// import moment from 'moment'
-// import _ from 'lodash'
+import Cookies from 'js-cookie'
+import moment from 'moment'
+import _ from 'lodash'
 
-// import useRoleAccess from '../../lib/security/useRoleAccess'
-// import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
-import router from 'next/router'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+import router, { useRouter } from 'next/router'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {

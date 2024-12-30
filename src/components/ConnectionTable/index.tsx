@@ -42,7 +42,6 @@ const dataGridCustom = {
     paddingBottom: '1em',
     border: `1px solid ${palette.border}`,
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    maxHeight: '100vh',
   },
   '& .MuiDataGrid-row': {
     borderBottom: `1px solid ${palette.border}`,
@@ -53,6 +52,10 @@ const dataGridCustom = {
   '& .MuiDataGrid-row:last-child': {
     borderBottom: 'none',
   },
+  '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
+    {
+      width: '32vw',
+    },
   '& .MuiDataGrid-columnHeaders': {
     backgroundColor: palette.white,
   },
@@ -86,8 +89,6 @@ const dataGridCustom = {
     },
   '& .MuiDataGrid-virtualScroller': {
     overflow: 'hidden',
-    maxHeight: '100vh',
-    minHeight: 'fit-content',
   },
   '.highlight': {
     bgcolor: palette.errorHighLight,
@@ -450,7 +451,7 @@ const ConnectionsTable = (props) => {
           sx={{
             position: 'relative',
             zIndex: 10,
-            maxHeight: '64px',
+            height: 'auto',
             boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.13)',
             marginBottom: '-16px',
             border: `1px solid ${palette.border}`,
