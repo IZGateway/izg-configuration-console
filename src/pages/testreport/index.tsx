@@ -1,33 +1,10 @@
-import {
-  Box,
-  Button,
-  Card,
-  Chip,
-  Container,
-  Tooltip,
-  Typography,
-} from '@mui/material'
+import { Container } from '@mui/material'
 import { getServerSession } from 'next-auth'
 import * as React from 'react'
 import destination from '../../lib/queries/fetch/destination'
-import palette from '../../styles/theme/palette'
 import { authOptions } from '../api/auth/[...nextauth]'
 import connectionTest from '../../lib/connectiontests'
-
-import _ from 'lodash'
-import { SessionContext, useSession } from 'next-auth/react'
 import cookie from 'cookie'
-import router, { useRouter } from 'next/router'
-import {
-  DataGrid,
-  GridColDef,
-  GridSlots,
-  GridToolbarContainer,
-  GridToolbarExport,
-  GridToolbarFilterButton,
-  GridToolbarQuickFilter,
-} from '@mui/x-data-grid'
-import { useEffect, useState } from 'react'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
@@ -57,9 +34,9 @@ export async function getServerSideProps(context) {
   const destArray = cookies.data ? JSON.parse(cookies.data) : []
   let destinations = []
   destinations = destArray.map((item) => {
-    const match = item.match(/([a-zA-Z]+)(\d+)/) // Match letters and numbers
+    const match = item.match(/([a-zA-Z]+)(\d+)/)
     return {
-      destId: match ? match[1] : '', // Extract letter
+      destId: match ? match[1] : '',
       destTypeId: match ? parseInt(match[2], 10) : null,
     }
   })
