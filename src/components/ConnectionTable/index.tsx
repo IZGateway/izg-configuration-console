@@ -2,10 +2,11 @@ import React, { useContext, useState } from 'react'
 import {
   DataGrid,
   GridColDef,
+  GridFooter,
   GridFooterContainer,
   GridSlots,
   GridToolbarContainer,
-  GridToolbarExport,
+  // GridToolbarExport,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
@@ -17,7 +18,6 @@ import {
   CardHeader,
   CardContent,
   Button,
-  Checkbox,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -31,8 +31,8 @@ import _ from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
-import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
-import Link from 'next/link'
+// import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
+// import Link from 'next/link'
 import { useRouter } from 'next/router'
 
 const dataGridCustom = {
@@ -93,6 +93,11 @@ const dataGridCustom = {
   },
   '.highlight': {
     bgcolor: palette.errorHighLight,
+  },
+  '& .MuiDataGrid-selectedRowCount': {
+    visibility: 'hidden',
+    width: 0,
+    marginLeft: '-8px',
   },
 }
 
@@ -156,29 +161,40 @@ const ConnectionsTable = (props) => {
   function CustomFooter({ selectedRow }) {
     const selectedRowCount = selectedRow.length
     return (
-      <GridFooterContainer
-        sx={{
+      <div
+        style={{
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '8px 16px',
+          gap: '16px',
+          justifyContent: 'space-between',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Typography
-            variant="body1"
-            sx={{ fontWeight: 'bold', color: '#005763' }}
-          >
-            {selectedRowCount} Connections Selected
-          </Typography>
-          <Typography variant="body2">For Test Report</Typography>
-          {/* <Link href={`/testreport/${encodedArray}`}> */}
+        <GridFooterContainer
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 16px',
+            gap: '16px',
+          }}
+        >
+          <Box display={'flex'} flexDirection={'column'}>
+            <Typography
+              gutterBottom
+              variant="body1"
+              sx={{ fontWeight: 'bold', color: '#005763' }}
+            >
+              {selectedRowCount} Connections Selected
+            </Typography>
+            <Typography variant="body2">For Test Report</Typography>
+            {/* <Link href={`/testreport/${encodedArray}`}> */}
+          </Box>
           <Button
             variant="contained"
+            color="primary"
             onClick={() => handleGenerateReport(selectedRow)}
             disabled={selectedRowCount === 0}
             sx={{
-              backgroundColor: '#6c757d',
               color: '#fff',
               '&:hover': { backgroundColor: '#5a6268' },
             }}
@@ -186,12 +202,11 @@ const ConnectionsTable = (props) => {
             Generate Report
           </Button>
           {/* </Link> */}
-        </div>
+        </GridFooterContainer>
         <div>
-          {/* This ensures that the default pagination controls remain on the right */}
-          <GridFooterContainer />
+          <GridFooter />
         </div>
-      </GridFooterContainer>
+      </div>
     )
   }
 
@@ -476,7 +491,7 @@ const ConnectionsTable = (props) => {
         pagination
         slots={{
           toolbar: CustomToolbar as GridSlots['toolbar'],
-          // footer: () => <CustomFooter selectedRow={selectedRows} />,
+          footer: () => <CustomFooter selectedRow={selectedRows} />,
         }}
         slotProps={{
           toolbar: {
@@ -526,24 +541,6 @@ const ConnectionsTable = (props) => {
           },
         }}
       />
-      <Button
-        variant="contained"
-        onClick={() => handleGenerateReport(selectedRows)}
-        disabled={_.isEmpty(selectedRows)}
-        sx={{
-          borderRadius: '24px',
-          padding: '8px 16px',
-          textTransform: 'none',
-          fontWeight: 500,
-          backgroundColor: palette.primary,
-          color: palette.white,
-          ':hover': {
-            backgroundColor: palette.primaryDark,
-          },
-        }}
-      >
-        Generate Report
-      </Button>
     </div>
   )
 }
