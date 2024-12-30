@@ -4,6 +4,7 @@ import {
   GridColDef,
   GridFooterContainer,
   GridSlots,
+  GridFooter,
   GridToolbarContainer,
   GridToolbarExport,
   GridToolbarFilterButton,
@@ -99,7 +100,7 @@ const dataGridCustom = {
 
 const renderStatus = (value) => {
   let color
-  let label = value === 'SKIPPED' ? 'N/A' : value
+  const label = value === 'SKIPPED' ? 'N/A' : value
   let icon = null
 
   if (value === 'PASS') {
@@ -123,6 +124,34 @@ const renderStatus = (value) => {
         marginTop: '8px',
       }}
     />
+  )
+}
+const handleGoBack = () => {
+  router.push('/manageconnections')
+}
+
+function IZGReportFooter({}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0px',
+      }}
+    >
+      <Button
+        variant="outlined"
+        onClick={handleGoBack}
+        color="primary"
+        sx={{
+          borderRadius: '30px',
+        }}
+      >
+        Go Back to Connections
+      </Button>
+      <GridFooter />
+    </div>
   )
 }
 function CustomToolbar() {
@@ -217,9 +246,6 @@ const TestReportTable = ({
       renderCell: (params) => renderStatus(params.value),
     },
   ]
-  const handleGoBack = () => {
-    router.push('/manageconnections')
-  }
 
   return (
     <div>
@@ -266,29 +292,17 @@ const TestReportTable = ({
           return params.row.hasActiveMaint === true ? 'highlight' : ''
         }}
         density={'comfortable'}
-        pagination
-        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
+        slots={{
+          toolbar: CustomToolbar as GridSlots['toolbar'],
+          footer: () => <IZGReportFooter />,
+        }}
       />
       <Box
         sx={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '200px',
           display: 'flex',
           alignItems: 'center',
         }}
-      >
-        <Button
-          variant="outlined"
-          onClick={handleGoBack}
-          color="primary"
-          sx={{
-            borderRadius: '30px',
-          }}
-        >
-          Go Back to Connections
-        </Button>
-      </Box>
+      ></Box>
     </div>
   )
 }
