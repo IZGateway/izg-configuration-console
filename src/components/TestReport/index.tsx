@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   DataGrid,
+  GridFooter,
   GridSlots,
   GridToolbarContainer,
   GridToolbarExport,
@@ -126,6 +127,27 @@ function CustomToolbar() {
     </GridToolbarContainer>
   )
 }
+const handleGoBack = () => {
+  router.push('/manageconnections')
+}
+
+const CustomFooter = () => {
+  return (
+    <Box display="flex" justifyContent="space-between" alignItems="center">
+      <Button
+        variant="outlined"
+        onClick={handleGoBack}
+        color="primary"
+        sx={{
+          borderRadius: '30px',
+        }}
+      >
+        Go Back to Connections
+      </Button>
+      <GridFooter />
+    </Box>
+  )
+}
 const TestReportTable = ({
   connectionTestResults,
   destinations,
@@ -192,9 +214,6 @@ const TestReportTable = ({
       renderCell: (params) => renderStatus(params.value),
     },
   ]
-  const handleGoBack = () => {
-    router.push('/manageconnections')
-  }
 
   return (
     <div>
@@ -242,28 +261,12 @@ const TestReportTable = ({
         }}
         density={'comfortable'}
         pagination
-        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: '20px',
-          left: '200px',
-          display: 'flex',
-          alignItems: 'center',
+        slots={{
+          footer: () => <CustomFooter />,
+          toolbar: CustomToolbar as GridSlots['toolbar'],
         }}
-      >
-        <Button
-          variant="outlined"
-          onClick={handleGoBack}
-          color="primary"
-          sx={{
-            borderRadius: '30px',
-          }}
-        >
-          Go Back to Connections
-        </Button>
-      </Box>
+      />
+      <></>
     </div>
   )
 }
