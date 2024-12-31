@@ -16,7 +16,7 @@ import changeRequestValidation from '../../lib/changerequestvalidation'
 import TestDrawer from './testDrawer'
 import CustomSnackbar from '../SnackBar'
 import _ from 'lodash'
-import moment from 'moment'
+import moment from 'moment-timezone'
 import FloatingActionButtons from './floatingActionButtons'
 import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
@@ -72,6 +72,28 @@ const EditConnection = (props: editConnectionProps) => {
     mutate,
   } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
 
+  const getNextBusinessDay = (date, daysToAdd) => {
+    let remainingDays = daysToAdd
+    while (remainingDays > 0) {
+      date = date.clone().add(1, 'days')
+      if (date.isoWeekday() < 6) {
+        remainingDays--
+      }
+    }
+    return date
+  }
+
+  const getDefaultDate = () => {
+    const currentDate = moment.tz('America/New_York')
+    const businessDate = getNextBusinessDay(currentDate, 2)
+    return businessDate.hour(8).minute(0).second(0) // Set time to 8:00 AM
+  }
+
+  useEffect(() => {
+    if (scheduledDateTime === null) {
+      setScheduledDateTime(getDefaultDate())
+    }
+  }, [scheduledDateTime])
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
       setAlert({
@@ -393,7 +415,7 @@ const EditConnection = (props: editConnectionProps) => {
   return (
     <div>
       <Close />
-      <Container maxWidth="sm">
+      <Container sx={{ mb: 16 }} maxWidth="sm">
         <Box sx={{ marginTop: 4 }}>
           <Typography
             align="center"
