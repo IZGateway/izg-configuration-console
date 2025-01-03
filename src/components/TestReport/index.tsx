@@ -153,20 +153,28 @@ const TestReportTable = ({
   destinations,
   destinationDetails,
 }) => {
-  const rows = destinations.map((dest, index) => ({
-    id: dest.destId + dest.destTypeId,
-    jurisdiction: destinationDetails[index]?.jurisdiction || 'N/A',
-    destination: dest.destId,
-    environment: destinationDetails[index]?.type || 'N/A',
-    dnsLookup: connectionTestResults[index]?.dns || 'N/A',
-    tcpConnectivity: connectionTestResults[index]?.tcp || 'N/A',
-    tlsVersion: connectionTestResults[index]?.tls || 'N/A',
-    cipherSuites: connectionTestResults[index]?.cipher || 'N/A',
-    wsdl: connectionTestResults[index]?.wsdl || 'N/A',
-    connectivity: connectionTestResults[index]?.connectivity || 'N/A',
-    hl7Query: connectionTestResults[index]?.hl7 || 'N/A',
-  }))
+  const rows = destinationDetails.map((dest) => {
+    const result = connectionTestResults.find(
+      (testResult) =>
+        testResult.destId === dest.destId && testResult.destType === dest.type
+    )
 
+    return {
+      id: dest.destId + dest.destTypeId,
+      jurisdiction:
+        destinationDetails.find((detail) => detail.type === result?.destType)
+          ?.jurisdiction || 'N/A',
+      destination: dest.destId,
+      environment: result?.destType || 'N/A',
+      dnsLookup: result?.dns || 'N/A',
+      tcpConnectivity: result?.tcp || 'N/A',
+      tlsVersion: result?.tls || 'N/A',
+      cipherSuites: result?.cipher || 'N/A',
+      wsdl: result?.wsdl || 'N/A',
+      connectivity: result?.connectivity || 'N/A',
+      hl7Query: result?.hl7 || 'N/A',
+    }
+  })
   const columns = [
     { field: 'jurisdiction', headerName: 'JURISDICTION', flex: 1 },
     { field: 'destination', headerName: 'DESTINATION', flex: 1 },
@@ -256,9 +264,6 @@ const TestReportTable = ({
         disableColumnSelector
         disableDensitySelector
         getRowId={(row) => row.id}
-        getRowClassName={(params) => {
-          return params.row.hasActiveMaint === true ? 'highlight' : ''
-        }}
         density={'comfortable'}
         pagination
         slots={{

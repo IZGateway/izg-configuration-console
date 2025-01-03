@@ -6,7 +6,6 @@ import {
   GridFooterContainer,
   GridSlots,
   GridToolbarContainer,
-  // GridToolbarExport,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
@@ -31,8 +30,6 @@ import _ from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
-// import { headerFilteringStateInitializer } from '@mui/x-data-grid/internals'
-// import Link from 'next/link'
 import { useRouter } from 'next/router'
 
 const dataGridCustom = {
@@ -137,22 +134,16 @@ const ConnectionsTable = (props) => {
   const [selectedRows, setSelectedRows] = useState([])
 
   const handleSelectionChange = (selection) => {
-    console.log(selection)
     setSelectedRows(selection)
-    console.log('type : ', typeof selectedRows)
   }
 
   const handleTestReportsClick = () => {
-    console.log('hello')
     setShowCheckbox(true)
   }
-
-  // const encodedArray = encodeURIComponent(JSON.stringify(selectedRows))
 
   const router = useRouter()
 
   const handleGenerateReport = (dataArray) => {
-    //  console.log("dataarray: ", type of dataArray)
     Cookies.set('data', JSON.stringify(dataArray), { path: '/' })
     router.push('/testreport')
   }
@@ -187,7 +178,6 @@ const ConnectionsTable = (props) => {
               {selectedRowCount} Connections Selected
             </Typography>
             <Typography variant="body2">For Test Report</Typography>
-            {/* <Link href={`/testreport/${encodedArray}`}> */}
           </Box>
           <Button
             variant="contained"
@@ -201,7 +191,6 @@ const ConnectionsTable = (props) => {
           >
             Generate Report
           </Button>
-          {/* </Link> */}
         </GridFooterContainer>
         <div>
           <GridFooter />

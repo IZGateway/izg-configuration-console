@@ -64,6 +64,7 @@ export async function getServerSideProps(context) {
 
     return {
       destId: result.destId,
+      destType: result.type,
       dns: getTestStatus('DNS Lookup Test'),
       tcp: getTestStatus('TCP Connectivity Test'),
       tls: getTestStatus('TLS Version Test'),
@@ -76,6 +77,7 @@ export async function getServerSideProps(context) {
   const destinationDetails = results.map((result) => ({
     type: result.type,
     jurisdiction: result.jurisdiction,
+    destId: result.destId,
   }))
 
   return {
