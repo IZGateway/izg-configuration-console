@@ -12,6 +12,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import { Box, Typography, Card, Chip, Button } from '@mui/material'
 import palette from '../../styles/theme/palette'
 import router from 'next/router'
+import Cookies from 'js-cookie'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -128,6 +129,7 @@ function CustomToolbar() {
   )
 }
 const handleGoBack = () => {
+  Cookies.remove('destination')
   router.push('/manageconnections')
 }
 
@@ -153,6 +155,7 @@ const TestReportTable = ({
   destinations,
   destinationDetails,
 }) => {
+  console.log(destinationDetails)
   const rows = destinationDetails.map((dest) => {
     const result = connectionTestResults.find(
       (testResult) =>
@@ -161,9 +164,7 @@ const TestReportTable = ({
 
     return {
       id: dest.destId + dest.destTypeId,
-      jurisdiction:
-        destinationDetails.find((detail) => detail.type === result?.destType)
-          ?.jurisdiction || 'N/A',
+      jurisdiction: dest?.jurisdiction || 'N/A',
       destination: dest.destId,
       environment: result?.destType || 'N/A',
       dnsLookup: result?.dns || 'N/A',

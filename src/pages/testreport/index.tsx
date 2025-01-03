@@ -31,7 +31,7 @@ export async function getServerSideProps(context) {
 
   const session = await getServerSession(req, res, authOptions)
   const cookies = cookie.parse(req.headers.cookie || '')
-  const destArray = cookies.data ? JSON.parse(cookies.data) : []
+  const destArray = cookies.destination ? JSON.parse(cookies.destination) : []
   let destinations = []
   destinations = destArray.map((item) => {
     const match = item.match(/([a-zA-Z]+)(\d+)/)

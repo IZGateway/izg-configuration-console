@@ -6,6 +6,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
+import Cookies from 'js-cookie'
 import {
   Collapse,
   styled,
@@ -219,6 +220,7 @@ const MiniDrawer = () => {
           id="logout"
           variant="text"
           onClick={() => {
+            Cookies.remove('destination')
             signOut().then(() => {
               return (window.location.href = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/login/signout`)
             })

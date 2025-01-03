@@ -144,7 +144,7 @@ const ConnectionsTable = (props) => {
   const router = useRouter()
 
   const handleGenerateReport = (dataArray) => {
-    Cookies.set('data', JSON.stringify(dataArray), { path: '/' })
+    Cookies.set('destination', JSON.stringify(dataArray), { path: '/' })
     router.push('/testreport')
   }
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
