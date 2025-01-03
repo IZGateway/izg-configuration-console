@@ -5,6 +5,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ChevronRightOutlined from '@mui/icons-material/ChevronRightOutlined'
 import {
   Box,
   Typography,
@@ -16,6 +17,8 @@ import {
   ListItemText,
   ListItem,
   Chip,
+  Tooltip,
+  IconButton,
 } from '@mui/material'
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
@@ -30,62 +33,90 @@ const TestsResults = ({ testResults }: testListProps) => {
   const totaldata = testResults.length
   const progressPct = Number(((passeddata / totaldata) * 100).toFixed())
 
+  const tooltipTexts = {
+    dns: 'This test looks up the hostname in DNS to verify that it is known on the internet.',
+    tcp: 'This test makes a connection to the host to verify that that it can be reached from the internet.',
+    tls: 'This test ensures that the host uses Transport Layer Security version 1.2 or 1.3 when making secure connections.',
+    cipher:
+      'This test ensures that the host uses one of the NIST approved cipher suites, including TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, ECDHE-ECDSA-AES128-GCM-SHA256, ECDHE-RSA-AES128-GCM-SHA256, ECDHE-ECDSA-AES256-GCM-SHA384, and ECDHE-RSA-AES256-GCM-SHA384.',
+    wsdl: 'This test verifies that a service is running at the SOAP endpoint and returns the Web Services Description Language (WSDL) description of the service supports.  This test is a simple verification that something is listening.  It may fail if the jurisdiction decides NOT to support the WSDL download specified in SOAP.',
+    connectivity:
+      'The ConnectivityTest message in the CDC and IZ Gateway WSDLs is used to verify that the endpoint is up and running.',
+    hl7: 'This SubmitSingleMessage test is used to verify that the specified username, password and facility id are valid and that an HL7 Version 2 message can be sent.  The query contains a well-known test patient for IZ Gateway testing.  If the endpoint responds with an HL7 message, then the new username and password are working.  If it responds with a security fault, then the username, password or facility id may need to be corrected.  The facility id used in this message should be a facility id only used for testing.',
+  }
+
   const list = () => (
     <List>
-      {testResults.map((item) => (
-        <React.Fragment key={item.name}>
-          <ListItem id={item.name}>
-            <ListItemIcon>
-              {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
-              {item.status === 'FAIL' && <ErrorIcon color="error" />}
-              {item.status === 'WARNING' && (
-                <ReportProblemIcon color="warning" />
-              )}
-              {item.status === 'SKIPPED' && (
-                <ErrorOutlineIcon sx={{ color: palette.error }} />
-              )}
-            </ListItemIcon>
+      {testResults.map((item) => {
+        const tooltipText = Object.keys(tooltipTexts).find((key) =>
+          item.name.toLowerCase().includes(key.toLowerCase())
+        )
+          ? tooltipTexts[
+              Object.keys(tooltipTexts).find((key) =>
+                item.name.toLowerCase().includes(key.toLowerCase())
+              )
+            ]
+          : 'No tooltip available'
 
-            {item.status === 'PASS' ? (
-              <ListItemText primary={item.name} />
-            ) : item.status === 'SKIPPED' ? (
-              <ListItemText
-                primary={item.name}
-                secondary={
-                  <Typography variant="body2" color="default">
-                    Test skipped due to connectivity test failures
-                  </Typography>
+        return (
+          <React.Fragment key={item.name}>
+            <ListItem id={item.name}>
+              <ListItemIcon>
+                {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
+                {item.status === 'FAIL' && <ErrorIcon color="error" />}
+                {item.status === 'WARNING' && (
+                  <ReportProblemIcon color="warning" />
+                )}
+                {item.status === 'SKIPPED' && (
+                  <ErrorOutlineIcon sx={{ color: palette.error }} />
+                )}
+              </ListItemIcon>
+              {item.status === 'PASS' ? (
+                <ListItemText primary={item.name} />
+              ) : item.status === 'SKIPPED' ? (
+                <ListItemText
+                  primary={item.name}
+                  secondary={
+                    <Typography variant="body2" color="default">
+                      Test skipped due to connectivity test failures
+                    </Typography>
+                  }
+                />
+              ) : (
+                <ListItemText
+                  primary={item.name}
+                  secondary={
+                    <Typography variant="body2" color="error">
+                      {item.message}
+                    </Typography>
+                  }
+                />
+              )}
+              <Tooltip title={tooltipText || 'No tooltip available'}>
+                <IconButton>
+                  <ChevronRightOutlined style={{ color: '#1976d2' }} />
+                </IconButton>
+              </Tooltip>
+              <Chip
+                label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                variant="outlined"
+                color={
+                  item.status === 'PASS'
+                    ? 'primary'
+                    : item.status === 'SKIPPED'
+                    ? 'default'
+                    : 'error'
                 }
+                sx={{
+                  borderRadius: '4px',
+                  marginTop: '8px',
+                }}
               />
-            ) : (
-              <ListItemText
-                primary={item.name}
-                secondary={
-                  <Typography variant="body2" color="error">
-                    {item.message}
-                  </Typography>
-                }
-              />
-            )}
-            <Chip
-              label={item.status === 'SKIPPED' ? 'N/A' : item.status}
-              variant="outlined"
-              color={
-                item.status === 'PASS'
-                  ? 'primary'
-                  : item.status === 'SKIPPED'
-                  ? 'default'
-                  : 'error'
-              }
-              sx={{
-                borderRadius: '4px',
-                marginTop: '8px',
-              }}
-            />
-          </ListItem>
-          <Divider />
-        </React.Fragment>
-      ))}
+            </ListItem>
+            <Divider />
+          </React.Fragment>
+        )
+      })}
     </List>
   )
   const handleExpand = () => {
