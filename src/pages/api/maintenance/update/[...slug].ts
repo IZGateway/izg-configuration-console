@@ -33,13 +33,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     const result = await maintenanceRequest(destId, destTypeId, maintData)
     res.json(result)
-    logger.info(
-      'Created maintenance request for ' +
-        destId +
-        ' on ' +
-        maintData.destType +
-        ' environment'
-    )
+    if (maintData.startDateTime === null) {
+      logger.info(
+        'Cancelled maintenance request for ' +
+          destId +
+          ' on ' +
+          maintData.destType +
+          ' environment'
+      )
+    } else {
+      logger.info(
+        'Created maintenance request for ' +
+          destId +
+          ' on ' +
+          maintData.destType +
+          ' environment'
+      )
+    }
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`
