@@ -5,7 +5,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ChevronRightOutlined from '@mui/icons-material/ChevronRightOutlined'
+import { ReadMore } from '@mui/icons-material'
 import {
   Box,
   Typography,
@@ -23,6 +23,14 @@ import {
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
 
+const actionButtonStyle = {
+  borderRadius: 90,
+  background: palette.white,
+  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  width: 35,
+  height: 35,
+  marginRight: 2,
+}
 interface testListProps {
   testResults: any[]
 }
@@ -92,9 +100,30 @@ const TestsResults = ({ testResults }: testListProps) => {
                   }
                 />
               )}
-              <Tooltip title={tooltipText || 'No tooltip available'}>
-                <IconButton>
-                  <ChevronRightOutlined style={{ color: '#1976d2' }} />
+              <Tooltip
+                arrow
+                placement="bottom"
+                componentsProps={{
+                  tooltip: {
+                    sx: {
+                      backgroundColor: palette.white,
+                      boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+                      border: `1px solid ${palette.border}`,
+                      color: palette.black,
+                      '& .MuiTooltip-arrow': {
+                        color: palette.border,
+                      },
+                    },
+                  },
+                }}
+                title={
+                  <Typography>
+                    {tooltipText || 'No tooltip available'}
+                  </Typography>
+                }
+              >
+                <IconButton disableRipple sx={actionButtonStyle}>
+                  <ReadMore color="primary" />
                 </IconButton>
               </Tooltip>
               <Chip
