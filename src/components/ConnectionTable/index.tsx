@@ -1,10 +1,11 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import {
   DataGrid,
   GridColDef,
+  GridFooter,
+  GridFooterContainer,
   GridSlots,
   GridToolbarContainer,
-  GridToolbarExport,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
@@ -15,6 +16,7 @@ import {
   Tooltip,
   CardHeader,
   CardContent,
+  Button,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -22,11 +24,13 @@ import SessionContext from '../../contexts/app'
 import ChangeRequestActionButtons from './ChangeRequestActionButtons'
 import palette from '../../styles/theme/palette'
 import PopOverActionButtons from './popOverActionButtons'
+import Cookies from 'js-cookie'
 import moment from 'moment'
 import _ from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+import { useRouter } from 'next/router'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -66,7 +70,7 @@ const dataGridCustom = {
       color: palette.primary,
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
-    width: '30em',
+    width: 'auto',
     borderRadius: '60px',
     float: 'right',
     margin: '2em 0',
@@ -87,24 +91,36 @@ const dataGridCustom = {
   '.highlight': {
     bgcolor: palette.errorHighLight,
   },
+  '& .MuiDataGrid-selectedRowCount': {
+    visibility: 'hidden',
+    width: 0,
+    marginLeft: '-8px',
+  },
 }
 
-interface CustomToolbarProps {
-  setFilterButtonEl: React.Dispatch<
-    React.SetStateAction<HTMLButtonElement | null>
-  >
-}
-function CustomToolbar({ setFilterButtonEl }: CustomToolbarProps) {
+const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
       <div style={{ marginLeft: 'auto' }}>
-        <GridToolbarExport
-          printOptions={{ disableToolbarButton: true }}
-          csvOptions={{
-            fields: ['destType', 'jurisdictionName', 'destUri', 'status'],
+        <Button
+          variant="contained"
+          onClick={onTestReportsClick}
+          sx={{
+            borderRadius: '24px',
+            padding: '8px 16px',
+            mr: '8px',
+            textTransform: 'none',
+            fontWeight: 500,
+            backgroundColor: palette.primary,
+            color: palette.white,
+            ':hover': {
+              backgroundColor: palette.primaryDark,
+            },
           }}
-        />
+        >
+          Test Report(s)
+        </Button>
         <GridToolbarFilterButton ref={setFilterButtonEl} />
       </div>
     </GridToolbarContainer>
@@ -113,9 +129,75 @@ function CustomToolbar({ setFilterButtonEl }: CustomToolbarProps) {
 
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
-  const [filterButtonEl, setFilterButtonEl] =
-    React.useState<HTMLButtonElement | null>(null)
+  const [filterButtonEl] = React.useState<HTMLButtonElement | null>(null)
+  const [showCheckbox, setShowCheckbox] = useState(false)
+  const [selectedRows, setSelectedRows] = useState([])
+
+  const handleSelectionChange = (selection) => {
+    setSelectedRows(selection)
+  }
+
+  const handleTestReportsClick = () => {
+    setShowCheckbox(true)
+  }
+
+  const router = useRouter()
+
+  const handleGenerateReport = (dataArray) => {
+    Cookies.set('destination', JSON.stringify(dataArray), { path: '/' })
+    router.push('/testreport')
+  }
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
+
+  function CustomFooter({ selectedRow }) {
+    const selectedRowCount = selectedRow.length
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          justifyContent: 'space-between',
+        }}
+      >
+        <GridFooterContainer
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '8px 16px',
+            gap: '16px',
+          }}
+        >
+          <Box display={'flex'} flexDirection={'column'}>
+            <Typography
+              gutterBottom
+              variant="body1"
+              sx={{ fontWeight: 'bold', color: '#005763' }}
+            >
+              {selectedRowCount} Connections Selected
+            </Typography>
+            <Typography variant="body2">For Test Report</Typography>
+          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => handleGenerateReport(selectedRow)}
+            disabled={selectedRowCount === 0}
+            sx={{
+              color: '#fff',
+              '&:hover': { backgroundColor: '#5a6268' },
+            }}
+          >
+            Generate Report
+          </Button>
+        </GridFooterContainer>
+        <div>
+          <GridFooter />
+        </div>
+      </div>
+    )
+  }
 
   const columns: GridColDef[] = [
     {
@@ -370,6 +452,7 @@ const ConnectionsTable = (props) => {
           }
         })}
         columns={columns}
+        checkboxSelection={showCheckbox}
         pageSizeOptions={[5, 25, 50, 100]}
         autoHeight
         initialState={{
@@ -383,6 +466,7 @@ const ConnectionsTable = (props) => {
             },
           },
         }}
+        onRowSelectionModelChange={handleSelectionChange}
         disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector
@@ -394,13 +478,17 @@ const ConnectionsTable = (props) => {
         }}
         density={'comfortable'}
         pagination
-        slots={{ toolbar: CustomToolbar as GridSlots['toolbar'] }}
+        slots={{
+          toolbar: CustomToolbar as GridSlots['toolbar'],
+          footer: () => <CustomFooter selectedRow={selectedRows} />,
+        }}
         slotProps={{
           toolbar: {
-            setFilterButtonEl,
+            setFilterButtonEl: null,
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
             columns: { field: 'action', filterable: false },
+            onTestReportsClick: handleTestReportsClick,
           },
           panel: {
             anchorEl: filterButtonEl,
