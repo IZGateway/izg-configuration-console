@@ -100,7 +100,6 @@ const renderStatus = (value, tooltipText) => {
       }}
     />
   )
-
   return value === 'PASS' ? (
     chip
   ) : (
