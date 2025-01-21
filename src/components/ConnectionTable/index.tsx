@@ -97,8 +97,17 @@ const dataGridCustom = {
     marginLeft: '-8px',
   },
 }
+interface CustomToolbarProps {
+  setFilterButtonEl: React.Dispatch<
+    React.SetStateAction<HTMLButtonElement | null>
+  >
+  onTestReportsClick: () => void
+}
 
-const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
+const CustomToolbar = ({
+  setFilterButtonEl,
+  onTestReportsClick,
+}: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
@@ -129,7 +138,8 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
 
 const ConnectionsTable = (props) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
-  const [filterButtonEl] = React.useState<HTMLButtonElement | null>(null)
+  const [filterButtonEl, setFilterButtonEl] =
+    React.useState<HTMLButtonElement | null>(null)
   const [showCheckbox, setShowCheckbox] = useState(false)
   const [selectedRows, setSelectedRows] = useState([])
 
@@ -484,7 +494,7 @@ const ConnectionsTable = (props) => {
         }}
         slotProps={{
           toolbar: {
-            setFilterButtonEl: null,
+            setFilterButtonEl,
             showQuickFilter: true,
             quickFilterProps: { debounceMs: 500 },
             columns: { field: 'action', filterable: false },

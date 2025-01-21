@@ -262,7 +262,7 @@ const EditConnection = (props: editConnectionProps) => {
           dest_type: destData.destination_type.type,
           jira_id: null,
           isAsap: asapSelected,
-          scheduledAt: scheduleAt,
+          scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
           requestedBy: session.user.email,
           draft: false,
         }),
