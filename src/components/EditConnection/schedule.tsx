@@ -26,6 +26,7 @@ const Schedule = (props: any) => {
   }
   const handleDateTimePicker = () => {
     props.setAsapSelected(false)
+    props.setfutureDateTimeSelected(true)
     setIsDateTimePickerOpen(true)
   }
 

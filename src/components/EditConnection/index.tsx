@@ -48,6 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [, setAccepted] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
+  const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
   const [formValues, setFormValues] = useState(null)
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
@@ -193,9 +194,7 @@ const EditConnection = (props: editConnectionProps) => {
   const isNextButtonDisabled =
     (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
     !_.isEmpty(formErrors)
-  const isScheduleButtonDisabled = asapSelected
-    ? !asapSelected
-    : !scheduledDateTime
+  const isScheduleButtonDisabled = !asapSelected && !futureDateTimeSelected
 
   const toggleTestDrawer = async () => {
     setOpen(!open)
@@ -306,6 +305,7 @@ const EditConnection = (props: editConnectionProps) => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(null)
     setAsapSelected(false)
+    setfutureDateTimeSelected(false)
     setScheduledDateTime(null)
   }
 
@@ -481,6 +481,7 @@ const EditConnection = (props: editConnectionProps) => {
             scheduledDateTime={scheduledDateTime}
             setScheduledDateTime={setScheduledDateTime}
             setAsapSelected={setAsapSelected}
+            setfutureDateTimeSelected={setfutureDateTimeSelected}
           />
         )}
         <Container
