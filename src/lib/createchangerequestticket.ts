@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import moment from 'moment'
+import moment from 'moment-timezone'
 
 const JIRA_API_URL = process.env.JIRA_API_URL || undefined
 const JIRA_API_ISSUE_TYPE = process.env.JIRA_API_ISSUE_TYPE || undefined
