@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type ConnectionTestRequest = {
   hostname: string
   path: string

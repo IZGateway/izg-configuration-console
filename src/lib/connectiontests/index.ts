@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import logger from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import ConnectionTestFactory from './ConnectionTestFactory'

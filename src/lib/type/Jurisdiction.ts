@@ -1,5 +1,5 @@
 export type Jurisdiction = {
-  jurisdiction_id: number
+  jurisdictionId: number
   name: string
   description: string
 }

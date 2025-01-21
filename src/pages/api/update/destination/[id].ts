@@ -26,7 +26,7 @@ import { dbClient } from '../../../../lib/utils/dbclient'
  *         application/json:
  *           example:
  *             username: string
- *             facility_id: string
+ *             facilityId: string
  *             MSH3: string
  *             MSH4: string
  *             MSH5: string

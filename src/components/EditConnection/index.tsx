@@ -115,7 +115,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: draftData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facilityId,
+        facilityId: draftData?.facilityId,
         MSH3: draftData?.MSH3,
         MSH4: draftData?.MSH4,
         MSH5: draftData?.MSH5,
@@ -127,7 +127,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: draftData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facilityId,
+        facilityId: draftData?.facilityId,
         MSH3: draftData?.MSH3,
         MSH4: draftData?.MSH4,
         MSH5: draftData?.MSH5,
@@ -140,7 +140,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facilityId,
+        facilityId: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -152,7 +152,7 @@ const EditConnection = (props: editConnectionProps) => {
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facilityId,
+        facilityId: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -180,7 +180,7 @@ const EditConnection = (props: editConnectionProps) => {
       const changedValues = getDelta(defaultFormValues, formValues)
       const validationErrors = changeRequestValidation(
         changedValues,
-        changedValues.facility_id || defaultFormValues.facility_id
+        changedValues.facilityId || defaultFormValues.facilityId
       ).errors
 
       setFormValuesDelta(changedValues)
@@ -254,15 +254,18 @@ const EditConnection = (props: editConnectionProps) => {
         body: JSON.stringify({
           requested: {
             ...formValues,
+            password: formValues.newPassword,
           },
           current: {
             ...defaultFormValues,
           },
-          dest_id: destData.destId,
-          dest_uri: destData.destUri,
-          dest_type_id: destData.destinationType.typeId,
-          dest_type: destData.destinationType.type,
-          jira_id: null,
+          destId: destData.destId,
+          destUri: destData.destUri,
+          destType: {
+            typeId: destData.destinationType.typeId,
+            type: destData.destinationType.type,
+          },
+          jiraId: null,
           isAsap: asapSelected,
           scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
           requestedBy: session.user.email,
@@ -343,11 +346,11 @@ const EditConnection = (props: editConnectionProps) => {
         current: {
           ...defaultFormValues,
         },
-        dest_id: destData.destId,
-        dest_uri: destData.destUri,
-        dest_type_id: destData.destinationType.typeId,
-        dest_type: destData.destinationType.type,
-        jira_id: null,
+        destId: destData.destId,
+        destUri: destData.destUri,
+        destTypeId: destData.destinationType.typeId,
+        destType: destData.destinationType.type,
+        jiraId: null,
         isAsap: true,
         scheduledAt: scheduleAt,
         requestedBy: session.user.email,
@@ -374,7 +377,7 @@ const EditConnection = (props: editConnectionProps) => {
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facilityId,
+      facilityId: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
@@ -386,7 +389,7 @@ const EditConnection = (props: editConnectionProps) => {
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facilityId,
+      facilityId: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,

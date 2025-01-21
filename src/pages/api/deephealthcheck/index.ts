@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'

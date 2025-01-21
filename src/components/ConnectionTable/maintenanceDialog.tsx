@@ -24,16 +24,16 @@ import FormControl from '@mui/material/FormControl'
 import Select, { SelectChangeEvent } from '@mui/material/Select'
 interface maintenanceDialogProps {
   open: boolean
-  handleClose: any
-  destTypeId: any
-  destId: any
-  jurisdictionName: any
-  destType: any
+  handleClose: () => void
+  destTypeId: number
+  destId: string
+  jurisdictionName: string
+  destType: string
 }
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
-    children: React.ReactElement<any, any>
+    children: React.ReactElement
   },
   ref: React.Ref<unknown>
 ) {

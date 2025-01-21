@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import {
   Typography,
@@ -59,7 +60,7 @@ const ViewChangeRequestTicket = (props: any) => {
             link below. Something how Jira is the source of truth and you may
             need to login additional systems.
           </Typography>
-          <Link href={jiraUrl + props.jira_id} target="_blank">
+          <Link href={jiraUrl + props.jiraId} target="_blank">
             <Button
               id="run"
               color="primary"

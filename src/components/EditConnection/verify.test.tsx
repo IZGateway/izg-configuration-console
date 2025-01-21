@@ -6,7 +6,7 @@ describe('Verify component', () => {
   it('renders without throwing any errors', () => {
     const data = {
       username: '',
-      facility_id: '',
+      facilityId: '',
       MSH3: '',
       MSH4: '',
       MSH5: '',
@@ -29,7 +29,7 @@ describe('Verify component', () => {
   it('should render data passed in', () => {
     const data = {
       username: 'existingUsername',
-      facility_id: '',
+      facilityId: '',
       MSH3: '',
       MSH4: '',
       MSH5: '',

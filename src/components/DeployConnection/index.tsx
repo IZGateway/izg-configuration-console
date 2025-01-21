@@ -56,9 +56,9 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
           fontSize="32px"
           id="title-change-request"
         >
-          {changerequestData.destinations.jurisdiction.description}{' '}
-          {changerequestData.destinations.destination_type.type} changes
-          requested for {humanReadableScheduledTime.toLocaleString()} ET
+          {changerequestData.jurisdiction.description}{' '}
+          {changerequestData.destType.type} changes requested for{' '}
+          {humanReadableScheduledTime.toLocaleString()} ET
         </Typography>
       </Box>
       <Box
@@ -83,14 +83,11 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
                 status={status}
               />
             )}
-          {/* {accessLevels.canViewJiraTicket && ( */}
           <ViewChangeRequestTicket
             {...changerequestData}
             status={status}
             jiraUrl={props.jiraUrl}
           />
-          {/* )} */}
-
           {status !== JIRA_STATUS_FOR_DEPLOY &&
             accessLevels.canRescheduleRequest && (
               <MakeChanges
@@ -101,11 +98,7 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
         </Box>
         <Box sx={{ width: '66%' }}>
           {accessLevels.canViewDetails && (
-            <DetailsChangeRequest
-              destId={props.destId}
-              destTypeId={props.destTypeId}
-              submittingValue={changerequestData}
-            />
+            <DetailsChangeRequest changeRequestData={changerequestData} />
           )}
         </Box>
       </Box>

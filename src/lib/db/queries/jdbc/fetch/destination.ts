@@ -32,6 +32,7 @@ const fetchDestination = async (
       },
       jurisdiction: {
         select: {
+          jurisdiction_id: true,
           name: true,
           description: true,
         },
@@ -44,7 +45,6 @@ const fetchDestination = async (
   }
   return {
     destId: result.dest_id,
-    destTypeId: result.destination_type.type_id,
     destUri: result.dest_uri,
     destVersion: result.dest_version,
     username: result.username,
@@ -64,6 +64,7 @@ const fetchDestination = async (
       typeId: result.destination_type.type_id,
     },
     jurisdiction: {
+      jurisdictionId: result.jurisdiction.jurisdiction_id,
       name: result.jurisdiction.name,
       description: result.jurisdiction.description,
     },
@@ -82,8 +83,7 @@ export const fetchDestinationPasswordByIdAndType = async (
   destId: string,
   destType: number
 ): Promise<string> => {
-  const result = await prismacontext.prisma.$queryRaw<
-    { password: string }[]
-  >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
+  const result = await prismacontext.prisma
+    .$queryRaw`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
   return result[0].password
 }

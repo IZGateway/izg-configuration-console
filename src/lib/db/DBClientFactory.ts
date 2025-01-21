@@ -1,9 +1,8 @@
-import ConfigConsoleRepository from './ConfigConsoleRepository'
 import Dynamo from './dynamo'
 import JDBC from './jdbc'
 
 export default class DBClientFactory {
-  static getDB(dbType: string): ConfigConsoleRepository {
+  static getDB(dbType: string) {
     const type = dbType.toLowerCase()
     if (type === 'jdbc') {
       return new JDBC()
@@ -11,6 +10,6 @@ export default class DBClientFactory {
     if (type === 'dynamo') {
       return new Dynamo()
     }
-    return null as unknown as ConfigConsoleRepository
+    return null
   }
 }

@@ -37,7 +37,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           destTypeId
         )
       await changeRequestTicketComment(changeRequest.jiraId, body.requestedAt)
-      await dbClient.cancelChangeRequest(destId, destTypeId)
+      await dbClient.deleteChangeRequest(destId, destTypeId)
       res.status(200).json('Change Request is cancelled')
     } catch (error) {
       console.error(error)

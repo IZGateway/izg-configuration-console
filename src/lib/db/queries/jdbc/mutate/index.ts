@@ -5,12 +5,12 @@ import {
   upsertDestinationChangeRequest,
   deleteDestinationChangeRequest,
 } from './destinationchangerequest'
-import cancelChangeRequest from './cancelchangerequest'
+import deleteChangeRequest from './deletechangerequest'
 import maintenanceRequest from './maintenancerequest'
 import updateChangeRequest from './updatechangerequest'
 
 export {
-  cancelChangeRequest,
+  deleteChangeRequest,
   deleteDraftValues,
   updateChangeRequest,
   updatedAuditedDestination,

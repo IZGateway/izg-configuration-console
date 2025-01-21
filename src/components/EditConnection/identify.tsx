@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import {
   Card,
@@ -69,9 +70,9 @@ const Identify = (props: any) => {
   const formFields = [
     {
       id: 'facilityId',
-      name: 'facility_id',
+      name: 'facilityId',
       label: 'Facility ID',
-      value: props.value.facility_id,
+      value: props.value.facilityId,
       group: 1,
       title:
         'The facility id is assigned by the IIS for each facility that connects to it through IZ Gateway for some use case (i.e., IIS SHARE, PATIENT ACCESS or PROVIDER CONNECT). If this value is not correct, the responding IIS will often fail with a security fault because the sender (as identified by facilityId) is not authorized to send messages to the IIS, even though the username and password may be correct.  IZ Gateway cannot distinguish between these security faults and those caused by an incorrect username or password.',
@@ -230,7 +231,7 @@ const Identify = (props: any) => {
                 variant="filled"
                 fullWidth
                 disabled
-                defaultValue={props.dest_uri}
+                value={props.destUri}
                 InputProps={{
                   readOnly: true,
                   endAdornment: (

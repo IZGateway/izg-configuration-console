@@ -8,9 +8,10 @@ import {
   Typography,
 } from '@mui/material'
 import desttypehelper from '../../lib/desttypehelper'
+import { Destination } from '../../lib/type/Destination'
 
 interface ConnectionDetailProps {
-  destination: any
+  destination: Destination
   open: boolean
   display: (isOpen: boolean) => void
 }
@@ -22,15 +23,7 @@ const ConnectionInfoDetail = ({
 }: ConnectionDetailProps) => {
   return (
     <div>
-      <Drawer
-        anchor={'right'}
-        open={open}
-        onClose={display}
-
-        // PaperProps={{
-        //   sx: { width: "30%" },
-        // }}
-      >
+      <Drawer anchor={'right'} open={open} onClose={display}>
         <CardContent id="detailDrawer">
           <Box
             display="flex"
@@ -78,7 +71,7 @@ const ConnectionInfoDetail = ({
                     variant="filled"
                     disabled
                     defaultValue={desttypehelper.destTypeFormattedToSyncWithApi(
-                      destination.destination_type.type
+                      destination.destinationType.type
                     )}
                     InputProps={{
                       readOnly: true,
@@ -89,7 +82,7 @@ const ConnectionInfoDetail = ({
                     label="Endpoint URL"
                     variant="filled"
                     disabled
-                    defaultValue={destination.dest_uri}
+                    defaultValue={destination.destUri}
                     InputProps={{
                       readOnly: true,
                     }}
@@ -119,7 +112,7 @@ const ConnectionInfoDetail = ({
                     label="Facility ID"
                     variant="filled"
                     disabled
-                    defaultValue={destination.facility_id}
+                    defaultValue={destination.facilityId}
                     InputProps={{
                       readOnly: true,
                     }}

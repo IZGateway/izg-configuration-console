@@ -1,26 +1,16 @@
-export type Destination = {
+import { DestinationConnectionSettings } from './DestinationConnectionSettings'
+import { DestinationType } from './DestinationType'
+import { Jurisdiction } from './Jurisdiction'
+
+export type DestinationDetails = {
   destId: string
-  destTypeId: number
-  destUri: string
-  destVersion: string
-  username: string
-  MSH6: string
-  MSH22: string
-  MSH3: string
-  MSH4: string
-  MSH5: string
-  RXA11: string
-  facilityId: string
+  destVersion?: string
   passExpiry: Date
   maintReason: string
   maintStart: Date
   maintEnd: Date
-  destinationType: {
-    type: string
-    typeId: number
-  }
-  jurisdiction: {
-    name: string
-    description: string
-  }
+  destinationType: DestinationType
+  jurisdiction: Jurisdiction
 }
+
+export type Destination = DestinationDetails & DestinationConnectionSettings

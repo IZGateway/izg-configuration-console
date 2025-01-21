@@ -28,12 +28,12 @@ const actionButtonStyle = {
   marginRight: 2,
 }
 const PopOverActionButtons = (props: {
-  destTypeId: any
-  destId: any
-  status: any
-  hasActiveMaintenance: any
-  jurisdictionName: any
-  destType: any
+  destTypeId: number
+  destId: string
+  status: string
+  hasActiveMaintenance: boolean
+  jurisdictionName: string
+  destType: string
 }) => {
   const { setAlert } = useContext(CombinedContext)
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()

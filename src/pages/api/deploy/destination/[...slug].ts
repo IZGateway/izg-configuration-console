@@ -29,7 +29,7 @@ import { dbClient } from '../../../../lib/utils/dbclient'
  *         application/json:
  *           example:
  *             username: string
- *             facility_id: string
+ *             facilityId: string
  *             MSH3: string
  *             MSH4: string
  *             MSH5: string
@@ -56,7 +56,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         destId,
         destTypeId
       )
-      const isPasswordDifferent = await dbClient.passwordComparison(
+      const isPasswordDifferent = await dbClient.isPasswordChangedForIdAndType(
         destId,
         destTypeId
       )
@@ -70,10 +70,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       )
       res.json(result)
       if (res.statusCode === 200) {
-        const passwordChanged =
-          isPasswordDifferent.is_password_different.toString() === '1'
-            ? 'yes'
-            : 'no'
+        const passwordChanged = isPasswordDifferent
 
         logger.info(
           'Changes for ' +
@@ -90,7 +87,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             createdAt: new Date(),
           }
         )
-        await dbClient.deleteDestinationChangeRequest(data.id)
+        await dbClient.deleteChangeRequest(destId, destTypeId)
       }
     } else {
       throw new Error(

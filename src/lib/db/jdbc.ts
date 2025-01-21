@@ -8,22 +8,24 @@ import {
   fetchDraftRecord,
   fetchDestinationPasswordByIdAndType,
   fetchJurisdictionByDestId,
+  passwordComparison,
 } from './queries/jdbc/fetch'
 import {
+  upsertDestinationChangeRequest,
   deleteDraftValues,
-  cancelChangeRequest,
+  deleteChangeRequest,
   updatedAuditedDestination,
+  upsertDraftRecord,
   maintenanceRequest,
   updateChangeRequest,
-  upsertDestinationChangeRequest,
-  deleteDestinationChangeRequest,
 } from './queries/jdbc/mutate'
-import passwordComparison from './queries/jdbc/fetch/passwordComparison'
-import upsertDraftRecord from './queries/jdbc/mutate/draftrecord'
-import ConfigConsoleRepository from './ConfigConsoleRepository'
+import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
+import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
 
-class JDBC implements ConfigConsoleRepository {
+class JDBC
+  implements ConfigConsoleFetchRepository, ConfigConsoleMutateRepository
+{
   //fetch
   fetchDestinationByIdAndType = fetchDestinationByIdAndType //done
   fetchLoggedInUsersDestinations = fetchLoggedInUsersDestinations //done
@@ -39,12 +41,11 @@ class JDBC implements ConfigConsoleRepository {
 
   //mutate
   upsertDestinationChangeRequest = upsertDestinationChangeRequest
-  deleteDestinationChangeRequest = deleteDestinationChangeRequest
   deleteDraftValues = deleteDraftValues
-  cancelChangeRequest = cancelChangeRequest
+  deleteChangeRequest = deleteChangeRequest
   updatedAuditedDestination = withIZGHubRefresh(updatedAuditedDestination) // needs to call /rest/refresh?all=true in target environment
-  upsertDraftRecord = upsertDraftRecord
   maintenanceRequest = withIZGHubRefresh(maintenanceRequest) // needs to call /rest/refresh?all=true in target environment
+  upsertDraftRecord = upsertDraftRecord
   updateChangeRequest = updateChangeRequest
 }
 export default JDBC

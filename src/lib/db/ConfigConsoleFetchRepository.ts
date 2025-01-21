@@ -3,7 +3,7 @@ import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 
-export default interface ConfigConsoleRepository {
+export default interface ConfigConsoleFetchRepository {
   fetchDestinationByIdAndType(
     destId: string,
     destType: number
@@ -29,34 +29,12 @@ export default interface ConfigConsoleRepository {
     destId: string,
     destType: number
   ): Promise<string>
-  fetchDraftRecord(destId: string, dest_type: number): Promise<any>
-  fetchJurisdictionByDestId(destId: string): Promise<any>
+  fetchDraftRecord(
+    destId: string,
+    dest_type: number
+  ): Promise<DestinationChangeRequest>
   isPasswordChangedForIdAndType(
     destId: string,
     dest_type: number
   ): Promise<boolean>
-
-  upsertDestinationChangeRequest(changeRequestData: any): Promise<any>
-  deleteDestinationChangeRequest(id: any): Promise<any>
-  deleteDraftValues(id: number, destId: string, dest_type: number): Promise<any>
-  cancelChangeRequest(destId: string, destType: number): Promise<any>
-  updatedAuditedDestination(
-    destId: string,
-    destType: number,
-    updatedData: object,
-    user: string,
-    oldValues: object,
-    isPasswordDifferent: object
-  ): Promise<any>
-  upsertDraftRecord(changeRequestData: any): Promise<any>
-  maintenanceRequest(
-    destId: string,
-    destType: number,
-    maintData: any
-  ): Promise<any>
-  updateChangeRequest(
-    destId: string,
-    destType: number,
-    updatedData: any
-  ): Promise<any>
 }

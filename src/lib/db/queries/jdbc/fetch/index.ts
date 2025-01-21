@@ -11,6 +11,7 @@ import {
   fetchDestinationPasswordByIdAndType,
 } from './destination'
 import fetchJurisdictionByDestId from './jurisdiction'
+import passwordComparison from './passwordComparison'
 
 export {
   fetchJurisdictionByDestId,
@@ -22,4 +23,5 @@ export {
   fetchChangeRequestPasswordByIdAndType,
   destinationType,
   fetchDraftRecord,
+  passwordComparison,
 }

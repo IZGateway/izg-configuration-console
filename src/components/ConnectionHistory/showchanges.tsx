@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { styled } from '@mui/material/styles'
 

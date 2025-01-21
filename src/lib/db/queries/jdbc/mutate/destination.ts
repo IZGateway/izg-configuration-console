@@ -25,7 +25,7 @@ const updateDestination = async (
 
 const auditDestination = async (
   user: string,
-  oldValues: any,
+  oldValues: object,
   updatedData: object,
   isPasswordDifferent: object
 ) =>

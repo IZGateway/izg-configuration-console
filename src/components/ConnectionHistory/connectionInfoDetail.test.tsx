@@ -20,7 +20,7 @@ describe('ConnectionInfoDetail component', () => {
       destination_type: { type: 'Test' },
       dest_uri: 'http://example.com',
       username: 'user123',
-      facility_id: 'facility123',
+      facilityId: 'facility123',
       MSH3: 'MSH3',
       MSH4: 'MSH4',
       MSH5: 'MSH5',
