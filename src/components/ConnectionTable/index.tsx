@@ -31,6 +31,7 @@ import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 import { useRouter } from 'next/router'
+import Slide from '@mui/material/Slide'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -104,7 +105,8 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
       <GridToolbarQuickFilter />
       <div style={{ marginLeft: 'auto' }}>
         <Button
-          variant="contained"
+          variant="outlined"
+          color="secondary"
           onClick={onTestReportsClick}
           sx={{
             borderRadius: '24px',
@@ -112,11 +114,6 @@ const CustomToolbar = ({ setFilterButtonEl, onTestReportsClick }) => {
             mr: '8px',
             textTransform: 'none',
             fontWeight: 500,
-            backgroundColor: palette.primary,
-            color: palette.white,
-            ':hover': {
-              backgroundColor: palette.primaryDark,
-            },
           }}
         >
           Test Report(s)
@@ -132,13 +129,15 @@ const ConnectionsTable = (props) => {
   const [filterButtonEl] = React.useState<HTMLButtonElement | null>(null)
   const [showCheckbox, setShowCheckbox] = useState(false)
   const [selectedRows, setSelectedRows] = useState([])
+  const [isBoxVisible, setIsBoxVisible] = useState(false) // State to control box visibility
 
   const handleSelectionChange = (selection) => {
     setSelectedRows(selection)
   }
 
   const handleTestReportsClick = () => {
-    setShowCheckbox(true)
+    setShowCheckbox((prev) => !prev)
+    setIsBoxVisible((prev) => !prev)
   }
 
   const router = useRouter()
@@ -157,43 +156,56 @@ const ConnectionsTable = (props) => {
           display: 'flex',
           alignItems: 'center',
           gap: '16px',
-          justifyContent: 'space-between',
+          justifyContent: isBoxVisible ? 'space-between' : 'flex-end',
         }}
       >
-        <GridFooterContainer
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '8px 16px',
-            gap: '16px',
-          }}
-        >
-          <Box display={'flex'} flexDirection={'column'}>
-            <Typography
-              gutterBottom
-              variant="body1"
-              sx={{ fontWeight: 'bold', color: '#005763' }}
+        <>
+          {isBoxVisible && (
+            <Slide
+              direction="up"
+              in={isBoxVisible}
+              mountOnEnter
+              unmountOnExit
+              appear={false}
             >
-              {selectedRowCount} Connections Selected
-            </Typography>
-            <Typography variant="body2">For Test Report</Typography>
-          </Box>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => handleGenerateReport(selectedRow)}
-            disabled={selectedRowCount === 0}
-            sx={{
-              color: '#fff',
-              '&:hover': { backgroundColor: '#5a6268' },
-            }}
-          >
-            Generate Report
-          </Button>
-        </GridFooterContainer>
+              <GridFooterContainer
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 16px',
+                  gap: '16px',
+                }}
+              >
+                <Box display={'flex'} flexDirection={'column'}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 'bold', color: '#005763' }}
+                  >
+                    {selectedRowCount} Connections Selected
+                  </Typography>
+                  <Typography variant="body2">For Test Report</Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleGenerateReport(selectedRows)} // Ensure you're using selectedRows
+                  disabled={selectedRowCount === 0}
+                  sx={{
+                    color: '#fff',
+                    '&:hover': { backgroundColor: palette.primaryDark },
+                  }}
+                >
+                  Generate Report
+                </Button>
+              </GridFooterContainer>
+            </Slide>
+          )}
+        </>
         <div>
-          <GridFooter />
+          <Slide direction="up" in mountOnEnter unmountOnExit appear={false}>
+            <GridFooter />
+          </Slide>
         </div>
       </div>
     )
