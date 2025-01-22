@@ -16,7 +16,7 @@ import changeRequestValidation from '../../lib/changerequestvalidation'
 import TestDrawer from './testDrawer'
 import CustomSnackbar from '../SnackBar'
 import _ from 'lodash'
-import moment from 'moment'
+import moment from 'moment-timezone'
 import FloatingActionButtons from './floatingActionButtons'
 import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
@@ -48,6 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [, setAccepted] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
+  const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
   const [formValues, setFormValues] = useState(null)
   const [, setFormValuesDelta] = useState(null)
   const [defaultFormValues, setDefaultFormValues] = useState(null)
@@ -72,6 +73,28 @@ const EditConnection = (props: editConnectionProps) => {
     mutate,
   } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
 
+  const getNextBusinessDay = (date, daysToAdd) => {
+    let remainingDays = daysToAdd
+    while (remainingDays > 0) {
+      date = date.clone().add(1, 'days')
+      if (date.isoWeekday() < 6) {
+        remainingDays--
+      }
+    }
+    return date
+  }
+
+  const getDefaultDate = () => {
+    const currentDate = moment.tz('America/New_York')
+    const businessDate = getNextBusinessDay(currentDate, 2)
+    return businessDate.hour(8).minute(0).second(0) // Set time to 8:00 AM
+  }
+
+  useEffect(() => {
+    if (scheduledDateTime === null) {
+      setScheduledDateTime(getDefaultDate())
+    }
+  }, [scheduledDateTime])
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
       setAlert({
@@ -171,9 +194,7 @@ const EditConnection = (props: editConnectionProps) => {
   const isNextButtonDisabled =
     (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
     !_.isEmpty(formErrors)
-  const isScheduleButtonDisabled = asapSelected
-    ? !asapSelected
-    : !scheduledDateTime
+  const isScheduleButtonDisabled = !asapSelected && !futureDateTimeSelected
 
   const toggleTestDrawer = async () => {
     setOpen(!open)
@@ -240,7 +261,7 @@ const EditConnection = (props: editConnectionProps) => {
           dest_type: destData.destination_type.type,
           jira_id: null,
           isAsap: asapSelected,
-          scheduledAt: scheduleAt,
+          scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
           requestedBy: session.user.email,
           draft: false,
         }),
@@ -284,6 +305,7 @@ const EditConnection = (props: editConnectionProps) => {
     setActiveStep((prevActiveStep) => prevActiveStep - 1)
     setFormErrors(null)
     setAsapSelected(false)
+    setfutureDateTimeSelected(false)
     setScheduledDateTime(null)
   }
 
@@ -393,7 +415,7 @@ const EditConnection = (props: editConnectionProps) => {
   return (
     <div>
       <Close />
-      <Container maxWidth="sm">
+      <Container sx={{ mb: 16 }} maxWidth="sm">
         <Box sx={{ marginTop: 4 }}>
           <Typography
             align="center"
@@ -459,6 +481,7 @@ const EditConnection = (props: editConnectionProps) => {
             scheduledDateTime={scheduledDateTime}
             setScheduledDateTime={setScheduledDateTime}
             setAsapSelected={setAsapSelected}
+            setfutureDateTimeSelected={setfutureDateTimeSelected}
           />
         )}
         <Container

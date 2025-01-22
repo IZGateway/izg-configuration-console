@@ -1,4 +1,5 @@
 import _ from 'lodash'
+import moment from 'moment-timezone'
 
 const JIRA_API_URL = process.env.JIRA_API_URL || undefined
 const JIRA_API_ISSUE_TYPE = process.env.JIRA_API_ISSUE_TYPE || undefined
@@ -32,10 +33,9 @@ const createChangeRequestTicket = async (changeRequestData) => {
     scheduledAt,
     isAsap,
   } = changeRequestData
-  const scheduledDateTime = new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'long',
-    timeStyle: 'long',
-  }).format(new Date(scheduledAt))
+  const scheduledDateTime = moment(scheduledAt)
+    .tz('America/New_York')
+    .format('ddd MMM DD YYYY HH:mm:ss [ET]')
   const changeRequestSummaryTemplate = `Destination ${dest_id} on ${dest_type} to be updated ${
     isAsap ? 'ASAP' : `on ${scheduledDateTime}`
   }`
