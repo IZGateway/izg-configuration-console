@@ -13,7 +13,7 @@ const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
   return (
-    <Container maxWidth="xl" title="Test Report">
+    <Container maxWidth="xl">
       <ErrorBoundary>
         <TestReportTable
           destinations={props.destinations}
