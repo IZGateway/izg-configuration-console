@@ -31,7 +31,7 @@ export async function getServerSideProps(context) {
 
   const session = await getServerSession(req, res, authOptions)
   const cookies = cookie.parse(req.headers.cookie || '')
-  const destArray = cookies.data ? JSON.parse(cookies.data) : []
+  const destArray = cookies.destination ? JSON.parse(cookies.destination) : []
   let destinations = []
   destinations = destArray.map((item) => {
     const match = item.match(/([a-zA-Z]+)(\d+)/)
@@ -61,17 +61,28 @@ export async function getServerSideProps(context) {
       const test = result.testResults.find((t) => t.name === testName)
       return test ? test.status : 'N/A'
     }
+    const getTestDetail = (testName) => {
+      const test = result.testResults.find((t) => t.name === testName)
+      return test ? test.detail : 'N/A'
+    }
 
     return {
       destId: result.destId,
       destType: result.type,
       dns: getTestStatus('DNS Lookup Test'),
+      dnsDetail: getTestDetail('DNS Lookup Test'),
       tcp: getTestStatus('TCP Connectivity Test'),
+      tcpDetail: getTestDetail('TCP Connectivity Test'),
       tls: getTestStatus('TLS Version Test'),
+      tlsDetail: getTestDetail('TLS Version Test'),
       cipher: getTestStatus('Cipher Suites Appropriate'),
+      cipherDetail: getTestDetail('Cipher Suites Appropriate'),
       connectivity: getTestStatus('Connectivity Test'),
+      connectivityDetail: getTestDetail('Connectivity Test'),
       wsdl: getTestStatus('WSDL Test'),
+      wsdlDetail: getTestDetail('WSDL Test'),
       hl7: getTestStatus('HL7 Query Test'),
+      hl7Detail: getTestDetail('HL7 Query Test'),
     }
   })
   const destinationDetails = results.map((result) => ({

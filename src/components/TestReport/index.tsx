@@ -7,11 +7,12 @@ import {
   GridToolbarExport,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
-import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import ErrorIcon from '@mui/icons-material/Error'
-import { Box, Typography, Card, Chip, Button } from '@mui/material'
+import ReportProblemIcon from '@mui/icons-material/ReportProblem'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import { Box, Typography, Card, Chip, Button, Tooltip } from '@mui/material'
 import palette from '../../styles/theme/palette'
 import router from 'next/router'
+import Cookies from 'js-cookie'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -73,7 +74,7 @@ const dataGridCustom = {
   },
 }
 
-const renderStatus = (value) => {
+const renderStatus = (value, tooltipText) => {
   let color
   const label = value === 'SKIPPED' ? 'N/A' : value
   let icon = null
@@ -82,13 +83,12 @@ const renderStatus = (value) => {
     color = 'primary'
   } else if (value === 'WARNING') {
     color = 'warning'
-    icon = <WarningAmberIcon fontSize="small" />
+    icon = <ReportProblemIcon fontSize="small" />
   } else if (value === 'FAIL') {
     color = 'error'
-    icon = <ErrorIcon fontSize="small" />
+    icon = <ErrorOutlineIcon fontSize="small" />
   }
-
-  return (
+  const chip = (
     <Chip
       icon={icon}
       label={label}
@@ -99,6 +99,15 @@ const renderStatus = (value) => {
         marginTop: '8px',
       }}
     />
+  )
+  return value === 'PASS' ? (
+    <Tooltip title="Test Successful" arrow>
+      {chip}
+    </Tooltip>
+  ) : (
+    <Tooltip title={tooltipText} arrow>
+      {chip}
+    </Tooltip>
   )
 }
 function CustomToolbar() {
@@ -128,6 +137,7 @@ function CustomToolbar() {
   )
 }
 const handleGoBack = () => {
+  Cookies.remove('destination')
   router.push('/manageconnections')
 }
 
@@ -153,26 +163,31 @@ const TestReportTable = ({
   destinations,
   destinationDetails,
 }) => {
+  console.log(destinationDetails)
   const rows = destinationDetails.map((dest) => {
     const result = connectionTestResults.find(
       (testResult) =>
         testResult.destId === dest.destId && testResult.destType === dest.type
     )
-
     return {
       id: dest.destId + dest.destTypeId,
-      jurisdiction:
-        destinationDetails.find((detail) => detail.type === result?.destType)
-          ?.jurisdiction || 'N/A',
+      jurisdiction: dest?.jurisdiction || 'N/A',
       destination: dest.destId,
       environment: result?.destType || 'N/A',
       dnsLookup: result?.dns || 'N/A',
+      dnsDetail: result?.dnsDetail || 'No details available',
       tcpConnectivity: result?.tcp || 'N/A',
+      tcpDetail: result?.tcpDetail || 'No details available',
       tlsVersion: result?.tls || 'N/A',
+      tlsDetail: result?.tlsDetail || 'No details available',
       cipherSuites: result?.cipher || 'N/A',
+      cipherDetail: result?.cipherDetail || 'No details available',
       wsdl: result?.wsdl || 'N/A',
+      wsdlDetail: result?.wsdlDetail || 'No details available',
       connectivity: result?.connectivity || 'N/A',
+      connectivityDetail: result?.connectivityDetail || 'No details available',
       hl7Query: result?.hl7 || 'N/A',
+      hl7Detail: result?.hl7Detail || 'No details available',
     }
   })
   const columns = [
@@ -183,43 +198,45 @@ const TestReportTable = ({
       field: 'dnsLookup',
       headerName: 'DNS LOOKUP',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) => renderStatus(params.value, params.row.dnsDetail),
     },
     {
       field: 'tcpConnectivity',
       headerName: 'TCP CONNECTIVITY',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) => renderStatus(params.value, params.row.tcpDetail),
     },
     {
       field: 'tlsVersion',
       headerName: 'TLS VERSION',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) => renderStatus(params.value, params.row.tlsDetail),
     },
     {
       field: 'cipherSuites',
       headerName: 'CIPHER SUITES',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) =>
+        renderStatus(params.value, params.row.cipherDetail),
     },
     {
       field: 'connectivity',
-      headerName: 'CONNETCIVITY',
+      headerName: 'CONNECTIVITY',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) =>
+        renderStatus(params.value, params.row.connectivityDetail),
     },
     {
       field: 'wsdl',
       headerName: 'WSDL',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) => renderStatus(params.value, params.row.wsdlDetail),
     },
     {
       field: 'hl7Query',
       headerName: 'HL7 QUERY',
       flex: 1,
-      renderCell: (params) => renderStatus(params.value),
+      renderCell: (params) => renderStatus(params.value, params.row.hl7Detail),
     },
   ]
 
