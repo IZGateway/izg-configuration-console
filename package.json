@@ -53,7 +53,7 @@
     "react-dom": "^18.2.0",
     "react-to-print": "^2.14.12",
     "saml2-js": "^4.0.2",
-    "swagger-ui-react": "^5.4.1",
+    "swagger-ui-react": "^5.18.2",
     "swr": "^2.2.0",
     "uuid": "^9.0.1",
     "waait": "^1.0.5",
