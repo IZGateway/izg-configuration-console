@@ -101,7 +101,9 @@ const renderStatus = (value, tooltipText) => {
     />
   )
   return value === 'PASS' ? (
-    chip
+    <Tooltip title="Test Successful" arrow>
+      {chip}
+    </Tooltip>
   ) : (
     <Tooltip title={tooltipText} arrow>
       {chip}
@@ -219,7 +221,7 @@ const TestReportTable = ({
     },
     {
       field: 'connectivity',
-      headerName: 'CONNETCIVITY',
+      headerName: 'CONNECTIVITY',
       flex: 1,
       renderCell: (params) =>
         renderStatus(params.value, params.row.connectivityDetail),
