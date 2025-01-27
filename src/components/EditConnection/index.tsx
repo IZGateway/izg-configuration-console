@@ -21,6 +21,7 @@ import FloatingActionButtons from './floatingActionButtons'
 import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
 import { Destination } from '../../lib/type/Destination'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -74,7 +75,9 @@ const EditConnection = (props: editConnectionProps) => {
     error: draftError,
     isLoading: isDraftLoading,
     mutate,
-  } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
+  } = useSWR<DestinationChangeRequest>(
+    `/api/changerequest/${props.destTypeId}/${props.destId}`
+  )
 
   const getNextBusinessDay = (date, daysToAdd) => {
     let remainingDays = daysToAdd
@@ -112,31 +115,34 @@ const EditConnection = (props: editConnectionProps) => {
   useEffect(() => {
     if (draftData) {
       setFormValues({
-        username: draftData?.username,
+        destUri: draftData.requested.destUri,
+        username: draftData.requested.username,
         newPassword: '',
         confirmPassword: '',
-        facilityId: draftData?.facilityId,
-        MSH3: draftData?.MSH3,
-        MSH4: draftData?.MSH4,
-        MSH5: draftData?.MSH5,
-        MSH6: draftData?.MSH6,
-        MSH22: draftData?.MSH22,
-        RXA11: draftData?.RXA11,
+        facilityId: draftData.requested.facilityId,
+        MSH3: draftData.requested.MSH3,
+        MSH4: draftData.requested.MSH4,
+        MSH5: draftData.requested.MSH5,
+        MSH6: draftData.requested.MSH6,
+        MSH22: draftData.requested.MSH22,
+        RXA11: draftData.requested.RXA11,
       })
       setDefaultFormValues({
-        username: draftData?.username,
+        destUri: destData?.destUri,
+        username: draftData?.current.username,
         newPassword: '',
         confirmPassword: '',
-        facilityId: draftData?.facilityId,
-        MSH3: draftData?.MSH3,
-        MSH4: draftData?.MSH4,
-        MSH5: draftData?.MSH5,
-        MSH6: draftData?.MSH6,
-        MSH22: draftData?.MSH22,
-        RXA11: draftData?.RXA11,
+        facilityId: draftData?.current.facilityId,
+        MSH3: draftData?.current.MSH3,
+        MSH4: draftData?.current.MSH4,
+        MSH5: draftData?.current.MSH5,
+        MSH6: draftData?.current.MSH6,
+        MSH22: draftData?.current.MSH22,
+        RXA11: draftData?.current.RXA11,
       })
-    } else if (destData) {
+    } else {
       setFormValues({
+        destUri: destData?.destUri,
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
@@ -149,6 +155,7 @@ const EditConnection = (props: editConnectionProps) => {
         RXA11: destData?.RXA11,
       })
       setDefaultFormValues({
+        destUri: destData?.destUri,
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
@@ -161,7 +168,7 @@ const EditConnection = (props: editConnectionProps) => {
         RXA11: destData?.RXA11,
       })
     }
-  }, [destData])
+  }, [destData, draftData])
 
   useEffect(() => {
     if (activeStep === 2) {
@@ -171,7 +178,7 @@ const EditConnection = (props: editConnectionProps) => {
         setShowSnackbar(false)
       }
     }
-  }, [alert])
+  }, [activeStep, alert])
 
   useEffect(() => {
     if (activeStep === 2) {
@@ -252,24 +259,24 @@ const EditConnection = (props: editConnectionProps) => {
       response = await fetch(`/api/changerequest`, {
         method: 'POST',
         body: JSON.stringify({
+          id: draftData?.id || null,
           requested: {
             ...formValues,
             password: formValues.newPassword,
+            ..._.omit(formValues, ['newPassword', 'confirmPassword']),
           },
           current: {
             ...defaultFormValues,
           },
           destId: destData.destId,
-          destUri: destData.destUri,
           destType: {
             typeId: destData.destinationType.typeId,
             type: destData.destinationType.type,
           },
-          jiraId: null,
           isAsap: asapSelected,
           scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
           requestedBy: session.user.email,
-          draft: false,
+          isDraft: false,
         }),
       })
     } catch (error) {
@@ -336,10 +343,11 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const saveDraft = async () => {
-    const scheduleAt = new Date().toISOString()
+    console.log('saving draft')
     const response = await fetch(`/api/changerequest`, {
       method: 'POST',
       body: JSON.stringify({
+        id: draftData?.id || null,
         requested: {
           ...formValues,
         },
@@ -347,21 +355,20 @@ const EditConnection = (props: editConnectionProps) => {
           ...defaultFormValues,
         },
         destId: destData.destId,
-        destUri: destData.destUri,
-        destTypeId: destData.destinationType.typeId,
-        destType: destData.destinationType.type,
+        destType: {
+          typeId: destData.destinationType.typeId,
+          type: destData.destinationType.type,
+        },
         jiraId: null,
-        isAsap: true,
-        scheduledAt: scheduleAt,
         requestedBy: session.user.email,
-        draft: true,
+        isDraft: true,
       }),
     })
     if (response.ok) {
       await mutate()
       setAlert({
         level: 'success',
-        message: `Your draft was saved!`,
+        message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
       })
     } else {
       setAlert({
@@ -374,6 +381,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   const resetDraftValues = async () => {
     setDefaultFormValues({
+      destUri: destData?.destUri,
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
@@ -386,6 +394,7 @@ const EditConnection = (props: editConnectionProps) => {
       RXA11: destData?.RXA11,
     })
     setFormValues({
+      destUri: destData?.destUri,
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
@@ -397,12 +406,9 @@ const EditConnection = (props: editConnectionProps) => {
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
-    const response = await fetch(
-      `/api/changerequest/draft/${props.destTypeId}/${props.destId}/${draftData.id}`,
-      {
-        method: 'DELETE',
-      }
-    )
+    const response = await fetch(`/api/changerequest/${draftData.id}`, {
+      method: 'DELETE',
+    })
     if (response.ok) {
       setAlert({
         level: 'success',

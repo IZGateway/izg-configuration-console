@@ -2,6 +2,7 @@ import React from 'react'
 import { render } from '@testing-library/react'
 import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
+import { Destination } from '../../lib/type/Destination'
 
 jest.mock('../../lib/desttypehelper', () => ({
   destTypeFormattedToSyncWithApi: jest.fn((type: string) => type),
@@ -15,10 +16,14 @@ describe('ConnectionInfoDetail component', () => {
   })
 
   it('renders connection info details correctly', () => {
-    const destination = {
-      jurisdiction: { description: 'Organization Description' },
-      destination_type: { type: 'Test' },
-      dest_uri: 'http://example.com',
+    const destination: Destination = {
+      jurisdiction: {
+        description: 'Organization Description',
+        jurisdictionId: 1,
+        name: 'Organization Name',
+      },
+      destinationType: { type: 'Test', typeId: 1 },
+      destUri: 'http://example.com',
       username: 'user123',
       facilityId: 'facility123',
       MSH3: 'MSH3',
@@ -27,6 +32,11 @@ describe('ConnectionInfoDetail component', () => {
       MSH6: 'MSH6',
       MSH22: 'MSH22',
       RXA11: 'RXA11',
+      destId: 'test',
+      passExpiry: new Date('2023-01-01T00:00:00Z'),
+      maintReason: 'Routine Maintenance',
+      maintStart: new Date('2023-01-01T00:00:00Z'),
+      maintEnd: new Date('2023-01-01T00:00:00Z'),
     }
 
     ;(useSWR as jest.Mock).mockReturnValueOnce({

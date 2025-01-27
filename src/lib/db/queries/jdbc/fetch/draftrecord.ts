@@ -1,6 +1,8 @@
 import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { DestinationChangeRequest } from '../../../../type/DestinationChangeRequest'
+import { fetchDestination } from './destination'
+import passwordComparison from './passwordComparison'
 
 const fetchDraftRecord = async (
   destId: string,
@@ -36,6 +38,7 @@ const fetchDraftRecord = async (
             },
             jurisdiction: {
               select: {
+                jurisdiction_id: true,
                 name: true,
                 description: true,
               },
@@ -53,31 +56,67 @@ const fetchDraftRecord = async (
   return {
     id: result.id,
     destId: result.dest_id,
-    destUri: result.dest_uri,
-    destType: result.dest_type,
+    //destUri: result.dest_uri,
+    destType: {
+      type: result.destinations.destination_type.type,
+      typeId: result.destinations.destination_type.type_id,
+    },
+    jurisdiction: {
+      jurisdictionId: result.destinations.jurisdiction.jurisdiction_id,
+      name: result.destinations.jurisdiction.name,
+      description: result.destinations.jurisdiction.description,
+    },
     jiraId: result.jira_id,
-    MSH22: result.MSH22,
-    MSH3: result.MSH3,
-    MSH4: result.MSH4,
-    MSH5: result.MSH5,
-    MSH6: result.MSH6,
     requestedAt: result.requestedAt,
     requestedBy: result.requestedBy,
-    RXA11: result.RXA11,
     scheduledAt: result.scheduledAt,
-    username: result.username,
-    facilityId: result.facility_id,
-    destinations: {
-      destinationType: {
-        type: result.destinations.destination_type.type,
-        typeId: result.destinations.destination_type.type_id,
-      },
-      jurisdiction: {
-        name: result.destinations.jurisdiction.name,
-        description: result.destinations.jurisdiction.description,
-      },
+    isDraft: result.jira_id ? false : true,
+    requested: {
+      destUri: result.dest_uri,
+      username: result.username,
+      MSH6: result.MSH6,
+      MSH22: result.MSH22,
+      MSH3: result.MSH3,
+      MSH4: result.MSH4,
+      MSH5: result.MSH5,
+      RXA11: result.RXA11,
+      facilityId: result.facility_id,
     },
+    current: await getCurrentDestinationSettings(
+      result.dest_id,
+      result.dest_type
+    ),
+    isPasswordDifferent: await getPasswordComparison(
+      result.dest_id,
+      result.dest_type
+    ),
   }
 }
 
 export default fetchDraftRecord
+
+const getCurrentDestinationSettings = async (
+  destId: string,
+  destType: number
+) => {
+  const result = await fetchDestination(destId, destType)
+  if (result) {
+    return {
+      destUri: result.destUri,
+      username: result.username,
+      MSH6: result.MSH6,
+      MSH22: result.MSH22,
+      MSH3: result.MSH3,
+      MSH4: result.MSH4,
+      MSH5: result.MSH5,
+      RXA11: result.RXA11,
+      facilityId: result.facilityId,
+    }
+  }
+  return null
+}
+
+const getPasswordComparison = async (destId: string, destType: number) => {
+  const result = await passwordComparison(destId, destType)
+  return result
+}

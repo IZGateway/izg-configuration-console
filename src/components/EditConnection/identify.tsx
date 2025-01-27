@@ -226,7 +226,8 @@ const Identify = (props: any) => {
             </div>
             <Box display="flex" flexDirection="column" gap="1rem">
               <TextField
-                id="endpointURL"
+                id="destUri"
+                name="destUri"
                 label="Endpoint URL"
                 variant="filled"
                 fullWidth

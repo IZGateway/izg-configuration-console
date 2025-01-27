@@ -47,7 +47,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     req.query.destType.toString()
   )
 
-  const destination_type = await dbClient.destinationType(destType)
+  const destination_type = await dbClient.fetchDestinationType(destType)
   if (req.method === 'POST') {
     const data = JSON.parse(req.body)
     const result = await dbClient.updatedAuditedDestination(

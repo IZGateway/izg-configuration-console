@@ -49,7 +49,7 @@ const createChangeRequestTicket = async (
       ? CHANGE_REQUESTED_EMPTY_VALUE
       : current.username
   }|${getRequestedValue(requested, 'username')}|\r\n|*Password*|REDACTED |${
-    !_.isEmpty(requested.password) ? '<UPDATED>' : 'REDACTED'
+    !_.isEmpty(requested.password) ? '<UPDATED>' : 'REDACTED - NOT UPDATED'
   } |\r\n|*Facility id*|${
     _.isEmpty(current.facilityId) ? CURRENT_EMPTY_VALUE : current.facilityId
   }|${getRequestedValue(requested, 'facilityId')}|\r\n|*MSH3*|${

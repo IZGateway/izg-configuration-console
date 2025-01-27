@@ -16,7 +16,7 @@ const fetchJurisdiction = async (destId: string): Promise<Jurisdiction> => {
     return null
   }
   return {
-    jurisdiction_id: result.jurisdiction_id,
+    jurisdictionId: result.jurisdiction_id,
     name: result.name,
     description: result.description,
   }

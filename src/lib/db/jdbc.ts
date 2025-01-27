@@ -1,51 +1,47 @@
 import {
-  fetchDestinationByIdAndType,
+  fetchDestination,
   fetchLoggedInUsersDestinations,
   destinationaudithistory,
-  fetchDestinationChangeRequestByIdAndType,
-  fetchChangeRequestPasswordByIdAndType,
+  fetchDestinationChangeRequestByDestIdAndDestType,
+  fetchDestinationChangeRequestById,
+  fetchChangeRequestPassword,
   destinationType,
-  fetchDraftRecord,
-  fetchDestinationPasswordByIdAndType,
-  fetchJurisdictionByDestId,
+  fetchDestinationPassword,
   passwordComparison,
 } from './queries/jdbc/fetch'
 import {
   upsertDestinationChangeRequest,
-  deleteDraftValues,
+  updateDestinationChangeRequestDeploymentTime,
   deleteChangeRequest,
-  updatedAuditedDestination,
-  upsertDraftRecord,
+  updateDestination,
   maintenanceRequest,
-  updateChangeRequest,
+  createDestinationAudit,
 } from './queries/jdbc/mutate'
 import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
-
 class JDBC
   implements ConfigConsoleFetchRepository, ConfigConsoleMutateRepository
 {
   //fetch
-  fetchDestinationByIdAndType = fetchDestinationByIdAndType //done
-  fetchLoggedInUsersDestinations = fetchLoggedInUsersDestinations //done
-  fetchDestinationAuditHistoryByIdAndType = destinationaudithistory //done
-  fetchDestinationChangeRequestByIdAndType =
-    fetchDestinationChangeRequestByIdAndType //done
-  fetchDestinationType = destinationType //done
-  fetchDraftRecord = fetchDraftRecord
-  fetchJurisdictionByDestId = fetchJurisdictionByDestId //done
-  isPasswordChangedForIdAndType = passwordComparison //done
-  fetchChangeRequestPasswordByIdAndType = fetchChangeRequestPasswordByIdAndType //done
-  fetchDestinationPasswordByIdAndType = fetchDestinationPasswordByIdAndType //done
+  fetchDestination = fetchDestination
+  fetchLoggedInUsersDestinations = fetchLoggedInUsersDestinations
+  fetchDestinationAuditHistory = destinationaudithistory
+  fetchDestinationChangeRequestByDestIdAndDestType =
+    fetchDestinationChangeRequestByDestIdAndDestType
+  fetchDestinationChangeRequestById = fetchDestinationChangeRequestById
+  fetchDestinationType = destinationType
+  isPasswordChanged = passwordComparison
+  fetchChangeRequestPassword = fetchChangeRequestPassword
+  fetchDestinationPassword = fetchDestinationPassword
 
   //mutate
   upsertDestinationChangeRequest = upsertDestinationChangeRequest
-  deleteDraftValues = deleteDraftValues
-  deleteChangeRequest = deleteChangeRequest
-  updatedAuditedDestination = withIZGHubRefresh(updatedAuditedDestination) // needs to call /rest/refresh?all=true in target environment
-  maintenanceRequest = withIZGHubRefresh(maintenanceRequest) // needs to call /rest/refresh?all=true in target environment
-  upsertDraftRecord = upsertDraftRecord
-  updateChangeRequest = updateChangeRequest
+  updateDestinationChangeRequestDeploymentTime =
+    updateDestinationChangeRequestDeploymentTime
+  deleteDestinationChangeRequest = deleteChangeRequest
+  updateDestination = withIZGHubRefresh(updateDestination)
+  createDestinationChangeRequestDeploymentAudit = createDestinationAudit
+  maintenanceRequest = withIZGHubRefresh(maintenanceRequest)
 }
 export default JDBC

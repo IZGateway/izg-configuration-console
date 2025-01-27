@@ -4,37 +4,24 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 
 export default interface ConfigConsoleFetchRepository {
-  fetchDestinationByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<Destination>
+  fetchDestination(destId: string, destType: number): Promise<Destination>
   fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: Array<string>
   ): Promise<Destination[]>
-  fetchDestinationAuditHistoryByIdAndType(
+  fetchDestinationAuditHistory(
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]>
-  fetchDestinationChangeRequestByIdAndType(
+  fetchDestinationChangeRequestById(
+    id: number
+  ): Promise<DestinationChangeRequest>
+  fetchDestinationChangeRequestByDestIdAndDestType(
     destId: string,
     destTypeId: number
   ): Promise<DestinationChangeRequest>
   fetchDestinationType(destType: string): Promise<DestinationType>
-  fetchChangeRequestPasswordByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<string>
-  fetchDestinationPasswordByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<string>
-  fetchDraftRecord(
-    destId: string,
-    dest_type: number
-  ): Promise<DestinationChangeRequest>
-  isPasswordChangedForIdAndType(
-    destId: string,
-    dest_type: number
-  ): Promise<boolean>
+  fetchChangeRequestPassword(id: number): Promise<string>
+  fetchDestinationPassword(destId: string, destType: number): Promise<string>
+  isPasswordChanged(destId: string, dest_type: number): Promise<boolean>
 }

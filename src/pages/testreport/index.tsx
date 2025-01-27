@@ -1,13 +1,13 @@
 import { Container } from '@mui/material'
 import { getServerSession } from 'next-auth'
 import * as React from 'react'
-import destination from '../../lib/queries/fetch/destination'
 import { authOptions } from '../api/auth/[...nextauth]'
 import connectionTest from '../../lib/connectiontests'
 import cookie from 'cookie'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
+import { dbClient } from '../../lib/utils/dbclient'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -42,14 +42,17 @@ export async function getServerSideProps(context) {
   })
   const results = await Promise.all(
     destinations.map(async (dest) => {
-      const destinationToTest = await destination(dest.destId, dest.destTypeId)
+      const destinationToTest = await dbClient.fetchDestination(
+        dest.destId,
+        dest.destTypeId
+      )
       const testResult = await connectionTest(
         destinationToTest,
         session.user.email
       )
       return {
-        type: destinationToTest.destination_type.type || 'N/A',
-        destId: destinationToTest.dest_id || 'N/A',
+        type: destinationToTest.destinationType.type || 'N/A',
+        destId: destinationToTest.destId || 'N/A',
         jurisdiction: destinationToTest.jurisdiction.description || 'N/A',
         testResults: testResult.connectionTestResult?.testResults || [],
       }

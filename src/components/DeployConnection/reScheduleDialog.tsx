@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import {
   Dialog,
@@ -22,16 +21,16 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker'
 import { useContext, useState } from 'react'
 import CombinedContext from '../../contexts/app'
 import { useRouter } from 'next/router'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 interface resetDialogProps {
   open: boolean
-  handleClose: any
-  destTypeId: any
-  destId: any
+  handleClose: () => void
+  changeRequest: DestinationChangeRequest
 }
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
-    children: React.ReactElement<any, any>
+    children: React.ReactElement
   },
   ref: React.Ref<unknown>
 ) {
@@ -45,6 +44,7 @@ const customPaperStyles = {
 }
 
 const RescheduleDialog = (props: resetDialogProps) => {
+  const { changeRequest } = props
   const { setAlert } = useContext(CombinedContext)
   const router = useRouter()
 
@@ -64,21 +64,21 @@ const RescheduleDialog = (props: resetDialogProps) => {
   const isScheduleButtonDisabled = asapSelected
     ? !asapSelected
     : !scheduledDateTime
+
   const handleReSchedule = async () => {
     const scheduledAt = asapSelected
       ? new Date().toISOString()
       : scheduledDateTime
-    const response = await fetch(
-      `/api/changerequest/update/${props.destTypeId}/${props.destId}`,
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          isAsap: asapSelected,
-          scheduledAt: scheduledAt,
-          requestedAt: new Date(),
-        }),
-      }
-    )
+    const updatedChangeRequest = { ...changeRequest }
+    updatedChangeRequest.scheduledAt = scheduledAt
+    updatedChangeRequest.isAsap = asapSelected
+    updatedChangeRequest.requestedAt = new Date()
+    const response = await fetch(`/api/changerequest?scheduleupdate=true`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...updatedChangeRequest,
+      }),
+    })
     if (response.ok) {
       props.handleClose()
       router.push('/manageconnections')

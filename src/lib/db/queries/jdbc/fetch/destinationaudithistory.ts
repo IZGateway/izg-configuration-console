@@ -2,7 +2,7 @@ import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { DestinationAudit } from '../../../../type/DestinationAudit'
 
-const fetchDestinationaudithistoryByIdAndType = async (
+const fetchDesinationAuditHistory = async (
   destId: string,
   destType: number
 ): Promise<DestinationAudit[]> => {
@@ -32,14 +32,4 @@ const fetchDestinationaudithistoryByIdAndType = async (
   }))
 }
 
-const fetchDesinationAuditHistory = async (
-  destId: string,
-  destType: number
-) => {
-  const history = await fetchDestinationaudithistoryByIdAndType(
-    destId,
-    destType
-  )
-  return history
-}
 export default fetchDesinationAuditHistory

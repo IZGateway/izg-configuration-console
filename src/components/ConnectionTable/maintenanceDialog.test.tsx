@@ -21,7 +21,7 @@ describe('MaintenanceDialog component', () => {
           open={true}
           handleClose={handleClose}
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
         />

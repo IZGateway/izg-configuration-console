@@ -144,7 +144,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
 }
 
 const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await dbClient.fetchDestinationChangeRequestByIdAndType(
+  return (await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
     destId,
     destTypeId
   ))
@@ -153,15 +153,19 @@ const hasActiveChangeRequest = async (destId, destTypeId) => {
 }
 
 const hasActiveDraft = async (destId, destTypeId) => {
-  return (await dbClient.fetchDraftRecord(destId, destTypeId)) ? true : false
+  return (
+    await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
+      destTypeId
+    )
+  )?.jiraId === null
+    ? true
+    : false
 }
 
 const getDestinationResult = async (destId, destTypeId) => {
   try {
-    destinationResult = await dbClient.fetchDestinationByIdAndType(
-      destId,
-      destTypeId
-    )
+    destinationResult = await dbClient.fetchDestination(destId, destTypeId)
   } catch (error) {
     throw new Error(error.message)
   }

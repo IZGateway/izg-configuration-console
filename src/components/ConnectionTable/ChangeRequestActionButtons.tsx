@@ -60,7 +60,7 @@ const ChangeRequestActionButtons = (props: {
     isLoading: isDraftLoading,
   } = useSWR(
     hasActiveDraft
-      ? `/api/destinationdraft/${props.destTypeId}/${props.destId}`
+      ? `/api/changerequest/${props.destTypeId}/${props.destId}`
       : null
   )
   if (draftError) throw new Error(draftError.message)

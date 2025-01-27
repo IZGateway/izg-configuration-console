@@ -38,6 +38,7 @@ const fetchDestinations = async (
       },
       jurisdiction: {
         select: {
+          jurisdiction_id: true,
           name: true,
           description: true,
         },
@@ -70,6 +71,7 @@ const fetchDestinations = async (
       typeId: dest.destination_type.type_id,
     },
     jurisdiction: {
+      jurisdictionId: dest.jurisdiction.jurisdiction_id,
       name: dest.jurisdiction.name,
       description: dest.jurisdiction.description,
     },

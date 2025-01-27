@@ -1,21 +1,17 @@
-import deleteDraftValues from './deletedraftvalues'
-import updatedAuditedDestination from './destination'
-import upsertDraftRecord from './draftrecord'
+import updateDestination from './destination'
 import {
   upsertDestinationChangeRequest,
-  deleteDestinationChangeRequest,
+  updateDestinationChangeRequestDeploymentTime,
+  deleteChangeRequest,
 } from './destinationchangerequest'
-import deleteChangeRequest from './deletechangerequest'
 import maintenanceRequest from './maintenancerequest'
-import updateChangeRequest from './updatechangerequest'
+import createDestinationAudit from './audithistory'
 
 export {
   deleteChangeRequest,
-  deleteDraftValues,
-  updateChangeRequest,
-  updatedAuditedDestination,
+  updateDestination,
   maintenanceRequest,
   upsertDestinationChangeRequest,
-  deleteDestinationChangeRequest,
-  upsertDraftRecord,
+  updateDestinationChangeRequestDeploymentTime,
+  createDestinationAudit,
 }

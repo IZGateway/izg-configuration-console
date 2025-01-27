@@ -1,26 +1,25 @@
 import fetchLoggedInUsersDestinations from './destinations'
 import destinationaudithistory from './destinationaudithistory'
 import {
-  fetchDestinationChangeRequestByIdAndType,
-  fetchChangeRequestPasswordByIdAndType,
+  fetchDestinationChangeRequestByDestIdAndDestType,
+  fetchDestinationChangeRequestById,
+  fetchChangeRequestPassword,
 } from './destinationchangerequest'
 import destinationType from './destinationtype'
 import fetchDraftRecord from './draftrecord'
-import {
-  fetchDestinationByIdAndType,
-  fetchDestinationPasswordByIdAndType,
-} from './destination'
+import { fetchDestination, fetchDestinationPassword } from './destination'
 import fetchJurisdictionByDestId from './jurisdiction'
 import passwordComparison from './passwordComparison'
 
 export {
   fetchJurisdictionByDestId,
-  fetchDestinationByIdAndType,
-  fetchDestinationPasswordByIdAndType,
+  fetchDestination,
+  fetchDestinationPassword,
   fetchLoggedInUsersDestinations,
   destinationaudithistory,
-  fetchDestinationChangeRequestByIdAndType,
-  fetchChangeRequestPasswordByIdAndType,
+  fetchDestinationChangeRequestByDestIdAndDestType,
+  fetchDestinationChangeRequestById,
+  fetchChangeRequestPassword,
   destinationType,
   fetchDraftRecord,
   passwordComparison,

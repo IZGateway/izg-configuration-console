@@ -57,15 +57,12 @@ const getFetchedDestination = async (
     destTypeValue = values.type
     jurisdictionDescriptionValue = values.jurisdiction
   } else if (configuration === 'test') {
-    data = await dbClient.fetchDestinationByIdAndType(
-      destId?.toString(),
-      destTypeId
-    )
+    data = await dbClient.fetchDestination(destId?.toString(), destTypeId)
     fetchedDestination = { ...data, configuration: 'test' }
     destTypeValue = fetchedDestination.destination_type.type
     jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
   } else if (configuration === 'deploy') {
-    data = await dbClient.fetchDestinationChangeRequestByIdAndType(
+    data = await dbClient.fetchDestinationChangeRequest(
       destId?.toString(),
       destTypeId
     )

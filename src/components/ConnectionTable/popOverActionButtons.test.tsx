@@ -57,7 +57,7 @@ describe('PopOverActionButtons component', () => {
       <CombinedContext.Provider value={combinedContextValueMock}>
         <PopOverActionButtons
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           status="active"
           hasActiveMaintenance={true}
           jurisdictionName="Test Jurisdiction"
@@ -73,7 +73,7 @@ describe('PopOverActionButtons component', () => {
       <CombinedContext.Provider value={combinedContextValueMock}>
         <PopOverActionButtons
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           status="active"
           hasActiveMaintenance={true}
           jurisdictionName="Test Jurisdiction"

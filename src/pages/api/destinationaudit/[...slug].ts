@@ -31,7 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
 
   if (req.method === 'GET') {
-    const result = await dbClient.fetchDestinationAuditHistoryByIdAndType(
+    const result = await dbClient.fetchDestinationAuditHistory(
       destId,
       destTypeId
     )

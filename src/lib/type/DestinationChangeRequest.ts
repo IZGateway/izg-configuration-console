@@ -6,14 +6,13 @@ export type DestinationChangeRequest = {
   id: number
   destId: string
   destType: DestinationType
-  destUri: string
   jurisdiction?: Jurisdiction
   jiraId: string
   requestedAt: Date
   requestedBy: string
-  scheduledAt: Date
+  scheduledAt?: Date | null
   isAsap?: boolean
-  isDraft?: boolean
+  isDraft: boolean
   isPasswordDifferent?: boolean
   current?: DestinationConnectionSettings
   requested: DestinationConnectionSettings

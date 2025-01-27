@@ -2,7 +2,7 @@ import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { Destination } from '../../../../type/Destination'
 
-const fetchDestination = async (
+export const fetchDestination = async (
   destId: string,
   destType: number
 ): Promise<Destination> => {
@@ -71,15 +71,7 @@ const fetchDestination = async (
   }
 }
 
-export const fetchDestinationByIdAndType = async (
-  destId: string,
-  destType: number
-) => {
-  const destination = await fetchDestination(destId, destType)
-  return destination
-}
-
-export const fetchDestinationPasswordByIdAndType = async (
+export const fetchDestinationPassword = async (
   destId: string,
   destType: number
 ): Promise<string> => {

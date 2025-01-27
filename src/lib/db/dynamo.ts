@@ -7,54 +7,7 @@ import ConfigConsoleRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 
 class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
-  upsertDestinationChangeRequest(
-    changeRequestData: DestinationChangeRequest
-  ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
-  }
-  deleteDraftValues(
-    id: number,
-    destId: string,
-    dest_type: number
-  ): Promise<boolean> {
-    throw new Error('Method not implemented.')
-  }
-  deleteChangeRequest(destId: string, destType: number): Promise<boolean> {
-    throw new Error('Method not implemented.')
-  }
-  updatedAuditedDestination(
-    destId: string,
-    destType: number,
-    updatedData: object,
-    user: string,
-    oldValues: object,
-    isPasswordDifferent: boolean
-  ): Promise<any> {
-    throw new Error('Method not implemented.')
-  }
-  upsertDraftRecord(
-    changeRequestData: DestinationChangeRequest
-  ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
-  }
-  maintenanceRequest(
-    destId: string,
-    destType: number,
-    maintData: any
-  ): Promise<any> {
-    throw new Error('Method not implemented.')
-  }
-  updateChangeRequest(
-    destId: string,
-    destType: number,
-    updatedData: any
-  ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
-  }
-  fetchDestinationByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<Destination> {
+  fetchDestination(destId: string, destType: number): Promise<Destination> {
     throw new Error('Method not implemented.')
   }
   fetchLoggedInUsersDestinations(
@@ -63,13 +16,18 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   ): Promise<Destination[]> {
     throw new Error('Method not implemented.')
   }
-  fetchDestinationAuditHistoryByIdAndType(
+  fetchDestinationAuditHistory(
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]> {
     throw new Error('Method not implemented.')
   }
-  fetchDestinationChangeRequestByIdAndType(
+  fetchDestinationChangeRequestById(
+    id: number
+  ): Promise<DestinationChangeRequest> {
+    throw new Error('Method not implemented.')
+  }
+  fetchDestinationChangeRequestByDestIdAndDestType(
     destId: string,
     destTypeId: number
   ): Promise<DestinationChangeRequest> {
@@ -78,28 +36,44 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   fetchDestinationType(destType: string): Promise<DestinationType> {
     throw new Error('Method not implemented.')
   }
-  fetchChangeRequestPasswordByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<string> {
+  fetchChangeRequestPassword(id: number): Promise<string> {
     throw new Error('Method not implemented.')
   }
-  fetchDestinationPasswordByIdAndType(
-    destId: string,
-    destType: number
-  ): Promise<string> {
+  fetchDestinationPassword(destId: string, destType: number): Promise<string> {
     throw new Error('Method not implemented.')
   }
-  fetchDraftRecord(
-    destId: string,
-    dest_type: number
+  isPasswordChanged(destId: string, dest_type: number): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+  upsertDestinationChangeRequest(
+    changeRequestData: DestinationChangeRequest
   ): Promise<DestinationChangeRequest> {
     throw new Error('Method not implemented.')
   }
-  isPasswordChangedForIdAndType(
-    destId: string,
-    dest_type: number
+  updateDestinationChangeRequestDeploymentTime(
+    id: number,
+    requestedAt: Date,
+    scheduledAt: Date
+  ): Promise<DestinationChangeRequest> {
+    throw new Error('Method not implemented.')
+  }
+  deleteDestinationChangeRequest(id: number): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+  createDestinationChangeRequestDeploymentAudit(
+    changeRequest: DestinationChangeRequest,
+    user: string
   ): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
+  updateDestination(destination: Destination): Promise<Destination> {
+    throw new Error('Method not implemented.')
+  }
+  maintenanceRequest(
+    destId: string,
+    destType: number,
+    maintData: any
+  ): Promise<any> {
     throw new Error('Method not implemented.')
   }
 }

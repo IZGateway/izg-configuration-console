@@ -14,7 +14,7 @@ export async function getServerSideProps(context) {
   const destId = context.query.slug[1]
   const destTypeId = _.toNumber(context.query.slug[0])
   const session = await getServerSession(req, res, authOptions)
-  const destinationToTest = await dbClient.fetchDestinationByIdAndType(
+  const destinationToTest = await dbClient.fetchDestination(
     destId?.toString(),
     destTypeId
   )
