@@ -333,7 +333,7 @@ const EditConnection = (props: editConnectionProps) => {
           draftData.requestedBy
         } on ${moment(new Date(draftData.scheduledAt)).format(
           'MMM DD, YYYY [at] h:mm A'
-        )}`,
+        )}. NOTE: Passwords are not saved as part of a draft`,
       })
     }
   }
