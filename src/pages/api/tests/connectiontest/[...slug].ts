@@ -58,35 +58,22 @@ const getFetchedDestination = async (
   let jurisdictionDescriptionValue
   let data
   if (values) {
+    values.password = await getPasswordForTesting(values, destId, destTypeId)
     fetchedDestination = { ...values, configuration: 'edit' }
     destTypeValue = values.destinationType.type
-    jurisdictionDescriptionValue = values.jurisdiction
-  } else if (configuration === 'test') {
-    data = await dbClient.fetchDestination(destId?.toString(), destTypeId)
-    fetchedDestination = { ...data, configuration: 'test' }
-    destTypeValue = fetchedDestination.destinationType.type
-    jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
+    jurisdictionDescriptionValue = values.jurisdiction.description
   } else if (configuration === 'deploy') {
-    let password = null
     data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
       destId,
       destTypeId
     )
-    if (data.isPasswordDifferent) {
-      password = await dbClient.fetchChangeRequestPassword(data.id)
-    } else {
-      password = await dbClient.fetchDestinationPassword(
-        data.destId,
-        data.destType.typeId
-      )
-    }
     fetchedDestination = {
       destId: data.destId,
       destinationType: data.destType,
       jurisdiction: data.jurisdiction,
       destUri: data.requested.destUri,
       destVersion: data.requested.destVersion,
-      password: password,
+      password: await getPasswordForTesting(null, destId, destTypeId),
       ...data.requested,
       configuration: 'deploy',
     }
@@ -97,6 +84,32 @@ const getFetchedDestination = async (
     fetchedDestination,
     destTypeValue,
     jurisdictionDescriptionValue,
+  }
+}
+
+const getPasswordForTesting = async (
+  values: any,
+  destId: string,
+  destTypeId: number
+): Promise<string> => {
+  let data = null
+  let passwordForTesting = null
+  if (_.isEmpty(values?.newPassword) && _.isEmpty(values?.confirmPassword)) {
+    data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
+      destTypeId
+    )
+    if (data?.isPasswordDifferent) {
+      passwordForTesting = await dbClient.fetchChangeRequestPassword(data.id)
+    } else {
+      passwordForTesting = await dbClient.fetchDestinationPassword(
+        destId,
+        destTypeId
+      )
+    }
+    return passwordForTesting
+  } else {
+    return values.newPassword
   }
 }
 
