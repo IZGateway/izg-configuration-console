@@ -25,8 +25,14 @@ const fetchDesinationAuditHistory = async (
     destType: audit.dest_type,
     tableName: audit.tableName,
     changeType: audit.changeType.valueOf(),
-    oldValues: JSON.stringify(audit.oldValues),
-    newValues: JSON.stringify(audit.newValues),
+    oldValues:
+      typeof audit.oldValues === 'string'
+        ? JSON.parse(audit.oldValues)
+        : audit.oldValues,
+    newValues:
+      typeof audit.newValues === 'string'
+        ? JSON.parse(audit.newValues)
+        : audit.newValues,
     userName: audit.userName,
     createdAt: audit.createdAt,
   }))

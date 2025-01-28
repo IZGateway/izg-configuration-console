@@ -1,11 +1,11 @@
-export interface DestinationAudit {
+export type DestinationAudit = {
   id: number
   destId: string
   destType: number
   tableName: string
   userName: string
   changeType: string
-  oldValues: string
-  newValues: string
+  oldValues: JSON
+  newValues: JSON
   createdAt: Date
 }
