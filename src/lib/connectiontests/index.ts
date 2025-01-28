@@ -1,12 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import logger from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
+import { Destination } from '../type/Destination'
 import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
 
-const connectionTest = async (destination: any, userId: string) => {
+const connectionTest = async (destination: Destination, userId: string) => {
   enum TestSuite {
     'dns',
     'tcp',
@@ -22,7 +22,7 @@ const connectionTest = async (destination: any, userId: string) => {
   const connectionTestResult = {
     user: userId,
     timestamp: new Date(Date.now()).toISOString(),
-    destId: destination.dest_id,
+    destId: destination.destId,
     destUrl: '',
     destType: '',
     jurisdictionDescription: '',
@@ -46,21 +46,17 @@ const connectionTest = async (destination: any, userId: string) => {
     }
   }
 
-  const setHostnameIfNull = (dest) => {
+  const setHostnameIfNull = (dest: Destination) => {
     let hostname
-    if (!hasHostname(dest?.dest_uri)) {
+    if (!hasHostname(dest?.destUri)) {
       hostname = 'https://' + getHostNameFromType(dest)
-      return hostname + dest?.dest_uri
+      return hostname + dest?.destUri
     } else {
-      return dest?.dest_uri
+      return dest?.destUri
     }
   }
 
   const testResults: ConnectionTestResult[] = []
-  let desttypeid
-  let destType
-  let jurisdictionDescription
-  const changeRequestDestination = destination?.destinations
   if (!destination) {
     connectionTestResult.destId = 'unknown'
     connectionTestResult.destUrl = 'unknown'
@@ -76,29 +72,18 @@ const connectionTest = async (destination: any, userId: string) => {
     ]
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else if (destination && !isValidUrl(setHostnameIfNull(destination))) {
-    if (changeRequestDestination) {
-      destType = destination?.destinations.destination_type.type
-      jurisdictionDescription =
-        destination?.destinations.jurisdiction.description
-    } else {
-      destType = destination?.destination_type.type
-      jurisdictionDescription = destination.jurisdiction.description
-    }
-    connectionTestResult.destId = destination.dest_id as string
-    connectionTestResult.destUrl = destination.dest_uri
-    connectionTestResult.destType =
-      destination.destination_type.type ||
-      destination.destionations.destination_type.type
+    connectionTestResult.destId = destination.destId
+    connectionTestResult.destUrl = destination.destUri
+    connectionTestResult.destType = destination.destinationType.type
     connectionTestResult.jurisdictionDescription =
-      destination.jurisdiction?.description ||
-      destination.destinations?.jurisdiction.description
+      destination.jurisdiction?.description
     connectionTestResult.testResults = [
       {
         name: '',
-        detail: `No tests were run because the requested destination's URL [ ${destination.dest_uri} ]is malformed.`,
+        detail: `No tests were run because the requested destination's URL [ ${destination.destUri} ]is malformed.`,
         status: null,
         order: -1,
-        message: `The URL retrieved for ${destination.dest_id} is malformed`,
+        message: `The URL retrieved for ${destination.destId} is malformed`,
       },
     ]
     logger.error(
@@ -111,17 +96,6 @@ const connectionTest = async (destination: any, userId: string) => {
     const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
     const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
     const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || undefined
-
-    if (changeRequestDestination) {
-      desttypeid = destination.destinations.destination_type.type_id
-      destType = destination?.destinations.destination_type.type
-      jurisdictionDescription =
-        destination?.destinations.jurisdiction.description
-    } else {
-      desttypeid = destination.destination_type.type_id
-      destType = destination?.destination_type.type
-      jurisdictionDescription = destination.jurisdiction.description
-    }
     const destIdURL = convertUrlStringToUrlObject(
       setHostnameIfNull(destination)
     )
@@ -131,8 +105,6 @@ const connectionTest = async (destination: any, userId: string) => {
       port: +destIdURL.port || DEFAULT_PORT,
       hostname: destIdURL.hostname,
       path: destIdURL.pathname,
-      id: destination.dest_id as string,
-      desttypeid: desttypeid,
       order: 0,
       certPath: IZG_ENDPOINT_CRT_PATH,
       keyPath: IZG_ENDPOINT_KEY_PATH,
@@ -141,7 +113,7 @@ const connectionTest = async (destination: any, userId: string) => {
     }
 
     logger.info(
-      `STARTING TESTS ON DEST ID: ${destination.dest_id} USING URL: ${connectionTestRequest.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
+      `STARTING TESTS ON DEST ID: ${destination.destId} USING URL: ${connectionTestRequest.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
     )
 
     let testCounter = 0
@@ -180,10 +152,12 @@ const connectionTest = async (destination: any, userId: string) => {
       logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
 
-    connectionTestResult.destId = destination.dest_id || 'unknown'
+    connectionTestResult.destId = destination.destId || 'unknown'
     connectionTestResult.destUrl = destIdURL.hostname || 'unknown'
-    connectionTestResult.destType = destType
-    connectionTestResult.jurisdictionDescription = jurisdictionDescription
+    connectionTestResult.destType =
+      destination.destinationType.type || 'unknown'
+    connectionTestResult.jurisdictionDescription =
+      destination.jurisdiction?.description || 'unknown'
     connectionTestResult.testResults = testResults
   }
   logger.info('Connection Test Results', {
@@ -208,7 +182,7 @@ const isValidUrl = (urlString: string) => {
   }
 }
 
-const getHostNameFromType = (dest: any) => {
+const getHostNameFromType = (dest: Destination) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
@@ -216,8 +190,8 @@ const getHostNameFromType = (dest: any) => {
   // if there is no hostname, then the URL is local, and so the endpoint
   // is where you would get status history from for the same destination
   const base = new URL(
-    configuredHubURLs.getIZGHubURL(dest.destination_type.type_id)
+    configuredHubURLs.getIZGHubURL(dest.destinationType.typeId)
   )
-  const url = new URL(dest.dest_uri, base)
+  const url = new URL(dest.destUri, base)
   return url.host
 }

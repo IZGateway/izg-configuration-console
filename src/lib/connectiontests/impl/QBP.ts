@@ -7,12 +7,10 @@ import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import logger from '../../../../logger'
-import _ from 'lodash'
 import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { IZGHubHttpsAgent } from '../../utils/izghubhttpsagent'
-import { dbClient } from '../../utils/dbclient'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -21,21 +19,9 @@ let requestBody: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
-    let password: string
-    if (_.isEmpty(destination.newPassword)) {
-      password = await lookupDestinationPassword(
-        destination.configuration,
-        this.connectionTestRequest.id,
-        this.connectionTestRequest.desttypeid
-      )
-    } else {
-      password = destination.newPassword
-    }
-
     const destinationVersion = await lookupDestinationVersion(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
+      this.connectionTestRequest.destinationData.destId,
+      this.connectionTestRequest.destinationData.destinationType.typeId
     )
     const hl7QueryTestResult: ConnectionTestResult = {
       name: TEST_NAME,
@@ -77,8 +63,8 @@ export default class QBP extends ConnectionTest {
     const setRequestBody = (version: string) => {
       /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
       const msh11 =
-        destination.dest_type == 5 ||
-        normalOnboardingDestinations.includes(destination.dest_id)
+        destination.destinationType.typeId == 5 ||
+        normalOnboardingDestinations.includes(destination.destId)
           ? 'P'
           : 'T'
 
@@ -101,8 +87,8 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       <soap:Body>
       <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
       <iis:username>${destination?.username}</iis:username>
-      <iis:password>${password}</iis:password>
-      <iis:facilityID>${destination?.facility_id}</iis:facilityID>
+      <iis:password>${destination?.password}</iis:password>
+      <iis:facilityID>${destination?.facilityId}</iis:facilityID>
       <iis:hl7Message>${hl7msg}</iis:hl7Message>
       </iis:submitSingleMessage>
       </soap:Body>
@@ -116,8 +102,8 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
         <soap:Body>
           <iis:SubmitSingleMessageRequest>
             <iis:Username>${destination?.username}</iis:Username>
-            <iis:Password>${password}</iis:Password>
-            <iis:FacilityID>${destination?.facility_id}</iis:FacilityID>
+            <iis:Password>${destination.password}</iis:Password>
+            <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
             <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
           </iis:SubmitSingleMessageRequest>
         </soap:Body>
@@ -127,7 +113,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
     }
 
     const httpsAgentOptions = IZGHubHttpsAgent
-    const isVersion2014 = destination.dest_version !== '2011'
+    const isVersion2014 = destination.destVersion !== '2011'
     const options = {
       hostname: this.connectionTestRequest.hostname,
       port: this.connectionTestRequest.port,
@@ -256,30 +242,4 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       req.end()
     })
   }
-}
-
-async function lookupDestinationPassword(
-  configType: string,
-  destId: string,
-  destType: number
-) {
-  let password: string
-  if (configType === 'deploy') {
-    password = await dbClient.fetchChangeRequestPasswordByIdAndType(
-      destId,
-      destType
-    )
-  } else if (configType === 'edit') {
-    password = await dbClient.fetchDestinationPasswordByIdAndType(
-      destId,
-      destType
-    )
-  } else {
-    //Request from test connection page
-    password = await dbClient.fetchDestinationPasswordByIdAndType(
-      destId,
-      destType
-    )
-  }
-  return password
 }

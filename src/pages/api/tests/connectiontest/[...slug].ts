@@ -8,6 +8,7 @@ import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import { dbClient } from '../../../../lib/utils/dbclient'
+import { Destination } from '../../../../lib/type/Destination'
 /**
  * @swagger
  * /api/tests/connectiontest/{destTypeId}/{destId}:
@@ -47,29 +48,50 @@ const getFetchedDestination = async (
   destTypeId: number,
   configuration?: string,
   values?: any
-) => {
-  let fetchedDestination
+): Promise<{
+  fetchedDestination: Destination
+  destTypeValue: string
+  jurisdictionDescriptionValue: string
+}> => {
+  let fetchedDestination: Destination
   let destTypeValue
   let jurisdictionDescriptionValue
   let data
   if (values) {
     fetchedDestination = { ...values, configuration: 'edit' }
-    destTypeValue = values.type
+    destTypeValue = values.destinationType.type
     jurisdictionDescriptionValue = values.jurisdiction
   } else if (configuration === 'test') {
     data = await dbClient.fetchDestination(destId?.toString(), destTypeId)
     fetchedDestination = { ...data, configuration: 'test' }
-    destTypeValue = fetchedDestination.destination_type.type
+    destTypeValue = fetchedDestination.destinationType.type
     jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
   } else if (configuration === 'deploy') {
-    data = await dbClient.fetchDestinationChangeRequest(
-      destId?.toString(),
+    let password = null
+    data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
       destTypeId
     )
-    fetchedDestination = { ...data, configuration: 'deploy' }
-    destTypeValue = fetchedDestination.destinations.destination_type.type
-    jurisdictionDescriptionValue =
-      fetchedDestination.destinations.jurisdiction.description
+    if (data.isPasswordDifferent) {
+      password = await dbClient.fetchChangeRequestPassword(data.id)
+    } else {
+      password = await dbClient.fetchDestinationPassword(
+        data.destId,
+        data.destType.typeId
+      )
+    }
+    fetchedDestination = {
+      destId: data.destId,
+      destinationType: data.destType,
+      jurisdiction: data.jurisdiction,
+      destUri: data.requested.destUri,
+      destVersion: data.requested.destVersion,
+      password: password,
+      ...data.requested,
+      configuration: 'deploy',
+    }
+    destTypeValue = data.destType.type
+    jurisdictionDescriptionValue = data.jurisdiction.description
   }
   return {
     fetchedDestination,

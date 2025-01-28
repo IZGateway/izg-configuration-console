@@ -19,11 +19,9 @@ export default class CONNECTIVITY extends ConnectionTest {
       detail: null,
       status: this.status,
     }
-    const destination = this.connectionTestRequest.destinationData
     const destinationVersion = await lookupDestinationVersion(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
+      this.connectionTestRequest.destinationData.destId,
+      this.connectionTestRequest.destinationData.destinationType.typeId
     )
     const setRequestBody = (version: string) => {
       if (version === '2011') {
