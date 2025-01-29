@@ -5,11 +5,6 @@ export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
     changeRequestData: DestinationChangeRequest
   ): Promise<DestinationChangeRequest>
-  updateDestinationChangeRequestDeploymentTime(
-    id: number,
-    requestedAt: Date,
-    scheduledAt: Date
-  ): Promise<DestinationChangeRequest>
   deleteDestinationChangeRequest(id: number): Promise<boolean>
   createDestinationChangeRequestDeploymentAudit(
     changeRequest: DestinationChangeRequest,

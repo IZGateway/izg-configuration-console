@@ -26,7 +26,7 @@ const updateDestination = async (destination: Destination) => {
     },
   })
   if (!result) {
-    logger.error(`Destination not updated: ${destination.destId}`)
+    logger.debug(`Destination not updated: ${destination.destId}`)
     return false
   }
   return true

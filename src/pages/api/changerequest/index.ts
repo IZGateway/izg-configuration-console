@@ -90,6 +90,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             ...requestBody,
           })
           if (changeRequestTicketResponse) {
+            if (
+              _.isEmpty(requestBody.requested.newPassword) &&
+              _.isEmpty(requestBody.requested.confirmPassword)
+            ) {
+              requestBody.requested.password =
+                await dbClient.fetchDestinationPassword(
+                  requestBody.destId,
+                  requestBody.destType.typeId
+                )
+            } else {
+              requestBody.requested.password = requestBody.requested.newPassword
+            }
+            _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
             changeRequestDBResponse = await upsertChangeRequest({
               ...requestBody,
               jiraId: changeRequestTicketResponse.key,
@@ -119,14 +132,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             requestBody.isAsap
           )
 
-          await dbClient.updateDestinationChangeRequestDeploymentTime(
-            requestBody.id,
-            new Date(),
-            new Date(requestBody.scheduledAt)
-          )
+          await dbClient.upsertDestinationChangeRequest({
+            id: requestBody.id,
+            jiraId: undefined,
+            current: undefined,
+            requested: undefined,
+            isDraft: false,
+            destId: undefined,
+            destType: undefined,
+            requestedBy: undefined,
+            requestedAt: new Date(),
+            scheduledAt: requestBody.scheduledAt,
+          })
+
           res.status(200).json('Change Request is updated')
         } catch (error) {
-          console.error(error)
+          logger.debug(error)
           res.status(500).json({ error: 'Unable to update Change request' })
         }
       } else {
@@ -134,7 +155,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           await dbClient.upsertDestinationChangeRequest(requestBody)
           res.status(200).json('Change Request is updated')
         } catch (error) {
-          console.error(error)
+          logger.debug(error)
           res.status(500).json({ error: 'Unable to update Change request' })
         }
       }
@@ -143,7 +164,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         await dbClient.deleteDestinationChangeRequest(requestBody.id)
         res.status(200).json('Change Request is deleted')
       } catch (error) {
-        console.error(error)
+        logger.debug(error)
         res.status(500).json({ error: 'Unable to delete Change request' })
       }
     } else {

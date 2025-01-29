@@ -6,6 +6,7 @@ import _ from 'lodash'
 import { dbClient } from '../../../../lib/utils/dbclient'
 import { Destination } from '../../../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../../../lib/type/DestinationChangeRequest'
+import logger from '../../../../../logger'
 /**
  * @swagger
  * /api/changerequest/deploye/{id}:
@@ -122,19 +123,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           deleteDestinationChangeRequest = 2,
         }
         if (results.every((result) => result.status === 'fulfilled')) {
-          console.info(
+          logger.debug(
             `Jira change request ${changeRequest.jiraId} deployed successfully`
           )
           res.status(200).json('update successful')
         }
-        console.error(
+        logger.debug(
           `Jira change request ${changeRequest.jiraId} deployment error(s) detected...`
         )
         results.map((result, index) => {
           let errorMessage = ''
           if (result.status === 'rejected') {
             errorMessage = `Error deploying Jira change request ${changeRequest.jiraId} on ${calls[index]}:  ${result.reason}`
-            console.error(errorMessage)
+            logger.debug(errorMessage)
             errorMessages.push(errorMessage)
           } else {
             errorMessages.push(`${calls[index]} was successful`)

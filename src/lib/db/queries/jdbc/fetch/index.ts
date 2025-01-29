@@ -10,6 +10,7 @@ import fetchDraftRecord from './draftrecord'
 import { fetchDestination, fetchDestinationPassword } from './destination'
 import fetchJurisdictionByDestId from './jurisdiction'
 import passwordComparison from './passwordComparison'
+import isDatabaseConnected from './DBConnectionCheck'
 
 export {
   fetchJurisdictionByDestId,
@@ -23,4 +24,5 @@ export {
   destinationType,
   fetchDraftRecord,
   passwordComparison,
+  isDatabaseConnected,
 }

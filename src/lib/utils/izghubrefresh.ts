@@ -2,6 +2,7 @@ import axios from 'axios'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import { Destination } from '../type/Destination'
 import { IZGHubHttpsAgent } from './izghubhttpsagent'
+import logger from '../../../logger'
 
 const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
 const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
@@ -17,7 +18,7 @@ const izgHubRefresh = (destination: Destination) => {
     httpsAgent: IZGHubHttpsAgent,
     timeout: 5000,
   })
-  console.log(
+  logger.debug(
     `refreshHub called with destType: ${destination.destinationType.type} and url: ${url}`
   )
 }

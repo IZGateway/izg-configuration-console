@@ -1,3 +1,4 @@
+import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { DestinationChangeRequest } from '../../../../type/DestinationChangeRequest'
 
@@ -18,10 +19,13 @@ const createDestinationAudit = async (
     },
   })
 
-  if (audit) {
-    return true
+  if (!audit) {
+    logger.debug(
+      `Error creating Audit history for destination ${destinationchangerequest.destId}`
+    )
+    return false
   }
-  return false
+  return true
 }
 
 export default createDestinationAudit

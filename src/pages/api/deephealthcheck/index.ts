@@ -2,11 +2,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
-import { prismacontext } from '../../../lib/prismacontext'
+
 import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
+import { dbClient } from '../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/deephealthcheck:
@@ -24,9 +25,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const databaseStatus = async () => {
     let dbConnectionCheck = {}
     try {
-      const query = await prismacontext.prisma.$queryRaw<any[]>`SELECT 1`
-
-      if (query.length >= 1) {
+      if (await dbClient.isDatabaseConnected()) {
         dbConnectionCheck = {
           component: 'DB',
           status: 'connected',

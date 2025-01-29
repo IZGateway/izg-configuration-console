@@ -3,6 +3,7 @@ import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
 import { dbClient } from '../../../lib/utils/dbclient'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
+import logger from '../../../../logger'
 /**
  * @swagger
  * /api/changerequest/{destTypeId}/{destId}:
@@ -45,7 +46,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       await dbClient.deleteDestinationChangeRequest(id)
       res.status(200).json('Change Request is deleted')
     } catch (error) {
-      console.error(error)
+      logger.debug(error)
       res.status(500).json({ error: 'Unable to delete Change request' })
     }
   } else {

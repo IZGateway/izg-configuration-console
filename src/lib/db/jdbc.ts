@@ -8,10 +8,10 @@ import {
   destinationType,
   fetchDestinationPassword,
   passwordComparison,
+  isDatabaseConnected,
 } from './queries/jdbc/fetch'
 import {
   upsertDestinationChangeRequest,
-  updateDestinationChangeRequestDeploymentTime,
   deleteChangeRequest,
   updateDestination,
   createDestinationAudit,
@@ -33,11 +33,10 @@ class JDBC
   isPasswordChanged = passwordComparison
   fetchChangeRequestPassword = fetchChangeRequestPassword
   fetchDestinationPassword = fetchDestinationPassword
+  isDatabaseConnected = isDatabaseConnected
 
   //mutate
   upsertDestinationChangeRequest = upsertDestinationChangeRequest
-  updateDestinationChangeRequestDeploymentTime =
-    updateDestinationChangeRequestDeploymentTime
   deleteDestinationChangeRequest = deleteChangeRequest
   updateDestination = withIZGHubRefresh(updateDestination)
   createDestinationChangeRequestDeploymentAudit = createDestinationAudit

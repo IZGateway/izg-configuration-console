@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import logger from '../../logger'
 
 const showSql =
   process.env.SHOW_SQL_IN_CONSOLE?.toLocaleLowerCase() === 'true' || false
@@ -27,9 +28,9 @@ const prisma = new PrismaClient({
 })
 
 prisma.$on('query', (e) => {
-  console.log('Query: ' + e.query)
-  console.log('Params: ' + e.params)
-  console.log('Duration: ' + e.duration + 'ms')
+  logger.debug('Query: ' + e.query)
+  logger.debug('Params: ' + e.params)
+  logger.debug('Duration: ' + e.duration + 'ms')
 })
 export interface Context {
   prisma: PrismaClient

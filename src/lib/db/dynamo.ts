@@ -7,6 +7,9 @@ import ConfigConsoleRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 
 class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
+  isDatabaseConnected(): Promise<boolean> {
+    throw new Error('Method not implemented.')
+  }
   fetchDestination(destId: string, destType: number): Promise<Destination> {
     throw new Error('Method not implemented.')
   }
@@ -50,13 +53,6 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   ): Promise<DestinationChangeRequest> {
     throw new Error('Method not implemented.')
   }
-  updateDestinationChangeRequestDeploymentTime(
-    id: number,
-    requestedAt: Date,
-    scheduledAt: Date
-  ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
-  }
   deleteDestinationChangeRequest(id: number): Promise<boolean> {
     throw new Error('Method not implemented.')
   }
@@ -66,14 +62,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   ): Promise<boolean> {
     throw new Error('Method not implemented.')
   }
-  updateDestination(destination: Destination): Promise<Destination> {
-    throw new Error('Method not implemented.')
-  }
-  maintenanceRequest(
-    destId: string,
-    destType: number,
-    maintData: any
-  ): Promise<any> {
+  updateDestination(destination: Destination): Promise<boolean> {
     throw new Error('Method not implemented.')
   }
 }
