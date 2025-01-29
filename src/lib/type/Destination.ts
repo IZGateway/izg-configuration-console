@@ -2,15 +2,15 @@ import { DestinationConnectionSettings } from './DestinationConnectionSettings'
 import { DestinationType } from './DestinationType'
 import { Jurisdiction } from './Jurisdiction'
 
-export type DestinationDetails = {
+export interface Destination extends DestinationConnectionSettings {
   destId: string
   destVersion?: string
-  passExpiry: Date
-  maintReason: string
-  maintStart: Date
-  maintEnd: Date
+  passExpiry?: Date
+  maintReason?: string
+  maintStart?: Date
+  maintEnd?: Date
   destinationType: DestinationType
-  jurisdiction: Jurisdiction
+  jurisdiction?: Jurisdiction
 }
 
-export type Destination = DestinationDetails & DestinationConnectionSettings
+//export type Destination = DestinationDetails & DestinationConnectionSettings

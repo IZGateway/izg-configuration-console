@@ -1,4 +1,4 @@
-export type DestinationAudit = {
+export interface DestinationAudit {
   id: number
   destId: string
   destType: number

@@ -102,7 +102,7 @@ const upsertDestinationChangeRequest = async (
     })
   }
   if (!results) {
-    logger.debug(
+    logger.error(
       `Destination Change Request not processed: ${changeRequestData.destId} and ${changeRequestData.destType.typeId}`
     )
     return null

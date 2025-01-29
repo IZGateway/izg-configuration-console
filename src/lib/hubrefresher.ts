@@ -10,6 +10,5 @@ export const withIZGHubRefresh =
   async (...args: any[]): Promise<any> => {
     const result = await fn(...args)
     izgHubRefresh(args[0])
-    console.log('Refreshed')
     return result
   }

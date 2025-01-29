@@ -15,10 +15,5 @@ export default interface ConfigConsoleMutateRepository {
     changeRequest: DestinationChangeRequest,
     user: string
   ): Promise<boolean>
-  updateDestination(destination: Destination): Promise<Destination>
-  maintenanceRequest(
-    destId: string,
-    destType: number,
-    maintData: any
-  ): Promise<any>
+  updateDestination(destination: Destination): Promise<boolean>
 }

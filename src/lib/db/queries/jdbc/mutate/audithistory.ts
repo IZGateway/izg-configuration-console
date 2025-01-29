@@ -12,8 +12,8 @@ const createDestinationAudit = async (
       dest_type: destinationchangerequest.destType.typeId,
       userName: user,
       changeType: 'Update',
-      oldValues: destinationchangerequest.current,
-      newValues: destinationchangerequest.requested,
+      oldValues: JSON.stringify(destinationchangerequest.current),
+      newValues: JSON.stringify(destinationchangerequest.requested),
       createdAt: new Date(),
     },
   })

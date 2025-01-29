@@ -14,7 +14,6 @@ import {
   updateDestinationChangeRequestDeploymentTime,
   deleteChangeRequest,
   updateDestination,
-  maintenanceRequest,
   createDestinationAudit,
 } from './queries/jdbc/mutate'
 import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
@@ -42,6 +41,5 @@ class JDBC
   deleteDestinationChangeRequest = deleteChangeRequest
   updateDestination = withIZGHubRefresh(updateDestination)
   createDestinationChangeRequestDeploymentAudit = createDestinationAudit
-  maintenanceRequest = withIZGHubRefresh(maintenanceRequest)
 }
 export default JDBC

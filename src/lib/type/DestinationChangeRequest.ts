@@ -2,7 +2,7 @@ import { DestinationConnectionSettings } from './DestinationConnectionSettings'
 import { DestinationType } from './DestinationType'
 import { Jurisdiction } from './Jurisdiction'
 
-export type DestinationChangeRequest = {
+export interface DestinationChangeRequest {
   id: number
   destId: string
   destType: DestinationType

@@ -1,4 +1,4 @@
-export type DestinationConnectionSettings = {
+export interface DestinationConnectionSettings {
   destUri: string
   username: string
   password?: string
