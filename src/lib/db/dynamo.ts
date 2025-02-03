@@ -1,69 +1,131 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import ConfigConsoleRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
+import AWS from 'aws-sdk'
 
+const dynamoDb = new AWS.DynamoDB.DocumentClient()
 class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
-  isDatabaseConnected(): Promise<boolean> {
-    throw new Error('Method not implemented.')
+  async fetchDestination(
+    destId: string,
+    destType: number
+  ): Promise<Destination> {
+    const params = {
+      TableName: 'Destinations',
+      Key: { destId, destType },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item as Destination
   }
-  fetchDestination(destId: string, destType: number): Promise<Destination> {
-    throw new Error('Method not implemented.')
-  }
-  fetchLoggedInUsersDestinations(
+
+  async fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: string[]
   ): Promise<Destination[]> {
-    throw new Error('Method not implemented.')
+    const params = {
+      TableName: 'Destinations',
+      FilterExpression:
+        'isAdmin = :isAdmin AND jurisdiction IN (:jurisdictions)',
+      ExpressionAttributeValues: {
+        ':isAdmin': isAdmin,
+        ':jurisdictions': jurisdictions,
+      },
+    }
+    const result = await dynamoDb.scan(params).promise()
+    return result.Items as Destination[]
   }
-  fetchDestinationAuditHistory(
+
+  async fetchDestinationAuditHistory(
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]> {
-    throw new Error('Method not implemented.')
+    const params = {
+      TableName: 'DestinationAudit',
+      KeyConditionExpression: 'destId = :destId AND destTypeId = :destTypeId',
+      ExpressionAttributeValues: {
+        ':destId': destId,
+        ':destTypeId': destTypeId,
+      },
+    }
+    const result = await dynamoDb.query(params).promise()
+    return result.Items as DestinationAudit[]
   }
-  fetchDestinationChangeRequestById(
+
+  async fetchDestinationChangeRequestById(
     id: number
   ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
+    const params = {
+      TableName: 'DestinationChangeRequests',
+      Key: { id },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item as DestinationChangeRequest
   }
-  fetchDestinationChangeRequestByDestIdAndDestType(
+
+  async fetchDestinationChangeRequestByDestIdAndDestType(
     destId: string,
     destTypeId: number
   ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
+    const params = {
+      TableName: 'DestinationChangeRequests',
+      KeyConditionExpression: 'destId = :destId AND destTypeId = :destTypeId',
+      ExpressionAttributeValues: {
+        ':destId': destId,
+        ':destTypeId': destTypeId,
+      },
+    }
+    const result = await dynamoDb.query(params).promise()
+    return result.Items[0] as DestinationChangeRequest
   }
-  fetchDestinationType(destType: string): Promise<DestinationType> {
-    throw new Error('Method not implemented.')
+
+  async fetchDestinationType(destType: string): Promise<DestinationType> {
+    const params = {
+      TableName: 'DestinationTypes',
+      Key: { destType },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item as DestinationType
   }
-  fetchChangeRequestPassword(id: number): Promise<string> {
-    throw new Error('Method not implemented.')
+
+  async fetchChangeRequestPassword(id: number): Promise<string> {
+    const params = {
+      TableName: 'ChangeRequestPasswords',
+      Key: { id },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item.password
   }
-  fetchDestinationPassword(destId: string, destType: number): Promise<string> {
-    throw new Error('Method not implemented.')
+
+  async fetchDestinationPassword(
+    destId: string,
+    destType: number
+  ): Promise<string> {
+    const params = {
+      TableName: 'DestinationPasswords',
+      Key: { destId, destType },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item.password
   }
-  isPasswordChanged(destId: string, dest_type: number): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async isPasswordChanged(destId: string, dest_type: number): Promise<boolean> {
+    const params = {
+      TableName: 'DestinationPasswords',
+      Key: { destId, dest_type },
+    }
+    const result = await dynamoDb.get(params).promise()
+    return result.Item.passwordChanged
   }
-  upsertDestinationChangeRequest(
-    changeRequestData: DestinationChangeRequest
-  ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
-  }
-  deleteDestinationChangeRequest(id: number): Promise<boolean> {
-    throw new Error('Method not implemented.')
-  }
-  createDestinationChangeRequestDeploymentAudit(
-    changeRequest: DestinationChangeRequest,
-    user: string
-  ): Promise<boolean> {
-    throw new Error('Method not implemented.')
-  }
-  updateDestination(destination: Destination): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async isDatabaseConnected(): Promise<boolean> {
+    try {
+      await dynamoDb.scan({ TableName: 'Destinations', Limit: 1 }).promise()
+      return true
+    } catch (error) {
+      return false
+    }
   }
 }
 
