@@ -1,8 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import updatedAuditedDestination from '../../../../lib/queries/mutate/destination'
 import desttypehelper from '../../../../lib/desttypehelper'
-import destinationType from '../../../../lib/queries/fetch/destinationtype'
 import withMiddleware from '../../api-middleware-helper'
+import { dbClient } from '../../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/update/destination/{id}:
@@ -27,7 +26,7 @@ import withMiddleware from '../../api-middleware-helper'
  *         application/json:
  *           example:
  *             username: string
- *             facility_id: string
+ *             facilityId: string
  *             MSH3: string
  *             MSH4: string
  *             MSH5: string
@@ -48,12 +47,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     req.query.destType.toString()
   )
 
-  const destination_type = await destinationType(destType)
+  const destination_type = await dbClient.fetchDestinationType(destType)
   if (req.method === 'POST') {
     const data = JSON.parse(req.body)
-    const result = await updatedAuditedDestination(
+    const result = await dbClient.updatedAuditedDestination(
       destId,
-      destination_type?.type_id,
+      destination_type?.typeId,
       data.updatedData,
       data.user,
       data.oldValues,

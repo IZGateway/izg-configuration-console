@@ -6,24 +6,20 @@ import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
 import _ from 'lodash'
-import * as fs from 'fs'
-import path from 'path'
-import https from 'https'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
-import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import AppHeaderBar from '../../components/AppHeader'
-import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
-import destination from '../../lib/queries/fetch/destination'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
+import { dbClient } from '../../lib/utils/dbclient'
+import { IZGHubHttpsAgent } from '../../lib/utils/izghubhttpsagent'
+import { Destination } from '../../lib/type/Destination'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
-let destinationResult = null
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -78,19 +74,23 @@ export const getServerSideProps = async (context) => {
     for (const [key, value] of Object.entries(endpoint as Jurisdiction)) {
       const destArray = Promise.all(
         value.map(async (x) => {
+          const destination = await dbClient.fetchDestination(
+            x.destId,
+            x.destTypeId
+          )
+          const destinationChangeRequest =
+            await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+              x.destId,
+              x.destTypeId
+            )
           return {
             ...x,
-            hasChangeRequest: await hasActiveChangeRequest(
-              x.destId,
-              x.destTypeId
-            ),
-            hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
-            hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
-            hasFutureMaint: await hasFutureMaintenance(x.destId, x.destTypeId),
-            getMaintenaceValues: await getMaintenaceValues(
-              x.destId,
-              x.destTypeId
-            ),
+            hasChangeRequest: destinationChangeRequest ? true : false,
+            hasActiveDraft:
+              destinationChangeRequest?.jiraId === null ? true : false,
+            hasActiveMaint: hasActiveMaintenance(destination),
+            hasFutureMaint: hasFutureMaintenance(destination),
+            getMaintenaceValues: getMaintenaceValues(destination),
           }
         })
       )
@@ -103,17 +103,6 @@ export const getServerSideProps = async (context) => {
 
 const fetchEndpointStatus = async (role, jurisdictions) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
-  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
-  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
-  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
-  const httpsAgentOptions = {
-    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
-    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
-    passphrase: IZG_ENDPOINT_PASSCODE,
-    rejectUnauthorized: false,
-    keepAlive: true,
-  }
-
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
@@ -126,7 +115,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const responses = Promise.allSettled(
     hubURLS.map((endpoint) =>
       axios.get(endpoint, {
-        httpsAgent: new https.Agent(httpsAgentOptions),
+        httpsAgent: IZGHubHttpsAgent,
         timeout: 30000,
       })
     )
@@ -157,80 +146,55 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const combinedResponses = [].concat(...endpointStatuses)
   return combinedResponses
 }
-
-const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await destinationChangeRequest(destId, destTypeId)) ? true : false
-}
-
-const hasActiveDraft = async (destId, destTypeId) => {
-  return (await fetchDraftRecord(destId, destTypeId)) ? true : false
-}
-
-const getDestinationResult = async (destId, destTypeId) => {
-  try {
-    destinationResult = await destination(destId, destTypeId)
-  } catch (error) {
-    throw new Error(error.message)
-  }
-}
-
-const getMaintenaceValues = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
-
-  if (_.isNull(destinationResult)) {
+const getMaintenaceValues = (destination: Destination) => {
+  if (_.isNull(destination)) {
     return {
       maint_start: null,
       maint_end: null,
     }
   } else {
     return {
-      maint_start: destinationResult.maint_start
-        ? destinationResult.maint_start.toISOString()
+      maint_start: destination.maintStart
+        ? destination.maintStart.toISOString()
         : null,
-      maint_end: destinationResult.maint_end
-        ? destinationResult.maint_end.toISOString()
+      maint_end: destination.maintEnd
+        ? destination.maintEnd.toISOString()
         : null,
     }
   }
 }
 
-const hasActiveMaintenance = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
+const hasActiveMaintenance = (destination: Destination) => {
   if (
-    _.isNull(destinationResult) ||
-    (_.isNull(destinationResult.maint_start) &&
-      _.isNull(destinationResult.maint_end))
+    _.isNull(destination) ||
+    (_.isNull(destination.maintStart) && _.isNull(destination.maintEnd))
   ) {
     return false
   } else {
     return (
-      destinationResult.maint_start <= new Date() &&
-      (_.isNull(destinationResult.maint_end) ||
-        destinationResult.maint_end >= new Date())
+      destination.maintStart <= new Date() &&
+      (_.isNull(destination.maintEnd) || destination.maintEnd >= new Date())
     )
   }
 }
 
-const hasFutureMaintenance = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
+const hasFutureMaintenance = (destination: Destination) => {
   if (
-    _.isNull(destinationResult) ||
-    (_.isNull(destinationResult.maint_start) &&
-      _.isNull(destinationResult.maint_end))
+    _.isNull(destination) ||
+    (_.isNull(destination.maintStart) && _.isNull(destination.maintEnd))
   ) {
     return false
   } else {
     return (
-      destinationResult.maint_start >= new Date() &&
-      (_.isNull(destinationResult.maint_end) ||
-        destinationResult.maint_end >= new Date())
+      destination.maintStart >= new Date() &&
+      (_.isNull(destination.maintEnd) || destination.maintEnd >= new Date())
     )
   }
 }
 
 function appendJurisdictionsAssignedToUser(
   hubURLS: string[],
-  jurisdictions: any
+  jurisdictions: Array<string>
 ) {
   return hubURLS.map(
     (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`

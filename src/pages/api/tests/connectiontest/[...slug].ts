@@ -1,13 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
-import destination from '../../../../lib/queries/fetch/destination'
 import _ from 'lodash'
-import destinationChangeRequest from '../../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
+import { dbClient } from '../../../../lib/utils/dbclient'
+import { Destination } from '../../../../lib/type/Destination'
 /**
  * @swagger
  * /api/tests/connectiontest/{destTypeId}/{destId}:
@@ -47,33 +48,68 @@ const getFetchedDestination = async (
   destTypeId: number,
   configuration?: string,
   values?: any
-) => {
-  let fetchedDestination
+): Promise<{
+  fetchedDestination: Destination
+  destTypeValue: string
+  jurisdictionDescriptionValue: string
+}> => {
+  let fetchedDestination: Destination
   let destTypeValue
   let jurisdictionDescriptionValue
   let data
   if (values) {
+    values.password = await getPasswordForTesting(values, destId, destTypeId)
     fetchedDestination = { ...values, configuration: 'edit' }
-    destTypeValue = values.type
-    jurisdictionDescriptionValue = values.jurisdiction
-  } else {
-    if (configuration === 'test') {
-      data = await destination(destId?.toString(), destTypeId)
-      fetchedDestination = { ...data, configuration: 'test' }
-      destTypeValue = fetchedDestination.destination_type.type
-      jurisdictionDescriptionValue = fetchedDestination.jurisdiction.description
-    } else if (configuration === 'deploy') {
-      data = await destinationChangeRequest(destId?.toString(), destTypeId)
-      fetchedDestination = { ...data, configuration: 'deploy' }
-      destTypeValue = fetchedDestination.destinations.destination_type.type
-      jurisdictionDescriptionValue =
-        fetchedDestination.destinations.jurisdiction.description
+    destTypeValue = values.destinationType.type
+    jurisdictionDescriptionValue = values.jurisdiction.description
+  } else if (configuration === 'deploy') {
+    data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
+      destTypeId
+    )
+    fetchedDestination = {
+      destId: data.destId,
+      destinationType: data.destType,
+      jurisdiction: data.jurisdiction,
+      destUri: data.requested.destUri,
+      destVersion: data.requested.destVersion,
+      password: await getPasswordForTesting(null, destId, destTypeId),
+      ...data.requested,
+      configuration: 'deploy',
     }
+    destTypeValue = data.destType.type
+    jurisdictionDescriptionValue = data.jurisdiction.description
   }
   return {
     fetchedDestination,
     destTypeValue,
     jurisdictionDescriptionValue,
+  }
+}
+
+const getPasswordForTesting = async (
+  values: any,
+  destId: string,
+  destTypeId: number
+): Promise<string> => {
+  let data = null
+  let passwordForTesting = null
+  if (_.isEmpty(values?.newPassword) && _.isEmpty(values?.confirmPassword)) {
+    data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
+      destTypeId
+    )
+    if (data?.isPasswordDifferent) {
+      passwordForTesting = await dbClient.fetchChangeRequestPassword(data.id)
+    } else {
+      passwordForTesting = await dbClient.fetchDestinationPassword(
+        destId,
+        destTypeId
+      )
+    }
+    return passwordForTesting
+  } else {
+    return values.newPassword
   }
 }
 

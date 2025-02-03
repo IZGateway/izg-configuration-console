@@ -3,11 +3,10 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
-import { prismacontext } from '../../prismacontext'
-import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
-import path from 'path'
 import { DOMParser, Document } from '@xmldom/xmldom'
+import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
+import { IZGHubHttpsAgent } from '../../utils/izghubhttpsagent'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Connectivity Test'
@@ -20,11 +19,9 @@ export default class CONNECTIVITY extends ConnectionTest {
       detail: null,
       status: this.status,
     }
-    const destination = this.connectionTestRequest.destinationData
     const destinationVersion = await lookupDestinationVersion(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
+      this.connectionTestRequest.destinationData.destId,
+      this.connectionTestRequest.destinationData.destinationType.typeId
     )
     const setRequestBody = (version: string) => {
       if (version === '2011') {
@@ -68,19 +65,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       }
     }
 
-    const httpsAgentOptions = {
-      cert: fs.readFileSync(
-        path.resolve(this.connectionTestRequest.certPath),
-        `utf-8`
-      ),
-      key: fs.readFileSync(
-        path.resolve(this.connectionTestRequest.keyPath),
-        'utf-8'
-      ),
-      passphrase: this.connectionTestRequest.passphrase,
-      rejectUnauthorized: false,
-      keepAlive: true,
-    }
+    const httpsAgentOptions = IZGHubHttpsAgent
 
     const options = {
       hostname: this.connectionTestRequest.hostname,
@@ -200,7 +185,8 @@ function processBody(
       )[0] as unknown as Element
     ).textContent.trim()
 
-    if (requestEchoback === responseEchoback) {
+    // If it includes "an Audacious Hello", it is good enough"
+    if (responseEchoback?.includes('an Audacious Hello')) {
       resolve([
         {
           ...connectivityTestResult,
@@ -209,7 +195,8 @@ function processBody(
           status: TestStatus.PASS,
         },
       ])
-    } else if (responseEchoback?.includes('an Audacious Hello')) {
+    } else if (responseEchoback != null) {
+      // It has a value, but does not contain our message
       resolve([
         {
           ...connectivityTestResult,
@@ -222,6 +209,7 @@ function processBody(
         },
       ])
     } else {
+      // It has no value
       resolve([
         {
           ...connectivityTestResult,
@@ -240,25 +228,5 @@ function processBody(
         status: TestStatus.WARNING,
       },
     ])
-  }
-}
-
-async function lookupDestinationVersion(
-  destination: any,
-  destId: any,
-  destType: any
-) {
-  if (destination.dest_version) {
-    return destination.dest_version
-  } else {
-    const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
-    FROM destinations d
-    WHERE d.dest_id = ${destId}
-    AND d.dest_type = ${destType}`
-    if (result[0].dest_version === '') {
-      return '2014'
-    } else {
-      return result[0].dest_version
-    }
   }
 }

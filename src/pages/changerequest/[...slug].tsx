@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as React from 'react'
 import Container from '../../components/Container'
 import { Box } from '@mui/material'
@@ -6,11 +5,11 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import DeployConnection from '../../components/DeployConnection/index'
 import Close from '../../components/Close'
 import { InferGetServerSidePropsType } from 'next'
-import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
+import { dbClient } from '../../lib/utils/dbclient'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -22,9 +21,7 @@ const Changerequest = (
           <div>
             <Close />
             <DeployConnection
-              destId={props.destId}
-              destTypeId={props.destTypeId}
-              changerequestData={props.changerequestData}
+              changeRequest={props.changeRequest}
               jiraUrl={props.jiraUrl}
             />
           </div>
@@ -43,13 +40,15 @@ export const getServerSideProps = async (context) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (hasAccessToDestId(destId, session)) {
-    const result = await destinationChangeRequest(destId, destTypeId)
+    const result =
+      await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+        destId,
+        destTypeId
+      )
     return {
       props: {
-        changerequestData: JSON.parse(JSON.stringify(result)),
+        changeRequest: JSON.parse(JSON.stringify(result)),
         jiraUrl: jiraUrl,
-        destId: destId as string,
-        destTypeId: destTypeId as unknown as string,
       },
     }
   }

@@ -15,7 +15,7 @@ describe('CancelRequestDialog', () => {
   const props = {
     open: true,
     handleClose: handleCloseMock,
-    destTypeId: 'sampleDestTypeId',
+    destTypeId: 1, // assuming 1 is a valid number for destTypeId
     destId: 'sampleDestId',
   }
   const combinedContextValueMock = {

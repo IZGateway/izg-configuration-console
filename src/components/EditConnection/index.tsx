@@ -20,6 +20,8 @@ import moment from 'moment-timezone'
 import FloatingActionButtons from './floatingActionButtons'
 import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
+import { Destination } from '../../lib/type/Destination'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -65,13 +67,17 @@ const EditConnection = (props: editConnectionProps) => {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
+  } = useSWR<Destination>(
+    `/api/destinations/${props.destTypeId}/${props.destId}`
+  )
   const {
     data: draftData,
     error: draftError,
     isLoading: isDraftLoading,
     mutate,
-  } = useSWR(`/api/destinationdraft/${props.destTypeId}/${props.destId}`)
+  } = useSWR<DestinationChangeRequest>(
+    `/api/changerequest/${props.destTypeId}/${props.destId}`
+  )
 
   const getNextBusinessDay = (date, daysToAdd) => {
     let remainingDays = daysToAdd
@@ -100,8 +106,8 @@ const EditConnection = (props: editConnectionProps) => {
       setAlert({
         level: 'error',
         jurisdiction: destData.jurisdiction.description,
-        dest_type: destData.destination_type.type,
-        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}. Please try again later!`,
+        dest_type: destData.destinationType.type,
+        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}. Please try again later!`,
       })
     }
   }, [hasCreateChangeRequestTicketError])
@@ -109,35 +115,38 @@ const EditConnection = (props: editConnectionProps) => {
   useEffect(() => {
     if (draftData) {
       setFormValues({
-        username: draftData?.username,
+        destUri: draftData.requested.destUri,
+        username: draftData.requested.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facility_id,
-        MSH3: draftData?.MSH3,
-        MSH4: draftData?.MSH4,
-        MSH5: draftData?.MSH5,
-        MSH6: draftData?.MSH6,
-        MSH22: draftData?.MSH22,
-        RXA11: draftData?.RXA11,
+        facilityId: draftData.requested.facilityId,
+        MSH3: draftData.requested.MSH3,
+        MSH4: draftData.requested.MSH4,
+        MSH5: draftData.requested.MSH5,
+        MSH6: draftData.requested.MSH6,
+        MSH22: draftData.requested.MSH22,
+        RXA11: draftData.requested.RXA11,
       })
       setDefaultFormValues({
-        username: draftData?.username,
+        destUri: destData?.destUri,
+        username: draftData?.current.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: draftData?.facility_id,
-        MSH3: draftData?.MSH3,
-        MSH4: draftData?.MSH4,
-        MSH5: draftData?.MSH5,
-        MSH6: draftData?.MSH6,
-        MSH22: draftData?.MSH22,
-        RXA11: draftData?.RXA11,
+        facilityId: draftData?.current.facilityId,
+        MSH3: draftData?.current.MSH3,
+        MSH4: draftData?.current.MSH4,
+        MSH5: draftData?.current.MSH5,
+        MSH6: draftData?.current.MSH6,
+        MSH22: draftData?.current.MSH22,
+        RXA11: draftData?.current.RXA11,
       })
-    } else if (destData) {
+    } else {
       setFormValues({
+        destUri: destData?.destUri,
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facility_id,
+        facilityId: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -146,10 +155,11 @@ const EditConnection = (props: editConnectionProps) => {
         RXA11: destData?.RXA11,
       })
       setDefaultFormValues({
+        destUri: destData?.destUri,
         username: destData?.username,
         newPassword: '',
         confirmPassword: '',
-        facility_id: destData?.facility_id,
+        facilityId: destData?.facilityId,
         MSH3: destData?.MSH3,
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
@@ -158,7 +168,7 @@ const EditConnection = (props: editConnectionProps) => {
         RXA11: destData?.RXA11,
       })
     }
-  }, [destData])
+  }, [destData, draftData])
 
   useEffect(() => {
     if (activeStep === 2) {
@@ -168,7 +178,7 @@ const EditConnection = (props: editConnectionProps) => {
         setShowSnackbar(false)
       }
     }
-  }, [alert])
+  }, [activeStep, alert])
 
   useEffect(() => {
     if (activeStep === 2) {
@@ -177,7 +187,7 @@ const EditConnection = (props: editConnectionProps) => {
       const changedValues = getDelta(defaultFormValues, formValues)
       const validationErrors = changeRequestValidation(
         changedValues,
-        changedValues.facility_id || defaultFormValues.facility_id
+        changedValues.facilityId || defaultFormValues.facilityId
       ).errors
 
       setFormValuesDelta(changedValues)
@@ -249,21 +259,24 @@ const EditConnection = (props: editConnectionProps) => {
       response = await fetch(`/api/changerequest`, {
         method: 'POST',
         body: JSON.stringify({
+          id: draftData?.id || null,
           requested: {
             ...formValues,
+            password: formValues.newPassword,
+            ..._.omit(formValues, ['newPassword', 'confirmPassword']),
           },
           current: {
             ...defaultFormValues,
           },
-          dest_id: destData.dest_id,
-          dest_uri: destData.dest_uri,
-          dest_type_id: destData.destination_type.type_id,
-          dest_type: destData.destination_type.type,
-          jira_id: null,
+          destId: destData.destId,
+          destType: {
+            typeId: destData.destinationType.typeId,
+            type: destData.destinationType.type,
+          },
           isAsap: asapSelected,
           scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
           requestedBy: session.user.email,
-          draft: false,
+          isDraft: false,
         }),
       })
     } catch (error) {
@@ -276,8 +289,8 @@ const EditConnection = (props: editConnectionProps) => {
       setAlert({
         level: 'success',
         jurisdiction: destData.jurisdiction.description,
-        dest_type: destData.destination_type.type,
-        message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destination_type.type}!`,
+        dest_type: destData.destinationType.type,
+        message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}!`,
       })
       router.push('/manageconnections')
     } else {
@@ -320,7 +333,7 @@ const EditConnection = (props: editConnectionProps) => {
           draftData.requestedBy
         } on ${moment(new Date(draftData.scheduledAt)).format(
           'MMM DD, YYYY [at] h:mm A'
-        )}`,
+        )}. NOTE: Passwords are not saved as part of a draft`,
       })
     }
   }
@@ -330,32 +343,32 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const saveDraft = async () => {
-    const scheduleAt = new Date().toISOString()
+    console.log('saving draft')
     const response = await fetch(`/api/changerequest`, {
       method: 'POST',
       body: JSON.stringify({
+        id: draftData?.id || null,
         requested: {
           ...formValues,
         },
         current: {
           ...defaultFormValues,
         },
-        dest_id: destData.dest_id,
-        dest_uri: destData.dest_uri,
-        dest_type_id: destData.destination_type.type_id,
-        dest_type: destData.destination_type.type,
-        jira_id: null,
-        isAsap: true,
-        scheduledAt: scheduleAt,
+        destId: destData.destId,
+        destType: {
+          typeId: destData.destinationType.typeId,
+          type: destData.destinationType.type,
+        },
+        jiraId: null,
         requestedBy: session.user.email,
-        draft: true,
+        isDraft: true,
       }),
     })
     if (response.ok) {
       await mutate()
       setAlert({
         level: 'success',
-        message: `Your draft was saved!`,
+        message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
       })
     } else {
       setAlert({
@@ -368,10 +381,11 @@ const EditConnection = (props: editConnectionProps) => {
 
   const resetDraftValues = async () => {
     setDefaultFormValues({
+      destUri: destData?.destUri,
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facility_id,
+      facilityId: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
@@ -380,10 +394,11 @@ const EditConnection = (props: editConnectionProps) => {
       RXA11: destData?.RXA11,
     })
     setFormValues({
+      destUri: destData?.destUri,
       username: destData?.username,
       newPassword: '',
       confirmPassword: '',
-      facility_id: destData?.facility_id,
+      facilityId: destData?.facilityId,
       MSH3: destData?.MSH3,
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
@@ -391,12 +406,9 @@ const EditConnection = (props: editConnectionProps) => {
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
-    const response = await fetch(
-      `/api/changerequest/draft/${props.destTypeId}/${props.destId}/${draftData.id}`,
-      {
-        method: 'DELETE',
-      }
-    )
+    const response = await fetch(`/api/changerequest/${draftData.id}`, {
+      method: 'DELETE',
+    })
     if (response.ok) {
       setAlert({
         level: 'success',
@@ -436,11 +448,11 @@ const EditConnection = (props: editConnectionProps) => {
             </thead>
             <tr style={{ fontWeight: 'bold' }}>
               <td colSpan={2} align="center">
-                {destData?.dest_id} ({destData?.jurisdiction.description})
+                {destData?.destId} ({destData?.jurisdiction.description})
               </td>
 
               <td colSpan={2} align="center">
-                {destData.destination_type.type}
+                {destData.destinationType.type}
               </td>
             </tr>
           </table>
@@ -463,7 +475,7 @@ const EditConnection = (props: editConnectionProps) => {
         {activeStep === 1 && (
           <Jurisdiction
             jurisdictionName={destData?.jurisdiction.description}
-            destType={destData?.destination_type.type}
+            destType={destData?.destinationType.type}
           />
         )}
         {activeStep === 2 && (

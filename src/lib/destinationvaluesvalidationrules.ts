@@ -14,7 +14,7 @@ const validationRules = {
     message:
       'Passwords must have a length of 15 characters. Passwords must include at least 2 of each: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
   },
-  facility_id: {
+  facilityId: {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
     message: facilityAndMSHValidationMessage,
   },

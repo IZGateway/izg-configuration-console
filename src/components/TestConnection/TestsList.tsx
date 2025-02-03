@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import ReactToPrint from 'react-to-print'
 import PrintIcon from '@mui/icons-material/Print'

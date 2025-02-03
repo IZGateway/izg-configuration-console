@@ -1,32 +1,13 @@
 import * as React from 'react'
 import { Card, CardHeader, CardContent, Divider } from '@mui/material'
-import useSWR from 'swr'
 import Details from '../ChangeRequest/details'
 import _ from 'lodash'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 
 const DetailsChangeRequest = (params: {
-  destTypeId: any
-  destId: any
-  submittingValue: any
+  changeRequestData: DestinationChangeRequest
 }) => {
-  const {
-    data: existingValue,
-    error: destError,
-    isLoading: isDestLoading,
-  } = useSWR(`/api/destinations/${params.destTypeId}/${params.destId}`)
-
-  const {
-    data,
-    error: passwordDiffError,
-    isLoading: passwordDiffLoading,
-  } = useSWR(
-    `/api/changerequest/passwordComparison/${params.destTypeId}/${params.destId}`
-  )
-
-  if (destError || passwordDiffError)
-    throw new Error(destError.message || passwordDiffError.message)
-  if (isDestLoading || passwordDiffLoading) return <div>loading...</div>
-
+  const changeRequestData = params.changeRequestData
   return (
     <div>
       <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
@@ -34,13 +15,17 @@ const DetailsChangeRequest = (params: {
         <Divider />
         <CardContent>
           <Details
-            existingValue={_.set(existingValue, 'password', '.........')}
-            submittingValue={_.set(
-              params.submittingValue,
+            existingValue={_.set(
+              changeRequestData.current,
               'password',
               '.........'
             )}
-            isPasswordDifferent={data.isPasswordDifferent}
+            submittingValue={_.set(
+              changeRequestData.requested,
+              'password',
+              '.........'
+            )}
+            isPasswordDifferent={changeRequestData.isPasswordDifferent}
           />
         </CardContent>
       </Card>

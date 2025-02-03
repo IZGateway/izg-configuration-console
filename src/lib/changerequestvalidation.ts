@@ -2,7 +2,7 @@ import validationRules from './../lib/destinationvaluesvalidationrules'
 import { validate as uuidValidate } from 'uuid'
 import * as _ from 'lodash'
 
-const changeRequestValidation = (valuesToValidate, facility_id) => {
+const changeRequestValidation = (valuesToValidate, facilityId) => {
   let errors = {}
 
   if (
@@ -21,7 +21,7 @@ const changeRequestValidation = (valuesToValidate, facility_id) => {
         ...errors,
         newPassword: 'Password must not be in the form of UUID',
       }
-    } else if (_.isEqual(valuesToValidate.confirmPassword, facility_id)) {
+    } else if (_.isEqual(valuesToValidate.confirmPassword, facilityId)) {
       errors = {
         ...errors,
         confirmPassword: 'Password must not be same as Facility ID',

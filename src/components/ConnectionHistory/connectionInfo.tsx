@@ -72,7 +72,7 @@ const ConnectionInfo = (props) => {
                 </Typography>
                 <Typography gutterBottom variant="body1">
                   {desttypehelper.destTypeFormattedToSyncWithApi(
-                    destData.destination_type.type
+                    destData?.destinationType.type
                   )}
                 </Typography>
               </Box>
@@ -82,11 +82,11 @@ const ConnectionInfo = (props) => {
                 </Typography>
                 <Typography>
                   <Link
-                    href={destData?.dest_uri.toString()}
+                    href={destData?.destUri.toString()}
                     target="_blank"
                     style={{ color: palette.primary, overflowWrap: 'anywhere' }}
                   >
-                    {destData?.dest_uri.toString()}
+                    {destData?.destUri.toString()}
                   </Link>
                 </Typography>
               </Box>
