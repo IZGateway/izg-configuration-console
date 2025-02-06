@@ -22,6 +22,10 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import Select, { SelectChangeEvent } from '@mui/material/Select'
+import {
+  hasFutureMaintenance,
+  hasActiveMaintenance,
+} from '../../lib/utils/endpointmaintainance'
 interface maintenanceDialogProps {
   open: boolean
   handleClose: () => void
@@ -29,6 +33,8 @@ interface maintenanceDialogProps {
   destId: string
   jurisdictionName: string
   destType: string
+  updateRow: (row) => void
+  row: object
 }
 
 const Transition = React.forwardRef(function Transition(
@@ -81,6 +87,21 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
         }
       )
       if (response.ok) {
+        props.updateRow({
+          ...props.row,
+          hasActiveMaintenance: hasActiveMaintenance(
+            startDateTime,
+            reinstatementDateTime
+          ),
+          hasFutureMaintenance: hasFutureMaintenance(
+            startDateTime,
+            reinstatementDateTime
+          ),
+          getMaintenaceValues: {
+            maint_start: startDateTime,
+            maint_end: reinstatementDateTime,
+          },
+        })
         props.handleClose()
         setAlert({
           level: 'success',

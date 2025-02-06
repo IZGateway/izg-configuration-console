@@ -12,7 +12,6 @@ import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
 import logger from '../../../logger'
-import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
 import { dbClient } from '../../lib/utils/dbclient'
@@ -68,36 +67,28 @@ export const getServerSideProps = async (context) => {
     session.user.role,
     session.user.jurisdictions
   )
-  const endpoints = []
-  for (const endpoint of endpointStatuses) {
-    const data = {}
-    for (const [key, value] of Object.entries(endpoint as Jurisdiction)) {
-      const destArray = Promise.all(
-        value.map(async (x) => {
-          const destination = await dbClient.fetchDestination(
-            x.destId,
-            x.destTypeId
-          )
-          const destinationChangeRequest =
-            await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
-              x.destId,
-              x.destTypeId
-            )
-          return {
-            ...x,
-            hasChangeRequest: destinationChangeRequest ? true : false,
-            hasActiveDraft:
-              destinationChangeRequest?.jiraId === null ? true : false,
-            hasActiveMaint: hasActiveMaintenance(destination),
-            hasFutureMaint: hasFutureMaintenance(destination),
-            getMaintenaceValues: getMaintenaceValues(destination),
-          }
-        })
+  const endpoints = await Promise.all(
+    endpointStatuses.map(async (endpoint) => {
+      const destination = await dbClient.fetchDestination(
+        endpoint.destId,
+        endpoint.destTypeId
       )
-      data[key] = await destArray
-      endpoints.push(data)
-    }
-  }
+      const destinationChangeRequest =
+        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+          endpoint.destId,
+          endpoint.destTypeId
+        )
+      return {
+        ...endpoint,
+        hasChangeRequest: destinationChangeRequest ? true : false,
+        hasActiveDraft:
+          destinationChangeRequest?.jiraId === null ? true : false,
+        hasActiveMaintenance: destination?.hasActiveMaintenance || false,
+        hasFutureMaintenance: destination?.hasFutureMaintenance || false,
+        getMaintenaceValues: getMaintenaceValues(destination),
+      }
+    })
+  )
   return { props: { data: endpoints } }
 }
 
@@ -136,7 +127,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
         for (const [key, value] of Object.entries(data)) {
           const dest = {}
           dest[key] = value
-          resultCollector.push(dest)
+          resultCollector.push(value[0])
         }
         return resultCollector
       }
@@ -161,34 +152,6 @@ const getMaintenaceValues = (destination: Destination) => {
         ? destination.maintEnd.toISOString()
         : null,
     }
-  }
-}
-
-const hasActiveMaintenance = (destination: Destination) => {
-  if (
-    _.isNull(destination) ||
-    (_.isNull(destination.maintStart) && _.isNull(destination.maintEnd))
-  ) {
-    return false
-  } else {
-    return (
-      destination.maintStart <= new Date() &&
-      (_.isNull(destination.maintEnd) || destination.maintEnd >= new Date())
-    )
-  }
-}
-
-const hasFutureMaintenance = (destination: Destination) => {
-  if (
-    _.isNull(destination) ||
-    (_.isNull(destination.maintStart) && _.isNull(destination.maintEnd))
-  ) {
-    return false
-  } else {
-    return (
-      destination.maintStart >= new Date() &&
-      (_.isNull(destination.maintEnd) || destination.maintEnd >= new Date())
-    )
   }
 }
 
