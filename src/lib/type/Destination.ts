@@ -11,6 +11,6 @@ export interface Destination extends DestinationConnectionSettings {
   maintEnd?: Date
   destinationType: DestinationType
   jurisdiction?: Jurisdiction
+  hasActiveMaintenance?: boolean
+  hasFutureMaintenance?: boolean
 }
-
-//export type Destination = DestinationDetails & DestinationConnectionSettings

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { prismacontext } from '../../../../prismacontext'
 
 const isDatabaseConnected = async (): Promise<boolean> => {

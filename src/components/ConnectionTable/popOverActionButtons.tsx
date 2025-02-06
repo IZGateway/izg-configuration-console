@@ -34,6 +34,8 @@ const PopOverActionButtons = (props: {
   hasActiveMaintenance: boolean
   jurisdictionName: string
   destType: string
+  row: object
+  updateRow: (row) => void
 }) => {
   const { setAlert } = useContext(CombinedContext)
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
@@ -66,6 +68,12 @@ const PopOverActionButtons = (props: {
         }
       )
       if (response.ok) {
+        props.updateRow({
+          ...props.row,
+          getMaintenaceValues: { maint_start: null, maint_end: null },
+          hasActiveMaintenance: false,
+          hasFutureMaintenance: false,
+        })
         setAlert({
           level: 'success',
           message: `Maintenance for ${props.jurisdictionName} ${' '} ${
@@ -181,6 +189,8 @@ const PopOverActionButtons = (props: {
         destTypeId={props.destTypeId}
         jurisdictionName={props.jurisdictionName}
         destType={props.destType}
+        updateRow={props.updateRow}
+        row={props.row}
       />
     </>
   )

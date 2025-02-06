@@ -140,7 +140,8 @@ const ConnectionsTable = (props) => {
   const [showCheckbox, setShowCheckbox] = useState(false)
   const [selectedRows, setSelectedRows] = useState([])
   const [isBoxVisible, setIsBoxVisible] = useState(false) // State to control box visibility
-
+  const [endpointStatuses, setEndpointStatuses] = useState(props.data)
+  const router = useRouter()
   const handleSelectionChange = (selection) => {
     setSelectedRows(selection)
   }
@@ -149,8 +150,6 @@ const ConnectionsTable = (props) => {
     setShowCheckbox((prev) => !prev)
     setIsBoxVisible((prev) => !prev)
   }
-
-  const router = useRouter()
 
   const handleGenerateReport = (dataArray) => {
     Cookies.set('destination', JSON.stringify(dataArray), { path: '/' })
@@ -337,50 +336,52 @@ const ConnectionsTable = (props) => {
             }
           >
             <Typography gutterBottom variant="body1" component="div">
-              {params.row.hasFutureMaint && !params.row.hasActiveMaint && (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ color: palette.warningDark }}>
-                    This connection will be under maintenance from{' '}
-                    {moment(
-                      new Date(params.row.getMaintenaceValues.maint_start)
-                    ).format('MMM DD, YYYY [at] h:mm A')}{' '}
-                    {_.isNull(params.row.getMaintenaceValues) ? (
-                      'ended by user'
-                    ) : (
-                      <>
-                        <br />
-                        until{' '}
-                        {moment(
-                          new Date(params.row.getMaintenaceValues.maint_end)
-                        ).format('MMM DD, YYYY [at] h:mm A')}
-                      </>
-                    )}
-                  </Typography>
-                  <ErrorOutlineIcon
-                    fontSize="small"
-                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
-                  />
-                </Box>
-              )}
-              {params.row.hasActiveMaint && !params.row.hasFutureMaint && (
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Typography sx={{ color: palette.errorDark }}>
-                    This connection is under maintenance until{' '}
-                    {_.isNull(params.row.getMaintenaceValues)
-                      ? 'ended by user'
-                      : moment(
-                          new Date(params.row.getMaintenaceValues.maint_end)
-                        ).format('MMM DD, YYYY [at] h:mm A')}
-                  </Typography>
-                  <ErrorOutlineIcon
-                    fontSize="small"
-                    sx={{ marginLeft: 0.5, color: palette.errorDark }}
-                  />
-                </Box>
-              )}
+              {params.row.hasFutureMaintenance &&
+                !params.row.hasActiveMaintenance && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ color: palette.warningDark }}>
+                      This connection will be under maintenance from{' '}
+                      {moment(
+                        new Date(params.row.getMaintenaceValues.maint_start)
+                      ).format('MMM DD, YYYY [at] h:mm A')}{' '}
+                      {_.isNull(params.row.getMaintenaceValues) ? (
+                        'ended by user'
+                      ) : (
+                        <>
+                          <br />
+                          until{' '}
+                          {moment(
+                            new Date(params.row.getMaintenaceValues.maint_end)
+                          ).format('MMM DD, YYYY [at] h:mm A')}
+                        </>
+                      )}
+                    </Typography>
+                    <ErrorOutlineIcon
+                      fontSize="small"
+                      sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                    />
+                  </Box>
+                )}
+              {params.row.hasActiveMaintenance &&
+                !params.row.hasFutureMaintenance && (
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ color: palette.errorDark }}>
+                      This connection is under maintenance until{' '}
+                      {_.isNull(params.row.getMaintenaceValues)
+                        ? 'ended by user'
+                        : moment(
+                            new Date(params.row.getMaintenaceValues.maint_end)
+                          ).format('MMM DD, YYYY [at] h:mm A')}
+                    </Typography>
+                    <ErrorOutlineIcon
+                      fontSize="small"
+                      sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                    />
+                  </Box>
+                )}
               {!isConnected &&
-                !params.row.hasActiveMaint &&
-                !params.row.hasFutureMaint && (
+                !params.row.hasActiveMaintenance &&
+                !params.row.hasFutureMaintenance && (
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography>Not Connected</Typography>
                     <ErrorOutlineIcon
@@ -390,8 +391,8 @@ const ConnectionsTable = (props) => {
                   </Box>
                 )}
               {isConnected &&
-                !params.row.hasActiveMaint &&
-                !params.row.hasFutureMaint && (
+                !params.row.hasActiveMaintenance &&
+                !params.row.hasFutureMaintenance && (
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography>Connected</Typography>
                     <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
@@ -432,16 +433,32 @@ const ConnectionsTable = (props) => {
               destTypeId={params.row.destTypeId}
               status={params.row.status}
               hasActiveMaintenance={
-                params.row.hasActiveMaint || params.row.hasFutureMaint
+                params.row.hasActiveMaintenance ||
+                params.row.hasFutureMaintenance
               }
               jurisdictionName={params.row.jurisdictionName}
               destType={params.row.destType}
+              row={params.row}
+              updateRow={updateRow}
             />
           </div>
         )
       },
     },
   ]
+
+  const updateRow = (row) => {
+    const updatedEndpointStatus = endpointStatuses.map((x) => {
+      if (x.destId === row.destId) {
+        return {
+          ...row,
+        }
+      } else {
+        return x
+      }
+    })
+    setEndpointStatuses(updatedEndpointStatus)
+  }
 
   return (
     <div>
@@ -469,11 +486,7 @@ const ConnectionsTable = (props) => {
 
       <DataGrid
         sx={dataGridCustom}
-        rows={props.data.map((endpoint) => {
-          for (const [, value] of Object.entries(endpoint)) {
-            return value[0]
-          }
-        })}
+        rows={endpointStatuses}
         columns={columns}
         checkboxSelection={showCheckbox}
         pageSizeOptions={[5, 25, 50, 100]}
@@ -497,7 +510,7 @@ const ConnectionsTable = (props) => {
         onPaginationModelChange={(model) => setPageSize(model.pageSize)}
         getRowId={(row) => row.destId + row.destTypeId}
         getRowClassName={(params) => {
-          return params.row.hasActiveMaint === true ? 'highlight' : ''
+          return params.row.hasActiveMaintenance === true ? 'highlight' : ''
         }}
         density={'comfortable'}
         pagination
