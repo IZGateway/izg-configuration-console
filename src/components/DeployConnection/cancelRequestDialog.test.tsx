@@ -35,7 +35,7 @@ describe('CancelRequestDialog', () => {
   it('renders dialog properly', () => {
     const { getByLabelText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <CancelRequestDialog {...props} />
+        <CancelRequestDialog changeRequestId={0} {...props} />
       </CombinedContext.Provider>
     )
     expect(getByLabelText('Cancel Request')).toBeInTheDocument()
@@ -44,7 +44,7 @@ describe('CancelRequestDialog', () => {
   it('calls handleClose when Close button is clicked', () => {
     const { getByText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <CancelRequestDialog {...props} />
+        <CancelRequestDialog changeRequestId={0} {...props} />
       </CombinedContext.Provider>
     )
     fireEvent.click(getByText('Close'))
