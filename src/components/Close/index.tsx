@@ -4,7 +4,10 @@ import CloseIcon from '@mui/icons-material/Close'
 import CombinedContext from '../../contexts/app'
 import { useRouter } from 'next/router'
 
-const Close = () => {
+interface CloseButtonProps {
+  buttonText?: string
+}
+const Close = (props: CloseButtonProps) => {
   const { clearValue } = React.useContext(CombinedContext)
   const router = useRouter()
   const handleClose = () => {
@@ -20,7 +23,7 @@ const Close = () => {
       onClick={handleClose}
       id="close"
     >
-      CLOSE
+      {props.buttonText || 'Close'}
       <CloseIcon sx={{ marginLeft: 1 }} />
     </Button>
   )
