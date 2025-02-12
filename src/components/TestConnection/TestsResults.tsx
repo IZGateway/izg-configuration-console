@@ -19,19 +19,9 @@ import {
   ListItem,
   Chip,
   Tooltip,
-  IconButton,
 } from '@mui/material'
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
-
-const actionButtonStyle = {
-  borderRadius: 90,
-  background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-  width: 35,
-  height: 35,
-  marginRight: 2,
-}
 interface testListProps {
   testResults: any[]
 }
