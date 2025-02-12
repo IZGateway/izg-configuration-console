@@ -6,7 +6,7 @@ import ErrorIcon from '@mui/icons-material/Error'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { ReadMore } from '@mui/icons-material'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import {
   Box,
   Typography,
@@ -123,9 +123,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                   </Typography>
                 }
               >
-                <IconButton disableRipple sx={actionButtonStyle}>
-                  <ReadMore color="primary" />
-                </IconButton>
+                <InfoOutlinedIcon color="primary" sx={{ marginRight: 2 }} />
               </Tooltip>
               <Chip
                 label={item.status === 'SKIPPED' ? 'N/A' : item.status}
