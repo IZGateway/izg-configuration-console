@@ -10,7 +10,6 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import {
   Box,
   Typography,
-  Divider,
   Button,
   LinearProgress,
   List,
@@ -22,6 +21,10 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
+
+import Table from '@mui/material/Table'
+import TableCell from '@mui/material/TableCell'
+import TableRow from '@mui/material/TableRow'
 interface testListProps {
   testResults: any[]
 }
@@ -60,78 +63,98 @@ const TestsResults = ({ testResults }: testListProps) => {
         return (
           <React.Fragment key={item.name}>
             <ListItem id={item.name}>
-              <ListItemIcon>
-                {item.status === 'PASS' && <CheckCircleIcon color="primary" />}
-                {item.status === 'FAIL' && <ErrorIcon color="error" />}
-                {item.status === 'WARNING' && (
-                  <ReportProblemIcon color="warning" />
-                )}
-                {item.status === 'SKIPPED' && (
-                  <ErrorOutlineIcon sx={{ color: palette.error }} />
-                )}
-              </ListItemIcon>
-              {item.status === 'PASS' ? (
-                <ListItemText primary={item.name} />
-              ) : item.status === 'SKIPPED' ? (
-                <ListItemText
-                  primary={item.name}
-                  secondary={
-                    <Typography variant="body2" color="default">
-                      Test skipped due to connectivity test failures
-                    </Typography>
-                  }
-                />
-              ) : (
-                <ListItemText
-                  primary={item.name}
-                  secondary={
-                    <Typography variant="body2" color="error">
-                      {item.message}
-                    </Typography>
-                  }
-                />
-              )}
-              <Tooltip
-                arrow
-                placement="bottom"
-                componentsProps={{
-                  tooltip: {
-                    sx: {
-                      backgroundColor: palette.white,
-                      boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                      border: `1px solid ${palette.border}`,
-                      color: palette.black,
-                      '& .MuiTooltip-arrow': {
-                        color: palette.border,
-                      },
-                    },
-                  },
-                }}
-                title={
-                  <Typography>
-                    {tooltipText || 'No tooltip available'}
-                  </Typography>
-                }
-              >
-                <InfoOutlinedIcon color="primary" sx={{ marginRight: 2 }} />
-              </Tooltip>
-              <Chip
-                label={item.status === 'SKIPPED' ? 'N/A' : item.status}
-                variant="outlined"
-                color={
-                  item.status === 'PASS'
-                    ? 'primary'
-                    : item.status === 'SKIPPED'
-                    ? 'default'
-                    : 'error'
-                }
-                sx={{
-                  borderRadius: '4px',
-                  marginTop: '8px',
-                }}
-              />
+              <Table>
+                <TableRow>
+                  <TableCell
+                    sx={{ padding: '5px', width: '35%', textAlign: 'start' }}
+                  >
+                    <ListItemIcon sx={{ float: 'inline-start' }}>
+                      {item.status === 'PASS' && (
+                        <CheckCircleIcon color="primary" />
+                      )}
+                      {item.status === 'FAIL' && <ErrorIcon color="error" />}
+                      {item.status === 'WARNING' && (
+                        <ReportProblemIcon color="warning" />
+                      )}
+                      {item.status === 'SKIPPED' && (
+                        <ErrorOutlineIcon sx={{ color: palette.error }} />
+                      )}
+                    </ListItemIcon>
+                    {item.status === 'PASS' ? (
+                      <ListItemText primary={item.name} />
+                    ) : item.status === 'SKIPPED' ? (
+                      <ListItemText
+                        primary={item.name}
+                        secondary={
+                          <Typography variant="body2" color="default">
+                            Test skipped due to connectivity test failures
+                          </Typography>
+                        }
+                      />
+                    ) : (
+                      <ListItemText
+                        primary={item.name}
+                        secondary={
+                          <Typography variant="body2" color="error">
+                            {item.message}
+                          </Typography>
+                        }
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell
+                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
+                  >
+                    <Tooltip
+                      arrow
+                      placement="bottom"
+                      componentsProps={{
+                        tooltip: {
+                          sx: {
+                            backgroundColor: palette.white,
+                            boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+                            border: `1px solid ${palette.border}`,
+                            color: palette.black,
+                            '& .MuiTooltip-arrow': {
+                              color: palette.border,
+                            },
+                          },
+                        },
+                      }}
+                      title={
+                        <Typography>
+                          {tooltipText || 'No tooltip available'}
+                        </Typography>
+                      }
+                    >
+                      <InfoOutlinedIcon
+                        color="primary"
+                        sx={{ marginRight: 2 }}
+                      />
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell
+                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
+                  >
+                    <Chip
+                      label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                      variant="outlined"
+                      color={
+                        item.status === 'PASS'
+                          ? 'primary'
+                          : item.status === 'SKIPPED'
+                          ? 'default'
+                          : 'error'
+                      }
+                      sx={{
+                        borderRadius: '4px',
+                        marginTop: '8px',
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              </Table>
             </ListItem>
-            <Divider />
           </React.Fragment>
         )
       })}
