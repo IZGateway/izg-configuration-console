@@ -29,7 +29,7 @@ RUN apk add bash
 
 COPY prisma ./prisma/
 COPY package.json package-lock.json ./
-RUN  npm ci --omit=dev --force
+RUN  npm ci --omit=dev --force && find . -type f -name 'yarn.lock' -delete
 RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml

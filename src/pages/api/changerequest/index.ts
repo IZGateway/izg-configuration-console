@@ -134,15 +134,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
           await dbClient.upsertDestinationChangeRequest({
             id: requestBody.id,
-            jiraId: undefined,
-            current: undefined,
-            requested: undefined,
-            isDraft: false,
-            destId: undefined,
-            destType: undefined,
-            requestedBy: undefined,
+            destId: requestBody.destId,
+            destType: requestBody.destType,
+            jiraId: requestBody.jiraId,
+            requestedBy: requestBody.requestedBy,
             requestedAt: new Date(),
             scheduledAt: requestBody.scheduledAt,
+            isDraft: false,
+            isPasswordDifferent: requestBody.isPasswordDifferent,
+            requested: {
+              destUri: requestBody.requested.destUri,
+              username: requestBody.requested.username,
+              MSH3: requestBody.requested.MSH3,
+              MSH4: requestBody.requested.MSH4,
+              MSH5: requestBody.requested.MSH5,
+              MSH6: requestBody.requested.MSH6,
+              MSH22: requestBody.requested.MSH22,
+              RXA11: requestBody.requested.RXA11,
+              facilityId: requestBody.requested.facilityId,
+            },
           })
 
           res.status(200).json('Change Request is updated')
