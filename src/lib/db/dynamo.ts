@@ -45,8 +45,24 @@ if (awsAccessKeyId && awsSecretAccessKey) {
   }
 }  
 
+const marshallOptions = {
+  // Whether to automatically convert empty strings, blobs, and sets to `null`.
+  convertEmptyValues: false, // false, by default.
+  // Whether to remove undefined values while marshalling.
+  removeUndefinedValues: true, // false, by default.
+  // Whether to convert typeof object to map attribute.
+  convertClassInstanceToMap: false // false, by default. <---- Set this flag
+}
+
+const unmarshallOptions = {
+  // Whether to return numbers as a string instead of converting them to native JavaScript numbers.
+  wrapNumbers: false, // false, by default.
+}
+
+const translateConfig = { marshallOptions, unmarshallOptions }
+
 const dynamodDbClient = new DynamoDBClient(clientConfig)
-export const dynamodDbDocClient = DynamoDBDocumentClient.from(dynamodDbClient)
+export const dynamodDbDocClient = DynamoDBDocumentClient.from(dynamodDbClient, translateConfig)
 
 // DynamoDbClient gets the credentials from ECS or AWS configuration or environment
 // To run with your AWS credentials, set them in the environment before starting VSCode,
@@ -115,7 +131,7 @@ async convertResponseToDestination(item: any) : Promise<Destination> {
       description: j.description,
     }, 
   }
-  if (item.msh11) {
+  if (item.hasOwnProperty('msh11')) {
     dest.MSH11 = item.msh11
   }
   return dest as Destination
@@ -161,46 +177,74 @@ async fetchDestinationAuditHistory(destId: string, destTypeId: number): Promise<
   return result.Items as DestinationAudit[]
 }
 
-async fetchDestinationChangeRequestById(id: number): Promise<DestinationChangeRequest> {
+async fetchDestinationChangeRequestById(id: number): Promise<DestinationChangeRequest> {  // DONE
   const params: GetCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'DestinationChangeRequest',
-      sortKey: `ID#${id}`
+      entityType: 'DestinationChangeRequest',
+      sortKey: `${id}`
     }
   }
   const result = await dynamodDbDocClient.send(new GetCommand(params))
-  return result.Item as DestinationChangeRequest
+  return this.convertResponseToDestinationChangeRequest(result.Item)
 }
 
-async fetchDestinationChangeRequestByDestIdAndDestType(destId: string, destTypeId: number): Promise<DestinationChangeRequest> {
-  const params: QueryCommandInput = {
-    TableName: TABLE_NAME,
-    KeyConditionExpression: 'typeName = :typeName and begins_with(sortKey, :sortKeyPrefix)',
-    ExpressionAttributeValues: {
-      ':typeName': 'DestinationChangeRequest',
-      ':sortKeyPrefix': `${destTypeId}#${destId}`
-    }
+async fetchDestinationChangeRequestByDestIdAndDestType(destId: string, destTypeId: number): Promise<DestinationChangeRequest> { // DONE
+  return this.fetchDestinationChangeRequestById(this.getChangeRequestId(destId, destTypeId))
+}
+
+async convertResponseToDestinationChangeRequest(item: Record<string, any>) : Promise<DestinationChangeRequest> {
+  const changeRequest = {
+    id: Number.parseInt(item.sortKey),
+    destId: item.destId,
+    destType: await this.fetchDestinationType(item.destType),
+    jiraId: item.jiraId,
+    isDraft: item.isDraft ? true : false,
+    requestedAt: item.requestedAt ? new Date(item.requestedAt) : null,
+    requestedBy: item.requestedBy,
+    scheduledAt: item.scheduledAt ? new Date(item.scheduledAt) : null,
+    requested: {
+      destUri: item.destUri,
+      username: item.username,
+      MSH3: item.msh3 || "",
+      MSH4: item.msh4 || "",
+      MSH5: item.msh5 || "",
+      MSH6: item.msh6 || "",
+      MSH22: item.msh22 || "",
+      RXA11: item.RXA11 || "",
+      facilityId: item.facilityId || "",
+    },
+  } as DestinationChangeRequest
+  if (item.hasOwnProperty('isAsap')) {
+    changeRequest.isAsap = item.isAs
   }
-  const result = await dynamodDbDocClient.send(new QueryCommand(params))
-  return result.Items[0] as DestinationChangeRequest
+  if (item.hasOwnProperty('isPasswordDifferent')) {
+    changeRequest.isPasswordDifferent = item.isPasswordDifferent
+  }
+  if (changeRequest.isPasswordDifferent) {
+    changeRequest.requested.password = item.password
+  }
+  if (item.hasOwnProperty('msh11')) {
+    changeRequest.requested.MSH11 = item.msh11
+  }
+
+  return changeRequest
 }
 
 async fetchDestinationType(destType: string): Promise<DestinationType> { // DONE
   const t: number = parseInt(destType)
-  const destinationType: DestinationType = {
+  return {
     type: DEST_TYPES[t],
     typeId: t,
-  }
-  return destinationType
+  } as DestinationType
 }
 
-async fetchChangeRequestPassword(id: number): Promise<string> {
+async fetchChangeRequestPassword(id: number): Promise<string> { // DONE
   const params: GetCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'DestinationChangeRequest',
-      sortKey: `ID#${id}`
+      entityType: 'DestinationChangeRequest',
+      sortKey: `${id}`
     },
     ProjectionExpression: 'password'
   }
@@ -208,11 +252,11 @@ async fetchChangeRequestPassword(id: number): Promise<string> {
   return result.Item.password
 }
 
-async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
+async fetchDestinationPassword(destId: string, destType: number): Promise<string> { // DONE
   const params: GetCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'Destination',
+      entityType: 'Destination',
       sortKey: `${destType}#${destId}`
     },
     ProjectionExpression: 'password'
@@ -225,7 +269,7 @@ async isPasswordChanged(destId: string, destType: number): Promise<boolean> {
   const params: GetCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'Destination',
+      entityType: 'Destination',
       sortKey: `${destType}#${destId}`
     },
     ProjectionExpression: 'passwordChanged'
@@ -243,25 +287,70 @@ async isDatabaseConnected(): Promise<boolean> {
   }
 }
 
-async upsertDestinationChangeRequest(changeRequestData: DestinationChangeRequest): Promise<DestinationChangeRequest> {
+getChangeRequestId(destId: string, destType: number) {
+  // If there is no id, we must generate one. JDBC uses Autoincrementing ID, but DynamoDB does 
+  // not have that feature.  We can safely hash the destType and destId to generate a unique ID.
+  // for all current values used for destinations known.  Since at most one change request can be
+  // in progress for a destination, this should be unique.
+  const idString = destType + destId
+  var h = 0;
+  for (var i = 0; i < idString.length; i++) {
+    h = 31 * h + (idString.charCodeAt(i) & 0xff)
+  }
+  return h
+}
+
+async upsertDestinationChangeRequest(changeRequestData: DestinationChangeRequest): Promise<DestinationChangeRequest> {  // DONE
+
+  const id = changeRequestData.id || 
+    this.getChangeRequestId(changeRequestData.destId, changeRequestData.destType.typeId)
+
   const params: PutCommandInput = {
     TableName: TABLE_NAME,
     Item: {
-      ...changeRequestData,
-      typeName: 'DestinationChangeRequest',
-      sortKey: `ID#${changeRequestData.id}`
+      entityType: 'DestinationChangeRequest',
+      sortKey: `${id}`,
+      jiraId: changeRequestData.jiraId,
+      scheduledAt: changeRequestData.scheduledAt.toISOString(),
+      requestedAt: (changeRequestData.requestedAt || new Date()).toISOString(),
+      requestedBy: changeRequestData.requestedBy,
+      destType: changeRequestData.destType.typeId,
+      destId: changeRequestData.destId,
+      destUri: changeRequestData.requested.destUri,
+      username: changeRequestData.requested.username,
+      facilityId: changeRequestData.requested.facilityId || null,
+      msh3: changeRequestData.requested.MSH3 || null,
+      msh4: changeRequestData.requested.MSH4 || null,
+      msh5: changeRequestData.requested.MSH5 || null,
+      msh6: changeRequestData.requested.MSH6 || null,
+      msh22: changeRequestData.requested.MSH22 || null,
+      rxa11: changeRequestData.requested.RXA11 || null,
     }
   }
-  await dynamodDbDocClient.send(new PutCommand(params))
-  return changeRequestData
+  if (changeRequestData.hasOwnProperty('isAsap')) {
+    params.Item.isAsap = changeRequestData.isAsap
+  }
+  if (changeRequestData.hasOwnProperty('isPasswordDifferent')) {
+    params.Item.isPasswordDifferent = changeRequestData.isPasswordDifferent
+  }
+  if (changeRequestData.isPasswordDifferent) {
+    params.Item.password = changeRequestData.requested.password || ""
+  } 
+  if (changeRequestData.requested.hasOwnProperty('MSH11')) {
+    params.Item.msh11 = changeRequestData.requested.MSH11
+  } 
+
+  const result = await dynamodDbDocClient.send(new PutCommand(params))
+  changeRequestData.id = id
+  return await this.convertResponseToDestinationChangeRequest(params.Item)
 }
 
 async deleteDestinationChangeRequest(id: number): Promise<boolean> {
   const params: DeleteCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'DestinationChangeRequest',
-      sortKey: `ID#${id}`
+      entityType: 'DestinationChangeRequest',
+      sortKey: `${id}`
     }
   }
   await dynamodDbDocClient.send(new DeleteCommand(params))
@@ -286,7 +375,7 @@ async createDestinationChangeRequestDeploymentAudit(
     TableName: TABLE_NAME,
     Item: {
       ...auditData,
-      typeName: 'DestinationAudit',
+      entityType: 'DestinationAudit',
       sortKey: `${changeRequest.destType.typeId}#${changeRequest.destId}#${auditData.createdAt.toISOString()}`
     }
   }
@@ -298,7 +387,7 @@ async updateDestination(destination: Destination): Promise<boolean> {
   const params: UpdateCommandInput = {
     TableName: TABLE_NAME,
     Key: {
-      typeName: 'Destination',
+      entityType: 'Destination',
       sortKey: `${destination.destinationType}#${destination.destId}`
     },
     UpdateExpression: 'set #name = :name, #url = :url',
