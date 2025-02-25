@@ -3,7 +3,6 @@ import { DestinationType } from './DestinationType'
 import { Jurisdiction } from './Jurisdiction'
 
 export interface Destination extends DestinationConnectionSettings {
-  destTypeId?: string
   destId: string
   destVersion?: string
   passExpiry?: Date

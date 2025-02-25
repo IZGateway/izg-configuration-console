@@ -14,13 +14,14 @@ const izgHubRefresh = (destination: Destination) => {
   // It is [host]/rest/refresh?all=true where host = status endpoint host for specified destId
   let url = configuredHubURLs.getIZGHubURL(destination.destinationType.typeId)
   url = url.substring(0, url.indexOf('/rest/') + 6) + 'refresh?all=true'
-  axios.get(url, {
-    httpsAgent: IZGHubHttpsAgent,
-    timeout: 5000,
-  })
-  logger.debug(
-    `refreshHub called with destType: ${destination.destinationType.type} and url: ${url}`
-  )
+  try {
+    axios.get(url, {
+      httpsAgent: IZGHubHttpsAgent,
+      timeout: 5000,
+    })
+  } catch (err) {
+    // Ignore refresh errors
+  }
 }
 
 export { izgHubRefresh }
