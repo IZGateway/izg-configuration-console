@@ -1,4 +1,5 @@
-import nextJest from 'next/jest';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const nextJest = require('next/jest')
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.test.local' });
 const createJestConfig = nextJest({
