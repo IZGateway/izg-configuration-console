@@ -75,7 +75,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   getTableName() {
     return TABLE_NAME
   }
-  jurisdictions = new Map<String, any>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  jurisdictions = new Map<string, any>
   async getJurisdiction(jurisdictionId: string) {
     if (this.jurisdictions.size == 0 || !this.jurisdictions.has(jurisdictionId)) {
       const params: GetCommandInput = {
@@ -103,7 +104,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     return await this.convertResponseToDestination(result.Item)
   }
 
-  async convertResponseToDestination(item: any) : Promise<Destination> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async convertResponseToDestination(item: Record<string, any>) : Promise<Destination> {
     const j = await this.getJurisdiction(item.jurisdictionId)
     const maintStart : Date = item.maintStart ? new Date(item.maintStart) : null
     const maintEnd : Date = item.maintEnd ? new Date(item.maintEnd) : null
@@ -136,6 +138,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     }
     return dest as Destination
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async convertResponseToDestinations(items: Record<string, any>[]) : Promise<Destination[]> {
     const result = []
     for (const item of items) {
@@ -152,8 +155,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       }
     }
     if (!isAdmin) {
-      var filter : string  = '('
-      for (var i = 0; i < destinations.length; i++) {
+      let filter   = '('
+      for (let i = 0; i < destinations.length; i++) {
         filter += ':d' + i + ','
         params.ExpressionAttributeValues[':d' + i] = destinations[i]
       }
@@ -199,6 +202,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     return this.fetchDestinationChangeRequestById(this.getChangeRequestId(destId, destTypeId))
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async convertResponseToDestinationChangeRequest(item: Record<string, any>) : Promise<DestinationChangeRequest> {
     const changeRequest = {
       id: Number.parseInt(item.sortKey),
@@ -299,8 +303,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     // for all current values used for destinations known.  Since at most one change request can be
     // in progress for a destination, this should be unique.
     const idString = destType + destId
-    var h = 0;
-    for (var i = 0; i < idString.length; i++) {
+    let h = 0;
+    for (let i = 0; i < idString.length; i++) {
       h = 31 * h + (idString.charCodeAt(i) & 0xff)  // Same as Java String.hashCode()
     }
     return h
@@ -402,7 +406,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       ExpressionAttributeValues: {
       }
     }
-    var separator = 'set'
+    let separator = 'set'
     const stringKeys = ['facilityId', 'username', 'password', 'MSH3', 'MSH4', 'MSH5', 'MSH6', 'MSH11', 'MSH22', 'RXA11', 'maintReason']
     const lowerKeys = ['MSH3', 'MSH4', 'MSH5', 'MSH6', 'MSH11', 'MSH22', 'RXA11']
     const dateKeys = ['passExpiry', 'maintStart', 'maintEnd']

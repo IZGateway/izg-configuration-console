@@ -5,10 +5,7 @@
 import Dynamo from './dynamo';
 import { Destination } from '../type/Destination';
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
-import AWS from 'aws-sdk';
 import JDBC from './jdbc';
-import exp from 'constants';
-import { relativeTimeRounding } from 'moment';
 
 // This is for local testing only
 const ENABLED = false;
@@ -53,7 +50,7 @@ function getChangeRequest(devDestination : Destination) : DestinationChangeReque
 describe('Dynamo Integration Tests', () => {
 
   if (!ENABLED) {
-    it('This is for local testing only', async () => {})
+    it('This is for local testing only', async () => { /* Do Nothing */ })
     return
   } 
 
@@ -92,7 +89,7 @@ describe('Dynamo Integration Tests', () => {
     await dynamo.updateDestination(devDestination)
     await jdbc.updateDestination(devDestination)
   })
-  afterAll(async () => {})
+  afterAll(async () => { /* Do Nothing */ })
 
   const destIdValues = [ '404', 'aira', 'dev', 'dev2011', 'devwup', 'dex-dev', 'dex', 'down', 'invalid', 'maint', 'mock', 'reject']
 
@@ -134,16 +131,20 @@ describe('Dynamo Integration Tests', () => {
     const result = await dynamo.upsertDestinationChangeRequest(changeRequest)
     const result2 = await jdbc.upsertDestinationChangeRequest(changeRequest)
     
-    var { requestedAt, scheduledAt, id, ...actual } = result
-    var { requestedAt, scheduledAt, id, ...expected } = result2
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { requestedAt, scheduledAt, id, ...actual } = result
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { scheduledAt: scheduledAt2, id: id2, ...expected } = result2
     expect(actual).toEqual(expected)
     result.requested.MSH22 = 'MSH22'
     result2.requested.MSH22 = 'MSH22'
     const result3 = await dynamo.upsertDestinationChangeRequest(result)
     const result4 = await jdbc.upsertDestinationChangeRequest(result2)
-    var { requestedAt, scheduledAt, id, ...actual } = result3
-    var { requestedAt, scheduledAt, id, ...expected } = result4
-    expect(actual).toEqual(expected)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { requestedAt: requestedAt3, scheduledAt: scheduledAt3, id: id3, ...actual2 } = result3
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { requestedAt: requestedAt4, scheduledAt: scheduledAt4, id: id4, ...expected2 } = result4
+    expect(actual2).toEqual(expected2)
 
     const result5 = await dynamo.fetchDestinationChangeRequestById(result.id)
     expect(result5).toEqual(result3)

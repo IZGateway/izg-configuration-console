@@ -1,7 +1,6 @@
 import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { Destination } from '../../../../type/Destination'
-import { hasActiveMaintenance, hasFutureMaintenance } from '../../../../utils/endpointmaintainance'
 
 const fetchDestinations = async (
   isAdmin: boolean,
