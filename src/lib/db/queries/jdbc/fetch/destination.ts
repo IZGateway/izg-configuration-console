@@ -1,7 +1,3 @@
-import {
-  hasFutureMaintenance,
-  hasActiveMaintenance,
-} from '../../../../utils/endpointmaintainance'
 import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { Destination } from '../../../../type/Destination'

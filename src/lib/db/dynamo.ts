@@ -12,30 +12,23 @@ import {
   DynamoDBDocumentClient,
   GetCommand,
   GetCommandInput,
-  GetCommandOutput,
   QueryCommand,
   QueryCommandInput,
   PutCommand,
   PutCommandInput,
-  PutCommandOutput,
   UpdateCommand,
   UpdateCommandInput,
-  UpdateCommandOutput,
 } from "@aws-sdk/lib-dynamodb"
 
 import {
   DynamoDBClient,
   DynamoDBClientConfig,
-  ListTablesCommand,
-  ListTablesCommandOutput,
 } from "@aws-sdk/client-dynamodb"
-import { hasActiveMaintenance, hasFutureMaintenance } from '../utils/endpointmaintainance'
-import { rest, result } from 'lodash'
 
 // To connect to local endpoint, use DYNAMODB_ENDPOINT = http://localhost:8000/ in .env.local
 const endpoint : string = process.env.DYNAMODB_ENDPOINT || 'http://localhost:8000/'
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || 'h0xzws'
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || 't8h2t4'
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
 
 const clientConfig : DynamoDBClientConfig = endpoint ? { endpoint: endpoint, region: 'us-east-1' } : {}
 if (awsAccessKeyId && awsSecretAccessKey) {
