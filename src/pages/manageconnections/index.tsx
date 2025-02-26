@@ -6,6 +6,9 @@ import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
 import _ from 'lodash'
+import * as fs from 'fs'
+import path from 'path'
+import https from 'https'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
@@ -15,7 +18,6 @@ import logger from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
 import { dbClient } from '../../lib/utils/dbclient'
-import { IZGHubHttpsAgent } from '../../lib/utils/izghubhttpsagent'
 import { Destination } from '../../lib/type/Destination'
 import { hasActiveMaintenance, hasFutureMaintenance } from '../../lib/utils/endpointmaintainance'
 
@@ -95,6 +97,17 @@ export const getServerSideProps = async (context) => {
 
 const fetchEndpointStatus = async (role, jurisdictions) => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
+  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
+  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
+  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
+  const httpsAgentOptions = {
+    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
+    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
+    passphrase: IZG_ENDPOINT_PASSCODE,
+    rejectUnauthorized: false,
+    keepAlive: true,
+  }
+
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
@@ -107,7 +120,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const responses = Promise.allSettled(
     hubURLS.map((endpoint) =>
       axios.get(endpoint, {
-        httpsAgent: IZGHubHttpsAgent,
+        httpsAgent: new https.Agent(httpsAgentOptions),
         timeout: 30000,
       })
     )

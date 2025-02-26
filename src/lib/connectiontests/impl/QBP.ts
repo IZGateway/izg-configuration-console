@@ -3,6 +3,8 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
+import * as fs from 'fs'
+import path from 'path'
 import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
@@ -10,7 +12,6 @@ import logger from '../../../../logger'
 import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
-import { IZGHubHttpsAgent } from '../../utils/izghubhttpsagent'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -112,7 +113,19 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       return requestBody
     }
 
-    const httpsAgentOptions = IZGHubHttpsAgent
+    const httpsAgentOptions = {
+      cert: fs.readFileSync(
+        path.resolve(this.connectionTestRequest.certPath),
+        `utf-8`
+      ),
+      key: fs.readFileSync(
+        path.resolve(this.connectionTestRequest.keyPath),
+        'utf-8'
+      ),
+      passphrase: this.connectionTestRequest.passphrase,
+      rejectUnauthorized: false,
+      keepAlive: true,
+    }
     const isVersion2014 = destination.destVersion !== '2011'
     const options = {
       hostname: this.connectionTestRequest.hostname,

@@ -3,10 +3,11 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
+import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
+import path from 'path'
 import { DOMParser, Document } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
-import { IZGHubHttpsAgent } from '../../utils/izghubhttpsagent'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Connectivity Test'
@@ -65,7 +66,19 @@ export default class CONNECTIVITY extends ConnectionTest {
       }
     }
 
-    const httpsAgentOptions = IZGHubHttpsAgent
+    const httpsAgentOptions = {
+      cert: fs.readFileSync(
+        path.resolve(this.connectionTestRequest.certPath),
+        `utf-8`
+      ),
+      key: fs.readFileSync(
+        path.resolve(this.connectionTestRequest.keyPath),
+        'utf-8'
+      ),
+      passphrase: this.connectionTestRequest.passphrase,
+      rejectUnauthorized: false,
+      keepAlive: true,
+    }
 
     const options = {
       hostname: this.connectionTestRequest.hostname,
