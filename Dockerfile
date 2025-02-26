@@ -1,10 +1,10 @@
-FROM node:21-alpine3.20 AS deps
+FROM node:22-alpine3.20 AS deps
 #RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN  npm ci --force
 
-FROM node:21-alpine3.20 AS builder
+FROM node:22-alpine3.20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
