@@ -8,6 +8,10 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import AWS from 'aws-sdk';
 import JDBC from './jdbc';
 import exp from 'constants';
+import { relativeTimeRounding } from 'moment';
+
+// This is for local testing only
+const ENABLED = false;
 
 function sortObjectKeys<T>(obj: T) : T {
   const orderedKeys = Object.keys(obj).sort();
@@ -47,6 +51,12 @@ function getChangeRequest(devDestination : Destination) : DestinationChangeReque
 };
 
 describe('Dynamo Integration Tests', () => {
+
+  if (!ENABLED) {
+    it('This is for local testing only', async () => {})
+    return
+  } 
+
   const dynamo = new Dynamo()
   const jdbc = new JDBC()
   const destType = 5;
@@ -85,6 +95,7 @@ describe('Dynamo Integration Tests', () => {
   afterAll(async () => {})
 
   const destIdValues = [ '404', 'aira', 'dev', 'dev2011', 'devwup', 'dex-dev', 'dex', 'down', 'invalid', 'maint', 'mock', 'reject']
+
   for (const destId of destIdValues) {
     it('fetchDestination should fetch same resources for ' + destId, async () => {
       const result = await dynamo.fetchDestination(destId, destType)
