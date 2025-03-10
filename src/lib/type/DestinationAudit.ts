@@ -1,5 +1,5 @@
 export interface DestinationAudit {
-  id: number
+  id: string | number
   destId: string
   destType: number
   tableName: string

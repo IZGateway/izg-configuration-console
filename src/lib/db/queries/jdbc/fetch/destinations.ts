@@ -60,7 +60,6 @@ const fetchDestinations = async (
     MSH6: dest.MSH6,
     MSH22: dest.MSH22,
     RXA11: dest.RXA11,
-    destTypeId: dest.destination_type.type_id,
     destVersion: dest.dest_version,
     passExpiry: dest.pass_expiry,
     maintReason: dest.maint_reason,

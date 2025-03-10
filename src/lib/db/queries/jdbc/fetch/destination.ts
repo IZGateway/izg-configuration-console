@@ -1,7 +1,3 @@
-import {
-  hasFutureMaintenance,
-  hasActiveMaintenance,
-} from '../../../../utils/endpointmaintainance'
 import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { Destination } from '../../../../type/Destination'
@@ -63,14 +59,6 @@ export const fetchDestination = async (
     maintReason: result.maint_reason,
     maintStart: result.maint_start,
     maintEnd: result.maint_end,
-    hasActiveMaintenance: hasActiveMaintenance(
-      result.maint_start,
-      result.maint_end
-    ),
-    hasFutureMaintenance: hasFutureMaintenance(
-      result.maint_start,
-      result.maint_end
-    ),
     destinationType: {
       type: result.destination_type.type,
       typeId: result.destination_type.type_id,
