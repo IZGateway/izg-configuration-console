@@ -19,6 +19,7 @@ import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
 import { dbClient } from '../../lib/utils/dbclient'
 import { Destination } from '../../lib/type/Destination'
+import { hasActiveMaintenance, hasFutureMaintenance } from '../../lib/utils/endpointmaintainance'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 const Manage = (
@@ -85,8 +86,8 @@ export const getServerSideProps = async (context) => {
         hasChangeRequest: destinationChangeRequest ? true : false,
         hasActiveDraft:
           destinationChangeRequest?.jiraId === null ? true : false,
-        hasActiveMaintenance: destination?.hasActiveMaintenance || false,
-        hasFutureMaintenance: destination?.hasFutureMaintenance || false,
+        hasActiveMaintenance: hasActiveMaintenance(destination?.maintStart, destination?.maintEnd),
+        hasFutureMaintenance: hasFutureMaintenance(destination?.maintStart, destination?.maintEnd),
         getMaintenaceValues: getMaintenaceValues(destination),
       }
     })
