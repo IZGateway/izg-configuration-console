@@ -54,6 +54,7 @@ const upsertDestinationChangeRequest = async (
     )
     return null
   }
+  const DEST_TYPES = [null, 'PRODUCTION', 'TEST', 'ONBOARD', 'STAGE', 'DEV', 'UNKNOWN']
   return {
     id: results.id,
     jiraId: results.jira_id,
@@ -64,7 +65,7 @@ const upsertDestinationChangeRequest = async (
     requestedAt: results.requestedAt,
     destType: {
       typeId: results.dest_type,
-      type: null,
+      type: DEST_TYPES[results.dest_type > 0 && results.dest_type < 6 ? results.dest_type : 0],
     },
     requested: {
       destUri: results.dest_uri,
