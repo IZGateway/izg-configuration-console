@@ -25,11 +25,12 @@ import palette from '../../styles/theme/palette'
 import Table from '@mui/material/Table'
 import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
-interface testListProps {
+
+interface TestsResultsProps {
   testResults: any[]
 }
 
-const TestsResults = ({ testResults }: testListProps) => {
+const TestsResults = ({ testResults }: TestsResultsProps) => {
   const [displayList, setDisplayList] = useState(true)
   const passeddata = testResults.filter((item) => item.status === 'PASS').length
   const totaldata = testResults.length
@@ -66,7 +67,12 @@ const TestsResults = ({ testResults }: testListProps) => {
               <Table>
                 <TableRow>
                   <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'start' }}
+                    sx={{
+                      padding: '4px',
+                      paddingBottom: '8px',
+                      width: '100%',
+                      textAlign: 'start',
+                    }}
                   >
                     <ListItemIcon sx={{ float: 'inline-start' }}>
                       {item.status === 'PASS' && (
@@ -102,9 +108,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                       />
                     )}
                   </TableCell>
-                  <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
-                  >
+                  <TableCell sx={{ padding: '4px', textAlign: 'end' }}>
                     <Tooltip
                       arrow
                       placement="bottom"
@@ -134,7 +138,8 @@ const TestsResults = ({ testResults }: testListProps) => {
                     </Tooltip>
                   </TableCell>
                   <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
+                    padding="none"
+                    sx={{ paddingBottom: '8px', textAlign: 'end' }}
                   >
                     <Chip
                       label={item.status === 'SKIPPED' ? 'N/A' : item.status}
