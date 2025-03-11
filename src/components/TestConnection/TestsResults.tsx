@@ -26,11 +26,11 @@ import Table from '@mui/material/Table'
 import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
 
-interface TestsResultsProps {
+interface testListProps {
   testResults: any[]
 }
 
-const TestsResults = ({ testResults }: TestsResultsProps) => {
+const TestsResults = ({ testResults }: testListProps) => {
   const [displayList, setDisplayList] = useState(true)
   const passeddata = testResults.filter((item) => item.status === 'PASS').length
   const totaldata = testResults.length
