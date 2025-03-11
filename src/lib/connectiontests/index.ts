@@ -134,7 +134,9 @@ const connectionTest = async (destination: Destination, userId: string) => {
       if (!skipTests) {
         const T = ConnectionTestFactory.getConnectionTest(
           TestSuite[test],
-          connectionTestRequest
+          connectionTestRequest,
+          connectionTestRequest.hostname, // Pass the jurisdictionUrl dynamically
+          connectionTestRequest.destinationData?.destUri // Pass the hostname dynamically
         )
         result = await T.run()
       }
