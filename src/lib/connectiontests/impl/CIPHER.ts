@@ -4,7 +4,7 @@ import { TestStatus } from '../TestStatus'
 import * as tls from 'tls'
 import logger from '../../../../logger'
 
-const TEST_NAME = 'Cipher Suites Appropriate'
+const TEST_NAME = 'Host uses a NIST approved encryption method'
 export default class CIPHER extends ConnectionTest {
   private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string = [
     'TLS_AES_256_GCM_SHA384',

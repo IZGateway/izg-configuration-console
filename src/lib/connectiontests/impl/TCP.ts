@@ -5,11 +5,17 @@ import { TestStatus } from '../TestStatus'
 import net from 'net'
 import { TestResponseMessages } from '../TestResponseMessages'
 
-const TEST_NAME = 'TCP Connectivity Test'
 export default class TCP extends ConnectionTest {
   private static readonly TIMEOUT_ERROR_CODE: string = 'ETIMEDOUT'
+  jurisdictionUrl: string
+
+  constructor(connectionTestRequest, jurisdictionUrl: string) {
+    super(connectionTestRequest)
+    this.jurisdictionUrl = jurisdictionUrl
+  }
 
   run = (): Promise<ConnectionTestResult[]> => {
+    const TEST_NAME = `TCP Connectivity Test for ${this.jurisdictionUrl}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,

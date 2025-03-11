@@ -7,12 +7,19 @@ import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
 
-const TEST_NAME = 'TLS Version Test'
 export default class TLS extends ConnectionTest {
+  jurisdictionUrl: string
+
+  constructor(connectionTestRequest, jurisdictionUrl: string) {
+    super(connectionTestRequest)
+    this.jurisdictionUrl = jurisdictionUrl
+  }
+
   private static readonly MIN_TLS_VERSION: string = 'TLSv1.2'
   private static readonly MAX_TLS_VERSION: string = 'TLSv1.3'
 
   run = (): Promise<ConnectionTestResult[]> => {
+    const TEST_NAME = `TLS Version Test for ${this.jurisdictionUrl}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,

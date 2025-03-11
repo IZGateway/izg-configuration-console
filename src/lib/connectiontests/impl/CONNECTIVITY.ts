@@ -10,7 +10,7 @@ import { DOMParser, Document } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
 const randomUUID = uuidv4()
-const TEST_NAME = 'Connectivity Test'
+const TEST_NAME = 'Send a Connectivity Test message'
 export default class CONNECTIVITY extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {

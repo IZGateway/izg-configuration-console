@@ -7,9 +7,16 @@ import path from 'path'
 import fs from 'fs'
 import { DOMParser } from '@xmldom/xmldom'
 
-const TEST_NAME = 'WSDL Test'
 export default class WSDL extends ConnectionTest {
+  hostname: string
+
+  constructor(connectionTestRequest, hostname: string) {
+    super(connectionTestRequest)
+    this.hostname = hostname
+  }
+
   run = (): Promise<ConnectionTestResult[]> => {
+    const TEST_NAME = `WSDL Test for ${this.hostname}`
     const wsdlConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,

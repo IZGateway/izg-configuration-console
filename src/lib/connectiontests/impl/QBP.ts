@@ -13,7 +13,8 @@ import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
-const TEST_NAME = 'HL7 Query Test'
+const TEST_NAME =
+  'Send a Submit Single Message with an HL7 QBP for test patient'
 const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
