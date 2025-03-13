@@ -12,7 +12,18 @@ describe('MakeChanges', () => {
       destId: 'sampleDestId',
       destTypeId: 'sampleDestTypeId',
     }
-    const { getByText } = render(<MakeChanges {...props} />)
+    const { getByText } = render(
+      <MakeChanges
+        id={0}
+        destType={undefined}
+        jiraId={''}
+        requestedAt={undefined}
+        requestedBy={''}
+        isDraft={false}
+        requested={undefined}
+        {...props}
+      />
+    )
     expect(getByText('Need to make changes?')).toBeInTheDocument()
   })
 })

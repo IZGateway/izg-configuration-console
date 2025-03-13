@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
+import { dbClient } from '../../../lib/utils/dbclient'
+import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
+import logger from '../../../../logger'
 /**
  * @swagger
  * /api/changerequest/{destTypeId}/{destId}:
@@ -25,11 +27,28 @@ import withMiddleware from '../api-middleware-helper'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
-  const destId = slug[1]
-  const destTypeId = _.toNumber(slug[0])
   if (req.method === 'GET') {
-    const result = await destinationChangeRequest(destId, destTypeId)
+    const destId = slug[1]
+    const destTypeId = _.toNumber(slug[0])
+    const result =
+      await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+        destId,
+        destTypeId
+      )
     res.json(result)
+  } else if (req.method === 'DELETE') {
+    const id = _.toNumber(slug[0])
+    try {
+      const changeRequest = await dbClient.fetchDestinationChangeRequestById(id)
+      if (!changeRequest.isDraft) {
+        await changeRequestTicketComment(changeRequest.jiraId, new Date())
+      }
+      await dbClient.deleteDestinationChangeRequest(id)
+      res.status(200).json('Change Request is deleted')
+    } catch (error) {
+      logger.debug(error)
+      res.status(500).json({ error: 'Unable to delete Change request' })
+    }
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`

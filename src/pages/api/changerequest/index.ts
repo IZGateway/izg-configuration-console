@@ -2,17 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import destinationChangeRequest from '../../../lib/queries/fetch/destinationchangerequest'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
-import {
-  upsertDestinationChangeRequest,
-  deleteDestinationChangeRequest,
-} from '../../../lib/queries/mutate/destinationchangerequest'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
-import upsertDraftRecord from '../../../lib/queries/mutate/draftrecord'
-import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
+import { dbClient } from '../../../lib/utils/dbclient'
+import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
+import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 /**
  * @swagger
  * /api/changerequest:
@@ -31,7 +27,7 @@ import fetchDraftRecord from '../../../lib/queries/fetch/draftrecord'
  *         application/json:
  *           example:
  *             username: string
- *             facility_id: string
+ *             facilityId: string
  *             MSH3: string
  *             MSH4: string
  *             MSH5: string
@@ -71,54 +67,115 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       'Jira connection is not configured correctly. Ensure the necessary variables have been configured for the environment.'
     )
   }
-  if (hasAccessToDestId(requestBody.dest_id, session)) {
-    const { dest_id, dest_type_id, draft } = requestBody
+  if (hasAccessToDestId(requestBody.destId, session)) {
+    const { isDraft } = requestBody
     if (req.method === 'POST') {
-      if (draft === true) {
-        await upsertDraft(requestBody)
-        logger.info('Draft was saved successfully for ' + requestBody.dest_uri)
-        res.status(200)
-        res.json('Draft was saved.')
+      if (isDraft === true) {
+        const draft = await upsertChangeRequest(requestBody)
+        if (draft) {
+          logger.info(
+            'Draft was saved successfully for ' + requestBody.dest_uri
+          )
+          res.status(200)
+          res.json(draft)
+        } else {
+          res.status(500)
+          res.json('Error saving draft.')
+        }
+      } else {
+        let changeRequestTicketResponse = null
+        let changeRequestDBResponse = null
+        try {
+          changeRequestTicketResponse = await createChangeRequestTicket({
+            ...requestBody,
+          })
+          if (changeRequestTicketResponse) {
+            if (
+              _.isEmpty(requestBody.requested.newPassword) &&
+              _.isEmpty(requestBody.requested.confirmPassword)
+            ) {
+              requestBody.requested.password =
+                await dbClient.fetchDestinationPassword(
+                  requestBody.destId,
+                  requestBody.destType.typeId
+                )
+            } else {
+              requestBody.requested.password = requestBody.requested.newPassword
+            }
+            _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
+            changeRequestDBResponse = await upsertChangeRequest({
+              ...requestBody,
+              jiraId: changeRequestTicketResponse.key,
+            })
+          }
+          res.status(200).json('Change request ticket created successfully.')
+        } catch (error) {
+          throw new Error(
+            `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
+          )
+        } finally {
+          if (_.isNull(changeRequestTicketResponse)) {
+            await dbClient.deleteDestinationChangeRequest(
+              changeRequestDBResponse.id
+            )
+          }
+        }
+      }
+    } else if (req.method === 'PUT') {
+      const { scheduleupdate } = req.query
+      if (scheduleupdate) {
+        try {
+          await changeRequestTicketComment(
+            requestBody.jiraId,
+            requestBody.requestedAt,
+            requestBody.scheduledAt,
+            requestBody.isAsap
+          )
+
+          await dbClient.upsertDestinationChangeRequest({
+            id: requestBody.id,
+            destId: requestBody.destId,
+            destType: requestBody.destType,
+            jiraId: requestBody.jiraId,
+            requestedBy: requestBody.requestedBy,
+            requestedAt: new Date(),
+            scheduledAt: requestBody.scheduledAt,
+            isDraft: false,
+            isPasswordDifferent: requestBody.isPasswordDifferent,
+            requested: {
+              destUri: requestBody.requested.destUri,
+              username: requestBody.requested.username,
+              MSH3: requestBody.requested.MSH3,
+              MSH4: requestBody.requested.MSH4,
+              MSH5: requestBody.requested.MSH5,
+              MSH6: requestBody.requested.MSH6,
+              MSH22: requestBody.requested.MSH22,
+              RXA11: requestBody.requested.RXA11,
+              facilityId: requestBody.requested.facilityId,
+            },
+          })
+
+          res.status(200).json('Change Request is updated')
+        } catch (error) {
+          logger.debug(error)
+          res.status(500).json({ error: 'Unable to update Change request' })
+        }
       } else {
         try {
-          if (await hasActiveDraft(dest_id, dest_type_id)) {
-            const draftRecord = await hasActiveDraft(dest_id, dest_type_id)
-            const modifiedDraftRecord = _.omit(draftRecord, 'destinations')
-            let changeRequestTicketResponse = null
-            try {
-              changeRequestTicketResponse = await createChangeRequestTicket({
-                ...requestBody,
-                changeRequestId: draftRecord.id,
-              })
-
-              await updateChangeRequestRecord({
-                ...modifiedDraftRecord,
-                jira_id: changeRequestTicketResponse.key,
-              })
-              res
-                .status(200)
-                .json('Change request ticket created successfully.')
-            } catch (error) {
-              throw new Error(
-                `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
-              )
-            }
-          } else if (await hasActiveChangeRequest(dest_id, dest_type_id)) {
-            res.status(409)
-            res.json(
-              'Conflict creating the requested resource because it already exists.'
-            )
-          } else {
-            await createChangeRequest(requestBody)
-            logger.info(
-              'change request created successfully for ' + requestBody.dest_uri
-            )
-            res.status(200)
-            res.json('The change request was created.')
-          }
+          await dbClient.upsertDestinationChangeRequest(requestBody)
+          res.status(200).json('Change Request is updated')
         } catch (error) {
-          throw new Error(`${error}`)
+          logger.debug(error)
+          res.status(500).json({ error: 'Unable to update Change request' })
         }
+      }
+    } else if (req.method === 'DELETE') {
+      try {
+        await dbClient.deleteDestinationChangeRequest(requestBody.id)
+        res.status(200).json('Change Request is deleted')
+      } catch (error) {
+        logger.debug(error)
+        res.status(500).json({ error: 'Unable to delete Change request' })
       }
     } else {
       throw new Error(
@@ -130,105 +187,34 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-const hasActiveChangeRequest = async (
-  dest_id: string,
-  dest_type_id: number
+const upsertChangeRequest = async (
+  changeRequestDetails: DestinationChangeRequest
 ) => {
-  const changeRequest = await destinationChangeRequest(dest_id, dest_type_id)
-  return !_.isEmpty(changeRequest)
-}
-
-const hasActiveDraft = async (dest_id: string, dest_type_id: number) => {
-  const changeRequest = await fetchDraftRecord(dest_id, dest_type_id)
-  return changeRequest
-}
-
-const createChangeRequest = async (changeRequestDetails: any) => {
-  const changeRequestRecord = await insertChangeRequestRecord(
-    changeRequestDetails
-  )
-  if (!_.isEmpty(changeRequestRecord)) {
-    let changeRequestTicketResponse = null
-    try {
-      changeRequestTicketResponse = await createChangeRequestTicket({
-        ...changeRequestDetails,
-        changeRequestId: changeRequestRecord.id,
-      })
-      await updateChangeRequestRecord({
-        ...changeRequestRecord,
-        jira_id: changeRequestTicketResponse.key,
-      })
-    } catch (error) {
-      throw new Error(
-        `Error creating change request ticket for ${changeRequestDetails.dest_id} on environment ${changeRequestDetails.dest_type_id} : ${error}`
-      )
-    } finally {
-      if (_.isNull(changeRequestTicketResponse)) {
-        deleteChangeRequestRecord(changeRequestRecord.id)
-      }
-    }
-  }
-}
-
-const upsertDraft = async (changeRequestDetails: any) => {
-  const activeDraftRecord = await hasActiveDraft(
-    changeRequestDetails.dest_id,
-    changeRequestDetails.dest_type_id
-  )
-  if (_.isEmpty(activeDraftRecord)) {
-    await upsertDraftRecord({
-      ..._.omit(changeRequestDetails.requested, [
-        'newPassword',
-        'confirmPassword',
-      ]),
-      password: changeRequestDetails.requested.newPassword,
-      jira_id: null,
-      dest_id: changeRequestDetails.dest_id,
-      dest_uri: changeRequestDetails.dest_uri,
-      dest_type: changeRequestDetails.dest_type_id,
-      scheduledAt: changeRequestDetails.scheduledAt,
-      requestedBy: changeRequestDetails.requestedBy,
-    })
-  } else {
-    await upsertDraftRecord({
-      ..._.omit(changeRequestDetails.requested, [
-        'newPassword',
-        'confirmPassword',
-      ]),
-      password: changeRequestDetails.requested.newPassword,
-      jira_id: null,
-      dest_id: changeRequestDetails.dest_id,
-      dest_uri: changeRequestDetails.dest_uri,
-      dest_type: changeRequestDetails.dest_type_id,
-      scheduledAt: changeRequestDetails.scheduledAt,
-      requestedBy: changeRequestDetails.requestedBy,
-      id: activeDraftRecord.id,
-    })
-  }
-}
-
-const insertChangeRequestRecord = async (changeRequestDetails: any) => {
-  const createdChangeRequestDBRecord = await upsertDestinationChangeRequest({
-    ..._.omit(changeRequestDetails.requested, [
-      'newPassword',
-      'confirmPassword',
-    ]),
-    password: changeRequestDetails.requested.newPassword,
-    jira_id: null,
-    dest_id: changeRequestDetails.dest_id,
-    dest_uri: changeRequestDetails.dest_uri,
-    dest_type: changeRequestDetails.dest_type_id,
+  const response = await dbClient.upsertDestinationChangeRequest({
+    id: changeRequestDetails.id,
+    isDraft: changeRequestDetails.isDraft,
+    jiraId: changeRequestDetails.jiraId,
+    destId: changeRequestDetails.destId,
+    destType: changeRequestDetails.destType,
+    requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
+    requested: {
+      destUri: changeRequestDetails.requested.destUri,
+      password: changeRequestDetails.isDraft
+        ? null
+        : changeRequestDetails.requested.password,
+      facilityId: changeRequestDetails.requested.facilityId,
+      MSH3: changeRequestDetails.requested.MSH3,
+      MSH4: changeRequestDetails.requested.MSH4,
+      MSH5: changeRequestDetails.requested.MSH5,
+      MSH6: changeRequestDetails.requested.MSH6,
+      MSH22: changeRequestDetails.requested.MSH22,
+      RXA11: changeRequestDetails.requested.RXA11,
+      username: changeRequestDetails.requested.username,
+    },
   })
-  return createdChangeRequestDBRecord
+  return response
 }
 
-const updateChangeRequestRecord = async (changeRequestRecord: any) => {
-  await upsertDestinationChangeRequest(changeRequestRecord)
-}
-
-const deleteChangeRequestRecord = async (id: any) => {
-  await deleteDestinationChangeRequest(id)
-}
 export default withMiddleware('logRequest')(handler)

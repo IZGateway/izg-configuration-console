@@ -1,10 +1,10 @@
-FROM node:21-alpine3.20 AS deps
+FROM node:22-alpine3.20 AS deps
 #RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN  npm ci --force
 
-FROM node:21-alpine3.20 AS builder
+FROM node:22-alpine3.20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -29,7 +29,7 @@ RUN apk add bash
 
 COPY prisma ./prisma/
 COPY package.json package-lock.json ./
-RUN  npm ci --omit=dev --force
+RUN  npm ci --omit=dev --force && find . -type f -name 'yarn.lock' -delete
 RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml

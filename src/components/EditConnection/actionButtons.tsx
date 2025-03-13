@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Tooltip, Box, ButtonGroup, Button } from '@mui/material'
 const ActionButtons = (props: {
   activeStep: number

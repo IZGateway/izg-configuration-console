@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Tooltip, Box, Fab } from '@mui/material'
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'

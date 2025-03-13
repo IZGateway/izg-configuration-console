@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export default function hasAccessToDestId(destId: string, session: any) {
   let isFound = false
   if (

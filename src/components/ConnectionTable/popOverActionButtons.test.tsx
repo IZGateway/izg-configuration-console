@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
 import PopOverActionButtons from './popOverActionButtons'
@@ -57,11 +59,15 @@ describe('PopOverActionButtons component', () => {
       <CombinedContext.Provider value={combinedContextValueMock}>
         <PopOverActionButtons
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           status="active"
           hasActiveMaintenance={true}
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
+          row={undefined}
+          updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          }}
         />
       </CombinedContext.Provider>
     )
@@ -73,11 +79,15 @@ describe('PopOverActionButtons component', () => {
       <CombinedContext.Provider value={combinedContextValueMock}>
         <PopOverActionButtons
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           status="active"
           hasActiveMaintenance={true}
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
+          row={undefined}
+          updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          }}
         />
       </CombinedContext.Provider>
     )

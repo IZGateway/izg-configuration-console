@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableRow } from '@mui/material'
 import { styled } from '@mui/material/styles'
+import { DestinationConnectionSettings } from '../../lib/type/DestinationConnectionSettings'
 const StyledCategoryCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.grey[200],
   fontWeight: 600,
@@ -10,13 +11,13 @@ const StyledDifferenceTableCell = styled(TableCell)(() => ({
 }))
 
 const Details = (params: {
-  existingValue: any
-  submittingValue: any
-  isPasswordDifferent: any
+  existingValue: DestinationConnectionSettings
+  submittingValue: DestinationConnectionSettings
+  isPasswordDifferent: boolean
 }) => {
   const fieldNames = [
     'username',
-    'facility_id',
+    'facilityId',
     'MSH3',
     'MSH4',
     'MSH5',

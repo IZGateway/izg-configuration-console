@@ -7,14 +7,17 @@ import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import connectionTest from '../../lib/connectiontests'
-import destination from '../../lib/queries/fetch/destination'
+import { dbClient } from '../../lib/utils/dbclient'
 
 export async function getServerSideProps(context) {
   const { req, res } = context
   const destId = context.query.slug[1]
   const destTypeId = _.toNumber(context.query.slug[0])
   const session = await getServerSession(req, res, authOptions)
-  const destinationToTest = await destination(destId?.toString(), destTypeId)
+  const destinationToTest = await dbClient.fetchDestination(
+    destId?.toString(),
+    destTypeId
+  )
   const { connectionTestResult, numberOfTests } = await connectionTest(
     destinationToTest,
     session.user.email

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import NextLink from 'next/link'
 import IZGLogo from './Branding'

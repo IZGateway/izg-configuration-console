@@ -18,14 +18,13 @@ import { useRouter } from 'next/router'
 
 interface cancelRequestDialogProps {
   open: boolean
-  handleClose: any
-  destTypeId: any
-  destId: any
+  handleClose: () => void
+  changeRequestId: number
 }
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & {
-    children: React.ReactElement<any, any>
+    children: React.ReactElement
   },
   ref: React.Ref<unknown>
 ) {
@@ -44,12 +43,9 @@ const CancelRequestDialog = (props: cancelRequestDialogProps) => {
 
   const handleCancelRequest = async () => {
     const response = await fetch(
-      `/api/changerequest/cancel/${props.destTypeId}/${props.destId}`,
+      `/api/changerequest/${props.changeRequestId}`,
       {
-        method: 'POST',
-        body: JSON.stringify({
-          requestedAt: new Date(),
-        }),
+        method: 'DELETE',
       }
     )
     if (response.ok) {

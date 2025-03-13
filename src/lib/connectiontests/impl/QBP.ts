@@ -1,5 +1,3 @@
-/* eslint-disable no-useless-escape */
-/* eslint-disable no-prototype-builtins */
 import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
@@ -10,11 +8,10 @@ import path from 'path'
 import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
-import { prismacontext } from '../../prismacontext'
 import logger from '../../../../logger'
-import _ from 'lodash'
 import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
+import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
 const TEST_NAME = 'HL7 Query Test'
 const randomUUID = uuidv4()
@@ -23,15 +20,9 @@ let requestBody: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
-    const password = await lookupDestinationPassword(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
-    )
     const destinationVersion = await lookupDestinationVersion(
-      destination,
-      this.connectionTestRequest.id,
-      this.connectionTestRequest.desttypeid
+      this.connectionTestRequest.destinationData.destId,
+      this.connectionTestRequest.destinationData.destinationType.typeId
     )
     const hl7QueryTestResult: ConnectionTestResult = {
       name: TEST_NAME,
@@ -73,8 +64,8 @@ export default class QBP extends ConnectionTest {
     const setRequestBody = (version: string) => {
       /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
       const msh11 =
-        destination.dest_type == 5 ||
-        normalOnboardingDestinations.includes(destination.dest_id)
+        destination.destinationType.typeId == 5 ||
+        normalOnboardingDestinations.includes(destination.destId)
           ? 'P'
           : 'T'
 
@@ -97,8 +88,8 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       <soap:Body>
       <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
       <iis:username>${destination?.username}</iis:username>
-      <iis:password>${password}</iis:password>
-      <iis:facilityID>${destination?.facility_id}</iis:facilityID>
+      <iis:password>${destination?.password}</iis:password>
+      <iis:facilityID>${destination?.facilityId}</iis:facilityID>
       <iis:hl7Message>${hl7msg}</iis:hl7Message>
       </iis:submitSingleMessage>
       </soap:Body>
@@ -112,8 +103,8 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
         <soap:Body>
           <iis:SubmitSingleMessageRequest>
             <iis:Username>${destination?.username}</iis:Username>
-            <iis:Password>${password}</iis:Password>
-            <iis:FacilityID>${destination?.facility_id}</iis:FacilityID>
+            <iis:Password>${destination.password}</iis:Password>
+            <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
             <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
           </iis:SubmitSingleMessageRequest>
         </soap:Body>
@@ -135,7 +126,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       rejectUnauthorized: false,
       keepAlive: true,
     }
-    const isVersion2014 = destination.dest_version !== '2011'
+    const isVersion2014 = destination.destVersion !== '2011'
     const options = {
       hostname: this.connectionTestRequest.hostname,
       port: this.connectionTestRequest.port,
@@ -263,53 +254,5 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       req.write(setRequestBody(destinationVersion))
       req.end()
     })
-  }
-}
-
-async function lookupDestinationPassword(
-  destination: any,
-  destId: any,
-  destType: any
-) {
-  let data
-  if (destination.configuration === 'deploy') {
-    data = await prismacontext.prisma
-      .$queryRaw`SELECT password FROM destination_change_request where dest_id=${destId} and dest_type=${destType}`
-    return data[0].password
-  } else if (destination.configuration === 'edit') {
-    if (_.isEmpty(destination.newPassword)) {
-      data = await prismacontext.prisma.$queryRaw<
-        any[]
-      >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
-      return data[0].password
-    } else {
-      return destination.newPassword
-    }
-  } else {
-    //Request from test connection page
-    data = await prismacontext.prisma.$queryRaw<
-      any[]
-    >`SELECT password FROM destinations where dest_id=${destId} and dest_type=${destType}`
-    return data[0].password
-  }
-}
-
-async function lookupDestinationVersion(
-  destination: any,
-  destId: any,
-  destType: any
-) {
-  if (destination.dest_version) {
-    return destination.dest_version
-  } else {
-    const result = await prismacontext.prisma.$queryRaw`SELECT dest_version
-    FROM destinations d
-    WHERE d.dest_id = ${destId}
-    AND d.dest_type = ${destType}`
-    if (result[0].dest_version === '') {
-      return '2014'
-    } else {
-      return result[0].dest_version
-    }
   }
 }

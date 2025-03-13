@@ -1,3 +1,4 @@
 import { Destination } from './Destination'
-
-export type Destinations = Array<Destination>
+export interface Destinations {
+  destinations: Array<Destination>
+}

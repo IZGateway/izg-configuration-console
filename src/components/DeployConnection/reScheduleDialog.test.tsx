@@ -37,7 +37,7 @@ describe('RescheduleDialog', () => {
   it('renders dialog properly', () => {
     const { getByText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <RescheduleDialog {...props} />
+        <RescheduleDialog changeRequest={undefined} {...props} />
       </CombinedContext.Provider>
     )
     expect(getByText('Reschedule Options')).toBeInTheDocument()
@@ -46,7 +46,7 @@ describe('RescheduleDialog', () => {
   it('displays appropriate radio buttons and date picker', () => {
     const { getByLabelText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <RescheduleDialog {...props} />
+        <RescheduleDialog changeRequest={undefined} {...props} />
       </CombinedContext.Provider>
     )
     expect(getByLabelText('Reschedule ASAP')).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('RescheduleDialog', () => {
   it('calls handleASAPPicker when Reschedule ASAP radio button is clicked', () => {
     const { getByLabelText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <RescheduleDialog {...props} />
+        <RescheduleDialog changeRequest={undefined} {...props} />
       </CombinedContext.Provider>
     )
     fireEvent.click(getByLabelText('Reschedule ASAP'))
@@ -81,7 +81,7 @@ describe('RescheduleDialog', () => {
   it('calls handleDateTimePicker when Reschedule at a future date and time radio button is clicked', () => {
     const { getByLabelText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <RescheduleDialog {...props} />
+        <RescheduleDialog changeRequest={undefined} {...props} />
       </CombinedContext.Provider>
     )
     fireEvent.click(
@@ -100,7 +100,7 @@ describe('RescheduleDialog', () => {
   it('calls handleClose when Close button is clicked', () => {
     const { getByText } = render(
       <CombinedContext.Provider value={combinedContextValueMock}>
-        <RescheduleDialog {...props} />
+        <RescheduleDialog changeRequest={undefined} {...props} />
       </CombinedContext.Provider>
     )
     fireEvent.click(getByText('Close'))

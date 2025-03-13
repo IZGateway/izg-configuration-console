@@ -45,11 +45,11 @@ const publishButtonStyle = {
 }
 
 const ChangeRequestActionButtons = (props: {
-  destTypeId: any
-  destId: any
-  hasChangeRequest: any
-  hasActiveDraft: any
-  tabIndex: any
+  destTypeId: number
+  destId: string
+  hasChangeRequest: boolean
+  hasActiveDraft: boolean
+  tabIndex: number
 }) => {
   const { destId, destTypeId, hasChangeRequest, hasActiveDraft } = props
   const canEdit = !hasChangeRequest && !hasActiveDraft
@@ -60,7 +60,7 @@ const ChangeRequestActionButtons = (props: {
     isLoading: isDraftLoading,
   } = useSWR(
     hasActiveDraft
-      ? `/api/destinationdraft/${props.destTypeId}/${props.destId}`
+      ? `/api/changerequest/${props.destTypeId}/${props.destId}`
       : null
   )
   if (draftError) throw new Error(draftError.message)

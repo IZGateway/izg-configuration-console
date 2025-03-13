@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Box, Button } from '@mui/material'
 const AcceptButton = (props: { handleAccept: any; agreed: boolean }) => {
   return (

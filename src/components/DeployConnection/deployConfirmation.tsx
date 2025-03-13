@@ -13,22 +13,18 @@ import LaunchIcon from '@mui/icons-material/Launch'
 import router from 'next/router'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
+import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
 
-const DeployConfirmation = (props) => {
+const DeployConfirmation = (props: DestinationChangeRequest) => {
   const { setAlert } = useContext(CombinedContext)
-  const humanReadableScheduledTime = new Date(props.submittingValue.scheduledAt)
+  const humanReadableScheduledTime = new Date(props.scheduledAt)
 
   const handleDeploy = async () => {
-    const jurisdiction =
-      props.submittingValue.destinations.jurisdiction.description
-    const destType = props.submittingValue.destinations.destination_type.type
-    const response = await fetch(
-      `/api/deploy/destination/${props.destTypeId}/${props.destId}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(props.submittingValue),
-      }
-    )
+    const jurisdiction = props.jurisdiction.description
+    const destType = props.destType.type
+    const response = await fetch(`/api/changerequest/deploy/${props.id}`, {
+      method: 'GET',
+    })
     if (response.ok) {
       setAlert({
         level: 'success',

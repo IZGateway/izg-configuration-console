@@ -2,10 +2,10 @@ const JIRA_API_URL = process.env.JIRA_API_URL || undefined
 const JIRA_API_AUTH_BASE64 = process.env.JIRA_API_AUTH_BASE64 || undefined
 
 const changeRequestTicketComment = async (
-  jira_id,
-  requestedAt,
-  scheduledAt?,
-  isAsap = false
+  jira_id: string,
+  requestedAt: Date,
+  scheduledAt?: Date,
+  isAsap?: boolean
 ) => {
   const jiraBasicAuthHeader = 'Basic ' + JIRA_API_AUTH_BASE64
   const isScheduledAtDateProvided: boolean = scheduledAt !== undefined

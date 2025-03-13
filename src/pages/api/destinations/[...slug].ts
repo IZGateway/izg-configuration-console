@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import destination from '../../../lib/queries/fetch/destination'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
+import { dbClient } from '../../../lib/utils/dbclient'
 /**
  * @swagger
  * /api/destinations/{destTypeId}/{destId}:
@@ -30,7 +30,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (req.method === 'GET') {
-    const result = await destination(destId, destTypeId)
+    const result = await dbClient.fetchDestination(destId, destTypeId)
     if (result) {
       res.json(result)
     } else {

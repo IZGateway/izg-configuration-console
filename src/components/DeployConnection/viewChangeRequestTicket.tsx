@@ -14,9 +14,16 @@ import Link from 'next/link'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ChangeRequestPageAccessControl } from '../../lib/type/PageAccessControls'
 
-const ViewChangeRequestTicket = (props: any) => {
+interface ViewChangeRequestTicketProps {
+  changeScheduledAt: Date
+  jiraUrl: string
+  jiraId: string
+  status: string
+}
+
+const ViewChangeRequestTicket = (props: ViewChangeRequestTicketProps) => {
   const accessLevels: ChangeRequestPageAccessControl = useRoleAccess()
-  const humanReadableScheduledTime = new Date(props.scheduledAt)
+  const humanReadableScheduledTime = new Date(props.changeScheduledAt)
   const { jiraUrl } = props
   return (
     <Card
@@ -56,10 +63,9 @@ const ViewChangeRequestTicket = (props: any) => {
         <CardContent>
           <Typography variant="body1" component="div">
             To update the status of this change request, please click on the
-            link below. Something how Jira is the source of truth and you may
-            need to login additional systems.
+            link below.
           </Typography>
-          <Link href={jiraUrl + props.jira_id} target="_blank">
+          <Link href={jiraUrl + props.jiraId} target="_blank">
             <Button
               id="run"
               color="primary"

@@ -13,17 +13,14 @@ import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
-import destinationChangeRequest from '../../lib/queries/fetch/destinationchangerequest'
 import AppHeaderBar from '../../components/AppHeader'
-import fetchDraftRecord from '../../lib/queries/fetch/draftrecord'
 import logger from '../../../logger'
-import destination from '../../lib/queries/fetch/destination'
-import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
+import { dbClient } from '../../lib/utils/dbclient'
+import { Destination } from '../../lib/type/Destination'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
-let destinationResult = null
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -72,32 +69,28 @@ export const getServerSideProps = async (context) => {
     session.user.role,
     session.user.jurisdictions
   )
-  const endpoints = []
-  for (const endpoint of endpointStatuses) {
-    const data = {}
-    for (const [key, value] of Object.entries(endpoint as Jurisdiction)) {
-      const destArray = Promise.all(
-        value.map(async (x) => {
-          return {
-            ...x,
-            hasChangeRequest: await hasActiveChangeRequest(
-              x.destId,
-              x.destTypeId
-            ),
-            hasActiveDraft: await hasActiveDraft(x.destId, x.destTypeId),
-            hasActiveMaint: await hasActiveMaintenance(x.destId, x.destTypeId),
-            hasFutureMaint: await hasFutureMaintenance(x.destId, x.destTypeId),
-            getMaintenaceValues: await getMaintenaceValues(
-              x.destId,
-              x.destTypeId
-            ),
-          }
-        })
+  const endpoints = await Promise.all(
+    endpointStatuses.map(async (endpoint) => {
+      const destination = await dbClient.fetchDestination(
+        endpoint.destId,
+        endpoint.destTypeId
       )
-      data[key] = await destArray
-      endpoints.push(data)
-    }
-  }
+      const destinationChangeRequest =
+        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+          endpoint.destId,
+          endpoint.destTypeId
+        )
+      return {
+        ...endpoint,
+        hasChangeRequest: destinationChangeRequest ? true : false,
+        hasActiveDraft:
+          destinationChangeRequest?.jiraId === null ? true : false,
+        hasActiveMaintenance: destination?.hasActiveMaintenance || false,
+        hasFutureMaintenance: destination?.hasFutureMaintenance || false,
+        getMaintenaceValues: getMaintenaceValues(destination),
+      }
+    })
+  )
   return { props: { data: endpoints } }
 }
 
@@ -147,7 +140,7 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
         for (const [key, value] of Object.entries(data)) {
           const dest = {}
           dest[key] = value
-          resultCollector.push(dest)
+          resultCollector.push(value[0])
         }
         return resultCollector
       }
@@ -157,80 +150,27 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const combinedResponses = [].concat(...endpointStatuses)
   return combinedResponses
 }
-
-const hasActiveChangeRequest = async (destId, destTypeId) => {
-  return (await destinationChangeRequest(destId, destTypeId)) ? true : false
-}
-
-const hasActiveDraft = async (destId, destTypeId) => {
-  return (await fetchDraftRecord(destId, destTypeId)) ? true : false
-}
-
-const getDestinationResult = async (destId, destTypeId) => {
-  try {
-    destinationResult = await destination(destId, destTypeId)
-  } catch (error) {
-    throw new Error(error.message)
-  }
-}
-
-const getMaintenaceValues = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
-
-  if (_.isNull(destinationResult)) {
+const getMaintenaceValues = (destination: Destination) => {
+  if (_.isNull(destination)) {
     return {
       maint_start: null,
       maint_end: null,
     }
   } else {
     return {
-      maint_start: destinationResult.maint_start
-        ? destinationResult.maint_start.toISOString()
+      maint_start: destination.maintStart
+        ? destination.maintStart.toISOString()
         : null,
-      maint_end: destinationResult.maint_end
-        ? destinationResult.maint_end.toISOString()
+      maint_end: destination.maintEnd
+        ? destination.maintEnd.toISOString()
         : null,
     }
   }
 }
 
-const hasActiveMaintenance = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
-  if (
-    _.isNull(destinationResult) ||
-    (_.isNull(destinationResult.maint_start) &&
-      _.isNull(destinationResult.maint_end))
-  ) {
-    return false
-  } else {
-    return (
-      destinationResult.maint_start <= new Date() &&
-      (_.isNull(destinationResult.maint_end) ||
-        destinationResult.maint_end >= new Date())
-    )
-  }
-}
-
-const hasFutureMaintenance = async (destId, destTypeId) => {
-  await getDestinationResult(destId, destTypeId)
-  if (
-    _.isNull(destinationResult) ||
-    (_.isNull(destinationResult.maint_start) &&
-      _.isNull(destinationResult.maint_end))
-  ) {
-    return false
-  } else {
-    return (
-      destinationResult.maint_start >= new Date() &&
-      (_.isNull(destinationResult.maint_end) ||
-        destinationResult.maint_end >= new Date())
-    )
-  }
-}
-
 function appendJurisdictionsAssignedToUser(
   hubURLS: string[],
-  jurisdictions: any
+  jurisdictions: Array<string>
 ) {
   return hubURLS.map(
     (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`

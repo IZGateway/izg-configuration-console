@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { render } from '@testing-library/react'
 import MaintenanceDialog from './maintenanceDialog'
@@ -21,10 +23,11 @@ describe('MaintenanceDialog component', () => {
           open={true}
           handleClose={handleClose}
           destTypeId={1}
-          destId={2}
+          destId={'test'}
           jurisdictionName="Test Jurisdiction"
-          destType="Test Type"
-        />
+          destType="Test Type" updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          } } row={undefined}        />
       </CombinedContext.Provider>
     )
     expect(getByText('Disable Traffic Request')).toBeInTheDocument()

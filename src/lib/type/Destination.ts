@@ -1,4 +1,16 @@
-export type Destination = {
+import { DestinationConnectionSettings } from './DestinationConnectionSettings'
+import { DestinationType } from './DestinationType'
+import { Jurisdiction } from './Jurisdiction'
+
+export interface Destination extends DestinationConnectionSettings {
   destId: string
-  destTypeId: number
+  destVersion?: string
+  passExpiry?: Date
+  maintReason?: string
+  maintStart?: Date
+  maintEnd?: Date
+  destinationType: DestinationType
+  jurisdiction?: Jurisdiction
+  hasActiveMaintenance?: boolean
+  hasFutureMaintenance?: boolean
 }

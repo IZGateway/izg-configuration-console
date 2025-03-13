@@ -13,9 +13,9 @@ const actionButtonStyle = {
 }
 
 const TestConnectionButton = (props: {
-  destTypeId: any
-  destId: any
-  tabIndex: any
+  destTypeId: number
+  destId: string
+  tabIndex: number
 }) => {
   return (
     <Link
