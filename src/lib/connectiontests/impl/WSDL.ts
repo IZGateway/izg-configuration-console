@@ -8,15 +8,12 @@ import fs from 'fs'
 import { DOMParser } from '@xmldom/xmldom'
 
 export default class WSDL extends ConnectionTest {
-  hostname: string
-
-  constructor(connectionTestRequest, hostname: string) {
+  constructor(connectionTestRequest) {
     super(connectionTestRequest)
-    this.hostname = hostname
   }
 
   run = (): Promise<ConnectionTestResult[]> => {
-    const TEST_NAME = `WSDL Test for ${this.hostname}`
+    const TEST_NAME = `WSDL Test for ${this.connectionTestRequest.url}`
     const wsdlConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -40,7 +37,7 @@ export default class WSDL extends ConnectionTest {
     }
 
     const options = {
-      hostname: this.connectionTestRequest.hostname,
+      hostname: this.connectionTestRequest.url.hostname,
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path + '?wsdl',
       method: 'GET',

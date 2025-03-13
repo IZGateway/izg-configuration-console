@@ -11,24 +11,22 @@ import QBP from './impl/QBP'
 export default class ConnectionTestFactory {
   static getConnectionTest(
     testName: string,
-    connectionTestRequest: ConnectionTestRequest,
-    jurisdictionUrl: string,
-    hostname: string
+    connectionTestRequest: ConnectionTestRequest
   ): Testable {
     if (testName === 'dns') {
-      return new DNS(connectionTestRequest, jurisdictionUrl)
+      return new DNS(connectionTestRequest)
     }
     if (testName === 'tcp') {
-      return new TCP(connectionTestRequest, jurisdictionUrl)
+      return new TCP(connectionTestRequest)
     }
     if (testName === 'tls') {
-      return new TLS(connectionTestRequest, jurisdictionUrl)
+      return new TLS(connectionTestRequest)
     }
     if (testName === 'cipher') {
       return new CIPHER(connectionTestRequest)
     }
     if (testName === 'wsdl') {
-      return new WSDL(connectionTestRequest, hostname)
+      return new WSDL(connectionTestRequest)
     }
     if (testName === 'connectivity') {
       return new CONNECTIVITY(connectionTestRequest)

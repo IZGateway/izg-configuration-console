@@ -37,7 +37,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
     ],
   }
   const DEFAULT_PORT = 443
-  const hasHostname = (url) => {
+  const hasHostname = (url: string | URL) => {
     try {
       const parsedUrl = new URL(url)
       return !!parsedUrl.hostname
@@ -47,7 +47,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
   }
 
   const setHostnameIfNull = (dest: Destination) => {
-    let hostname
+    let hostname: string
     if (!hasHostname(dest?.destUri)) {
       hostname = 'https://' + getHostNameFromType(dest)
       return hostname + dest?.destUri
@@ -103,7 +103,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
     const connectionTestRequest: ConnectionTestRequest = {
       ip: '',
       port: +destIdURL.port || DEFAULT_PORT,
-      hostname: destIdURL.hostname,
+      url: destIdURL,
       path: destIdURL.pathname,
       order: 0,
       certPath: IZG_ENDPOINT_CRT_PATH,
@@ -113,7 +113,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
     }
 
     logger.info(
-      `STARTING TESTS ON DEST ID: ${destination.destId} USING URL: ${connectionTestRequest.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
+      `STARTING TESTS ON DEST ID: ${destination.destId} USING URL: ${connectionTestRequest.url.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
     )
 
     let testCounter = 0
@@ -134,9 +134,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
       if (!skipTests) {
         const T = ConnectionTestFactory.getConnectionTest(
           TestSuite[test],
-          connectionTestRequest,
-          connectionTestRequest.hostname, // Pass the jurisdictionUrl dynamically
-          connectionTestRequest.destinationData?.destUri // Pass the hostname dynamically
+          connectionTestRequest
         )
         result = await T.run()
       }

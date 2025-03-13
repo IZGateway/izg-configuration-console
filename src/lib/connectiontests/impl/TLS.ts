@@ -10,16 +10,15 @@ import fs from 'fs'
 export default class TLS extends ConnectionTest {
   jurisdictionUrl: string
 
-  constructor(connectionTestRequest, jurisdictionUrl: string) {
+  constructor(connectionTestRequest) {
     super(connectionTestRequest)
-    this.jurisdictionUrl = jurisdictionUrl
   }
 
   private static readonly MIN_TLS_VERSION: string = 'TLSv1.2'
   private static readonly MAX_TLS_VERSION: string = 'TLSv1.3'
 
   run = (): Promise<ConnectionTestResult[]> => {
-    const TEST_NAME = `TLS Version Test for ${this.jurisdictionUrl}`
+    const TEST_NAME = `TLS Version Test for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -43,7 +42,7 @@ export default class TLS extends ConnectionTest {
     }
 
     const options = {
-      hostname: this.connectionTestRequest.hostname,
+      hostname: this.connectionTestRequest.url.hostname,
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path,
       agent: new https.Agent(httpsAgentOptions),

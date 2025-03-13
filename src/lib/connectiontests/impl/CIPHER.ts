@@ -22,7 +22,7 @@ export default class CIPHER extends ConnectionTest {
   private TLSv1_2_methodConnection = new Promise((resolve, reject) => {
     const client = tls
       .connect({
-        host: this.connectionTestRequest.hostname,
+        host: this.connectionTestRequest.url.hostname,
         port: this.connectionTestRequest.port,
         rejectUnauthorized: false,
         ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
@@ -51,7 +51,7 @@ export default class CIPHER extends ConnectionTest {
   private minVersionConnection = new Promise((resolve, reject) => {
     const client = tls
       .connect({
-        host: this.connectionTestRequest.hostname,
+        host: this.connectionTestRequest.url.hostname,
         port: this.connectionTestRequest.port,
         rejectUnauthorized: false,
         ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
