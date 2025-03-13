@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
 const {
   PHASE_DEVELOPMENT_SERVER,
   PHASE_PRODUCTION_SERVER,
@@ -6,7 +7,7 @@ const {
 const winston = require('winston')
 const ecsFormat = require('@elastic/ecs-winston-format')
 
-module.exports = async (phase, { defaultConfig }) => {
+module.exports = async (phase) => {
   /** @type {import('next').NextConfig} */
   const nextConfig = {
     reactStrictMode: true,
@@ -51,6 +52,10 @@ module.exports = async (phase, { defaultConfig }) => {
         }
       }
       return config
+    },
+    // Explicitly set to use the Pages Router
+    experimental: {
+      ppr: false,
     },
   }
 

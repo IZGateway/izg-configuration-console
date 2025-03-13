@@ -15,6 +15,8 @@ import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
 import NavigationLoader from '../components/NavigationLoader'
+import type { AppProps } from 'next/app'
+import { EmotionCache } from '@emotion/cache'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')
@@ -25,7 +27,11 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
 const clientSideEmotionCache = createEmotionCache()
 const blueTheme = createTheme(blueThemeOptions)
 
-const MyApp = (props) => {
+interface MyAppProps extends AppProps {
+  emotionCache?: EmotionCache;
+}
+
+const MyApp = (props: MyAppProps) => {
   const {
     Component,
     emotionCache = clientSideEmotionCache,
@@ -54,7 +60,7 @@ const MyApp = (props) => {
   )
 }
 
-function Auth({ children }) {
+function Auth({ children }: { children: React.ReactNode }) {
   const { status } = useSession({ required: true })
 
   if (status === 'loading') {

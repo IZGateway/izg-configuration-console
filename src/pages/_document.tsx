@@ -1,9 +1,21 @@
 import * as React from 'react'
-import Document, { Html, Head, Main, NextScript } from 'next/document'
+import Document, { Html, Head, Main, NextScript, DocumentProps, DocumentContext } from 'next/document'
 import createEmotionServer from '@emotion/server/create-instance'
 import createEmotionCache from '../utility/createEmotionCache'
 
-export default class MyDocument extends Document {
+interface MyDocumentProps extends DocumentProps {
+  emotionStyleTags: React.ReactNode[];
+}
+
+// Define a type for the enhanced App component that accepts emotionCache
+interface EnhancedAppProps {
+  emotionCache?: ReturnType<typeof createEmotionCache>;
+  pageProps: Record<string, unknown>;
+  Component: React.ComponentType;
+  router: unknown;
+}
+
+export default class MyDocument extends Document<MyDocumentProps> {
   render() {
     return (
       <Html lang="en">
@@ -12,6 +24,7 @@ export default class MyDocument extends Document {
             rel="stylesheet"
             href="https://fonts.googleapis.com/css?family=Ubuntu:300,400,500,700&display=swap"
           />
+          {this.props.emotionStyleTags}
         </Head>
         <body>
           <Main />
@@ -35,7 +48,7 @@ export default class MyDocument extends Document {
 
 // `getInitialProps` belongs to `_document` (instead of `_app`),
 // it's compatible with static-site generation (SSG).
-MyDocument.getInitialProps = async (ctx) => {
+MyDocument.getInitialProps = async (ctx: DocumentContext) => {
   // Resolution order
   //
   // On the server:
@@ -65,13 +78,14 @@ MyDocument.getInitialProps = async (ctx) => {
   const cache = createEmotionCache()
   const { extractCriticalToChunks } = createEmotionServer(cache)
 
-  /* eslint-disable */
   ctx.renderPage = () =>
     originalRenderPage({
-      enhanceApp: (App: any) => (props) =>
-        <App emotionCache={cache} {...props} />,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      enhanceApp: (App: any) => 
+        function EnhanceApp(props: EnhancedAppProps) {
+          return <App emotionCache={cache} {...props} />;
+        },
     })
-  /* eslint-enable */
 
   const initialProps = await Document.getInitialProps(ctx)
   // This is important. It prevents emotion to render invalid HTML.
@@ -93,5 +107,6 @@ MyDocument.getInitialProps = async (ctx) => {
       ...React.Children.toArray(initialProps.styles),
       ...emotionStyleTags,
     ],
+    emotionStyleTags,
   }
 }
