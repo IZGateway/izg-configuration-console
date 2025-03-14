@@ -2,13 +2,17 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import { TestResponseMessages } from '../TestResponseMessages'
-
-const TEST_NAME = 'DNS Lookup Test'
+import { ConnectionTestRequest } from '../types/ConnectionTestRequest'
 
 export default class DNS extends ConnectionTest {
+  constructor(connectionTestRequest: ConnectionTestRequest) {
+    super(connectionTestRequest)
+  }
+
   run = (): Promise<ConnectionTestResult[]> => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const dns = require('dns')
+    const TEST_NAME = `Verify DNS entry for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -19,7 +23,7 @@ export default class DNS extends ConnectionTest {
 
     return new Promise((resolve) => {
       dns.resolve4(
-        this.connectionTestRequest.hostname,
+        this.connectionTestRequest.url.hostname,
         (error: NodeJS.ErrnoException, address: string[]) => {
           resolve([
             {
@@ -27,7 +31,7 @@ export default class DNS extends ConnectionTest {
               detail: error?.code || address[0],
               message: error
                 ? TestResponseMessages.DNS_LOOKUP_FAIL(
-                    this.connectionTestRequest.hostname
+                    this.connectionTestRequest.url.hostname
                   )
                 : '',
               status: error ? TestStatus.FAIL : TestStatus.PASS,
