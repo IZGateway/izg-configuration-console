@@ -13,7 +13,8 @@ import { DOMParser } from '@xmldom/xmldom'
 import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
-const TEST_NAME = 'HL7 Query Test'
+const TEST_NAME =
+  'Send a Submit Single Message with an HL7 QBP for test patient'
 const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
@@ -128,13 +129,13 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
     }
     const isVersion2014 = destination.destVersion !== '2011'
     const options = {
-      hostname: this.connectionTestRequest.hostname,
+      hostname: this.connectionTestRequest.url.hostname,
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path,
       method: 'POST',
       agent: new https.Agent(httpsAgentOptions),
       headers: {
-        Host: this.connectionTestRequest.hostname,
+        Host: this.connectionTestRequest.url.hostname,
         'Content-Type': isVersion2014
           ? 'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest"'
           : 'application/soap+xml;charset=UTF-8;action="urn:cdc:iisb:2011:submitSingleMessage"',
