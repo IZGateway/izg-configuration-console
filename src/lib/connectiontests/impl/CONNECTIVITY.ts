@@ -34,7 +34,7 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <connectivityTest xmlns="urn:cdc:iisb:2011">
-            <echoBack>Wishing ${this.connectionTestRequest.hostname} : ${
+            <echoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
           this.connectionTestRequest.port
         } an Audacious Hello at ${new Date()} !</echoBack>
         </connectivityTest>
@@ -49,7 +49,7 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014">
-            <EchoBack>Wishing ${this.connectionTestRequest.hostname} : ${
+            <EchoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
           this.connectionTestRequest.port
         } an Audacious Hello at ${new Date()} !</EchoBack>
         </ConnectivityTestRequest>
@@ -81,13 +81,13 @@ export default class CONNECTIVITY extends ConnectionTest {
     }
 
     const options = {
-      hostname: this.connectionTestRequest.hostname,
+      hostname: this.connectionTestRequest.url.hostname,
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path,
       method: 'POST',
       agent: new https.Agent(httpsAgentOptions),
       headers: {
-        Host: this.connectionTestRequest.hostname,
+        Host: this.connectionTestRequest.url.hostname,
         'Content-Type': setContentType(destinationVersion),
       },
     }
