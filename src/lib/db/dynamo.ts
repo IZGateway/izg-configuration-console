@@ -331,13 +331,17 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
 
   async isDatabaseConnected(): Promise<boolean> {
     try {
-      await dynamodDbDocClient.send(
+      const result = await dynamodDbDocClient.send(
         new QueryCommand({ TableName: TABLE_NAME, Limit: 1 })
       )
-      return true
+      if (result) {
+        console.debug('DynamoDB connection successful')
+        return true
+      }
     } catch (error) {
       return false
     }
+    return false
   }
 
   getChangeRequestId(destId: string, destType: number) {
