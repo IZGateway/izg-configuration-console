@@ -113,7 +113,11 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       },
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
-    logger.info('INFO ---> got the following result from dynamodb', result)
+    logger.info(
+      `INFO ---> got the following result from dynamodb: ${JSON.stringify(
+        result
+      )}`
+    )
     return await this.convertResponseToDestination(result.Item)
   }
 
