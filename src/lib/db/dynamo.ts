@@ -104,7 +104,6 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     destId: string,
     destType: number
   ): Promise<Destination> {
-    // DONE
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -112,11 +111,16 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         sortKey: `${destType}#${destId}`,
       },
     }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    logger.info(
-      `INFO ---> got the following result from dynamodb: ${result.Item}`
-    )
-    return await this.convertResponseToDestination(result.Item)
+    try {
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      logger.info(
+        `INFO ---> got the following result from dynamodb: ${result.Item}`
+      )
+      return await this.convertResponseToDestination(result.Item)
+    } catch (e) {
+      logger.error(`Error fetching destination: ${e.message}`)
+      return null
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -346,7 +350,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         })
       )
       if (result) {
-        logger.info('DynamoDB connection successful')
+        logger.debug('DynamoDB connection successful')
         return true
       } else {
         logger.error('DynamoDB connection query test failed')
