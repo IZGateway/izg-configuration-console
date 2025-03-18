@@ -102,13 +102,13 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
 
   async fetchDestination(
     destId: string,
-    destType: number
+    destTypeId: number
   ): Promise<Destination> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
         entityType: 'Destination',
-        sortKey: `${destType}#${destId}`,
+        sortKey: `${destTypeId}#${destId}`,
       },
     }
     try {
