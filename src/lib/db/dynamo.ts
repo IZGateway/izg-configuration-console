@@ -114,9 +114,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
     logger.info(
-      `INFO ---> got the following result from dynamodb: ${JSON.stringify(
-        result.Item
-      )}`
+      `INFO ---> got the following result from dynamodb: ${result.Item}`
     )
     return await this.convertResponseToDestination(result.Item)
   }
@@ -338,7 +336,14 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   async isDatabaseConnected(): Promise<boolean> {
     try {
       const result = await dynamodDbDocClient.send(
-        new QueryCommand({ TableName: TABLE_NAME, Limit: 1 })
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: 'entityType = :entityType',
+          ExpressionAttributeValues: {
+            ':entityType': 'Destination',
+          },
+          Limit: 1,
+        })
       )
       if (result) {
         logger.info('DynamoDB connection successful')
@@ -348,7 +353,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         return false
       }
     } catch (error) {
-      logger.error('Error connecting to DynamoDB', error)
+      logger.error('Error with database deep health check:', error)
       return false
     }
   }
