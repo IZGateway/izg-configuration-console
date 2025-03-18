@@ -22,6 +22,7 @@ import {
 } from '@aws-sdk/lib-dynamodb'
 
 import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
+import logger from '../../../logger'
 
 // To connect to local endpoint, use DYNAMODB_ENDPOINT = http://localhost:8000/ in .env.local
 const endpoint: string = process.env.DYNAMODB_ENDPOINT || null
@@ -335,13 +336,16 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         new QueryCommand({ TableName: TABLE_NAME, Limit: 1 })
       )
       if (result) {
-        console.debug('DynamoDB connection successful')
+        logger.info('DynamoDB connection successful')
         return true
+      } else {
+        logger.error('DynamoDB connection query test failed')
+        return false
       }
     } catch (error) {
+      logger.error('Error connecting to DynamoDB', error)
       return false
     }
-    return false
   }
 
   getChangeRequestId(destId: string, destType: number) {
