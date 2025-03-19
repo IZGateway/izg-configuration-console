@@ -113,11 +113,12 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     }
     try {
       const result = await dynamodDbDocClient.send(new GetCommand(params))
-      logger.info(
-        `INFO ---> got the following result from dynamodb: ${JSON.stringify(
-          result.Item
-        )}`
-      )
+      if (!result.Item) {
+        logger.info(
+          `No destination found for destId: ${destId} and destTypeId: ${destTypeId}`
+        )
+        return null
+      }
       return await this.convertResponseToDestination(result.Item)
     } catch (e) {
       logger.error(`Error fetching destination: ${e.message}`)
