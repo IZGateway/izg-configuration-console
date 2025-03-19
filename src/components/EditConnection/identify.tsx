@@ -328,6 +328,9 @@ const Identify = (props: any) => {
                       name={field.name}
                       label={field.label}
                       variant="outlined"
+                      sx={{
+                        width: '50%',
+                      }}
                       value={field.value}
                       onChange={handleChange}
                       InputProps={getInputProps(field.title)}
@@ -347,6 +350,9 @@ const Identify = (props: any) => {
                       name={field.name}
                       label={field.label}
                       variant="outlined"
+                      sx={{
+                        width: '50%',
+                      }}
                       value={field.value}
                       onChange={handleChange}
                       InputProps={getInputProps(field.title)}
@@ -366,6 +372,9 @@ const Identify = (props: any) => {
                       name={field.name}
                       label={field.label}
                       variant="outlined"
+                      sx={{
+                        width: '50%',
+                      }}
                       value={field.value}
                       onChange={handleChange}
                       InputProps={getInputProps(field.title)}
