@@ -233,6 +233,10 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       },
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
+    if (!result.Item) {
+      logger.debug(`Destination Change Request not found for id: ${id}`)
+      return null
+    }
     return this.convertResponseToDestinationChangeRequest(result.Item)
   }
 
@@ -240,7 +244,6 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     destId: string,
     destTypeId: number
   ): Promise<DestinationChangeRequest> {
-    // DONE
     return this.fetchDestinationChangeRequestById(
       this.getChangeRequestId(destId, destTypeId)
     )
