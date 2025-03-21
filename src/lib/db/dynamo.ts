@@ -384,8 +384,6 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   async upsertDestinationChangeRequest(
     changeRequestData: DestinationChangeRequest
   ): Promise<DestinationChangeRequest> {
-    // DONE
-
     const id =
       changeRequestData.id ||
       this.getChangeRequestId(
@@ -399,7 +397,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         entityType: 'DestinationChangeRequest',
         sortKey: `${id}`,
         jiraId: changeRequestData.jiraId,
-        scheduledAt: changeRequestData.scheduledAt.toISOString(),
+        scheduledAt: changeRequestData.scheduledAt?.toISOString(),
         requestedAt: (
           changeRequestData.requestedAt || new Date()
         ).toISOString(),
