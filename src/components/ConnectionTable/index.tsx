@@ -342,16 +342,16 @@ const ConnectionsTable = (props) => {
                     <Typography sx={{ color: palette.warningDark }}>
                       This connection will be under maintenance from{' '}
                       {moment(
-                        new Date(params.row.getMaintenaceValues.maint_start)
+                        new Date(params.row.maintenanceValues.maint_start)
                       ).format('MMM DD, YYYY [at] h:mm A')}{' '}
-                      {_.isNull(params.row.getMaintenaceValues) ? (
+                      {_.isNull(params.row.maintenanceValues) ? (
                         'ended by user'
                       ) : (
                         <>
                           <br />
                           until{' '}
                           {moment(
-                            new Date(params.row.getMaintenaceValues.maint_end)
+                            new Date(params.row.maintenanceValues.maint_end)
                           ).format('MMM DD, YYYY [at] h:mm A')}
                         </>
                       )}
@@ -367,10 +367,10 @@ const ConnectionsTable = (props) => {
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography sx={{ color: palette.errorDark }}>
                       This connection is under maintenance until{' '}
-                      {_.isNull(params.row.getMaintenaceValues)
+                      {_.isNull(params.row.maintenanceValues)
                         ? 'ended by user'
                         : moment(
-                            new Date(params.row.getMaintenaceValues.maint_end)
+                            new Date(params.row.maintenanceValues.maint_end)
                           ).format('MMM DD, YYYY [at] h:mm A')}
                     </Typography>
                     <ErrorOutlineIcon

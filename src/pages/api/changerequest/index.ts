@@ -73,9 +73,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (isDraft === true) {
         const draft = await upsertChangeRequest(requestBody)
         if (draft) {
-          logger.info(
-            'Draft was saved successfully for ' + requestBody.dest_uri
-          )
+          logger.info('Draft was saved successfully for ' + requestBody.destId)
           res.status(200)
           res.json(draft)
         } else {
@@ -111,7 +109,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
           throw new Error(
-            `Error creating change request ticket for ${requestBody.dest_id} on environment ${requestBody.dest_type_id} : ${error}`
+            `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`
           )
         } finally {
           if (_.isNull(changeRequestTicketResponse)) {

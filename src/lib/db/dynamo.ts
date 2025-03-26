@@ -24,13 +24,13 @@ import {
 import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 
-// To connect to local endpoint, use DYNAMODB_ENDPOINT = http://localhost:8000/ in .env.local
-const endpoint: string = process.env.DYNAMODB_ENDPOINT || null
+// DynamoDB Configuration
+const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
 const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
 const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
 
 const clientConfig: DynamoDBClientConfig = endpoint
-  ? { endpoint: endpoint, region: 'us-east-1' }
+  ? { endpoint, region: 'us-east-1' }
   : {}
 if (awsAccessKeyId && awsSecretAccessKey) {
   clientConfig.credentials = {
@@ -40,17 +40,13 @@ if (awsAccessKeyId && awsSecretAccessKey) {
 }
 
 const marshallOptions = {
-  // Whether to automatically convert empty strings, blobs, and sets to `null`.
-  convertEmptyValues: false, // false, by default.
-  // Whether to remove undefined values while marshalling.
-  removeUndefinedValues: true, // false, by default.
-  // Whether to convert typeof object to map attribute.
-  convertClassInstanceToMap: false, // false, by default. <---- Set this flag
+  convertEmptyValues: false,
+  removeUndefinedValues: true,
+  convertClassInstanceToMap: false,
 }
 
 const unmarshallOptions = {
-  // Whether to return numbers as a string instead of converting them to native JavaScript numbers.
-  wrapNumbers: false, // false, by default.
+  wrapNumbers: false,
 }
 
 const translateConfig = { marshallOptions, unmarshallOptions }
@@ -61,10 +57,6 @@ export const dynamodDbDocClient = DynamoDBDocumentClient.from(
   translateConfig
 )
 
-// DynamoDbClient gets the credentials from ECS or AWS configuration or environment
-// To run with your AWS credentials, set them in the environment before starting VSCode,
-// or set them as default credentials with your profile, rather than stuffing them into
-// your .env.local (in general, it's not a good idea to store credentials in a file)
 const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
 const DEST_TYPES = [
   null,
@@ -77,16 +69,14 @@ const DEST_TYPES = [
 ]
 
 class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
-  getTableName() {
+  private jurisdictionsCache = new Map<string, any>()
+
+  getTableName(): string {
     return TABLE_NAME
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  jurisdictions = new Map<string, any>()
-  async getJurisdiction(jurisdictionId: string) {
-    if (
-      this.jurisdictions.size == 0 ||
-      !this.jurisdictions.has(jurisdictionId)
-    ) {
+
+  async getJurisdiction(jurisdictionId: string): Promise<any> {
+    if (!this.jurisdictionsCache.has(jurisdictionId)) {
       const params: GetCommandInput = {
         TableName: TABLE_NAME,
         Key: {
@@ -94,16 +84,21 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
           sortKey: `${jurisdictionId}`,
         },
       }
-      const result = await dynamodDbDocClient.send(new GetCommand(params))
-      this.jurisdictions.set(jurisdictionId, result.Item)
+      try {
+        const result = await dynamodDbDocClient.send(new GetCommand(params))
+        this.jurisdictionsCache.set(jurisdictionId, result.Item || null)
+      } catch (error) {
+        logger.error(`Error fetching jurisdiction: ${error.message}`)
+        throw error
+      }
     }
-    return this.jurisdictions.get(jurisdictionId)
+    return this.jurisdictionsCache.get(jurisdictionId)
   }
 
   async fetchDestination(
     destId: string,
     destTypeId: number
-  ): Promise<Destination> {
+  ): Promise<Destination | null> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -120,21 +115,20 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         return null
       }
       return await this.convertResponseToDestination(result.Item)
-    } catch (e) {
-      logger.error(`Error fetching destination: ${e.message}`)
-      return null
+    } catch (error) {
+      logger.error(`Error fetching destination: ${error.message}`)
+      throw error
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async convertResponseToDestination(
+  private async convertResponseToDestination(
     item: Record<string, any>
   ): Promise<Destination> {
-    const j = await this.getJurisdiction(item.jurisdictionId)
-    const maintStart: Date = item.maintStart ? new Date(item.maintStart) : null
-    const maintEnd: Date = item.maintEnd ? new Date(item.maintEnd) : null
+    const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+    const maintStart = item.maintStart ? new Date(item.maintStart) : null
+    const maintEnd = item.maintEnd ? new Date(item.maintEnd) : null
 
-    const dest: Destination = {
+    return {
       destId: item.destId,
       destUri: item.destUri,
       destVersion: item.destVersion ?? null,
@@ -148,30 +142,25 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       facilityId: item.facilityId ?? null,
       passExpiry: item.passExpiry ? new Date(item.passExpiry) : null,
       maintReason: item.maintReason ?? null,
-      maintStart: item.maintStart ? maintStart : null,
-      maintEnd: item.maintEnd ? maintEnd : null,
+      maintStart,
+      maintEnd,
       destinationType: await this.fetchDestinationType(item.destTypeId),
       jurisdiction: {
         jurisdictionId: item.jurisdictionId,
-        name: j.name,
-        description: j.description,
+        name: jurisdiction?.name || '',
+        description: jurisdiction?.description || '',
       },
     }
-    if (item.hasOwnProperty('msh11')) {
-      dest.MSH11 = item.msh11
-    }
-    return dest as Destination
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   async convertResponseToDestinations(
     items: Record<string, any>[]
   ): Promise<Destination[]> {
-    const result = []
-    for (const item of items) {
-      result.push(await this.convertResponseToDestination(item))
-    }
-    return result
+    return Promise.all(
+      items.map((item) => this.convertResponseToDestination(item))
+    )
   }
+
   async fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     destinations: Array<string>
@@ -211,20 +200,22 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         ':sortKey': `${destTypeId}#${destId}#`,
       },
     }
-    const result = await dynamodDbDocClient.send(new QueryCommand(params))
-    for (const item of result.Items) {
-      item.createdAt = new Date(item.createdAt)
-      item.id = item.sortKey
-      delete item.entityType
-      delete item.sortKey
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return result.Items.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        id: item.sortKey,
+      })) as DestinationAudit[]
+    } catch (error) {
+      logger.error(`Error fetching destination audit history: ${error.message}`)
+      throw error
     }
-    return result.Items as DestinationAudit[]
   }
 
   async fetchDestinationChangeRequestById(
     id: number
   ): Promise<DestinationChangeRequest> {
-    // DONE
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -253,15 +244,17 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   async convertResponseToDestinationChangeRequest(
     item: Record<string, any>
   ): Promise<DestinationChangeRequest> {
+    const destination = await this.fetchDestination(item.destId, item.destType)
     const changeRequest = {
       id: Number.parseInt(item.sortKey),
       destId: item.destId,
       destType: await this.fetchDestinationType(item.destType),
       jiraId: item.jiraId,
-      isDraft: item.isDraft ? true : false,
+      isDraft: item.jiraId === null ? true : false,
       requestedAt: item.requestedAt ? new Date(item.requestedAt) : null,
       requestedBy: item.requestedBy,
       scheduledAt: item.scheduledAt ? new Date(item.scheduledAt) : null,
+      jurisdiction: destination.jurisdiction,
       requested: {
         destUri: item.destUri,
         username: item.username,
@@ -273,9 +266,20 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         RXA11: item.RXA11 || '',
         facilityId: item.facilityId || '',
       },
+      current: {
+        destUri: destination.destUri,
+        username: destination.username,
+        MSH3: destination.MSH3,
+        MSH4: destination.MSH4,
+        MSH5: destination.MSH5,
+        MSH6: destination.MSH6,
+        MSH22: destination.MSH22,
+        RXA11: destination.RXA11,
+        facilityId: destination.facilityId,
+      },
     } as DestinationChangeRequest
     if (item.hasOwnProperty('isAsap')) {
-      changeRequest.isAsap = item.isAs
+      changeRequest.isAsap = item.isAsap
     }
     if (item.hasOwnProperty('isPasswordDifferent')) {
       changeRequest.isPasswordDifferent = item.isPasswordDifferent
@@ -291,12 +295,11 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
   }
 
   async fetchDestinationType(destType: string): Promise<DestinationType> {
-    // DONE
-    const t: number = parseInt(destType)
+    const destTypeId = parseInt(destType, 10)
     return {
-      type: DEST_TYPES[t],
-      typeId: t,
-    } as DestinationType
+      type: DEST_TYPES[destTypeId] || 'UNKNOWN',
+      typeId: destTypeId,
+    }
   }
 
   async fetchChangeRequestPassword(id: number): Promise<string> {
@@ -355,15 +358,10 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
           Limit: 1,
         })
       )
-      if (result) {
-        logger.debug('DynamoDB connection successful')
-        return true
-      } else {
-        logger.error('DynamoDB connection query test failed')
-        return false
-      }
+      logger.debug('DynamoDB connection successful')
+      return !!result
     } catch (error) {
-      logger.error('Error with database deep health check:', error)
+      logger.error('Error with database connection check:', error)
       return false
     }
   }
@@ -397,10 +395,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         entityType: 'DestinationChangeRequest',
         sortKey: `${id}`,
         jiraId: changeRequestData.jiraId,
-        scheduledAt: changeRequestData.scheduledAt?.toISOString(),
-        requestedAt: (
-          changeRequestData.requestedAt || new Date()
-        ).toISOString(),
+        scheduledAt: new Date(changeRequestData.scheduledAt).toISOString(),
+        requestedAt: new Date().toISOString(),
         requestedBy: changeRequestData.requestedBy,
         destType: changeRequestData.destType.typeId,
         destId: changeRequestData.destId,
@@ -429,8 +425,11 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     }
 
     const result = await dynamodDbDocClient.send(new PutCommand(params))
-    changeRequestData.id = id
-    return await this.convertResponseToDestinationChangeRequest(params.Item)
+    if (result) {
+      changeRequestData.id = id
+      return await this.convertResponseToDestinationChangeRequest(params.Item)
+    }
+    return null
   }
 
   async deleteDestinationChangeRequest(id: number): Promise<boolean> {
@@ -441,8 +440,8 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         sortKey: `${id}`,
       },
     }
-    await dynamodDbDocClient.send(new DeleteCommand(params))
-    return true
+    const result = await dynamodDbDocClient.send(new DeleteCommand(params))
+    return !!result
   }
 
   async createDestinationChangeRequestDeploymentAudit(
@@ -525,7 +524,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
         params.ExpressionAttributeValues[`:${key}`] = destination[key]
-          ? destination[key].toISOString()
+          ? destination[key]
           : null
       }
     }

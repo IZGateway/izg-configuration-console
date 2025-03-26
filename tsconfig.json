@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
@@ -13,7 +17,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "types": ["cypress", "@types/gtag.js"]
+    "types": [
+      "cypress",
+      "@types/gtag.js"
+    ],
+    "target": "ES2017"
   },
   "include": [
     "next-env.d.ts",
@@ -24,5 +32,10 @@
     ".next/types/**/*.ts",
     "cypress/support/commands.ts"
   ],
-  "exclude": ["node_modules", "cypress", "**/*.cy.tsx", ".next"]
+  "exclude": [
+    "node_modules",
+    "cypress",
+    "**/*.cy.tsx",
+    ".next"
+  ]
 }
