@@ -23,21 +23,7 @@ import {
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
 
-// Cache certificate and key files to avoid repeated reads
-const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
-const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
-const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
-const httpsAgentOptions = {
-  cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
-  key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
-  passphrase: IZG_ENDPOINT_PASSCODE,
-  rejectUnauthorized: false,
-  keepAlive: true,
-}
-const httpsAgent = new https.Agent(httpsAgentOptions)
-
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
-
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -120,6 +106,17 @@ const fetchEndpointStatus = async (
   jurisdictions: string[]
 ): Promise<any[]> => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
+  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
+  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
+  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
+  const httpsAgentOptions = {
+    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
+    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
+    passphrase: IZG_ENDPOINT_PASSCODE,
+    rejectUnauthorized: false,
+    keepAlive: true,
+  }
+
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
@@ -132,7 +129,7 @@ const fetchEndpointStatus = async (
   const responses = await Promise.allSettled(
     hubURLs.map((endpoint) =>
       axios.get(endpoint, {
-        httpsAgent,
+        httpsAgent: new https.Agent(httpsAgentOptions),
         timeout: 30000,
       })
     )
