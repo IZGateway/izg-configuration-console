@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import * as React from 'react'
 import { authOptions } from '../api/auth/[...nextauth]'
 import connectionTest from '../../lib/connectiontests'
-import cookie from 'cookie'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
@@ -30,8 +29,9 @@ export async function getServerSideProps(context) {
   const { req, res } = context
 
   const session = await getServerSession(req, res, authOptions)
-  const cookies = cookie.parse(req.headers.cookie || '')
-  const destArray = cookies.destination ? JSON.parse(cookies.destination) : []
+  const destArray = context.req.cookies['destination']
+    ? JSON.parse(context.req.cookies['destination'])
+    : []
   let destinations = []
   destinations = destArray.map((item) => {
     const match = item.match(/([a-zA-Z]+)(\d+)/)
