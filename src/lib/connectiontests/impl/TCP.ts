@@ -13,7 +13,7 @@ export default class TCP extends ConnectionTest {
   }
 
   run = (): Promise<ConnectionTestResult[]> => {
-    const TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.ip}`
+    const TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
