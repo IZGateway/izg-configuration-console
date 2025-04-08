@@ -95,5 +95,10 @@
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.0.4"
+  },
+  "overrides": {
+    "@types/react": "19.0.10",
+    "prismjs": "1.30.0",
+    "dompurify": "3.2.5"
   }
 }
