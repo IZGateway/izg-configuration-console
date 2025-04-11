@@ -1,5 +1,5 @@
 #Create a test instance of the database and run in docker for local development and demonstrations
-FROM mysql:5.7.15
+FROM mysql:8.0.41
 
 ENV MYSQL_DATABASE=phiz
 ENV MYSQL_ROOT_PASSWORD=admin

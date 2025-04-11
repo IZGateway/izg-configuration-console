@@ -24,8 +24,8 @@ NOTE: A certificate for connecting to an instance of IZ Gateway is not necessary
 NextJS will use values found in the .env.local file. Below is an example of the keys that require values custom to your environment
 
 ```
+SSL_SOURCE=<>
 NEXTAUTH_URL=http://localhost
-NEXTAUTH_URL_INTERNAL=http://localhost
 NEXTAUTH_SECRET=<enter generated secret>
 OKTA_CLIENT_ID=<enter client id>
 OKTA_ISSUER=<the URL for the Okta service>
@@ -33,19 +33,40 @@ OKTA_CLIENT_SECRET=<Okta secret>
 SHOW_SQL_IN_CONSOLE=true
 DATABASE_URL="mysql://<url to your database>"
 IZG_MAX_STATUS_HISTORY_RETURNED=20
-IZG_ENDPOINT_CRT_PATH=<path/to/your/certificate.crt>
-IZG_ENDPOINT_KEY_PATH=<path/to/your/key.key>
+IZG_ENDPOINT_CRT_PATH=${SSL_SOURCE}<Your Certificate filename>
+IZG_ENDPOINT_KEY_PATH=${SSL_SOURCE}<Your Key filename>
 IZG_ENDPOINT_PASSCODE=<your certificate passcode>
 NEXTAUTH_DEBUG=true
 IZG_STATUS_ENDPOINT_URL=<statushistory endpoint>
 AUTOMATED_TEST_RUN_DURATION=900000
-USERNAME_JIRA=<Jira username>
-PASSWORD_JIRA=<Jira password>
 JIRA_API_URL=<Jira url>
 JIRA_API_AUTH_BASE64=<Jira auth>
 JIRA_API_PROJECT_ID=<Jira project id>
 JIRA_API_ISSUE_TYPE=<Jira issue type>
 ```
+
+If you are going to send logs to Elastic for testing, you will also need these:
+
+```
+ELASTIC_ENV_TAG=<Environment code, likely dev if running locally>
+ELASTIC_HOST=<Audacious Elastic URL>
+ELASTIC_API_KEY=<API key used by filebeats and metricbeats to push logs to Elastic>
+ELASTIC_INDEX=<Index to post application logs to: Something like izgw-config-console-dev>
+ELASTIC_INDEX_NGINX=<Index to post nginx logs to, if running in Docker: izgw-config-console-nginx-dev>
+```
+
+NOTE: About certificates.  There are a few environment variables in an attempt to make pulling certificates no matter if you are running the application locally or inside Docker.
+
+- SSL_SOURCE - this should point to a directory on your local machine where your certificate files are located.
+
+IZG_ENDPOINT_CRT_PATH and IZG_ENDPOINT_KEY_PATH can be configured to append a directory to the beginning.
+
+Let's say, on you local machine, that you have your certificate and key in a /Users/moodya/izg/certs folder.  You can set the SSL_SOURCE to that directory location.  Then set your key and cert variables:
+
+- IZG_ENDPOINT_CRT_PATH = ${SSL_SOURCE}/amoody_testing_izgateway_org.crt
+- IZG_ENDPOINT_KEY_PATH = ${SSL_SOURCE}/amoody_testing_izgateway_org.key
+
+This will allow for running the application locally and inside Docker and have your certificates work in both places.
 
 NOTE: the IZG_STATUS_ENDPOINT_URL must be an array of objects
 
@@ -91,9 +112,11 @@ npx prisma generate
 YES - npX and not npM  
 This will create the Prisma client using the connection info in the .env file.
 
+**PLEASE NOTE:** If you add any sensitive database connectivity information to an .env file that NEEDS TO BE REMOVED and not posted to Git.
+
 ### **Step 4: Start local application**
 
-Prerequisite: Existing services running on port 3306, such as another database instance, must be stopped. Or, you can modify the port by creating a docker-compose.override.yml and setting a port value.
+Prerequisite: Existing services running on port 3306, such as another database instance, must be stopped.
 
 In a terminal window at the root of the project directory, run
 
@@ -104,44 +127,23 @@ npm run start:local-dev
 This script executes the following:
 
 ```
-"docker-compose -f docker-compose.local.yml up -d && npm run dev",
+docker compose -f ./local-docker/docker-compose.yml up -d && npm run dev && docker compose -f ./local-docker/docker-compose.yml down
 ```
 
-- Create and start an Nginx image configured to listen to port 80 and route incoming requests to the application running on port 3000
+- Create and start a Nginx image configured to listen to port 443 and route incoming requests to the application running on port 3000
 - Create and start a MySQL image loaded with dummy test data
 - Runs 'npm run dev' to start the node application on port 3000
 
-### **Step 5 (OPTIONAL): Create docker-compose.override.yml**
+### **Step 5: Run everything in Docker**
 
-This step is needed if you want to run the config console application in a docker container along with the mysql and nginx containers..
-The docker-compose.override.yml file must be created at the root of the project and configured with the following values:
-
-```
-version: '3'
-services:
-  config-console:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    environment:
-      - NEXTAUTH_URL=http://localhost
-      - NEXTAUTH_URL_INTERNAL=http://localhost
-      - NEXTAUTH_SECRET=<enter generated secret>
-      - OKTA_CLIENT_ID=<enter client id>
-      - OKTA_ISSUER=<the URL for the Okta service>
-      - OKTA_CLIENT_SECRET=<Okta secret>
-      - SHOW_SQL_IN_CONSOLE=true
-      - DATABASE_URL="mysql://<url to your database>"
-      - IZG_MAX_STATUS_HISTORY_RETURNED=20
-      - IZG_ENDPOINT_CRT_PATH=<path/to/your/certificate.crt>
-      - IZG_ENDPOINT_KEY_PATH=<path/to/your/key.key>
-      - IZG_ENDPOINT_PASSCODE=<your certificate passcode>
-      - NEXTAUTH_DEBUG=true
-    volumes:
-      - <full path to your certificate and key directory>:/usr/src/app/certs
+This will run the Docker image for IZG CC (which has Nginx and the application) as well as a MySQL image loaded with dummy test data.
 
 ```
+npm run start:local-docker
+```
+
+Make sure you have your .env.local file setup properly.  Please note that your .env.local file may be pointing to MySQL on _localhost_ if you have been running the application locally (as in the previoius step).  As MySQL is running in the same docker compose you will need to change the host to mysql instead.
 
 ### **After start**
 
-Navigate to http://localhost in a browser and you should see the application prompt you for a keycloak login
+Navigate to https://localhost in a browser, and you should see the application prompt you for a keycloak login

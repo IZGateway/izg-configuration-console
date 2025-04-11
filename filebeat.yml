@@ -15,13 +15,31 @@ filebeat.inputs:
           message_key: message
           overwrite_keys: true
           expand_keys: true
-
     processors:
       - add_host_metadata: ~
       - add_cloud_metadata: ~
-
     # change tag to dev/onboard/prod for selected environment
     tags: ['${ELASTIC_ENV_TAG:dev}'] # https://www.elastic.co/guide/en/beats/filebeat/7.14/configuration-general-options.html#_tags_21
+
+  - type: filestream
+    id: nginx-error
+    enabled: true
+    paths:
+      - /var/log/nginx/error.log
+    processors:
+      - add_host_metadata: ~
+      - add_cloud_metadata: ~
+    tags: ['${ELASTIC_ENV_TAG:dev}', 'nginx']
+
+  - type: filestream
+    id: run-and-monitor
+    enabled: true
+    paths:
+      - /app/logs/run_and_monitor.log
+    processors:
+      - add_host_metadata: ~
+      - add_cloud_metadata: ~
+    tags: ['${ELASTIC_ENV_TAG:dev}', 'nginx']
 
 # The Kibana section can be enabled to import dashboards and visualizations for specific Elastic Beats.
 # The ILM and Template settings are not recommended, as you should be controlling those from within Kibana and Elasticsearch itself.
@@ -36,8 +54,14 @@ output.elasticsearch:
   hosts: [
       '${ELASTIC_HOST:https://audacioussearchtest.es.us-east-1.aws.found.io:9243}',
     ] # Set ELASTIC_HOST in environment
-  # Set index to izgw-config-console-{tag} datastream for selected environment
-  index: '${ELASTIC_INDEX:izgw-config-console-dev}' # Use izgw-config-console-prod for production
   api_key: '${ELASTIC_API_KEY}' # Set ELASTIC_API_KEY in environment
   worker: 2
   allow_older_versions: true
+  # We will have a separate index for application logs vs. nginx logs
+  indices:
+    - index: '${ELASTIC_INDEX:izgw-xform-ui-dev}'
+      when.not.contains:
+        tags: "nginx"
+    - index: '${ELASTIC_INDEX_NGINX:izgw-xform-ui-nginx-dev}'
+      when.contains:
+        tags: "nginx"
