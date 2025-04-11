@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "start:local-dev": "docker compose -f ./local-docker/docker-compose.yml up -d && npm run dev && docker compose -f ./local-docker/docker-compose.yml down",
-    "start:local-docker": "docker compose --env-file .env.local up && docker compose --env-file .env.local down",
+    "start:local-docker": "docker compose --env-file .env.local up --build && docker compose --env-file .env.local down",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "code-quality-check": "next lint && npm run type-check",
