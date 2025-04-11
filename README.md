@@ -24,7 +24,7 @@ NOTE: A certificate for connecting to an instance of IZ Gateway is not necessary
 NextJS will use values found in the .env.local file. Below is an example of the keys that require values custom to your environment
 
 ```
-SSL_SOURCE=<>
+SSL_SOURCE=<Path to your certificates on local machine>
 NEXTAUTH_URL=http://localhost
 NEXTAUTH_SECRET=<enter generated secret>
 OKTA_CLIENT_ID=<enter client id>
@@ -33,8 +33,8 @@ OKTA_CLIENT_SECRET=<Okta secret>
 SHOW_SQL_IN_CONSOLE=true
 DATABASE_URL="mysql://<url to your database>"
 IZG_MAX_STATUS_HISTORY_RETURNED=20
-IZG_ENDPOINT_CRT_PATH=${SSL_SOURCE}<Your Certificate filename>
-IZG_ENDPOINT_KEY_PATH=${SSL_SOURCE}<Your Key filename>
+IZG_ENDPOINT_CRT_PATH=${SSL_SOURCE}/<Your Certificate filename>
+IZG_ENDPOINT_KEY_PATH=${SSL_SOURCE}/<Your Key filename>
 IZG_ENDPOINT_PASSCODE=<your certificate passcode>
 NEXTAUTH_DEBUG=true
 IZG_STATUS_ENDPOINT_URL=<statushistory endpoint>
