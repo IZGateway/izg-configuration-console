@@ -69,9 +69,9 @@ output.elasticsearch:
   allow_older_versions: true
   # We will have a separate index for application logs vs. nginx logs
   indices:
-    - index: '${ELASTIC_INDEX:izgw-xform-ui-dev}'
+    - index: '${ELASTIC_INDEX:izgw-config-console-dev}'
       when.not.contains:
         tags: "nginx"
-    - index: '${ELASTIC_INDEX_NGINX:izgw-xform-ui-nginx-dev}'
+    - index: '${ELASTIC_INDEX_NGINX:izgw-config-console-nginx-dev}'
       when.contains:
         tags: "nginx"
