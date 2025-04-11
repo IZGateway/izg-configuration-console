@@ -101,9 +101,29 @@ const TestsResults = ({ testResults }: testListProps) => {
                       <ListItemText
                         primary={item.name}
                         secondary={
-                          <Typography variant="body2" color="error">
-                            {item.message}
-                          </Typography>
+                          <>
+                            <Typography
+                              variant="body2"
+                              color="error"
+                              gutterBottom={true}
+                            >
+                              {item.message}
+                            </Typography>
+                            {item.detail && (
+                              <Typography
+                                variant="caption"
+                                color="info"
+                                component="textarea"
+                                rows={10}
+                                sx={{
+                                  width: '100%',
+                                }}
+                                title="Drag bottom left corner to resize text area."
+                              >
+                                {item.detail}
+                              </Typography>
+                            )}
+                          </>
                         }
                       />
                     )}
