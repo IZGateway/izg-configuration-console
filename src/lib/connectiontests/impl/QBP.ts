@@ -10,7 +10,6 @@ import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import logger from '../../../../logger'
 import { DOMParser } from '@xmldom/xmldom'
-import { json2xml } from 'xml-js'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
 const TEST_NAME =
@@ -225,18 +224,25 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
           })
           res.on('end', function () {
             xml2js.parseString(data, (_err, result) => {
-              resolve([
-                {
-                  ...hl7QueryTestResult,
-                  detail: result,
-                  message: `Server responded with HTTP status code ${
-                    res.statusCode
-                  }. Response is: ${json2xml(result, {
-                    compact: true,
-                  })}`,
-                  status: TestStatus.FAIL,
-                },
-              ])
+              if (!_err) {
+                resolve([
+                  {
+                    ...hl7QueryTestResult,
+                    detail: `${new xml2js.Builder().buildObject(result)}`,
+                    message: `Server responded with HTTP status code ${res.statusCode}.`,
+                    status: TestStatus.FAIL,
+                  },
+                ])
+              } else {
+                resolve([
+                  {
+                    ...hl7QueryTestResult,
+                    detail: `${data}`,
+                    message: `Server responded with HTTP status code ${res.statusCode}. Error parsing the XML: ${_err?.message}.`,
+                    status: TestStatus.FAIL,
+                  },
+                ])
+              }
             })
           })
         }
