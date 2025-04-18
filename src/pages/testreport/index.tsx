@@ -34,10 +34,16 @@ export async function getServerSideProps(context) {
     : []
   let destinations = []
   destinations = destArray.map((item) => {
-    const match = item.match(/([a-zA-Z]+)(\d+)/)
+    if (typeof item !== 'string' || item.length < 2) {
+      return { destId: '', destTypeId: null }
+    }
+
+    const destId = item.slice(0, -1)
+    const destTypeId = parseInt(item.slice(-1), 10)
+
     return {
-      destId: match ? match[1] : '',
-      destTypeId: match ? parseInt(match[2], 10) : null,
+      destId,
+      destTypeId: isNaN(destTypeId) ? null : destTypeId,
     }
   })
   const results = await Promise.all(
