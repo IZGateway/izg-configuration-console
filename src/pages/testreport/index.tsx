@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import * as React from 'react'
 import { authOptions } from '../api/auth/[...nextauth]'
 import connectionTest from '../../lib/connectiontests'
+import cookie from 'cookie'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
@@ -29,21 +30,14 @@ export async function getServerSideProps(context) {
   const { req, res } = context
 
   const session = await getServerSession(req, res, authOptions)
-  const destArray = context.req.cookies['destination']
-    ? JSON.parse(context.req.cookies['destination'])
-    : []
+  const cookies = cookie.parse(req.headers.cookie || '')
+  const destArray = cookies.destination ? JSON.parse(cookies.destination) : []
   let destinations = []
   destinations = destArray.map((item) => {
-    if (typeof item !== 'string' || item.length < 2) {
-      return { destId: '', destTypeId: null }
-    }
-
-    const destId = item.slice(0, -1)
-    const destTypeId = parseInt(item.slice(-1), 10)
-
+    const match = item.match(/([a-zA-Z]+)(\d+)/)
     return {
-      destId,
-      destTypeId: isNaN(destTypeId) ? null : destTypeId,
+      destId: match ? match[1] : '',
+      destTypeId: match ? parseInt(match[2], 10) : null,
     }
   })
   const results = await Promise.all(
@@ -52,10 +46,12 @@ export async function getServerSideProps(context) {
         dest.destId,
         dest.destTypeId
       )
+
       const testResult = await connectionTest(
         destinationToTest,
         session.user.email
       )
+
       return {
         type: destinationToTest.destinationType.type || 'N/A',
         destId: destinationToTest.destId || 'N/A',
@@ -67,31 +63,32 @@ export async function getServerSideProps(context) {
 
   const connectionTestResults = results.map((result) => {
     const getTestStatus = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+      const test = result.testResults.find((t) => t.name.includes(testName))
       return test ? test.status : 'N/A'
     }
+
     const getTestDetail = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+      const test = result.testResults.find((t) => t.name.includes(testName))
       return test ? test.detail : 'N/A'
     }
 
     return {
       destId: result.destId,
       destType: result.type,
-      dns: getTestStatus('DNS Lookup Test'),
-      dnsDetail: getTestDetail('DNS Lookup Test'),
-      tcp: getTestStatus('TCP Connectivity Test'),
-      tcpDetail: getTestDetail('TCP Connectivity Test'),
-      tls: getTestStatus('TLS Version Test'),
-      tlsDetail: getTestDetail('TLS Version Test'),
-      cipher: getTestStatus('Cipher Suites Appropriate'),
-      cipherDetail: getTestDetail('Cipher Suites Appropriate'),
+      dns: getTestStatus('DNS'),
+      dnsDetail: getTestDetail('DNS'),
+      tcp: getTestStatus('TCP'),
+      tcpDetail: getTestDetail('TCP'),
+      tls: getTestStatus('TLS'),
+      tlsDetail: getTestDetail('TLS'),
+      cipher: getTestStatus('NIST'),
+      cipherDetail: getTestDetail('NIST'),
       connectivity: getTestStatus('Connectivity Test'),
       connectivityDetail: getTestDetail('Connectivity Test'),
-      wsdl: getTestStatus('WSDL Test'),
-      wsdlDetail: getTestDetail('WSDL Test'),
-      hl7: getTestStatus('HL7 Query Test'),
-      hl7Detail: getTestDetail('HL7 Query Test'),
+      wsdl: getTestStatus('WSDL'),
+      wsdlDetail: getTestDetail('WSDL'),
+      hl7: getTestStatus('HL7'),
+      hl7Detail: getTestDetail('HL7'),
     }
   })
   const destinationDetails = results.map((result) => ({
