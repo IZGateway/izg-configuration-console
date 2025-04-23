@@ -66,12 +66,50 @@ export async function getServerSideProps(context) {
   )
 
   const connectionTestResults = results.map((result) => {
-    const getTestStatus = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+    const getTestStatus = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
       return test ? test.status : 'N/A'
     }
-    const getTestDetail = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+    const getTestDetail = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
       return test ? test.detail : 'N/A'
     }
 
@@ -84,14 +122,14 @@ export async function getServerSideProps(context) {
       tcpDetail: getTestDetail('TCP'),
       tls: getTestStatus('TLS'),
       tlsDetail: getTestDetail('TLS'),
-      cipher: getTestStatus('NIST'),
-      cipherDetail: getTestDetail('NIST'),
-      connectivity: getTestStatus('Connectivity Test'),
-      connectivityDetail: getTestDetail('Connectivity Test'),
+      cipher: getTestStatus(['NIST', 'cipher']),
+      cipherDetail: getTestDetail(['NIST', 'cipher']),
+      connectivity: getTestStatus('Connectivity'),
+      connectivityDetail: getTestDetail('Connectivity'),
       wsdl: getTestStatus('WSDL'),
       wsdlDetail: getTestDetail('WSDL'),
-      hl7: getTestStatus('HL7'),
-      hl7Detail: getTestDetail('HL7'),
+      hl7: getTestStatus(['HL7', 'qbp']),
+      hl7Detail: getTestDetail(['HL7', 'qbp']),
     }
   })
   const destinationDetails = results.map((result) => ({
