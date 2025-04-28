@@ -57,10 +57,10 @@ export async function getServerSideProps(context) {
         session.user.email
       )
       return {
-        type: destinationToTest.destinationType.type || 'N/A',
-        destId: destinationToTest.destId || 'N/A',
-        jurisdiction: destinationToTest.jurisdiction.description || 'N/A',
-        testResults: testResult.connectionTestResult?.testResults || [],
+        type: destinationToTest?.destinationType.type || 'N/A',
+        destId: destinationToTest?.destId || 'N/A',
+        jurisdiction: destinationToTest?.jurisdiction.description || 'N/A',
+        testResults: testResult?.connectionTestResult?.testResults || [],
       }
     })
   )
