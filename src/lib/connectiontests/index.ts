@@ -22,7 +22,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
   const connectionTestResult = {
     user: userId,
     timestamp: new Date(Date.now()).toISOString(),
-    destId: destination.destId,
+    destId: destination?.destId || 'unknown',
     destUrl: '',
     destType: '',
     jurisdictionDescription: '',
@@ -70,7 +70,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
         message: `The requested destination was not found in our records.`,
       },
     ]
-    throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
+    //throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else if (destination && !isValidUrl(setHostnameIfNull(destination))) {
     connectionTestResult.destId = destination.destId
     connectionTestResult.destUrl = destination.destUri
