@@ -34,10 +34,16 @@ export async function getServerSideProps(context) {
     : []
   let destinations = []
   destinations = destArray.map((item) => {
-    const match = item.match(/([a-zA-Z]+)(\d+)/)
+    if (typeof item !== 'string' || item.length < 2) {
+      return { destId: '', destTypeId: null }
+    }
+
+    const destId = item.slice(0, -1)
+    const destTypeId = parseInt(item.slice(-1), 10)
+
     return {
-      destId: match ? match[1] : '',
-      destTypeId: match ? parseInt(match[2], 10) : null,
+      destId,
+      destTypeId: isNaN(destTypeId) ? null : destTypeId,
     }
   })
   const results = await Promise.all(
@@ -60,32 +66,70 @@ export async function getServerSideProps(context) {
   )
 
   const connectionTestResults = results.map((result) => {
-    const getTestStatus = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+    const getTestStatus = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
       return test ? test.status : 'N/A'
     }
-    const getTestDetail = (testName) => {
-      const test = result.testResults.find((t) => t.name === testName)
+    const getTestDetail = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
       return test ? test.detail : 'N/A'
     }
 
     return {
       destId: result.destId,
       destType: result.type,
-      dns: getTestStatus('DNS Lookup Test'),
-      dnsDetail: getTestDetail('DNS Lookup Test'),
-      tcp: getTestStatus('TCP Connectivity Test'),
-      tcpDetail: getTestDetail('TCP Connectivity Test'),
-      tls: getTestStatus('TLS Version Test'),
-      tlsDetail: getTestDetail('TLS Version Test'),
-      cipher: getTestStatus('Cipher Suites Appropriate'),
-      cipherDetail: getTestDetail('Cipher Suites Appropriate'),
-      connectivity: getTestStatus('Connectivity Test'),
-      connectivityDetail: getTestDetail('Connectivity Test'),
-      wsdl: getTestStatus('WSDL Test'),
-      wsdlDetail: getTestDetail('WSDL Test'),
-      hl7: getTestStatus('HL7 Query Test'),
-      hl7Detail: getTestDetail('HL7 Query Test'),
+      dns: getTestStatus('DNS'),
+      dnsDetail: getTestDetail('DNS'),
+      tcp: getTestStatus('TCP'),
+      tcpDetail: getTestDetail('TCP'),
+      tls: getTestStatus('TLS'),
+      tlsDetail: getTestDetail('TLS'),
+      cipher: getTestStatus(['NIST', 'cipher']),
+      cipherDetail: getTestDetail(['NIST', 'cipher']),
+      connectivity: getTestStatus('Connectivity'),
+      connectivityDetail: getTestDetail('Connectivity'),
+      wsdl: getTestStatus('WSDL'),
+      wsdlDetail: getTestDetail('WSDL'),
+      hl7: getTestStatus(['HL7', 'qbp']),
+      hl7Detail: getTestDetail(['HL7', 'qbp']),
     }
   })
   const destinationDetails = results.map((result) => ({

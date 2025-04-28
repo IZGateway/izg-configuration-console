@@ -25,7 +25,7 @@ NextJS will use values found in the .env.local file. Below is an example of the 
 
 ```
 SSL_SOURCE=<Path to your certificates on local machine>
-NEXTAUTH_URL=http://localhost
+NEXTAUTH_URL=https://localhost
 NEXTAUTH_SECRET=<enter generated secret>
 OKTA_CLIENT_ID=<enter client id>
 OKTA_ISSUER=<the URL for the Okta service>
@@ -55,13 +55,13 @@ ELASTIC_INDEX=<Index to post application logs to: Something like izgw-config-con
 ELASTIC_INDEX_NGINX=<Index to post nginx logs to, if running in Docker: izgw-config-console-nginx-dev>
 ```
 
-NOTE: About certificates.  There are a few environment variables in an attempt to make pulling certificates no matter if you are running the application locally or inside Docker.
+NOTE: About certificates. There are a few environment variables in an attempt to make pulling certificates no matter if you are running the application locally or inside Docker.
 
 - SSL_SOURCE - this should point to a directory on your local machine where your certificate files are located.
 
 IZG_ENDPOINT_CRT_PATH and IZG_ENDPOINT_KEY_PATH can be configured to append a directory to the beginning.
 
-Let's say, on you local machine, that you have your certificate and key in a /Users/moodya/izg/certs folder.  You can set the SSL_SOURCE to that directory location.  Then set your key and cert variables:
+Let's say, on you local machine, that you have your certificate and key in a /Users/moodya/izg/certs folder. You can set the SSL_SOURCE to that directory location. Then set your key and cert variables:
 
 - IZG_ENDPOINT_CRT_PATH = ${SSL_SOURCE}/amoody_testing_izgateway_org.crt
 - IZG_ENDPOINT_KEY_PATH = ${SSL_SOURCE}/amoody_testing_izgateway_org.key
@@ -142,7 +142,7 @@ This will run the Docker image for IZG CC (which has Nginx and the application) 
 npm run start:local-docker
 ```
 
-Make sure you have your .env.local file setup properly.  Please note that your .env.local file may be pointing to MySQL on _localhost_ if you have been running the application locally (as in the previoius step).  As MySQL is running in the same docker compose you will need to change the host to mysql instead.
+Make sure you have your .env.local file setup properly. Please note that your .env.local file may be pointing to MySQL on _localhost_ if you have been running the application locally (as in the previoius step). As MySQL is running in the same docker compose you will need to change the host to mysql instead.
 
 ### **After start**
 
