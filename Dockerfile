@@ -42,14 +42,14 @@ COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-var
 RUN apk add curl libc6-compat
 
 # Replace default filebeat config with custom config file 
-RUN cd filebeat && \
-    rm -rf /filebeat/filebeat.yml && \
-    cp ../filebeat.yml ./filebeat.yml
+ RUN cd ../filebeat && \
+     rm -rf /filebeat.yml && \
+     cp ../app/filebeat.yml ./filebeat.yml
 
 # Replace default metricbeat config with custom config file
-RUN cd ../metricbeat && \
-    rm -rf /metricbeat/metricbeat.yml && \
-    cp ../app/metricbeat.yml ./metricbeat.yml
+ RUN cd ../metricbeat && \
+     rm -rf /metricbeat.yml && \
+     cp ../app/metricbeat.yml ./metricbeat.yml
 
 #USER nextjs
 RUN chmod a+x replace-variable.sh
