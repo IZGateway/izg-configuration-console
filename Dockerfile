@@ -38,23 +38,18 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
-# Install filebeat
 
 RUN apk add curl libc6-compat
-ENV FILEBEAT_VERSION=8.15.0
-RUN curl https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-${FILEBEAT_VERSION}-linux-x86_64.tar.gz -o ./filebeat.tar.gz && \
-    tar xzvf filebeat.tar.gz && \
-    rm filebeat.tar.gz && \
-    mv filebeat-${FILEBEAT_VERSION}-linux-x86_64 filebeat && \
-    cd filebeat && \
-    cp filebeat /usr/bin && \
-    rm -rf /filebeat/filebeat.yml && \
-    cp ../filebeat.yml ./filebeat.yml
+
+# Replace default filebeat config with custom config file 
+ RUN cd ../filebeat && \
+     rm -rf /filebeat.yml && \
+     cp ../app/filebeat.yml ./filebeat.yml
 
 # Replace default metricbeat config with custom config file
-RUN cd ../metricbeat && \
-    rm -rf /metricbeat/metricbeat.yml && \
-    cp ../app/metricbeat.yml ./metricbeat.yml
+ RUN cd ../metricbeat && \
+     rm -rf /metricbeat.yml && \
+     cp ../app/metricbeat.yml ./metricbeat.yml
 
 #USER nextjs
 RUN chmod a+x replace-variable.sh
