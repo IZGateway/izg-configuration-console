@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import ConnectionsTable from '../../components/ConnectionTable'
 import ErrorBoundary from '../../components/ErrorBoundary'
@@ -5,7 +6,6 @@ import Container from '../../components/Container'
 import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
-import _ from 'lodash'
 import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
@@ -14,11 +14,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
-import logger from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
 import isOperationsRole from '../../lib/security/accessutils'
 import { dbClient } from '../../lib/utils/dbclient'
 import { Destination } from '../../lib/type/Destination'
+import {
+  hasActiveMaintenance,
+  hasFutureMaintenance,
+} from '../../lib/utils/endpointmaintainance'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 const Manage = (
@@ -28,11 +31,7 @@ const Manage = (
   const [showSnackbar, setShowSnackbar] = useState(false)
 
   useEffect(() => {
-    if (!_.isEmpty(alert.level)) {
-      setShowSnackbar(true)
-    } else {
-      setShowSnackbar(false)
-    }
+    setShowSnackbar(!!alert.level)
   }, [alert])
 
   const handleClose = () => {
@@ -69,6 +68,7 @@ export const getServerSideProps = async (context) => {
     session.user.role,
     session.user.jurisdictions
   )
+
   const endpoints = await Promise.all(
     endpointStatuses.map(async (endpoint) => {
       const destination = await dbClient.fetchDestination(
@@ -80,21 +80,31 @@ export const getServerSideProps = async (context) => {
           endpoint.destId,
           endpoint.destTypeId
         )
+
       return {
         ...endpoint,
-        hasChangeRequest: destinationChangeRequest ? true : false,
-        hasActiveDraft:
-          destinationChangeRequest?.jiraId === null ? true : false,
-        hasActiveMaintenance: destination?.hasActiveMaintenance || false,
-        hasFutureMaintenance: destination?.hasFutureMaintenance || false,
-        getMaintenaceValues: getMaintenaceValues(destination),
+        hasChangeRequest: !!destinationChangeRequest,
+        hasActiveDraft: destinationChangeRequest?.jiraId === null,
+        hasActiveMaintenance: hasActiveMaintenance(
+          destination?.maintStart,
+          destination?.maintEnd
+        ),
+        hasFutureMaintenance: hasFutureMaintenance(
+          destination?.maintStart,
+          destination?.maintEnd
+        ),
+        maintenanceValues: getMaintenanceValues(destination),
       }
     })
   )
+
   return { props: { data: endpoints } }
 }
 
-const fetchEndpointStatus = async (role, jurisdictions) => {
+const fetchEndpointStatus = async (
+  role: string,
+  jurisdictions: string[]
+): Promise<any[]> => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
@@ -110,14 +120,14 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
-  let hubURLS = configuredHubURLs.getIZGHubURLs()
+  let hubURLs = configuredHubURLs.getIZGHubURLs()
 
   if (!isOperationsRole(role)) {
-    hubURLS = appendJurisdictionsAssignedToUser(hubURLS, jurisdictions)
+    hubURLs = appendJurisdictionsAssignedToUser(hubURLs, jurisdictions)
   }
 
-  const responses = Promise.allSettled(
-    hubURLS.map((endpoint) =>
+  const responses = await Promise.allSettled(
+    hubURLs.map((endpoint) =>
       axios.get(endpoint, {
         httpsAgent: new https.Agent(httpsAgentOptions),
         timeout: 30000,
@@ -125,54 +135,20 @@ const fetchEndpointStatus = async (role, jurisdictions) => {
     )
   )
 
-  const responseData = await responses
-
-  const endpointStatuses = [
-    ...responseData.map((response) => {
-      if (response.status !== ALL_SETTLED_SUCCESSFUL) {
-        logger.error(
-          'Error connecting to a configured statushistory endpoint: ' +
-            JSON.stringify(response)
-        )
-      } else {
-        const data = response.value.data
-        const resultCollector = []
-        for (const [key, value] of Object.entries(data)) {
-          const dest = {}
-          dest[key] = value
-          resultCollector.push(value[0])
-        }
-        return resultCollector
-      }
-    }),
-  ]
-
-  const combinedResponses = [].concat(...endpointStatuses)
-  return combinedResponses
-}
-const getMaintenaceValues = (destination: Destination) => {
-  if (_.isNull(destination)) {
-    return {
-      maint_start: null,
-      maint_end: null,
-    }
-  } else {
-    return {
-      maint_start: destination.maintStart
-        ? destination.maintStart.toISOString()
-        : null,
-      maint_end: destination.maintEnd
-        ? destination.maintEnd.toISOString()
-        : null,
-    }
-  }
+  return responses
+    .filter((response) => response.status === ALL_SETTLED_SUCCESSFUL)
+    .map((response: any) => response.value.data)
+    .flatMap((data) => Object.values(data).map((value: any) => value[0]))
 }
 
-function appendJurisdictionsAssignedToUser(
-  hubURLS: string[],
-  jurisdictions: Array<string>
-) {
-  return hubURLS.map(
-    (izgUrl) => izgUrl + '?include=' + `${jurisdictions?.join(',')}`
-  )
+const getMaintenanceValues = (destination: Destination | null) => ({
+  maint_start: destination?.maintStart?.toISOString() || null,
+  maint_end: destination?.maintEnd?.toISOString() || null,
+})
+
+const appendJurisdictionsAssignedToUser = (
+  hubURLs: string[],
+  jurisdictions: string[]
+): string[] => {
+  return hubURLs.map((izgUrl) => `${izgUrl}?include=${jurisdictions.join(',')}`)
 }

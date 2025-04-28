@@ -4,7 +4,7 @@ import { TestStatus } from '../TestStatus'
 import * as tls from 'tls'
 import logger from '../../../../logger'
 
-const TEST_NAME = 'Cipher Suites Appropriate'
+const TEST_NAME = 'Host uses a NIST approved encryption method'
 export default class CIPHER extends ConnectionTest {
   private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string = [
     'TLS_AES_256_GCM_SHA384',
@@ -22,7 +22,7 @@ export default class CIPHER extends ConnectionTest {
   private TLSv1_2_methodConnection = new Promise((resolve, reject) => {
     const client = tls
       .connect({
-        host: this.connectionTestRequest.hostname,
+        host: this.connectionTestRequest.url.hostname,
         port: this.connectionTestRequest.port,
         rejectUnauthorized: false,
         ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
@@ -51,7 +51,7 @@ export default class CIPHER extends ConnectionTest {
   private minVersionConnection = new Promise((resolve, reject) => {
     const client = tls
       .connect({
-        host: this.connectionTestRequest.hostname,
+        host: this.connectionTestRequest.url.hostname,
         port: this.connectionTestRequest.port,
         rejectUnauthorized: false,
         ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,

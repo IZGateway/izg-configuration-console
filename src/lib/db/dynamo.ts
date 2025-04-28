@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
@@ -5,64 +6,530 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import ConfigConsoleRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
+
+import {
+  DeleteCommand,
+  DeleteCommandInput,
+  DynamoDBDocumentClient,
+  GetCommand,
+  GetCommandInput,
+  QueryCommand,
+  QueryCommandInput,
+  PutCommand,
+  PutCommandInput,
+  UpdateCommand,
+  UpdateCommandInput,
+} from '@aws-sdk/lib-dynamodb'
+
+import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
+import logger from '../../../logger'
+
+// DynamoDB Configuration
+const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
+const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
+const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
+
+const clientConfig: DynamoDBClientConfig = endpoint
+  ? { endpoint, region: 'us-east-1' }
+  : {}
+if (awsAccessKeyId && awsSecretAccessKey) {
+  clientConfig.credentials = {
+    accessKeyId: awsAccessKeyId,
+    secretAccessKey: awsSecretAccessKey,
+  }
+}
+
+const marshallOptions = {
+  convertEmptyValues: false,
+  removeUndefinedValues: true,
+  convertClassInstanceToMap: false,
+}
+
+const unmarshallOptions = {
+  wrapNumbers: false,
+}
+
+const translateConfig = { marshallOptions, unmarshallOptions }
+
+const dynamodDbClient = new DynamoDBClient(clientConfig)
+export const dynamodDbDocClient = DynamoDBDocumentClient.from(
+  dynamodDbClient,
+  translateConfig
+)
+
+const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
+const DEST_TYPES = [
+  null,
+  'PRODUCTION',
+  'TEST',
+  'ONBOARD',
+  'STAGE',
+  'DEV',
+  'UNKNOWN',
+]
+
 class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
-  fetchDestination(destId: string, destType: number): Promise<Destination> {
-    throw new Error('Method not implemented.')
+  private jurisdictionsCache = new Map<string, any>()
+
+  getTableName(): string {
+    return TABLE_NAME
   }
-  fetchLoggedInUsersDestinations(
-    isAdmin: boolean,
-    jurisdictions: string[]
+
+  async getJurisdiction(jurisdictionId: string): Promise<any> {
+    if (!this.jurisdictionsCache.has(jurisdictionId)) {
+      const params: GetCommandInput = {
+        TableName: TABLE_NAME,
+        Key: {
+          entityType: 'Jurisdiction',
+          sortKey: `${jurisdictionId}`,
+        },
+      }
+      try {
+        const result = await dynamodDbDocClient.send(new GetCommand(params))
+        this.jurisdictionsCache.set(jurisdictionId, result.Item || null)
+      } catch (error) {
+        logger.error(`Error fetching jurisdiction: ${error.message}`)
+        throw error
+      }
+    }
+    return this.jurisdictionsCache.get(jurisdictionId)
+  }
+
+  async fetchDestination(
+    destId: string,
+    destTypeId: number
+  ): Promise<Destination | null> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Destination',
+        sortKey: `${destTypeId}#${destId}`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      if (!result.Item) {
+        logger.info(
+          `No destination found for destId: ${destId} and destTypeId: ${destTypeId}`
+        )
+        return null
+      }
+      return await this.convertResponseToDestination(result.Item)
+    } catch (error) {
+      logger.error(`Error fetching destination: ${error.message}`)
+      throw error
+    }
+  }
+
+  private async convertResponseToDestination(
+    item: Record<string, any>
+  ): Promise<Destination> {
+    const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+    const maintStart = item.maintStart ? new Date(item.maintStart) : null
+    const maintEnd = item.maintEnd ? new Date(item.maintEnd) : null
+
+    return {
+      destId: item.destId,
+      destUri: item.destUri,
+      destVersion: item.destVersion ?? null,
+      username: item.username,
+      MSH3: item.msh3 ?? null,
+      MSH4: item.msh4 ?? null,
+      MSH5: item.msh5 ?? null,
+      MSH6: item.msh6 ?? null,
+      MSH22: item.msh22 ?? null,
+      RXA11: item.rxa11 ?? null,
+      facilityId: item.facilityId ?? null,
+      passExpiry: item.passExpiry ? new Date(item.passExpiry) : null,
+      maintReason: item.maintReason ?? null,
+      maintStart,
+      maintEnd,
+      destinationType: await this.fetchDestinationType(item.destTypeId),
+      jurisdiction: {
+        jurisdictionId: item.jurisdictionId,
+        name: jurisdiction?.name || '',
+        description: jurisdiction?.description || '',
+      },
+    }
+  }
+
+  async convertResponseToDestinations(
+    items: Record<string, any>[]
   ): Promise<Destination[]> {
-    throw new Error('Method not implemented.')
+    return Promise.all(
+      items.map((item) => this.convertResponseToDestination(item))
+    )
   }
-  fetchDestinationAuditHistory(
+
+  async fetchLoggedInUsersDestinations(
+    isAdmin: boolean,
+    destinations: Array<string>
+  ): Promise<Destination[]> {
+    // DONE
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'Destination',
+      },
+    }
+    if (!isAdmin) {
+      let filter = '('
+      for (let i = 0; i < destinations.length; i++) {
+        filter += ':d' + i + ','
+        params.ExpressionAttributeValues[':d' + i] = destinations[i]
+      }
+      filter = filter.slice(0, -1) + ')'
+      params.FilterExpression = 'destId IN ' + filter
+    }
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+    return await this.convertResponseToDestinations(result.Items)
+  }
+
+  async fetchDestinationAuditHistory(
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]> {
-    throw new Error('Method not implemented.')
+    // DONE
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression:
+        'entityType = :entityType and begins_with(sortKey, :sortKey)',
+      ExpressionAttributeValues: {
+        ':entityType': 'DestinationAudit',
+        ':sortKey': `${destTypeId}#${destId}#`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return result.Items.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        id: item.sortKey,
+      })) as DestinationAudit[]
+    } catch (error) {
+      logger.error(`Error fetching destination audit history: ${error.message}`)
+      throw error
+    }
   }
-  fetchDestinationChangeRequestById(
+
+  async fetchDestinationChangeRequestById(
     id: number
   ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    if (!result.Item) {
+      logger.debug(`Destination Change Request not found for id: ${id}`)
+      return null
+    }
+    return this.convertResponseToDestinationChangeRequest(result.Item)
   }
-  fetchDestinationChangeRequestByDestIdAndDestType(
+
+  async fetchDestinationChangeRequestByDestIdAndDestType(
     destId: string,
     destTypeId: number
   ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
+    return this.fetchDestinationChangeRequestById(
+      this.getChangeRequestId(destId, destTypeId)
+    )
   }
-  fetchDestinationType(destType: string): Promise<DestinationType> {
-    throw new Error('Method not implemented.')
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async convertResponseToDestinationChangeRequest(
+    item: Record<string, any>
+  ): Promise<DestinationChangeRequest> {
+    const destination = await this.fetchDestination(item.destId, item.destType)
+    const changeRequest = {
+      id: Number.parseInt(item.sortKey),
+      destId: item.destId,
+      destType: await this.fetchDestinationType(item.destType),
+      jiraId: item.jiraId,
+      isDraft: item.jiraId === null ? true : false,
+      requestedAt: item.requestedAt ? new Date(item.requestedAt) : null,
+      requestedBy: item.requestedBy,
+      scheduledAt: item.scheduledAt ? new Date(item.scheduledAt) : null,
+      jurisdiction: destination.jurisdiction,
+      requested: {
+        destUri: item.destUri,
+        username: item.username,
+        MSH3: item.msh3 || '',
+        MSH4: item.msh4 || '',
+        MSH5: item.msh5 || '',
+        MSH6: item.msh6 || '',
+        MSH22: item.msh22 || '',
+        RXA11: item.RXA11 || '',
+        facilityId: item.facilityId || '',
+      },
+      current: {
+        destUri: destination.destUri,
+        username: destination.username,
+        MSH3: destination.MSH3,
+        MSH4: destination.MSH4,
+        MSH5: destination.MSH5,
+        MSH6: destination.MSH6,
+        MSH22: destination.MSH22,
+        RXA11: destination.RXA11,
+        facilityId: destination.facilityId,
+      },
+    } as DestinationChangeRequest
+    if (item.hasOwnProperty('isAsap')) {
+      changeRequest.isAsap = item.isAsap
+    }
+    if (item.hasOwnProperty('isPasswordDifferent')) {
+      changeRequest.isPasswordDifferent = item.isPasswordDifferent
+    }
+    if (changeRequest.isPasswordDifferent) {
+      changeRequest.requested.password = item.password
+    }
+    if (item.hasOwnProperty('msh11')) {
+      changeRequest.requested.MSH11 = item.msh11
+    }
+
+    return changeRequest
   }
-  fetchChangeRequestPassword(id: number): Promise<string> {
-    throw new Error('Method not implemented.')
+
+  async fetchDestinationType(destType: string): Promise<DestinationType> {
+    const destTypeId = parseInt(destType, 10)
+    return {
+      type: DEST_TYPES[destTypeId] || 'UNKNOWN',
+      typeId: destTypeId,
+    }
   }
-  fetchDestinationPassword(destId: string, destType: number): Promise<string> {
-    throw new Error('Method not implemented.')
+
+  async fetchChangeRequestPassword(id: number): Promise<string> {
+    // DONE
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+      ProjectionExpression: 'password',
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result.Item.password
   }
-  isPasswordChanged(destId: string, dest_type: number): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async fetchDestinationPassword(
+    destId: string,
+    destType: number
+  ): Promise<string> {
+    // DONE
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Destination',
+        sortKey: `${destType}#${destId}`,
+      },
+      ProjectionExpression: 'password',
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result.Item.password
   }
-  isDatabaseConnected(): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async isPasswordChanged(destId: string, destType: number): Promise<boolean> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Destination',
+        sortKey: `${destType}#${destId}`,
+      },
+      ProjectionExpression: 'passwordChanged',
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result.Item.passwordChanged
   }
-  upsertDestinationChangeRequest(
+
+  async isDatabaseConnected(): Promise<boolean> {
+    try {
+      const result = await dynamodDbDocClient.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: 'entityType = :entityType',
+          ExpressionAttributeValues: {
+            ':entityType': 'Destination',
+          },
+          Limit: 1,
+        })
+      )
+      logger.debug('DynamoDB connection successful')
+      return !!result
+    } catch (error) {
+      logger.error('Error with database connection check:', error)
+      return false
+    }
+  }
+
+  getChangeRequestId(destId: string, destType: number) {
+    // If there is no id, we must generate one. JDBC uses Autoincrementing ID, but DynamoDB does
+    // not have that feature.  We can safely hash the destType and destId to generate a unique ID.
+    // for all current values used for destinations known.  Since at most one change request can be
+    // in progress for a destination, this should be unique.
+    const idString = destType + destId
+    let h = 0
+    for (let i = 0; i < idString.length; i++) {
+      h = 31 * h + (idString.charCodeAt(i) & 0xff) // Same as Java String.hashCode()
+    }
+    return h
+  }
+
+  async upsertDestinationChangeRequest(
     changeRequestData: DestinationChangeRequest
   ): Promise<DestinationChangeRequest> {
-    throw new Error('Method not implemented.')
+    const id =
+      changeRequestData.id ||
+      this.getChangeRequestId(
+        changeRequestData.destId,
+        changeRequestData.destType.typeId
+      )
+
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+        jiraId: changeRequestData.jiraId,
+        scheduledAt: new Date(changeRequestData.scheduledAt).toISOString(),
+        requestedAt: new Date().toISOString(),
+        requestedBy: changeRequestData.requestedBy,
+        destType: changeRequestData.destType.typeId,
+        destId: changeRequestData.destId,
+        destUri: changeRequestData.requested.destUri,
+        username: changeRequestData.requested.username,
+        facilityId: changeRequestData.requested.facilityId || null,
+        msh3: changeRequestData.requested.MSH3 || null,
+        msh4: changeRequestData.requested.MSH4 || null,
+        msh5: changeRequestData.requested.MSH5 || null,
+        msh6: changeRequestData.requested.MSH6 || null,
+        msh22: changeRequestData.requested.MSH22 || null,
+        rxa11: changeRequestData.requested.RXA11 || null,
+      },
+    }
+    if (changeRequestData.hasOwnProperty('isAsap')) {
+      params.Item.isAsap = changeRequestData.isAsap
+    }
+    if (changeRequestData.hasOwnProperty('isPasswordDifferent')) {
+      params.Item.isPasswordDifferent = changeRequestData.isPasswordDifferent
+    }
+    if (changeRequestData.isPasswordDifferent) {
+      params.Item.password = changeRequestData.requested.password || ''
+    }
+    if (changeRequestData.requested.hasOwnProperty('MSH11')) {
+      params.Item.msh11 = changeRequestData.requested.MSH11
+    }
+
+    const result = await dynamodDbDocClient.send(new PutCommand(params))
+    if (result) {
+      changeRequestData.id = id
+      return await this.convertResponseToDestinationChangeRequest(params.Item)
+    }
+    return null
   }
-  deleteDestinationChangeRequest(id: number): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async deleteDestinationChangeRequest(id: number): Promise<boolean> {
+    const params: DeleteCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+    }
+    const result = await dynamodDbDocClient.send(new DeleteCommand(params))
+    return !!result
   }
-  createDestinationChangeRequestDeploymentAudit(
+
+  async createDestinationChangeRequestDeploymentAudit(
     changeRequest: DestinationChangeRequest,
     user: string
   ): Promise<boolean> {
-    throw new Error('Method not implemented.')
+    // DONE
+    if (!changeRequest.current) {
+      changeRequest.current = await this.fetchDestination(
+        changeRequest.destId,
+        changeRequest.destType.typeId
+      )
+    }
+    const auditData = {
+      tableName: 'destinations',
+      destId: changeRequest.destId,
+      destType: changeRequest.destType.typeId,
+      userName: user,
+      changeType: 'Update',
+      oldValues: changeRequest.current,
+      newValues: changeRequest.requested,
+      createdAt: new Date().toISOString(),
+    }
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: {
+        ...auditData,
+        entityType: 'DestinationAudit',
+        sortKey: `${changeRequest.destType.typeId}#${changeRequest.destId}#${auditData.createdAt}`,
+      },
+    }
+    await dynamodDbDocClient.send(new PutCommand(params))
+    return true
   }
-  updateDestination(destination: Destination): Promise<boolean> {
-    throw new Error('Method not implemented.')
+
+  async updateDestination(destination: Destination): Promise<boolean> {
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Destination',
+        sortKey: `${destination.destinationType.typeId}#${destination.destId}`,
+      },
+      UpdateExpression: '',
+      ExpressionAttributeValues: {},
+    }
+    let separator = 'set'
+    const stringKeys = [
+      'facilityId',
+      'username',
+      'password',
+      'MSH3',
+      'MSH4',
+      'MSH5',
+      'MSH6',
+      'MSH11',
+      'MSH22',
+      'RXA11',
+      'maintReason',
+    ]
+    const lowerKeys = [
+      'MSH3',
+      'MSH4',
+      'MSH5',
+      'MSH6',
+      'MSH11',
+      'MSH22',
+      'RXA11',
+    ]
+    const dateKeys = ['passExpiry', 'maintStart', 'maintEnd']
+    for (const key of stringKeys) {
+      if (destination[key] !== undefined) {
+        const key2 = lowerKeys.includes(key) ? key.toLowerCase() : key
+        params.UpdateExpression += `${separator} ${key2} = :${key}`
+        separator = ','
+        params.ExpressionAttributeValues[`:${key}`] = destination[key] || ''
+      }
+    }
+    for (const key of dateKeys) {
+      if (destination[key] !== undefined) {
+        params.UpdateExpression += `${separator} ${key} = :${key}`
+        separator = ','
+        params.ExpressionAttributeValues[`:${key}`] = destination[key]
+          ? destination[key]
+          : null
+      }
+    }
+    await dynamodDbDocClient.send(new UpdateCommand(params))
+    return true
   }
 }
 

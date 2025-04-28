@@ -49,9 +49,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       maintEnd: maintData.reinstatementDateTime
         ? maintData.reinstatementDateTime
         : null,
-      maintStart: maintData.startDateTime
-        ? new Date(maintData.startDateTime)
-        : null,
+      maintStart: maintData.startDateTime ? maintData.startDateTime : null,
     })
     res.json(result)
     if (maintData.startDateTime === null) {

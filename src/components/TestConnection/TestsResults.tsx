@@ -25,6 +25,7 @@ import palette from '../../styles/theme/palette'
 import Table from '@mui/material/Table'
 import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
+
 interface testListProps {
   testResults: any[]
 }
@@ -66,7 +67,12 @@ const TestsResults = ({ testResults }: testListProps) => {
               <Table>
                 <TableRow>
                   <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'start' }}
+                    sx={{
+                      padding: '4px',
+                      paddingBottom: '8px',
+                      width: '100%',
+                      textAlign: 'start',
+                    }}
                   >
                     <ListItemIcon sx={{ float: 'inline-start' }}>
                       {item.status === 'PASS' && (
@@ -95,16 +101,34 @@ const TestsResults = ({ testResults }: testListProps) => {
                       <ListItemText
                         primary={item.name}
                         secondary={
-                          <Typography variant="body2" color="error">
-                            {item.message}
-                          </Typography>
+                          <>
+                            <Typography
+                              variant="body2"
+                              color="error"
+                              gutterBottom={true}
+                            >
+                              {item.message}
+                            </Typography>
+                            {item.detail && (
+                              <Typography
+                                variant="caption"
+                                color="info"
+                                component="textarea"
+                                rows={10}
+                                sx={{
+                                  width: '100%',
+                                }}
+                                title="Drag bottom left corner to resize text area."
+                              >
+                                {item.detail}
+                              </Typography>
+                            )}
+                          </>
                         }
                       />
                     )}
                   </TableCell>
-                  <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
-                  >
+                  <TableCell sx={{ padding: '4px', textAlign: 'end' }}>
                     <Tooltip
                       arrow
                       placement="bottom"
@@ -134,7 +158,8 @@ const TestsResults = ({ testResults }: testListProps) => {
                     </Tooltip>
                   </TableCell>
                   <TableCell
-                    sx={{ padding: '5px', width: '35%', textAlign: 'end' }}
+                    padding="none"
+                    sx={{ paddingBottom: '8px', textAlign: 'end' }}
                   >
                     <Chip
                       label={item.status === 'SKIPPED' ? 'N/A' : item.status}

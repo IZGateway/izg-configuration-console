@@ -1,7 +1,7 @@
 import { Destination } from '../../type/Destination'
 
 export type ConnectionTestRequest = {
-  hostname: string
+  url: URL
   path: string
   ip: string
   port: number
