@@ -118,18 +118,7 @@ function CustomToolbar() {
         <GridToolbarExport
           printOptions={{ disableToolbarButton: true }}
           csvOptions={{
-            fields: [
-              'jurisdiction',
-              'destination',
-              'environment',
-              'dnsLookup',
-              'tcpConnectivity',
-              'tlsVersion',
-              'cipherSuites',
-              'connectivity',
-              'wsdl',
-              'hl7Query',
-            ],
+            allColumns: true,
           }}
         />
       </div>
@@ -163,7 +152,6 @@ const TestReportTable = ({
   destinations,
   destinationDetails,
 }) => {
-  console.log(destinationDetails)
   const rows = destinationDetails.map((dest) => {
     const result = connectionTestResults.find(
       (testResult) =>
@@ -175,19 +163,19 @@ const TestReportTable = ({
       destination: dest.destId,
       environment: result?.destType || 'N/A',
       dnsLookup: result?.dns || 'N/A',
-      dnsDetail: result?.dnsDetail || 'No details available',
+      dnsDetail: result?.dnsDetail || '',
       tcpConnectivity: result?.tcp || 'N/A',
-      tcpDetail: result?.tcpDetail || 'No details available',
+      tcpDetail: result?.tcpDetail || '',
       tlsVersion: result?.tls || 'N/A',
-      tlsDetail: result?.tlsDetail || 'No details available',
+      tlsDetail: result?.tlsDetail || '',
       cipherSuites: result?.cipher || 'N/A',
-      cipherDetail: result?.cipherDetail || 'No details available',
+      cipherDetail: result?.cipherDetail || '',
       wsdl: result?.wsdl || 'N/A',
-      wsdlDetail: result?.wsdlDetail || 'No details available',
+      wsdlDetail: result?.wsdlDetail || '',
       connectivity: result?.connectivity || 'N/A',
-      connectivityDetail: result?.connectivityDetail || 'No details available',
+      connectivityDetail: result?.connectivityDetail || '',
       hl7Query: result?.hl7 || 'N/A',
-      hl7Detail: result?.hl7Detail || 'No details available',
+      hl7Detail: result?.hl7Detail || '',
     }
   })
   const columns = [
@@ -238,6 +226,16 @@ const TestReportTable = ({
       flex: 1,
       renderCell: (params) => renderStatus(params.value, params.row.hl7Detail),
     },
+    { field: 'dnsDetail', headerName: 'DNS DETAIL' },
+    { field: 'tcpDetail', headerName: 'TCP DETAIL' },
+    { field: 'tlsDetail', headerName: 'TLS DETAIL' },
+    { field: 'cipherDetail', headerName: 'CIPHER DETAIL' },
+    {
+      field: 'connectivityDetail',
+      headerName: 'CONNECTIVITY DETAIL',
+    },
+    { field: 'wsdlDetail', headerName: 'WSDL DETAIL' },
+    { field: 'hl7Detail', headerName: 'HL7 QUERY DETAIL' },
   ]
 
   return (
@@ -273,6 +271,13 @@ const TestReportTable = ({
           columns: {
             columnVisibilityModel: {
               destTypeId: false,
+              dnsDetail: false,
+              tcpDetail: false,
+              tlsDetail: false,
+              cipherDetail: false,
+              connectivityDetail: false,
+              wsdlDetail: false,
+              hl7Detail: false,
             },
           },
         }}
