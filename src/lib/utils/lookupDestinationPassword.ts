@@ -1,4 +1,3 @@
-import _ from 'lodash'
 import { dbClient } from './dbclient'
 
 export async function lookupDestinationPassword(
