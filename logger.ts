@@ -1,11 +1,25 @@
 import winston from 'winston'
 import ecsFormat from '@elastic/ecs-winston-format'
+import { AsyncLocalStorage } from 'async_hooks'
+
+export const asyncLocalStorage = new AsyncLocalStorage<{
+  username?: string
+  ipAddress?: string
+}>()
+
+const injectContextFormat = winston.format((info) => {
+  const store = asyncLocalStorage.getStore()
+  info.user = { name: store?.username || 'Config Console Application' }
+  info.ipAddress = store?.ipAddress || 'ConfigConsoleSystemIP'
+  return info
+})
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'debug',
   format: winston.format.combine(
     winston.format.uncolorize(),
     winston.format.errors({ stack: true }),
+    injectContextFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],

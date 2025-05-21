@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import getChangeRequestStatus from '../../../lib/getChangeRequestStatus'
+import withMiddleware from '../api-middleware-helper'
 
 /**
  * @swagger
@@ -37,10 +38,7 @@ const isJiraConfigured = () => {
   return false
 }
 
-export default async function handle(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const id = req.query.id.toString()
 
   if (!isJiraConfigured) {
@@ -58,3 +56,4 @@ export default async function handle(
     )
   }
 }
+export default withMiddleware('logRequest')(handler)

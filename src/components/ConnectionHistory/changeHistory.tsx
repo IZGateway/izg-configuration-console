@@ -20,6 +20,8 @@ import _ from 'lodash'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ShowChanges from './showchanges'
+import { patchConsoleWithUser, setUsername } from '../../utility/frontendLogger'
+import { useSession } from 'next-auth/react'
 interface ChangeHistoryProps {
   destId: string
   destTypeId: string
@@ -27,7 +29,7 @@ interface ChangeHistoryProps {
 
 const findDifferentKeysAndValues = (newObj, oldObj) => {
   if (!newObj || !oldObj) {
-    console.error('One or both objects are undefined or null.')
+    console.error('One or both destination objects are undefined or null.')
     return {}
   }
 
@@ -54,6 +56,13 @@ const findDifferentKeysAndValues = (newObj, oldObj) => {
 }
 
 const ChangeHistory = (props: ChangeHistoryProps) => {
+  const { data: session } = useSession()
+    React.useEffect(() => {
+  if (session?.user?.email) {
+    setUsername(session.user.email)
+    patchConsoleWithUser() 
+  }
+  }, [session])
   const { data, error, isLoading } = useSWR(
     `/api/destinationaudit/${props.destTypeId}/${props.destId}`
   )
@@ -62,6 +71,7 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
   if (error) throw new Error(error.message)
   if (isLoading) return <div>loading...</div>
   if (!data) return <div>no data</div>
+
   const historyDataLength = data.length
   const defaultChangeHistoryView = data.slice(0, 5)
 

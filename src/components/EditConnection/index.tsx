@@ -22,6 +22,7 @@ import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
 import { Destination } from '../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
+import { patchConsoleWithUser, setUsername } from '../../utility/frontendLogger'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -78,6 +79,12 @@ const EditConnection = (props: editConnectionProps) => {
   } = useSWR<DestinationChangeRequest>(
     `/api/changerequest/${props.destTypeId}/${props.destId}`
   )
+  useEffect(() => {
+  if (session?.user?.email) {
+    setUsername(session.user.email)
+    patchConsoleWithUser()
+  }
+}, [session])
 
   const getNextBusinessDay = (date, daysToAdd) => {
     let remainingDays = daysToAdd

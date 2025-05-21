@@ -1,4 +1,4 @@
-import logger from '../../../logger'
+import logger, { asyncLocalStorage } from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import { Destination } from '../type/Destination'
 import ConnectionTestFactory from './ConnectionTestFactory'
@@ -7,6 +7,10 @@ import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
 
 const connectionTest = async (destination: Destination, userId: string) => {
+  return await asyncLocalStorage.run( {
+    username: userId || 'Config Console Application',
+    ipAddress: 'ConfigConsoleSystemIP', 
+  }, async () => {
   enum TestSuite {
     'dns',
     'tcp',
@@ -167,6 +171,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
     connectionTestResult,
     numberOfTests,
   }
+})
 }
 export default connectionTest
 
