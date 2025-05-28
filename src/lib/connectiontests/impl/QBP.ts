@@ -11,15 +11,25 @@ import * as xml2js from 'xml2js'
 import logger from '../../../../logger'
 import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
+import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
 
 const TEST_NAME =
   'Send a Submit Single Message with an HL7 QBP for test patient'
 const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
+let password: string
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
+
+    if(!destination?.password){
+    password = await lookupDestinationPassword(
+      this.connectionTestRequest.destinationData.destId,
+      this.connectionTestRequest.destinationData.destinationType.typeId
+    )
+
+  }
     const destinationVersion = await lookupDestinationVersion(
       this.connectionTestRequest.destinationData.destId,
       this.connectionTestRequest.destinationData.destinationType.typeId
@@ -88,7 +98,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       <soap:Body>
       <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
       <iis:username>${destination?.username}</iis:username>
-      <iis:password>${destination?.password}</iis:password>
+      <iis:password>${destination?.password || password}</iis:password>
       <iis:facilityID>${destination?.facilityId}</iis:facilityID>
       <iis:hl7Message>${hl7msg}</iis:hl7Message>
       </iis:submitSingleMessage>
@@ -103,7 +113,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
         <soap:Body>
           <iis:SubmitSingleMessageRequest>
             <iis:Username>${destination?.username}</iis:Username>
-            <iis:Password>${destination.password}</iis:Password>
+            <iis:Password>${destination?.password || password}</iis:Password>
             <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
             <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
           </iis:SubmitSingleMessageRequest>
