@@ -97,7 +97,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                   requestBody.destId,
                   requestBody.destType.typeId
                 )
+              requestBody.isPasswordDifferent = false
             } else {
+              requestBody.isPasswordDifferent = true
               requestBody.requested.password = requestBody.requested.newPassword
             }
             _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
@@ -197,6 +199,7 @@ const upsertChangeRequest = async (
     requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
+    isPasswordDifferent: changeRequestDetails.isPasswordDifferent || false,
     requested: {
       destUri: changeRequestDetails.requested.destUri,
       password: changeRequestDetails.isDraft
