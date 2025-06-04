@@ -123,8 +123,6 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       return requestBody
     }
     logger.debug('HL7 message ' + setRequestBody(destinationVersion))
-    logger.debug('Destination ' + JSON.stringify(destination))
-    logger.debug('Password ' + password)
     const httpsAgentOptions = {
       cert: fs.readFileSync(
         path.resolve(this.connectionTestRequest.certPath),
