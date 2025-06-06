@@ -19,17 +19,18 @@ const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
 let password: string
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class QBP extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
 
-    if(!destination?.password){
-    password = await lookupDestinationPassword(
-      this.connectionTestRequest.destinationData.destId,
-      this.connectionTestRequest.destinationData.destinationType.typeId
-    )
+    if (!destination?.password) {
+      password = await lookupDestinationPassword(
+        this.connectionTestRequest.destinationData.destId,
+        this.connectionTestRequest.destinationData.destinationType.typeId
+      )
 
-  }
+    }
     const destinationVersion = await lookupDestinationVersion(
       this.connectionTestRequest.destinationData.destId,
       this.connectionTestRequest.destinationData.destinationType.typeId
@@ -75,21 +76,19 @@ export default class QBP extends ConnectionTest {
       /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
       const msh11 =
         destination.destinationType.typeId == 5 ||
-        normalOnboardingDestinations.includes(destination.destId)
+          normalOnboardingDestinations.includes(destination.destId)
           ? 'P'
           : 'T'
 
-      const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
-        destination?.MSH5
-      }|${destination?.MSH6}|${moment().format(
-        'YYYYMMDDHHmmssZZ'
-      )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
-        destination?.MSH22
-      }|
+      const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${destination?.MSH5
+        }|${destination?.MSH6}|${moment().format(
+          'YYYYMMDDHHmmssZZ'
+        )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination?.MSH22
+        }|
 QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID.replace(
-        /-/g,
-        ''
-      )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
+          /-/g,
+          ''
+        )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
 RCP|I|10^RD&amp;Records&amp;HL70126`
 
       if (version !== '2014') {
@@ -234,7 +233,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
           })
           res.on('end', function () {
             xml2js.parseString(data, (_err, result) => {
-              if (!_err) {
+              if (!_err && result) {
                 resolve([
                   {
                     ...hl7QueryTestResult,
@@ -247,7 +246,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
                 resolve([
                   {
                     ...hl7QueryTestResult,
-                    detail: `${data}`,
+                    detail: data || 'No data received',
                     message: `Server responded with HTTP status code ${res.statusCode}. Error parsing the XML: ${_err?.message}.`,
                     status: TestStatus.FAIL,
                   },
@@ -257,7 +256,17 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
           })
         }
       })
-
+      req.setTimeout(CONNECTION_TEST_TIMEOUT, () => {
+        req.destroy()
+        resolve([
+          {
+            ...hl7QueryTestResult,
+            detail: 'ETIMEDOUT',
+            message: `QBP test timed out after 5 seconds for ${options.hostname}`,
+            status: TestStatus.FAIL,
+          },
+        ])
+      })
       req.on('error', (error) => {
         resolve([
           {

@@ -6,7 +6,7 @@ import https from 'https'
 import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
-
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class TLS extends ConnectionTest {
   jurisdictionUrl: string
 
@@ -57,9 +57,9 @@ export default class TLS extends ConnectionTest {
             message: this.isGoodTLSVersion((res.socket as any).getProtocol())
               ? ''
               : TestResponseMessages.TLS_VERSION_FAIL(
-                  options.hostname,
-                  (res.socket as any).getProtocol()
-                ),
+                options.hostname,
+                (res.socket as any).getProtocol()
+              ),
             status: this.isGoodTLSVersion((res.socket as any).getProtocol())
               ? TestStatus.PASS
               : TestStatus.FAIL,
@@ -77,7 +77,17 @@ export default class TLS extends ConnectionTest {
           },
         ])
       })
-
+      req.setTimeout(CONNECTION_TEST_TIMEOUT, () => {
+        req.destroy()
+        resolve([
+          {
+            ...dnsConnectionTestResult,
+            detail: 'ETIMEDOUT',
+            message: `The TLS test timed out. The endpoint ${options.hostname} may be unresponsive.`,
+            status: TestStatus.FAIL,
+          },
+        ])
+      })
       req.end()
     })
   }

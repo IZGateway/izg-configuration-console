@@ -132,22 +132,38 @@ const connectionTest = async (destination: Destination, userId: string) => {
       ]
       connectionTestRequest.order = testCounter
       if (!skipTests) {
-        const T = ConnectionTestFactory.getConnectionTest(
-          TestSuite[test],
-          connectionTestRequest
-        )
-        result = await T.run()
+        try {
+          const T = ConnectionTestFactory.getConnectionTest(
+            TestSuite[test],
+            connectionTestRequest
+          )
+          result = await T.run()
+        } catch (error: any) {
+          logger.error(
+            `Error running test ${TestSuite[test]}: ${error.message || error}`
+          )
+          result = [
+            {
+              name: TestSuite[test],
+              status: TestStatus.FAIL,
+              message: error.message || 'An unexpected error occurred.',
+              detail: '',
+              order: testCounter,
+            },
+          ]
+        }
       }
+
 
       testResults.push(...result)
       logger.debug(
         `${TestSuite[test]} results: ${JSON.stringify(result, null, 3)}`
       )
-      if (TestSuite.dns || TestSuite.tcp) {
-        if (result[0]?.status === TestStatus.FAIL) {
-          skipTests = true
-        }
-        connectionTestRequest.ip = result[0]?.detail
+      if (result[0]?.status === TestStatus.FAIL) {
+        skipTests = true;
+      }
+      if (TestSuite[test] === 'dns') {
+        connectionTestRequest.ip = result[0]?.detail;
       }
       logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
