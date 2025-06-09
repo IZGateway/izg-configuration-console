@@ -138,7 +138,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
             connectionTestRequest
           )
           result = await T.run()
-        } catch (error: any) {
+        } catch (error) {
           logger.error(
             `Error running test ${TestSuite[test]}: ${error.message || error}`
           )
