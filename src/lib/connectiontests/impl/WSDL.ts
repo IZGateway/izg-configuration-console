@@ -7,6 +7,7 @@ import path from 'path'
 import fs from 'fs'
 import { DOMParser } from '@xmldom/xmldom'
 
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class WSDL extends ConnectionTest {
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
@@ -59,7 +60,7 @@ export default class WSDL extends ConnectionTest {
               if (
                 resXmlDoc.documentElement.localName == 'definitions' &&
                 resXmlDoc.documentElement.namespaceURI ==
-                  'http://schemas.xmlsoap.org/wsdl/'
+                'http://schemas.xmlsoap.org/wsdl/'
               ) {
                 resolve([
                   {
@@ -102,6 +103,17 @@ export default class WSDL extends ConnectionTest {
             },
           ])
         }
+      })
+      req.setTimeout(CONNECTION_TEST_TIMEOUT, () => {
+        req.destroy()
+        resolve([
+          {
+            ...wsdlConnectionTestResult,
+            detail: 'ETIMEDOUT',
+            message: `WSDL test timed out after 5 seconds for ${options.hostname}`,
+            status: TestStatus.FAIL,
+          },
+        ])
       })
 
       req.on('error', (error) => {
