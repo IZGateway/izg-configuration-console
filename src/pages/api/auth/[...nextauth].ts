@@ -30,6 +30,7 @@ export const authOptions = {
         session.accessToken = token.accessToken
         session.user.groups = token.groups
         session.user.role = _.intersection(token.groups, roles)[0]
+        session.user.sub = token.sub
         session.user.isAdmin = token?.groups?.includes(
           process.env.OPERATIONS_GROUP
         )
@@ -43,6 +44,7 @@ export const authOptions = {
         token.id_token = account.id_token
         token.provider = account.provider
         token.accessToken = account.access_token
+        token.sub = account.providerAccountId
         token.id = profile.id
         token.groups = profile.groups
         try {
