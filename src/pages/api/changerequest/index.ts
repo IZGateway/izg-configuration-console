@@ -218,4 +218,4 @@ const upsertChangeRequest = async (
   return response
 }
 
-export default withMiddleware('logRequest')(handler)
+export default withMiddleware()(handler)
