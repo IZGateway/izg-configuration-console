@@ -28,15 +28,15 @@ const logApiRequest: Middleware = async (req, res, next) => {
     logger.info('Api request ' + req.url, {
       req,
       res,
-      user: session.user.email || null,
-      sub: session.user.sub || null,
+      user: session?.user?.email || null,
+      sub: session?.user?.sub || null,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
   } else {
     logger.info('Api request ' + req.url, {
-      user: session.user.email || null,
-      sub: session.user.sub || null,
+      user: session?.user?.email || null,
+      sub: session?.user?.sub || null,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
