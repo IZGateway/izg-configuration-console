@@ -107,6 +107,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               ...requestBody,
               jiraId: changeRequestTicketResponse.key,
             })
+            logger.info(
+              `Change request ticket created for destination id ${requestBody.destId} on environment ${requestBody.destType.type}. Jira ticket id is ${changeRequestTicketResponse?.key}`
+            )
           }
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
@@ -154,7 +157,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               facilityId: requestBody.requested.facilityId,
             },
           })
-
+          logger.info(
+            `Change Request schedule with Jira ticket id ${requestBody.jiraId} was updated.`
+          )
           res.status(200).json('Change Request is updated')
         } catch (error) {
           logger.debug(error)
@@ -163,6 +168,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       } else {
         try {
           await dbClient.upsertDestinationChangeRequest(requestBody)
+          logger.info(
+            `Change Request with Jira ticket id ${requestBody.jiraId} was updated.`
+          )
           res.status(200).json('Change Request is updated')
         } catch (error) {
           logger.debug(error)
@@ -172,6 +180,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     } else if (req.method === 'DELETE') {
       try {
         await dbClient.deleteDestinationChangeRequest(requestBody.id)
+        logger.info(`Change Request with ID ${requestBody.id} is deleted.`)
         res.status(200).json('Change Request is deleted')
       } catch (error) {
         logger.debug(error)

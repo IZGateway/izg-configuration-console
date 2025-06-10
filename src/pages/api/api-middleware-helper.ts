@@ -25,7 +25,7 @@ const logApiRequest: Middleware = async (req, res, next) => {
     logger.warn(
       'WARNING: LOG_LEVEL is set to DEBUG, this will log sensitive information for every API request'
     )
-    logger.info('Api request ' + req.url, {
+    logger.info('API Request ' + req.url, {
       req,
       res,
       user: session?.user?.email || null,
@@ -34,7 +34,7 @@ const logApiRequest: Middleware = async (req, res, next) => {
       'user-agent': req.headers['user-agent'] || null,
     })
   } else {
-    logger.info('Api request ' + req.url, {
+    logger.info('API Request ' + req.url, {
       user: session?.user?.email || null,
       sub: session?.user?.sub || null,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
