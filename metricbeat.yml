@@ -1,4 +1,5 @@
 #============================= Metricbeat Modules =============================
+path.data: /usr/share/metricbeat/data
 metricbeat.modules:
   - module: system
     metricsets:
