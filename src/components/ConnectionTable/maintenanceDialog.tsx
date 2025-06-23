@@ -116,7 +116,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
             startDateTime,
             reinstatementDateTime
           ),
-          getMaintenaceValues: {
+          maintenanceValues: {
             maint_start: startDateTime,
             maint_end: reinstatementDateTime,
           },
