@@ -153,4 +153,10 @@ Navigate to https://localhost in a browser, and you should see the application p
 
 Run npm install
 ```
+Add .env.test file in porject root folder which will include below values 
+OKTA_USERNAME=Username of the user
+OKTA_PASSWORD=Password for the user
+BASE_URL=URL of where you want to run these tests against
+
+```
 Run npm run test:e2e which will run tests in all 4 headed browsers. To run for specific browser use this command npm run test:e2e --project=Chrome
