@@ -147,3 +147,10 @@ Make sure you have your .env.local file setup properly. Please note that your .e
 ### **After start**
 
 Navigate to https://localhost in a browser, and you should see the application prompt you for a keycloak login
+
+
+### **End to End testing: Playwright set up**
+
+Run npm install
+```
+Run npm run test:e2e which will run tests in all 4 headed browsers. To run for specific browser use this command npm run test:e2e --project=Chrome
