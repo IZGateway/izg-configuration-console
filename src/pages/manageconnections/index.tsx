@@ -98,7 +98,9 @@ export const getServerSideProps = async (context) => {
     })
   )
 
-  return { props: { data: endpoints } }
+  // Remove statusBy field as it can contain private ip/dns information
+  const cleanedEndpoints = endpoints.map(({ statusBy, ...endpoint }) => endpoint)
+  return { props: { data: cleanedEndpoints } }
 }
 
 const fetchEndpointStatus = async (
