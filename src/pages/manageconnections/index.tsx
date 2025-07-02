@@ -81,6 +81,10 @@ export const getServerSideProps = async (context) => {
           endpoint.destTypeId
         )
 
+      // Remove statusBy field from endpoint info to prevent private IP/DNS being
+      // delivered to client.
+      delete endpoint.statusBy
+
       return {
         ...endpoint,
         hasChangeRequest: !!destinationChangeRequest,
@@ -98,9 +102,7 @@ export const getServerSideProps = async (context) => {
     })
   )
 
-  // Remove statusBy field as it can contain private ip/dns information
-  const cleanedEndpoints = endpoints.map(({ statusBy, ...endpoint }) => endpoint)
-  return { props: { data: cleanedEndpoints } }
+  return { props: { data: endpoints } }
 }
 
 const fetchEndpointStatus = async (
