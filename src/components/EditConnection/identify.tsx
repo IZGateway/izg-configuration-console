@@ -229,12 +229,13 @@ const Identify = (props: any) => {
                 id="destUri"
                 name="destUri"
                 label="Endpoint URL"
-                variant="filled"
+                variant="outlined"
                 fullWidth
-                disabled
-                value={props.destUri}
+                value={props.value.destUri}
+                onChange={handleChange}
+                error={_.get(props.formErrors, 'destUri', null)}
+                helperText={_.get(props.formErrors, 'destUri', null)}
                 InputProps={{
-                  readOnly: true,
                   endAdornment: (
                     <InputAdornment position="start">
                       <Tooltip

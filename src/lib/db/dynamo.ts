@@ -263,7 +263,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         MSH5: item.msh5 || '',
         MSH6: item.msh6 || '',
         MSH22: item.msh22 || '',
-        RXA11: item.RXA11 || '',
+        RXA11: item.rxa11 || '',
         facilityId: item.facilityId || '',
       },
       current: {
@@ -491,6 +491,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
     const stringKeys = [
       'facilityId',
       'username',
+      'destUri',
       'password',
       'MSH3',
       'MSH4',

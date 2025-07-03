@@ -17,6 +17,7 @@ const Details = (params: {
 }) => {
   const fieldNames = [
     'username',
+    'destUri',
     'facilityId',
     'MSH3',
     'MSH4',
