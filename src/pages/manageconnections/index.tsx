@@ -81,10 +81,6 @@ export const getServerSideProps = async (context) => {
           endpoint.destTypeId
         )
 
-      // Remove statusBy field from endpoint info to prevent private IP/DNS being
-      // delivered to client.
-      delete endpoint.statusBy
-
       return {
         ...endpoint,
         hasChangeRequest: !!destinationChangeRequest,
@@ -142,7 +138,12 @@ const fetchEndpointStatus = async (
   return responses
     .filter((response) => response.status === ALL_SETTLED_SUCCESSFUL)
     .map((response: any) => response.value.data)
-    .flatMap((data) => Object.values(data).map((value: any) => value[0]))
+    .flatMap((data) => Object.values(data).map((value: any) => {
+      const endpoint = value[0]
+      // Remove statusBy field to prevent private IP/DNS being delivered to client
+      delete endpoint.statusBy
+      return endpoint
+    }))
 }
 
 const getMaintenanceValues = (destination: Destination | null) => ({
