@@ -45,7 +45,7 @@ const validationRules = {
   },
   username: {
     regex: new RegExp(`^[A-Za-z0-9_\\-.]{0,${maxUsernameLength}}$`),
-    message: `Value must be a max of ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and . characters.`,
+    message: `Value must be between ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters`
   },
 }
 export default validationRules

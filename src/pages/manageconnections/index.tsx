@@ -6,24 +6,17 @@ import Container from '../../components/Container'
 import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
-import * as fs from 'fs'
-import path from 'path'
-import https from 'https'
-import axios from 'axios'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
-import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
-import isOperationsRole from '../../lib/security/accessutils'
 import { dbClient } from '../../lib/utils/dbclient'
 import { Destination } from '../../lib/type/Destination'
 import {
   hasActiveMaintenance,
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
-
-const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
+import { fetchEndpointStatus } from '../../lib/services/fetchEndpointStatus'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -101,54 +94,9 @@ export const getServerSideProps = async (context) => {
   return { props: { data: endpoints } }
 }
 
-const fetchEndpointStatus = async (
-  role: string,
-  jurisdictions: string[]
-): Promise<any[]> => {
-  const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
-  const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
-  const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''
-  const IZG_ENDPOINT_PASSCODE = process.env.IZG_ENDPOINT_PASSCODE || ''
-  const httpsAgentOptions = {
-    cert: fs.readFileSync(path.resolve(IZG_ENDPOINT_CRT_PATH), 'utf-8'),
-    key: fs.readFileSync(path.resolve(IZG_ENDPOINT_KEY_PATH), 'utf-8'),
-    passphrase: IZG_ENDPOINT_PASSCODE,
-    rejectUnauthorized: false,
-    keepAlive: true,
-  }
-
-  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
-    IZG_STATUS_ENDPOINT_URL
-  )
-  let hubURLs = configuredHubURLs.getIZGHubURLs()
-
-  if (!isOperationsRole(role)) {
-    hubURLs = appendJurisdictionsAssignedToUser(hubURLs, jurisdictions)
-  }
-
-  const responses = await Promise.allSettled(
-    hubURLs.map((endpoint) =>
-      axios.get(endpoint, {
-        httpsAgent: new https.Agent(httpsAgentOptions),
-        timeout: 30000,
-      })
-    )
-  )
-
-  return responses
-    .filter((response) => response.status === ALL_SETTLED_SUCCESSFUL)
-    .map((response: any) => response.value.data)
-    .flatMap((data) => Object.values(data).map((value: any) => value[0]))
-}
 
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,
   maint_end: destination?.maintEnd?.toISOString() || null,
 })
 
-const appendJurisdictionsAssignedToUser = (
-  hubURLs: string[],
-  jurisdictions: string[]
-): string[] => {
-  return hubURLs.map((izgUrl) => `${izgUrl}?include=${jurisdictions.join(',')}`)
-}
