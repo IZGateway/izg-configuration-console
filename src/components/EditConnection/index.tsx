@@ -27,6 +27,15 @@ interface editConnectionProps {
   destTypeId: string
 }
 
+// IGDD-1853
+const getAgreementKey = (destId: string, destTypeId: string) => `agreement-accepted-${destTypeId}-${destId}`
+const hasAcceptedAgreement = (destId: string, destTypeId: string): boolean => {
+  return sessionStorage.getItem(getAgreementKey(destId, destTypeId)) === 'true'
+}
+const setAcceptedAgreement = (destId: string, destTypeId: string) => {
+  sessionStorage.setItem(getAgreementKey(destId, destTypeId), 'true')
+}
+
 const steps = [
   'SERVICE AGREEMENT',
   'ORGANIZATION',
@@ -46,7 +55,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(false)
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement(props.destId, props.destTypeId))
   const [, setAccepted] = useState(false)
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
@@ -195,6 +204,13 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues])
 
+  useEffect(() => {
+    // Skip agreement acknowledgement if already accepted this session
+    if (hasAcceptedAgreement(props.destId, props.destTypeId) && activeStep === 0) {
+      setActiveStep(1)
+    }
+  }, [props.destId, props.destTypeId, activeStep])
+
   if (destError || draftError)
     throw new Error(destError.message || draftError.message)
   if (isDestLoading || isDraftLoading) return <div>loading...</div>
@@ -304,6 +320,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   const handleAccept = () => {
     setAccepted(true)
+    setAcceptedAgreement(props.destId, props.destTypeId)
     advanceStepper(1)
   }
 
