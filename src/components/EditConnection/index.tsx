@@ -28,12 +28,12 @@ interface editConnectionProps {
 }
 
 // IGDD-1853
-const getAgreementKey = (destId: string, destTypeId: string) => `agreement-accepted-${destTypeId}-${destId}`
-const hasAcceptedAgreement = (destId: string, destTypeId: string): boolean => {
-  return sessionStorage.getItem(getAgreementKey(destId, destTypeId)) === 'true'
+const authorizationAgreementKey = `authorization-agreement-accepted`
+const hasAcceptedAgreement = (): boolean => {
+  return sessionStorage.getItem(authorizationAgreementKey) === 'true'
 }
-const setAcceptedAgreement = (destId: string, destTypeId: string) => {
-  sessionStorage.setItem(getAgreementKey(destId, destTypeId), 'true')
+const setAcceptedAgreement = () => {
+  sessionStorage.setItem(authorizationAgreementKey, 'true')
 }
 
 const steps = [
@@ -55,8 +55,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(hasAcceptedAgreement(props.destId, props.destTypeId))
-  const [, setAccepted] = useState(false)
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement())
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
@@ -206,7 +205,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   useEffect(() => {
     // Skip agreement acknowledgement if already accepted this session
-    if (hasAcceptedAgreement(props.destId, props.destTypeId) && activeStep === 0) {
+    if (hasAcceptedAgreement() && activeStep === 0) {
       setActiveStep(1)
     }
   }, [props.destId, props.destTypeId, activeStep])
@@ -319,8 +318,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleAccept = () => {
-    setAccepted(true)
-    setAcceptedAgreement(props.destId, props.destTypeId)
+    setAcceptedAgreement()
     advanceStepper(1)
   }
 
