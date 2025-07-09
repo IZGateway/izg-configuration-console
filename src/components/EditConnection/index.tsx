@@ -22,19 +22,13 @@ import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
 import { Destination } from '../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
+import { hasAcceptedAgreement, setAcceptedAgreement } from '../../utility/agreementStorage'
 interface editConnectionProps {
   destId: string
   destTypeId: string
 }
 
-// IGDD-1853
-const authorizationAgreementKey = `authorization-agreement-accepted`
-const hasAcceptedAgreement = (): boolean => {
-  return sessionStorage.getItem(authorizationAgreementKey) === 'true'
-}
-const setAcceptedAgreement = () => {
-  sessionStorage.setItem(authorizationAgreementKey, 'true')
-}
+
 
 const steps = [
   'SERVICE AGREEMENT',
