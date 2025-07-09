@@ -122,6 +122,67 @@ jobs:
             ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+  build-and-push-aphl:
+    name: 'Push Image To APHL'
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.ref, 'refs/heads/release/') }}
+    needs: [code-quality-check, generate-release-timestamp]
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: |
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-
+
+      - name: Configure AWS credentials (APHL)
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.APHL_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.APHL_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR (APHL)
+        id: login_ecr_aphl
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker Metadata (APHL)
+        id: docker_meta_aphl
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
+          tags: |
+            type=raw,value=izg-configuration-console_${{ needs.generate-release-timestamp.outputs.releaseDate }}
+            type=raw,value=izg-configuration-console_rc_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
+            type=raw,value=izg-configuration-console_release_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ github.ref == 'refs/heads/main' }}
+          flavor: |
+            latest=false
+
+      - name: Build and push Docker IZG Configuration Console image
+        id: docker_build_aphl
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+          push: true
+          tags: |
+            ${{ steps.docker_meta_aphl.outputs.tags }}
+          labels: ${{ steps.docker_meta_aphl.outputs.labels }}
+
   deploy-dev:
     name: Deploy to Dev AWS environment
     runs-on: ubuntu-latest
