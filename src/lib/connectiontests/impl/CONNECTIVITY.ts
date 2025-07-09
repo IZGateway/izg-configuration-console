@@ -11,6 +11,7 @@ import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Send a Connectivity Test message'
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class CONNECTIVITY extends ConnectionTest {
   run = async (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {
@@ -34,9 +35,8 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <connectivityTest xmlns="urn:cdc:iisb:2011">
-            <echoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
-          this.connectionTestRequest.port
-        } an Audacious Hello at ${new Date()} !</echoBack>
+            <echoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${this.connectionTestRequest.port
+          } an Audacious Hello at ${new Date()} !</echoBack>
         </connectivityTest>
         </soap:Body>
         </soap:Envelope>`
@@ -49,9 +49,8 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014">
-            <EchoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
-          this.connectionTestRequest.port
-        } an Audacious Hello at ${new Date()} !</EchoBack>
+            <EchoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${this.connectionTestRequest.port
+          } an Audacious Hello at ${new Date()} !</EchoBack>
         </ConnectivityTestRequest>
         </soap:Body>
         </soap:Envelope>`
@@ -132,6 +131,18 @@ export default class CONNECTIVITY extends ConnectionTest {
             parser = null
           }
         })
+      })
+
+      req.setTimeout(CONNECTION_TEST_TIMEOUT, () => {
+        req.destroy()
+        resolve([
+          {
+            ...connectivityTestResult,
+            detail: `Request timed out after 5 seconds`,
+            message: 'Connectivity test timed out after 5 seconds',
+            status: TestStatus.FAIL,
+          },
+        ])
       })
 
       req.on('error', (error) => {

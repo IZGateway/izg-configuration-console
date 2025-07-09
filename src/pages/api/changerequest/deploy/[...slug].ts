@@ -123,19 +123,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           deleteDestinationChangeRequest = 2,
         }
         if (results.every((result) => result.status === 'fulfilled')) {
-          logger.debug(
+          logger.info(
             `Jira change request ${changeRequest.jiraId} deployed successfully`
           )
           res.status(200).json('update successful')
         }
-        logger.debug(
+        logger.info(
           `Jira change request ${changeRequest.jiraId} deployment error(s) detected...`
         )
         results.map((result, index) => {
           let errorMessage = ''
           if (result.status === 'rejected') {
             errorMessage = `Error deploying Jira change request ${changeRequest.jiraId} on ${calls[index]}:  ${result.reason}`
-            logger.debug(errorMessage)
+            logger.info(errorMessage)
             errorMessages.push(errorMessage)
           } else {
             errorMessages.push(`${calls[index]} was successful`)

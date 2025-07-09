@@ -1,6 +1,6 @@
 # Filebeat Inputs section
 # Add another item to the "filebeat.inputs" object.
-
+path.data: /usr/share/filebeat/data
 filebeat.inputs:
   - type: 'filestream'
     id: izgw-config-console-filestream
@@ -71,7 +71,7 @@ output.elasticsearch:
   indices:
     - index: '${ELASTIC_INDEX:izgw-config-console-dev}'
       when.not.contains:
-        tags: "nginx"
+        tags: 'nginx'
     - index: '${ELASTIC_INDEX_NGINX:izgw-config-console-nginx-dev}'
       when.contains:
-        tags: "nginx"
+        tags: 'nginx'
