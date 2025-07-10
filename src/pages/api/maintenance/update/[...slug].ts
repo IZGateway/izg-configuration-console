@@ -44,6 +44,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       RXA11: undefined,
       facilityId: undefined,
       MSH6: undefined,
+      MSH11: undefined,
       MSH22: undefined,
       maintReason: maintData.message,
       maintEnd: maintData.reinstatementDateTime

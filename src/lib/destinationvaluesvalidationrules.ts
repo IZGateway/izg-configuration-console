@@ -39,6 +39,10 @@ const validationRules = {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
     message: facilityAndMSHValidationMessage,
   },
+  MSH11: {
+    regex: /^[A-Za-z0-9_-]{0,25}$/,
+    message: facilityAndMSHValidationMessage,
+  },
   RXA11: {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
     message: facilityAndMSHValidationMessage,

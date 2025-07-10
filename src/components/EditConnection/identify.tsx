@@ -122,6 +122,14 @@ const Identify = (props: any) => {
       title: 'Version: MSH.22 represents the HL7 version being used.',
     },
     {
+      id: 'msh11',
+      name: 'MSH11',
+      label: 'MSH-11',
+      value: props.value.MSH11,
+      group: 4,
+      title: 'Version: MSH.11 represents the HL7 version being used.',
+    },
+    {
       id: 'rxa11',
       name: 'RXA11',
       label: 'RXA-11',
@@ -385,7 +393,8 @@ const Identify = (props: any) => {
                   ))}
               </Box>
             </Box>
-            <Box sx={{ marginTop: '1rem' }}>
+            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
               {formFields
                 .filter((field) => field.group === 4)
                 .map((field) => (
@@ -402,6 +411,7 @@ const Identify = (props: any) => {
                     helperText={_.get(props.formErrors, field.name, null)}
                   />
                 ))}
+              </Box>
             </Box>
           </CardContent>
         </Card>

@@ -124,6 +124,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: draftData.requested.MSH4,
         MSH5: draftData.requested.MSH5,
         MSH6: draftData.requested.MSH6,
+        MSH11: draftData.requested.MSH11,
         MSH22: draftData.requested.MSH22,
         RXA11: draftData.requested.RXA11,
       })
@@ -137,6 +138,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: draftData?.current.MSH4,
         MSH5: draftData?.current.MSH5,
         MSH6: draftData?.current.MSH6,
+        MSH11: draftData?.current.MSH11,
         MSH22: draftData?.current.MSH22,
         RXA11: draftData?.current.RXA11,
       })
@@ -151,6 +153,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
         MSH6: destData?.MSH6,
+        MSH11: destData?.MSH11,
         MSH22: destData?.MSH22,
         RXA11: destData?.RXA11,
       })
@@ -164,6 +167,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
         MSH6: destData?.MSH6,
+        MSH11: destData?.MSH11,
         MSH22: destData?.MSH22,
         RXA11: destData?.RXA11,
       })
@@ -390,6 +394,7 @@ const EditConnection = (props: editConnectionProps) => {
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
       MSH6: destData?.MSH6,
+      MSH11: destData?.MSH11,
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
@@ -403,6 +408,7 @@ const EditConnection = (props: editConnectionProps) => {
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
       MSH6: destData?.MSH6,
+      MSH11: destData?.MSH11,
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })

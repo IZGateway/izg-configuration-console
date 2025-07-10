@@ -85,6 +85,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         destVersion: undefined,
         username: changeRequest.requested.username,
         MSH6: changeRequest.requested.MSH6 || undefined,
+        MSH11: changeRequest.requested.MSH11 || undefined,
         MSH22: changeRequest.requested.MSH22 || undefined,
         MSH3: changeRequest.requested.MSH3 || undefined,
         MSH4: changeRequest.requested.MSH4 || undefined,
