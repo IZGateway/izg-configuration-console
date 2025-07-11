@@ -22,13 +22,12 @@ import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
 import { Destination } from '../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
-import { hasAcceptedAgreement, setAcceptedAgreement } from '../../utility/agreementStorage'
 interface editConnectionProps {
   destId: string
   destTypeId: string
 }
 
-
+const authorizationAgreementKey = `authorization-agreement-accepted`
 
 const steps = [
   'SERVICE AGREEMENT',
@@ -49,7 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(hasAcceptedAgreement())
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement(authorizationAgreementKey))
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
@@ -199,7 +198,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   useEffect(() => {
     // Skip agreement acknowledgement if already accepted this session
-    if (hasAcceptedAgreement() && activeStep === 0) {
+    if (hasAcceptedAgreement(authorizationAgreementKey) && activeStep === 0) {
       setActiveStep(1)
     }
   }, [props.destId, props.destTypeId, activeStep])
@@ -312,7 +311,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleAccept = () => {
-    setAcceptedAgreement()
+    setAcceptedAgreement(authorizationAgreementKey)
     advanceStepper(1)
   }
 
@@ -552,6 +551,18 @@ const EditConnection = (props: editConnectionProps) => {
       )}
     </div>
   )
+}
+
+export const hasAcceptedAgreement = (key: string): boolean => {
+  return sessionStorage.getItem(key) === 'true'
+}
+
+export const setAcceptedAgreement = (key: string) => {
+  sessionStorage.setItem(key, 'true')
+}
+
+export const clearAcceptedAgreement = (key: string): void => {
+  sessionStorage.removeItem(key)
 }
 
 export default EditConnection
