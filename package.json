@@ -1,7 +1,7 @@
 {
   "name": "izg-configuration-console",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.4.1",
   "scripts": {
     "dev": "next",
     "build": "next build",
@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "test": "jest",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
-    "cypress:open": "cypress open --config-file cypress/config/cypress-dev-config.ts"
+    "test:e2e": "dotenv -e .env.test -- npx playwright test --headed"
   },
   "dependencies": {
     "@aws-sdk/lib-dynamodb": "^3.744.0",
@@ -69,6 +69,7 @@
     "@commitlint/cli": "^17.6.5",
     "@commitlint/config-conventional": "^17.6.5",
     "@next/eslint-plugin-next": "^14.0.1",
+    "@playwright/test": "^1.53.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^14.0.0",
     "@types/gtag.js": "^0.0.12",

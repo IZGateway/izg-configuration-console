@@ -70,7 +70,7 @@ const PopOverActionButtons = (props: {
       if (response.ok) {
         props.updateRow({
           ...props.row,
-          getMaintenaceValues: { maint_start: null, maint_end: null },
+          maintenanceValues: { maint_start: null, maint_end: null },
           hasActiveMaintenance: false,
           hasFutureMaintenance: false,
         })

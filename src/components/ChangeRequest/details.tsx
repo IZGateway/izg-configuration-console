@@ -17,6 +17,7 @@ const Details = (params: {
 }) => {
   const fieldNames = [
     'username',
+    'destUri',
     'facilityId',
     'MSH3',
     'MSH4',
@@ -28,7 +29,7 @@ const Details = (params: {
   ]
 
   return (
-    <div>
+    <div style={{ overflowX: 'auto' }}>
       <Table sx={{ minWidth: 400 }} aria-label="simple table">
         <TableHead>
           <TableRow>

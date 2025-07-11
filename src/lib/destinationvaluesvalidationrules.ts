@@ -1,5 +1,6 @@
 const facilityAndMSHValidationMessage =
   'Value must be between 0-25 characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters'
+const maxUsernameLength = 50
 
 const validationRules = {
   newPassword: {
@@ -43,8 +44,12 @@ const validationRules = {
     message: facilityAndMSHValidationMessage,
   },
   username: {
-    regex: /^[A-Za-z0-9_\-.]{0,25}$/,
-    message: facilityAndMSHValidationMessage,
+    regex: new RegExp(`^[A-Za-z0-9_\\-.]{0,${maxUsernameLength}}$`),
+    message: `Value must be between ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters`
   },
+  destUri: {
+  regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
+  message: 'Please enter a valid URL (must start with http:// or https://)',
+},
 }
 export default validationRules

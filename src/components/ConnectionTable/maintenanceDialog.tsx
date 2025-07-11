@@ -10,6 +10,7 @@ import {
   Box,
   IconButton,
 } from '@mui/material'
+import moment from 'moment'
 import { TransitionProps } from '@mui/material/transitions'
 import palette from '../../styles/theme/palette'
 import { AdapterMoment } from '@mui/x-date-pickers/AdapterMoment'
@@ -52,6 +53,18 @@ const customPaperStyles = {
   paddingBottom: '16px',
 }
 
+const getClosestTenMinuteInterval = (time) => {
+  const minutes = time.minutes()
+  const remainder = minutes % 10
+  if (remainder > 0) {
+    return time
+      .add(10 - remainder, 'minutes')
+      .seconds(0)
+      .milliseconds(0)
+  }
+  return time.seconds(0).milliseconds(0)
+}
+
 const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const { setAlert } = useContext(CombinedContext)
   const [reinstatementDateTime, setReinstatementDateTime] = useState(null)
@@ -60,10 +73,16 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
   const [error, setError] = useState(null)
   const isDisableConnectionButtonDisabled =
     !startDateTime || !reinstatementDateTime || !message || error
+
   useEffect(() => {
     if (props.open) {
-      setReinstatementDateTime(null)
-      setStartDateTime(null)
+      const now = moment()
+      const startDateTime = getClosestTenMinuteInterval(now)
+      const reinstatementDateTime = getClosestTenMinuteInterval(now)
+        .clone()
+        .add(1, 'hour')
+      setReinstatementDateTime(reinstatementDateTime)
+      setStartDateTime(startDateTime)
       setMessage('')
       setError(null)
     }
@@ -97,7 +116,7 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
             startDateTime,
             reinstatementDateTime
           ),
-          getMaintenaceValues: {
+          maintenanceValues: {
             maint_start: startDateTime,
             maint_end: reinstatementDateTime,
           },
@@ -180,17 +199,19 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
               <DateTimePicker
                 label="Start date and time*"
                 disablePast
-                defaultValue={null}
                 onChange={handleStartDateChange}
                 value={startDateTime}
+                minDateTime={moment()}
+                closeOnSelect={false} 
                 sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
                 label="Reinstatement date and time*"
                 disablePast
                 onChange={handleReinstateDateChange}
-                defaultValue={null}
                 value={reinstatementDateTime}
+                closeOnSelect={false} 
+                minDateTime={moment()}
                 slotProps={{
                   textField: {
                     variant: 'outlined',
