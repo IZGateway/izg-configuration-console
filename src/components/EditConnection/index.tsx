@@ -189,7 +189,6 @@ const EditConnection = (props: editConnectionProps) => {
       setFormErrors(null)
       setFormValuesDelta(null)
       const changedValues = getDelta(defaultFormValues, formValues)
-      console.log(changedValues)
       const validationErrors = changeRequestValidation(
         changedValues,
         changedValues.facilityId || defaultFormValues.facilityId,
@@ -210,7 +209,6 @@ const EditConnection = (props: editConnectionProps) => {
   const isNextButtonDisabled =
     (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
     !_.isEmpty(formErrors)
-        console.log(formErrors)
   const isScheduleButtonDisabled = !asapSelected && !futureDateTimeSelected
 
   const toggleTestDrawer = async () => {
@@ -350,7 +348,6 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const saveDraft = async () => {
-    console.log('saving draft')
     const response = await fetch(`/api/changerequest`, {
       method: 'POST',
       body: JSON.stringify({
