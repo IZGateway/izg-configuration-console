@@ -199,17 +199,19 @@ const MaintenanceDialog = (props: maintenanceDialogProps) => {
               <DateTimePicker
                 label="Start date and time*"
                 disablePast
-                //defaultValue={null}
                 onChange={handleStartDateChange}
                 value={startDateTime}
+                minDateTime={moment()}
+                closeOnSelect={false} 
                 sx={{ width: '100%', marginBottom: '24px' }}
               />
               <DateTimePicker
                 label="Reinstatement date and time*"
                 disablePast
                 onChange={handleReinstateDateChange}
-                //defaultValue={null}
                 value={reinstatementDateTime}
+                closeOnSelect={false} 
+                minDateTime={moment()}
                 slotProps={{
                   textField: {
                     variant: 'outlined',
