@@ -35,62 +35,62 @@ describe('sessionStorageTests', () => {
   describe('hasAcceptedAgreement', () => {
 
     it('should return false when no key is stored', () => {
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
       expect(mockSessionStorage.getItem).toHaveBeenCalledWith(authorizationAgreementKey)
     })
 
     it('should return false when key is stored as "false"', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, 'false')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
     })
 
     it('should return false when agreement is stored as empty string', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, '')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
     })
 
     it('should return true when agreement is stored as "true"', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, 'true')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      expect(hasAcceptedAgreement()).toBe(true)
     })
 
     it('should return false for any other string value', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, 'yes')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
     })
 
   })
 
   describe('setAcceptedAgreement', () => {
     it('should store "true" in sessionStorage', () => {
-      setAcceptedAgreement(authorizationAgreementKey)
+      setAcceptedAgreement()
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(authorizationAgreementKey, 'true')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      expect(hasAcceptedAgreement()).toBe(true)
     })
 
     it('should overwrite existing value', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, 'false')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
 
-      setAcceptedAgreement(authorizationAgreementKey)
+      setAcceptedAgreement()
 
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      expect(hasAcceptedAgreement()).toBe(true)
     })
   })
 
   describe('clearAcceptedAgreement', () => {
     it('should remove the key from sessionStorage', () => {
       mockSessionStorage.setItem(authorizationAgreementKey, 'true')
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      expect(hasAcceptedAgreement()).toBe(true)
 
-      clearAcceptedAgreement(authorizationAgreementKey)
+      clearAcceptedAgreement()
 
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
     })
 
     it('should handle clearing non-existent key', () => {
-      clearAcceptedAgreement(authorizationAgreementKey)
+      clearAcceptedAgreement()
       expect(mockSessionStorage.removeItem).toHaveBeenCalledWith(authorizationAgreementKey)
     })
   })
@@ -98,28 +98,28 @@ describe('sessionStorageTests', () => {
   describe('integration tests', () => {
     it('should work together: set, check, clear, check', () => {
       // Initially should be false
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
 
       // Set agreement
-      setAcceptedAgreement(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      setAcceptedAgreement()
+      expect(hasAcceptedAgreement()).toBe(true)
 
       // Clear agreement
-      clearAcceptedAgreement(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      clearAcceptedAgreement()
+      expect(hasAcceptedAgreement()).toBe(false)
     })
 
     it('should handle multiple set/clear cycles', () => {
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      expect(hasAcceptedAgreement()).toBe(false)
 
-      setAcceptedAgreement(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      setAcceptedAgreement()
+      expect(hasAcceptedAgreement()).toBe(true)
 
-      clearAcceptedAgreement(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(false)
+      clearAcceptedAgreement()
+      expect(hasAcceptedAgreement()).toBe(false)
 
-      setAcceptedAgreement(authorizationAgreementKey)
-      expect(hasAcceptedAgreement(authorizationAgreementKey)).toBe(true)
+      setAcceptedAgreement()
+      expect(hasAcceptedAgreement()).toBe(true)
     })
   })
 })

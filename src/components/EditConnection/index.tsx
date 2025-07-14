@@ -48,7 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(hasAcceptedAgreement(authorizationAgreementKey))
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement())
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
@@ -198,7 +198,7 @@ const EditConnection = (props: editConnectionProps) => {
 
   useEffect(() => {
     // Skip agreement acknowledgement if already accepted this session
-    if (hasAcceptedAgreement(authorizationAgreementKey) && activeStep === 0) {
+    if (hasAcceptedAgreement() && activeStep === 0) {
       setActiveStep(1)
     }
   }, [props.destId, props.destTypeId, activeStep])
@@ -311,7 +311,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleAccept = () => {
-    setAcceptedAgreement(authorizationAgreementKey)
+    setAcceptedAgreement()
     advanceStepper(1)
   }
 
@@ -553,16 +553,16 @@ const EditConnection = (props: editConnectionProps) => {
   )
 }
 
-export const hasAcceptedAgreement = (key: string): boolean => {
-  return sessionStorage.getItem(key) === 'true'
+export const hasAcceptedAgreement = (): boolean => {
+  return sessionStorage.getItem(authorizationAgreementKey) === 'true'
 }
 
-export const setAcceptedAgreement = (key: string) => {
-  sessionStorage.setItem(key, 'true')
+export const setAcceptedAgreement = () => {
+  sessionStorage.setItem(authorizationAgreementKey, 'true')
 }
 
-export const clearAcceptedAgreement = (key: string): void => {
-  sessionStorage.removeItem(key)
+export const clearAcceptedAgreement = (): void => {
+  sessionStorage.removeItem(authorizationAgreementKey)
 }
 
 export default EditConnection
