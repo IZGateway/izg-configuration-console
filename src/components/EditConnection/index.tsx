@@ -192,7 +192,7 @@ const EditConnection = (props: editConnectionProps) => {
       const validationErrors = changeRequestValidation(
         changedValues,
         changedValues.facilityId || defaultFormValues.facilityId,
-        props.destTypeId
+        destData.destinationType.type
       ).errors
 
       setFormValuesDelta(changedValues)
