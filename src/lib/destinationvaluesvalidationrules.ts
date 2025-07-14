@@ -40,8 +40,8 @@ const validationRules = {
     message: facilityAndMSHValidationMessage,
   },
   MSH11: {
-    regex: /^[A-Za-z0-9_-]{0,25}$/,
-    message: facilityAndMSHValidationMessage,
+    regex: /^[PT]$/,
+    message: 'MSH-11 must be "P" or "T"',
   },
   RXA11: {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
@@ -52,8 +52,8 @@ const validationRules = {
     message: `Value must be between ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters`
   },
   destUri: {
-  regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
-  message: 'Please enter a valid URL (must start with http:// or https://)',
-},
+    regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
+    message: 'Please enter a valid URL (must start with http:// or https://)',
+  },
 }
 export default validationRules
