@@ -6,6 +6,7 @@ on:
     branches:
       - develop
       - 'release/**'
+      - 'IGDD-2124_Push-image-to-aphl'
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
