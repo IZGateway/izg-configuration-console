@@ -125,7 +125,7 @@ jobs:
   build-and-push-aphl:
     name: 'Push Image To APHL'
     runs-on: ubuntu-latest
-    if: ${{ contains(github.ref, 'refs/heads/release/') }}
+    if: ${{ contains(github.ref, 'refs/heads/release/') || github.ref == 'refs/heads/IGDD-2124_Push-image-to-aphl' }}
     needs: [code-quality-check, generate-release-timestamp]
     permissions:
       contents: write
@@ -162,10 +162,10 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
+            ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') || github.ref == 'refs/heads/IGDD-2124_Push-image-to-aphl' }}
           tags: |
             type=raw,value=izg-configuration-console_${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=izg-configuration-console_rc_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
+            type=raw,value=izg-configuration-console_rc_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ contains(github.ref, 'refs/heads/release/') || github.ref == 'refs/heads/IGDD-2124_Push-image-to-aphl' }}
             type=raw,value=izg-configuration-console_release_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ github.ref == 'refs/heads/main' }}
           flavor: |
             latest=false
