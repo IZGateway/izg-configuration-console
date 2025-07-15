@@ -192,6 +192,17 @@ const ConnectionInfoDetail = ({
                   gap={2}
                 >
                   <TextField
+                    id="msh11"
+                    label="MSH-11"
+                    variant="filled"
+                    disabled
+                    defaultValue={destination.MSH11}
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                    fullWidth
+                  />
+                  <TextField
                     id="msh22"
                     label="MSH-22"
                     variant="filled"
@@ -202,7 +213,14 @@ const ConnectionInfoDetail = ({
                     }}
                     fullWidth
                   />
-
+                </Box>
+                <Box
+                  display="flex"
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  gap={2}
+                >
                   <TextField
                     id="rxa11"
                     label="RXA-11"

@@ -2,7 +2,7 @@ import validationRules from './../lib/destinationvaluesvalidationrules'
 import { validate as uuidValidate } from 'uuid'
 import * as _ from 'lodash'
 
-const changeRequestValidation = (valuesToValidate, facilityId) => {
+const changeRequestValidation = (valuesToValidate, facilityId, destType) => {
   let errors = {}
 
   if (
@@ -52,6 +52,23 @@ const changeRequestValidation = (valuesToValidate, facilityId) => {
       MSH5: 'At least one of MSH-5 and MSH-6 must be provided',
     }
   }
+
+  if (_.has(valuesToValidate, 'MSH11')) {
+    const msh11 = valuesToValidate.MSH11
+
+    if (destType.toUpperCase() === 'PRODUCTION' && msh11 !== 'P') {
+      errors = {
+        ...errors,
+        MSH11: 'MSH-11 must be "P" when environment of the destination is production',
+      }
+    } else if (destType.toUpperCase() !== 'PRODUCTION' && !['P', 'T'].includes(msh11)) {
+      errors = {
+        ...errors,
+        MSH11: 'MSH-11 must be "P" or "T"',
+      }
+    }
+  }
+
 
   Object.keys(valuesToValidate).forEach((key) => {
     const value = valuesToValidate[key]

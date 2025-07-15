@@ -122,6 +122,14 @@ const Identify = (props: any) => {
       title: 'Version: MSH.22 represents the HL7 version being used.',
     },
     {
+      id: 'msh11',
+      name: 'MSH11',
+      label: 'MSH-11',
+      value: props.value.MSH11,
+      group: 4,
+      title: 'MSH 11 specifies the value to use for the type of message processing',
+    },
+    {
       id: 'rxa11',
       name: 'RXA11',
       label: 'RXA-11',
@@ -173,8 +181,8 @@ const Identify = (props: any) => {
                     ? 'text'
                     : 'password'
                   : showConfirmNewPassword
-                  ? 'text'
-                  : 'password'
+                    ? 'text'
+                    : 'password'
               }
               label={field.label}
               variant="outlined"
@@ -185,13 +193,13 @@ const Identify = (props: any) => {
               InputProps={
                 field.name === 'newPassword'
                   ? getPasswordInputProps(
-                      showNewPassword,
-                      toggleNewPasswordVisibility
-                    )
+                    showNewPassword,
+                    toggleNewPasswordVisibility
+                  )
                   : getPasswordInputProps(
-                      showConfirmNewPassword,
-                      toggleConfirmNewPasswordVisibility
-                    )
+                    showConfirmNewPassword,
+                    toggleConfirmNewPasswordVisibility
+                  )
               }
               error={_.get(props.formErrors, field.name, null)}
               helperText={_.get(props.formErrors, field.name, null)}
@@ -385,23 +393,25 @@ const Identify = (props: any) => {
                   ))}
               </Box>
             </Box>
-            <Box sx={{ marginTop: '1rem' }}>
-              {formFields
-                .filter((field) => field.group === 4)
-                .map((field) => (
-                  <TextField
-                    key={field.id}
-                    name={field.name}
-                    label={field.label}
-                    variant="outlined"
-                    fullWidth
-                    value={field.value}
-                    onChange={handleChange}
-                    InputProps={getInputProps(field.title)}
-                    error={_.get(props.formErrors, field.name, null)}
-                    helperText={_.get(props.formErrors, field.name, null)}
-                  />
-                ))}
+            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+                {formFields
+                  .filter((field) => field.group === 4)
+                  .map((field) => (
+                    <TextField
+                      key={field.id}
+                      name={field.name}
+                      label={field.label}
+                      variant="outlined"
+                      fullWidth
+                      value={field.value}
+                      onChange={handleChange}
+                      InputProps={getInputProps(field.title)}
+                      error={_.get(props.formErrors, field.name, null)}
+                      helperText={_.get(props.formErrors, field.name, null)}
+                    />
+                  ))}
+              </Box>
             </Box>
           </CardContent>
         </Card>

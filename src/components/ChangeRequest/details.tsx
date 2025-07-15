@@ -24,6 +24,7 @@ const Details = (params: {
     'MSH5',
     'MSH6',
     'MSH22',
+    'MSH11',
     'RXA11',
     'password',
   ]
