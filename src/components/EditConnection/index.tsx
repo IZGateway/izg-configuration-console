@@ -561,8 +561,4 @@ export const setAcceptedAgreement = () => {
   sessionStorage.setItem(authorizationAgreementKey, 'true')
 }
 
-export const clearAcceptedAgreement = (): void => {
-  sessionStorage.removeItem(authorizationAgreementKey)
-}
-
 export default EditConnection

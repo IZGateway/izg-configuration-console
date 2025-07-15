@@ -1,6 +1,12 @@
-import { hasAcceptedAgreement, setAcceptedAgreement, clearAcceptedAgreement } from './index'
+import { hasAcceptedAgreement, setAcceptedAgreement } from './index'
 
 const authorizationAgreementKey = 'authorization-agreement-accepted'
+
+// Used to clear the key from session in order to test
+// set/clear cycle
+const clearAcceptedAgreement = (): void => {
+  sessionStorage.removeItem(authorizationAgreementKey)
+}
 
 // Create mock of session storage
 const mockSessionStorage = (() => {
