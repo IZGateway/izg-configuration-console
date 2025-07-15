@@ -59,7 +59,7 @@ const changeRequestValidation = (valuesToValidate, facilityId, destType) => {
     if (destType.toUpperCase() === 'PRODUCTION' && msh11 !== 'P') {
       errors = {
         ...errors,
-        MSH11: 'MSH-11 must be "P" when environment of the destinaiton is production',
+        MSH11: 'MSH-11 must be "P" when environment of the destination is production',
       }
     } else if (destType.toUpperCase() !== 'PRODUCTION' && !['P', 'T'].includes(msh11)) {
       errors = {
