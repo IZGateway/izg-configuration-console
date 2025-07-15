@@ -27,6 +27,8 @@ interface editConnectionProps {
   destTypeId: string
 }
 
+const authorizationAgreementKey = `authorization-agreement-accepted`
+
 const steps = [
   'SERVICE AGREEMENT',
   'ORGANIZATION',
@@ -46,8 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(false)
-  const [, setAccepted] = useState(false)
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement())
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
@@ -195,6 +196,13 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [activeStep, defaultFormValues, formValues])
 
+  useEffect(() => {
+    // Skip agreement acknowledgement if already accepted this session
+    if (hasAcceptedAgreement() && activeStep === 0) {
+      setActiveStep(1)
+    }
+  }, [props.destId, props.destTypeId, activeStep])
+
   if (destError || draftError)
     throw new Error(destError.message || draftError.message)
   if (isDestLoading || isDraftLoading) return <div>loading...</div>
@@ -303,7 +311,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleAccept = () => {
-    setAccepted(true)
+    setAcceptedAgreement()
     advanceStepper(1)
   }
 
@@ -543,6 +551,14 @@ const EditConnection = (props: editConnectionProps) => {
       )}
     </div>
   )
+}
+
+export const hasAcceptedAgreement = (): boolean => {
+  return sessionStorage.getItem(authorizationAgreementKey) === 'true'
+}
+
+export const setAcceptedAgreement = () => {
+  sessionStorage.setItem(authorizationAgreementKey, 'true')
 }
 
 export default EditConnection
