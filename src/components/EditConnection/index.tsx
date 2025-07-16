@@ -27,6 +27,8 @@ interface editConnectionProps {
   destTypeId: string
 }
 
+const authorizationAgreementKey = `authorization-agreement-accepted`
+
 const steps = [
   'SERVICE AGREEMENT',
   'ORGANIZATION',
@@ -46,8 +48,7 @@ const EditConnection = (props: editConnectionProps) => {
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
-  const [agreed, setAgreed] = useState(false)
-  const [, setAccepted] = useState(false)
+  const [agreed, setAgreed] = useState(hasAcceptedAgreement())
   const [scheduledDateTime, setScheduledDateTime] = useState(null)
   const [asapSelected, setAsapSelected] = useState(false)
   const [futureDateTimeSelected, setfutureDateTimeSelected] = useState(false)
@@ -124,6 +125,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: draftData.requested.MSH4,
         MSH5: draftData.requested.MSH5,
         MSH6: draftData.requested.MSH6,
+        MSH11: draftData.requested.MSH11,
         MSH22: draftData.requested.MSH22,
         RXA11: draftData.requested.RXA11,
       })
@@ -137,6 +139,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: draftData?.current.MSH4,
         MSH5: draftData?.current.MSH5,
         MSH6: draftData?.current.MSH6,
+        MSH11: draftData?.current.MSH11,
         MSH22: draftData?.current.MSH22,
         RXA11: draftData?.current.RXA11,
       })
@@ -151,6 +154,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
         MSH6: destData?.MSH6,
+        MSH11: destData?.MSH11,
         MSH22: destData?.MSH22,
         RXA11: destData?.RXA11,
       })
@@ -164,6 +168,7 @@ const EditConnection = (props: editConnectionProps) => {
         MSH4: destData?.MSH4,
         MSH5: destData?.MSH5,
         MSH6: destData?.MSH6,
+        MSH11: destData?.MSH11,
         MSH22: destData?.MSH22,
         RXA11: destData?.RXA11,
       })
@@ -187,13 +192,21 @@ const EditConnection = (props: editConnectionProps) => {
       const changedValues = getDelta(defaultFormValues, formValues)
       const validationErrors = changeRequestValidation(
         changedValues,
-        changedValues.facilityId || defaultFormValues.facilityId
+        changedValues.facilityId || defaultFormValues.facilityId,
+        destData.destinationType.type
       ).errors
 
       setFormValuesDelta(changedValues)
       setFormErrors(validationErrors)
     }
   }, [activeStep, defaultFormValues, formValues])
+
+  useEffect(() => {
+    // Skip agreement acknowledgement if already accepted this session
+    if (hasAcceptedAgreement() && activeStep === 0) {
+      setActiveStep(1)
+    }
+  }, [props.destId, props.destTypeId, activeStep])
 
   if (destError || draftError)
     throw new Error(destError.message || draftError.message)
@@ -303,7 +316,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleAccept = () => {
-    setAccepted(true)
+    setAcceptedAgreement()
     advanceStepper(1)
   }
 
@@ -343,7 +356,6 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const saveDraft = async () => {
-    console.log('saving draft')
     const response = await fetch(`/api/changerequest`, {
       method: 'POST',
       body: JSON.stringify({
@@ -390,6 +402,7 @@ const EditConnection = (props: editConnectionProps) => {
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
       MSH6: destData?.MSH6,
+      MSH11: destData?.MSH11,
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
@@ -403,6 +416,7 @@ const EditConnection = (props: editConnectionProps) => {
       MSH4: destData?.MSH4,
       MSH5: destData?.MSH5,
       MSH6: destData?.MSH6,
+      MSH11: destData?.MSH11,
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
@@ -425,6 +439,7 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   return (
+
     <div>
       <Close buttonText="Cancel" />
       <Container sx={{ mb: 16 }} maxWidth="sm">
@@ -543,6 +558,14 @@ const EditConnection = (props: editConnectionProps) => {
       )}
     </div>
   )
+}
+
+export const hasAcceptedAgreement = (): boolean => {
+  return sessionStorage.getItem(authorizationAgreementKey) === 'true'
+}
+
+export const setAcceptedAgreement = () => {
+  sessionStorage.setItem(authorizationAgreementKey, 'true')
 }
 
 export default EditConnection

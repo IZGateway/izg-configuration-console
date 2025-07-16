@@ -31,6 +31,7 @@ describe('ConnectionInfoDetail component', () => {
       MSH5: 'MSH5',
       MSH6: 'MSH6',
       MSH22: 'MSH22',
+      MSH11: 'P',
       RXA11: 'RXA11',
       destId: 'test',
       passExpiry: new Date('2023-01-01T00:00:00Z'),
@@ -72,6 +73,7 @@ describe('ConnectionInfoDetail component', () => {
     expect(getByLabelText('MSH-5')).toHaveValue('MSH5')
     expect(getByLabelText('MSH-6')).toHaveValue('MSH6')
     expect(getByLabelText('MSH-22')).toHaveValue('MSH22')
+    expect(getByLabelText('MSH-11')).toHaveValue('P')
     expect(getByLabelText('RXA-11')).toHaveValue('RXA11')
   })
 })
