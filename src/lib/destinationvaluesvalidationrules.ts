@@ -55,5 +55,9 @@ const validationRules = {
     regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
     message: 'Please enter a valid URL (must start with http:// or https://)',
   },
+  destUri: {
+  regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
+  message: 'Please enter a valid URL (must start with http:// or https://)',
+},
 }
 export default validationRules
