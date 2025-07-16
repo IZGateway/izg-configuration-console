@@ -52,8 +52,8 @@ const validationRules = {
     message: `Value must be between ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters`
   },
   destUri: {
-    regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
-    message: 'Please enter a valid URL (must start with http:// or https://)',
-  },
+  regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
+  message: 'Please enter a valid URL (must start with http:// or https://)',
+},
 }
 export default validationRules
