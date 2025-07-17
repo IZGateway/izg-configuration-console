@@ -4,8 +4,6 @@ on:
   schedule:
     - cron: '0 7 * * *'
   workflow_dispatch:
-    branches:
-      - IGDD-2081-playwright-in-pipeline
 
 jobs:
   e2e:
