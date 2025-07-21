@@ -1,0 +1,15 @@
+import { Page, expect, test } from '@playwright/test';
+import { loginToOkta } from './helpers/oktaLogin';
+
+test.beforeEach('Login User', async ({ page }) => {
+  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
+});
+
+test.afterEach('Logout User', async ({ page }) => {
+  await page.locator('#logout').click();
+});
+
+test('Test', async ({ page }) => {
+  await page.pause(); 
+});
+
