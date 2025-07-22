@@ -58,7 +58,7 @@ jobs:
           path: playwright-report
 
       - name: Shutdown AWS Dev Service
-        if: always()
+        if: github.event_name == 'schedule'
         run: |
           echo "Stopping ECS service..."
           aws ecs update-service \
