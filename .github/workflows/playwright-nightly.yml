@@ -1,14 +1,12 @@
 name: Playwright E2E Tests (Dev)
 
 on:
-  push:
-    branches:
-      - IGDD-2081-playwright-in-pipeline
+  schedule:
+    - cron: '0 7 * * * 1-5'
   workflow_dispatch:
 
 jobs:
   e2e:
-    if: github.ref == 'refs/heads/IGDD-2081-playwright-in-pipeline'
     runs-on: ubuntu-latest
 
     env:
@@ -60,7 +58,7 @@ jobs:
           path: playwright-report
 
       - name: Shutdown AWS Dev Service
-        if: always()
+        if: github.event_name == 'schedule'
         run: |
           echo "Stopping ECS service..."
           aws ecs update-service \
