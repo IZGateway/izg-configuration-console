@@ -14,13 +14,26 @@ test('Verify Connections Table For Admin User', async ({ page }) => {
 
   await expect(page.locator('#title-table')).toContainText('My Connections');
 
-  const gridRowCount = await page.locator('.MuiDataGrid-row').count();
-  console.log(`Found ${gridRowCount} connections in the table`);
+  // By default, we show 5 connections per-page, check that
+  let gridRowCount = await page.locator('.MuiDataGrid-row').count()
+  expect(gridRowCount).toEqual(5)
 
-  expect(gridRowCount).toBeGreaterThanOrEqual(5);
-
-  // Click the dropdown arrow
+  // Choose 25 per-page
   await page.locator('.MuiTablePagination-select').click();
-// Select 25 from the dropdown
   await page.getByRole('option', { name: '25' }).click();
+  gridRowCount = await page.locator('.MuiDataGrid-row').count();
+  expect(gridRowCount).toEqual(25)
+
+  // Choose 50 per-page
+  await page.locator('.MuiTablePagination-select').click();
+  await page.getByRole('option', { name: '50' }).click();
+  gridRowCount = await page.locator('.MuiDataGrid-row').count();
+  expect(gridRowCount).toEqual(50)
+
+  // Choose 100 per-page - we expect at least 50 in dev at this time
+  await page.locator('.MuiTablePagination-select').click();
+  await page.getByRole('option', { name: '100' }).click();
+  gridRowCount = await page.locator('.MuiDataGrid-row').count();
+  expect(gridRowCount).toBeGreaterThanOrEqual(50)
+
 });
