@@ -63,17 +63,3 @@ test('Home page Navigation is correct', async ({ page }) => {
   await expect.soft(bb2.height).toBe(bb.height); // Height is same
  
 });
-
-// User should see IZG Logo at top of the navigation panel.
-//   Login successfully 
-//   Expect to see IZG logo at the top of left navigation Bar
-// User should be able to expand/collapse navigation panel by clicking on </> arrow in panel.
-//   Login successfully 
-//   Click on the < icon on the navigation bar
-//   Expect navigation bar to collapse 
-//   Click on the > icon on the navigation bar
-//   Expect navigation bar to expand 
-// Navigation would have Manage connections, Swagger API and Logout buttons clickable.
-//   Login successfully 
-//   Click on Swagger API
-//   Expect to see swagger API page
