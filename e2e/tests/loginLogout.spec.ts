@@ -1,4 +1,4 @@
-import { Page, expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { loginToOkta } from '../helpers/oktaLogin';
 
 const rowsPerPageOptions = [
@@ -8,7 +8,7 @@ const rowsPerPageOptions = [
   { pageSize: '100', expectedCount: 50, useMinimum: true }
 ];
 
-// Test 12 - a - i
+// Test 12-a-i
 test('Verify Connections Table, for Admin, for all row count options', async ({ page }) => {
 
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
@@ -34,10 +34,34 @@ test('Verify Connections Table, for Admin, for all row count options', async ({ 
   await page.locator('#logout').click();
 });
 
-// Test 12 - a - i
-// ON HOLD - need non-admin user setup in Okta
+// Test 12-a-ii
+test('Verify connections table for non-admin user', async ({ page }) => {
+  await loginToOkta(page, process.env.OKTA_NONADMIN_USERNAME, process.env.OKTA_NONADMIN_PASSWORD, process.env.OKTA_NONADMIN_EXPECTED_FULLNAME);
 
-// Test 12 - a- iii
+  await page.locator('[id="Manage Connections_button"]').click();
+  await expect(page.locator('#title-table')).toContainText('My Connections');
+
+  // Get configured expected destination id's for non-admin user
+  const expectedDestinationIds = process.env.OKTA_NONADMIN_EXPECTED_DEST_IDS.split(',');
+  const expectedConnectionCount = expectedDestinationIds.length;
+
+  // Verify configured # of rows are visible
+  const gridRowCount = await page.locator('.MuiDataGrid-row').count();
+  expect(gridRowCount).toEqual(expectedConnectionCount);
+
+  // Get DESTINATION ID values from the first column of each row
+  const destinationIds = await page.locator('div[data-field="destId"][role="gridcell"]').allTextContents();
+
+  // Sort the actual values to compare with expected
+  const sortedDestinationIds = destinationIds.sort();
+
+  // Verify we have exactly the expected DESTINATION IDs
+  expect(sortedDestinationIds).toEqual(expectedDestinationIds);
+
+  await page.locator('#logout').click();
+});
+
+// Test 12-a-iii
 test('Verify unauthorized user cannot login', async ({ page }) => {
   await page.goto('/', { waitUntil: 'load', timeout: 10000 })
 
@@ -59,7 +83,7 @@ test('Verify unauthorized user cannot login', async ({ page }) => {
 
 })
 
-// Test 12 - iv
+// Test 12-a-iv
 test('Verify Login then Logout', async ({ page }) => {
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
 

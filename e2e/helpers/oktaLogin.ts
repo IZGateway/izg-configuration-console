@@ -1,7 +1,7 @@
 import { Page, expect } from '@playwright/test';
 
 
-export const loginToOkta = async (page: Page, username: string, password: string) => {
+export const loginToOkta = async (page: Page, username: string, password: string, userFullName: string = 'Automation Testerson') => {
   await page.goto('/', { waitUntil: 'load', timeout: 10000 });
 
   await page.getByText('Sign in with Okta').click();
@@ -16,5 +16,5 @@ export const loginToOkta = async (page: Page, username: string, password: string
   await page.locator('input[name="credentials.passcode"]').fill(password);
   await page.locator('[type="submit"]').click();
   await page.waitForSelector('#app-header', { timeout: 10000 });
-  await expect(page.locator('#app-header')).toContainText('Automation Testerson');
+  await expect(page.locator('#app-header')).toContainText(userFullName);
 };
