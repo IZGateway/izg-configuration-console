@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "test": "jest",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
-    "test:dev": "npx playwright test --project=Chrome --headed"
+    "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
     "@aws-sdk/lib-dynamodb": "^3.744.0",
