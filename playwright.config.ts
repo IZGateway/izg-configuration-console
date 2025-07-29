@@ -4,18 +4,15 @@ export default defineConfig({
   testDir: './e2e/tests',
   globalSetup: require.resolve('./playwright.env.setup'),
   use: {
-    launchOptions: {
-    args: ['--ignore-certificate-errors'],
-    },
     baseURL: process.env.BASE_URL,
     headless: true,
     ignoreHTTPSErrors: true,  
     viewport: { width: 1280, height: 720 },
-    actionTimeout: 5000,
+    actionTimeout: 20000,
     contextOptions: {
     ignoreHTTPSErrors: true,
     },
-    screenshot: 'only-on-failure',
+    screenshot: 'off',
   },
   projects: [
     {

@@ -15,7 +15,7 @@
     "test:watch": "jest --watch",
     "test": "jest",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
-    "test:e2e": "dotenv -e .env.test -- npx playwright test --headed"
+    "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
     "@aws-sdk/lib-dynamodb": "^3.744.0",
@@ -79,6 +79,7 @@
     "@typescript-eslint/eslint-plugin": "^5.59.8",
     "@typescript-eslint/parser": "^5.59.8",
     "concurrently": "^8.1.0",
+    "cross-env": "^7.0.3",
     "cypress": "^13.7.3",
     "dotenv": "^16.4.7",
     "eslint-config-next": "14.0.1",
