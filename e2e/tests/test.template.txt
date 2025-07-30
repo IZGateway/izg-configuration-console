@@ -1,5 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
-import { loginToOkta } from './helpers/oktaLogin';
+import { loginToOkta } from '../helpers/oktaLogin';
 
 let context;
 let page;
