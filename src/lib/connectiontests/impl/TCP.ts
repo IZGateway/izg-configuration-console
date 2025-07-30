@@ -5,6 +5,8 @@ import { TestStatus } from '../TestStatus'
 import net from 'net'
 import { TestResponseMessages } from '../TestResponseMessages'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const MY_IP_ADDRESS = await (await fetch('https://checkip.amazonaws.com', { cache: 'no-store' })).text()
+
 export default class TCP extends ConnectionTest {
   private static readonly TIMEOUT_ERROR_CODE: string = 'ETIMEDOUT'
 
@@ -45,10 +47,8 @@ export default class TCP extends ConnectionTest {
             detail: error?.code,
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
-                ? TestResponseMessages.TCP_TIMEOUT(
-                  this.connectionTestRequest.ip
-                )
-                : TestResponseMessages.TCP_REJECT(this.connectionTestRequest.ip)
+                ? TestResponseMessages.TCP_TIMEOUT(MY_IP_ADDRESS)
+                : TestResponseMessages.TCP_REJECT(MY_IP_ADDRESS)
               : '',
             status: TestStatus.FAIL,
           },
@@ -60,7 +60,7 @@ export default class TCP extends ConnectionTest {
           {
             ...dnsConnectionTestResult,
             detail: 'ETIMEDOUT',
-            message: TestResponseMessages.TCP_TIMEOUT(this.connectionTestRequest.ip),
+            message: TestResponseMessages.TCP_TIMEOUT(MY_IP_ADDRESS),
             status: TestStatus.FAIL,
           },
         ])
