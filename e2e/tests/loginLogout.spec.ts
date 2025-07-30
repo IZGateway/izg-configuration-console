@@ -32,7 +32,7 @@ test('Verify Connections Table, for Admin, for all row count options', async ({ 
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
 
   await page.locator('[id="Manage Connections_button"]').click();
-  await expect(page.locator('#title-table')).toContainText('My Connections');
+  await expect.soft(page.locator('#title-table')).toContainText('My Connections');
 
   for (const { pageSize, expectedCount, useMinimum } of rowsPerPageOptions) {
 
@@ -43,9 +43,9 @@ test('Verify Connections Table, for Admin, for all row count options', async ({ 
     const gridRowCount = await page.locator('.MuiDataGrid-row').count();
 
     if (useMinimum) {
-      await expect(gridRowCount).toBeGreaterThanOrEqual(expectedCount);
+      await expect.soft(gridRowCount).toBeGreaterThanOrEqual(expectedCount);
     } else {
-      await expect(gridRowCount).toEqual(expectedCount);
+      await expect.soft(gridRowCount).toEqual(expectedCount);
     }
   }
 
@@ -57,7 +57,7 @@ test('Verify connections table for non-admin user', async ({ page }) => {
   await loginToOkta(page, process.env.OKTA_NONADMIN_USERNAME, process.env.OKTA_NONADMIN_PASSWORD, process.env.OKTA_NONADMIN_EXPECTED_FULLNAME);
 
   await page.locator('[id="Manage Connections_button"]').click();
-  await expect(page.locator('#title-table')).toContainText('My Connections');
+  await expect.soft(page.locator('#title-table')).toContainText('My Connections');
 
   // Get configured expected destination id's for non-admin user
   const expectedDestinationIds = process.env.OKTA_NONADMIN_EXPECTED_DEST_IDS.split(',');
@@ -65,7 +65,7 @@ test('Verify connections table for non-admin user', async ({ page }) => {
 
   // Verify configured # of rows are visible
   const gridRowCount = await page.locator('.MuiDataGrid-row').count();
-  await expect(gridRowCount).toEqual(expectedConnectionCount);
+  await expect.soft(gridRowCount).toEqual(expectedConnectionCount);
 
   // Get DESTINATION ID values from the first column of each row
   const destinationIds = await page.locator('div[data-field="destId"][role="gridcell"]').allTextContents();
@@ -74,7 +74,7 @@ test('Verify connections table for non-admin user', async ({ page }) => {
   const sortedDestinationIds = destinationIds.sort();
 
   // Verify we have exactly the expected DESTINATION IDs
-  await expect(sortedDestinationIds).toEqual(expectedDestinationIds);
+  await expect.soft(sortedDestinationIds).toEqual(expectedDestinationIds);
 
   await page.locator('#logout').click();
 });
