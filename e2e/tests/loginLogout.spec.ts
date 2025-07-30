@@ -43,9 +43,9 @@ test('Verify Connections Table, for Admin, for all row count options', async ({ 
     const gridRowCount = await page.locator('.MuiDataGrid-row').count();
 
     if (useMinimum) {
-      expect(gridRowCount).toBeGreaterThanOrEqual(expectedCount);
+      await expect(gridRowCount).toBeGreaterThanOrEqual(expectedCount);
     } else {
-      expect(gridRowCount).toEqual(expectedCount);
+      await expect(gridRowCount).toEqual(expectedCount);
     }
   }
 
@@ -65,7 +65,7 @@ test('Verify connections table for non-admin user', async ({ page }) => {
 
   // Verify configured # of rows are visible
   const gridRowCount = await page.locator('.MuiDataGrid-row').count();
-  expect(gridRowCount).toEqual(expectedConnectionCount);
+  await expect(gridRowCount).toEqual(expectedConnectionCount);
 
   // Get DESTINATION ID values from the first column of each row
   const destinationIds = await page.locator('div[data-field="destId"][role="gridcell"]').allTextContents();
@@ -74,7 +74,7 @@ test('Verify connections table for non-admin user', async ({ page }) => {
   const sortedDestinationIds = destinationIds.sort();
 
   // Verify we have exactly the expected DESTINATION IDs
-  expect(sortedDestinationIds).toEqual(expectedDestinationIds);
+  await expect(sortedDestinationIds).toEqual(expectedDestinationIds);
 
   await page.locator('#logout').click();
 });
