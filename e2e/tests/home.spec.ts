@@ -1,5 +1,6 @@
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
+import { logout } from '../helpers/logout'
 
 let context
 let page: Page
@@ -8,13 +9,10 @@ test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
 })
 
 test.afterAll(async () => {
-  await page.goto('/')
-  await page.locator('#logout').click()
+  await logout(page)
   await page.close()
   await context.close()
 })
