@@ -8,7 +8,7 @@ test.beforeAll(async ({ browser }) => {
     context = await browser.newContext();
     page = await context.newPage();
     await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
-    await page.goto('/'); // Update based on your test
+    await page.goto('/manageconnections'); // Update based on your test
     await page.waitForLoadState('networkidle'); // Ensure the page is fully loaded
 });
 
@@ -19,7 +19,6 @@ test.afterAll(async () => {
 })
 
 test('Test', async () => {
-  await page.goto('/manageconnections');
   await page.pause(); 
 });
 

@@ -188,6 +188,7 @@ const TestsResults = ({ testResults }: testListProps) => {
   const handleExpand = () => {
     setDisplayList(!displayList)
   }
+  const testTime = new Date().toLocaleTimeString()
   return (
     <>
       <Typography variant="body1">
@@ -213,7 +214,7 @@ const TestsResults = ({ testResults }: testListProps) => {
         }}
       >
         <Typography variant="body1">
-          {passeddata} out of {totaldata} Test Passed
+          {passeddata} out of {totaldata} Test Passed at <span id='TestTime'>{testTime}</span>
         </Typography>
         {displayList ? (
           <Button
