@@ -18,7 +18,6 @@ export const loginToOkta = async (page: Page, username: string, password: string
   await page.locator('[type="submit"]').click();
   await page.waitForSelector('#app-header', { timeout: 10000 });
   await expect(page.locator('#app-header')).toContainText(userFullName);
-};
-  await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
 }
