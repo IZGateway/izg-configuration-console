@@ -6,6 +6,7 @@ import net from 'net'
 import { TestResponseMessages } from '../TestResponseMessages'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 const MY_IP_ADDRESS = await (await fetch('https://checkip.amazonaws.com', { cache: 'no-store' })).text()
+const TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`
 
 export default class TCP extends ConnectionTest {
   private static readonly TIMEOUT_ERROR_CODE: string = 'ETIMEDOUT'
@@ -15,7 +16,7 @@ export default class TCP extends ConnectionTest {
   }
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
-      name: `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`,
+      name: TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
       message: 'TCP test skipped due to connectivity test failures',
@@ -24,7 +25,6 @@ export default class TCP extends ConnectionTest {
   }
 
   run = (): Promise<ConnectionTestResult[]> => {
-    const TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,

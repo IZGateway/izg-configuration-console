@@ -15,7 +15,7 @@ const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(p
 export default class CONNECTIVITY extends ConnectionTest {
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
-      name: `Connectivity Test for ${this.connectionTestRequest.url.hostname}`,
+      name: TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
       message: 'Connectivity test skipped due to connectivity test failures',
