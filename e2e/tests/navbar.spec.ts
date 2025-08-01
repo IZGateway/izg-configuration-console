@@ -1,8 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { BrowserContext, expect, Page, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 
-let context
-let page
+let context : BrowserContext
+let page : Page
 
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
@@ -22,8 +22,8 @@ test('Home page title and logo are correct', async () => {
   const logo = page.getByAltText('izg logo')
   await expect.soft(logo).toBeVisible()
   const bb = await logo.boundingBox()
-  await expect.soft(bb.x).toBeLessThan(20)
-  await expect.soft(bb.y).toBeLessThan(20)
+  expect.soft(bb.x).toBeLessThan(20)
+  expect.soft(bb.y).toBeLessThan(20)
 })
 
 test('Navigation panel has expected links', async () => {
@@ -57,12 +57,12 @@ test('Navigation panel can collapse and expand', async () => {
   const bb = await navPanel.boundingBox()
 
   await navPanel.getByTestId('ChevronLeftIcon').click()
-  var bb2 = await navPanel.boundingBox()
-  await expect.soft(bb2.width).toBeLessThan(bb.width)
-  await expect.soft(bb2.height).toBe(bb.height)
+  let bb2 = await navPanel.boundingBox()
+  expect.soft(bb2.width).toBeLessThan(bb.width)
+  expect.soft(bb2.height).toBe(bb.height)
 
   await navPanel.getByTestId('ChevronRightIcon').click()
   bb2 = await navPanel.boundingBox()
-  await expect.soft(bb2.width).toBe(bb.width)
-  await expect.soft(bb2.height).toBe(bb.height)
+  expect.soft(bb2.width).toBe(bb.width)
+  expect.soft(bb2.height).toBe(bb.height)
 })

@@ -21,6 +21,15 @@ let requestBody: string
 let password: string
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class QBP extends ConnectionTest {
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `QBP Test for ${this.connectionTestRequest.url.hostname}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'QBP test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  }
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
 

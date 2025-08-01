@@ -13,9 +13,9 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
-    await page.locator('#logout').click();
-    await page.close();
-    await context.close();
+  await logout(page)
+  await page.close()
+  await context.close()
 })
 
 test('Test', async () => {

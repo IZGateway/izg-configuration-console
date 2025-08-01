@@ -92,7 +92,15 @@ export default class CIPHER extends ConnectionTest {
         resolve('success')
       })
   })
-
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `Cipher Suites Appropriate Test for ${this.connectionTestRequest.url.hostname}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'Cipher Suites Appropriate test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  }
   run = (): Promise<ConnectionTestResult[]> => {
     const cipherConnectionTestResult: ConnectionTestResult = {
       name: TEST_NAME,
