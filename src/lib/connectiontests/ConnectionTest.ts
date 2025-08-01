@@ -10,6 +10,6 @@ export default abstract class ConnectionTest implements Testable {
     this.connectionTestRequest = connectionTestRequest
     this.status = TestStatus.SKIPPED
   }
-
+  abstract skip: () => Promise<ConnectionTestResult[]>
   abstract run: () => Promise<ConnectionTestResult[]>
 }

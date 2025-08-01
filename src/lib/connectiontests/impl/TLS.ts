@@ -16,7 +16,15 @@ export default class TLS extends ConnectionTest {
 
   private static readonly MIN_TLS_VERSION: string = 'TLSv1.2'
   private static readonly MAX_TLS_VERSION: string = 'TLSv1.3'
-
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `TLS Version Test for ${this.connectionTestRequest.url.hostname}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'TLS test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  } 
   run = (): Promise<ConnectionTestResult[]> => {
     const TEST_NAME = `TLS Version Test for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {

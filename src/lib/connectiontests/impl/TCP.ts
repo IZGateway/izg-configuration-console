@@ -13,6 +13,15 @@ export default class TCP extends ConnectionTest {
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
   }
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'TCP test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  }
 
   run = (): Promise<ConnectionTestResult[]> => {
     const TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`
