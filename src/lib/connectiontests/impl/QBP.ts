@@ -13,13 +13,12 @@ import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
 
-const TEST_NAME =
-  'Send a Submit Single Message with an HL7 QBP for test patient'
 const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
 let password: string
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const TEST_NAME = 'Send a Submit Single Message with an HL7 QBP for test patient'
 export default class QBP extends ConnectionTest {
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{

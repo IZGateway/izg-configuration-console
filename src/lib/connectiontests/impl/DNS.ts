@@ -5,16 +5,18 @@ import { TestResponseMessages } from '../TestResponseMessages'
 import { ConnectionTestRequest } from '../types/ConnectionTestRequest'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class DNS extends ConnectionTest {
-  private readonly TEST_NAME = `Verify DNS entry for ${this.connectionTestRequest.url.hostname}`
-  private dnsConnectionTestResult: ConnectionTestResult = {
-    name: this.TEST_NAME,
-    order: this.connectionTestRequest.order,
-    message: '',
-    detail: null,
-    status: this.status,
-  }
+  private readonly TEST_NAME : string
+  private dnsConnectionTestResult: ConnectionTestResult 
   constructor(connectionTestRequest: ConnectionTestRequest) {
     super(connectionTestRequest)
+    this.dnsConnectionTestResult = {
+      name: this.TEST_NAME,
+      order: this.connectionTestRequest.order,
+      message: '',
+      detail: null,
+      status: this.status,
+    }
+    this.TEST_NAME = `Verify DNS entry for ${this.connectionTestRequest.url.hostname}`
   }
   skip = () : Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
