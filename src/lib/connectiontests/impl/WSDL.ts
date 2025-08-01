@@ -8,14 +8,15 @@ import fs from 'fs'
 import { DOMParser } from '@xmldom/xmldom'
 
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
-const TEST_NAME = `WSDL Test for ${this.connectionTestRequest.url}`
 export default class WSDL extends ConnectionTest {
+  private readonly TEST_NAME: string
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
+    this.TEST_NAME = `WSDL Test for ${this.connectionTestRequest.url}`
   }
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
-      name: TEST_NAME,
+      name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
       message: 'WSDL test skipped due to connectivity test failures',
@@ -24,7 +25,7 @@ export default class WSDL extends ConnectionTest {
   }
   run = (): Promise<ConnectionTestResult[]> => {
     const wsdlConnectionTestResult: ConnectionTestResult = {
-      name: TEST_NAME,
+      name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
       message: '',
       detail: null,

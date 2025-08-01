@@ -9,16 +9,17 @@ import fs from 'fs'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class TLS extends ConnectionTest {
   jurisdictionUrl: string
-
+  private readonly TEST_NAME: string
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
+    this.TEST_NAME = `TLS Version Test for ${this.connectionTestRequest.url.hostname}`
   }
 
   private static readonly MIN_TLS_VERSION: string = 'TLSv1.2'
   private static readonly MAX_TLS_VERSION: string = 'TLSv1.3'
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
-      name: `TLS Version Test for ${this.connectionTestRequest.url.hostname}`,
+      name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
       message: 'TLS test skipped due to connectivity test failures',
@@ -26,9 +27,8 @@ export default class TLS extends ConnectionTest {
     }])
   } 
   run = (): Promise<ConnectionTestResult[]> => {
-    const TEST_NAME = `TLS Version Test for ${this.connectionTestRequest.url.hostname}`
     const dnsConnectionTestResult: ConnectionTestResult = {
-      name: TEST_NAME,
+      name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
       message: '',
       detail: null,
