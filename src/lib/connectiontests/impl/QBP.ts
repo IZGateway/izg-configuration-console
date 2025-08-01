@@ -23,7 +23,7 @@ const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(p
 export default class QBP extends ConnectionTest {
   skip = (): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
-      name: `QBP Test for ${this.connectionTestRequest.url.hostname}`,
+      name: TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
       message: 'QBP test skipped due to connectivity test failures',
