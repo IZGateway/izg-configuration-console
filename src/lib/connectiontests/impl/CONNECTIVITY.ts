@@ -13,6 +13,15 @@ const randomUUID = uuidv4()
 const TEST_NAME = 'Send a Connectivity Test message'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 export default class CONNECTIVITY extends ConnectionTest {
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `Connectivity Test for ${this.connectionTestRequest.url.hostname}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'Connectivity test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  }
   run = async (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {
       name: TEST_NAME,

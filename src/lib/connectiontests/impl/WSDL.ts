@@ -12,7 +12,15 @@ export default class WSDL extends ConnectionTest {
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
   }
-
+  skip = (): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([{
+      name: `WSDL Test for ${this.connectionTestRequest.url}`,
+      order: this.connectionTestRequest.order,
+      status: TestStatus.SKIPPED,
+      message: 'WSDL test skipped due to connectivity test failures',
+      detail: null,
+    }])
+  }
   run = (): Promise<ConnectionTestResult[]> => {
     const TEST_NAME = `WSDL Test for ${this.connectionTestRequest.url}`
     const wsdlConnectionTestResult: ConnectionTestResult = {

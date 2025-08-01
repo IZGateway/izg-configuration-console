@@ -131,28 +131,31 @@ const connectionTest = async (destination: Destination, userId: string) => {
         },
       ]
       connectionTestRequest.order = testCounter
-      if (!skipTests) {
-        try {
-          const T = ConnectionTestFactory.getConnectionTest(
-            TestSuite[test],
-            connectionTestRequest
-          )
+      try {
+        const T = ConnectionTestFactory.getConnectionTest(
+          TestSuite[test],
+          connectionTestRequest
+        )
+        if (!skipTests) {
           result = await T.run()
-        } catch (error) {
-          logger.error(
-            `Error running test ${TestSuite[test]}: ${error.message || error}`
-          )
-          result = [
-            {
-              name: TestSuite[test],
-              status: TestStatus.FAIL,
-              message: error.message || 'An unexpected error occurred.',
-              detail: '',
-              order: testCounter,
-            },
-          ]
+        } else {
+          result = await T.skip()
         }
+      } catch (error) {
+        logger.error(
+          `Error running test ${TestSuite[test]}: ${error.message || error}`
+        )
+        result = [
+          {
+            name: TestSuite[test],
+            status: TestStatus.FAIL,
+            message: error.message || 'An unexpected error occurred.',
+            detail: '',
+            order: testCounter,
+          },
+        ]
       }
+      
 
 
       testResults.push(...result)
