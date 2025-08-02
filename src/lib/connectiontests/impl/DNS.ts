@@ -9,6 +9,7 @@ export default class DNS extends ConnectionTest {
   private dnsConnectionTestResult: ConnectionTestResult 
   constructor(connectionTestRequest: ConnectionTestRequest) {
     super(connectionTestRequest)
+    this.TEST_NAME = `Verify DNS entry for ${this.connectionTestRequest.url.hostname}`
     this.dnsConnectionTestResult = {
       name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -16,7 +17,6 @@ export default class DNS extends ConnectionTest {
       detail: null,
       status: this.status,
     }
-    this.TEST_NAME = `Verify DNS entry for ${this.connectionTestRequest.url.hostname}`
   }
   skip = () : Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
