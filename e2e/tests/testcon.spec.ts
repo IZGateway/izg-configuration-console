@@ -134,5 +134,5 @@ test('Test Invalid Endpoint', async ({ page }) => {
 
 test('Test Reject Endpoint', async ({ page }) => {
   await page.goto('https://dev.console.izgateway.org/test/5/reject')
-  await testResults(page, ['FAIL', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'Batman'])
+  await testResults(page, ['PASS', 'FAIL', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
 })
