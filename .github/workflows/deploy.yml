@@ -4,7 +4,6 @@ name: Test, Build and Publish to AWS DEV environment
 on:
   push:
     branches:
-      - develop
       - 'release/**'
   pull_request:
     branches:
