@@ -157,6 +157,11 @@ Add .env.test file in project root folder which will include below values
 OKTA_USERNAME=Username of the user
 OKTA_PASSWORD=Password for the user
 BASE_URL=URL of where you want to run these tests against
+OKTA_NONADMIN_USERNAME=Username for the non-admin user
+OKTA_NONADMIN_PASSWORD=Password for the non-admin user
+OKTA_NONADMIN_EXPECTED_FULLNAME=The full name of the non-admin user, which shows after successful login. Comes from Okta
+OKTA_NONADMIN_EXPECTED_DEST_IDS=A comma separate list of Destination Id's that will show in the first column for the non-admin user. Will only have rows for jurisdictions the user is configured for in Okta
+
 
 ```
 Run npm run test:dev which will run tests in all 4 headed browsers. To run for specific browser use this command npm run test:dev --project=Chrome
