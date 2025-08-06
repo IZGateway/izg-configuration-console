@@ -17,6 +17,10 @@ jobs:
       OKTA_USERNAME: ${{ secrets.OKTA_USERNAME }}
       OKTA_PASSWORD: ${{ secrets.OKTA_PASSWORD }}
       BASE_URL: ${{ secrets.BASE_URL }}
+      OKTA_NONADMIN_USERNAME: ${{ secrets.OKTA_NONADMIN_USERNAME }}
+      OKTA_NONADMIN_PASSWORD: ${{ secrets.OKTA_NONADMIN_PASSWORD }}
+      OKTA_NONADMIN_EXPECTED_FULLNAME: ${{ secrets.OKTA_NONADMIN_EXPECTED_FULLNAME }}
+      OKTA_NONADMIN_EXPECTED_DEST_IDS: ${{ secrets.OKTA_NONADMIN_EXPECTED_DEST_IDS }}
 
     steps:
       - name: Checkout code
