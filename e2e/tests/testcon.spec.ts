@@ -75,7 +75,7 @@ async function testResults(page: Page, results) {
     .toBeVisible()
 }
 
-test('Test Navigation to Test Connection Page', async ({ page }) => {
+test.only('Test Navigation to Test Connection Page', async ({ page }) => {
   await page.goto('https://dev.console.izgateway.org/manageconnections')
   await page.waitForLoadState('networkidle')
   // User should be able to navigate to test connection page by clicking on ‘Test’ button under ‘Actions’ column for a connection in connections table.
@@ -112,15 +112,17 @@ test('Test Navigation to Test Connection Page', async ({ page }) => {
   const testTimeText = await testTime.textContent()
   const testTimeRegex = /^\d{1,2}:\d{2}:\d{2} (AM|PM)$/
   expect.soft(testTimeText).toMatch(testTimeRegex)
-
+  console.log(`Test time: ${testTimeText}`)
+  await page.waitForTimeout(10000) // wait for tests to complete
   // User can re run tests with 'Re run test' button
   // Once test results are back, click on 'Re run Test' button
   await page.getByRole('button', { name: 'RERUN TEST' }).click()
-  await page.waitForTimeout(10000)
+
   // Ensure the page is fully loaded
   await page.waitForLoadState('networkidle')
   testTime = page.locator('#TestTime')
   const newTestTimeText = await testTime.textContent()
+  console.log(`Test time: ${newTestTimeText}`)
   // Ensure the test time has changed
   expect.soft(newTestTimeText).not.toEqual(testTimeText)
 
