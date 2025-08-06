@@ -116,7 +116,7 @@ test('Test Navigation to Test Connection Page', async ({ page }) => {
   // User can re run tests with 'Re run test' button
   // Once test results are back, click on 'Re run Test' button
   await page.getByRole('button', { name: 'RERUN TEST' }).click()
-  await page.waitForTimeout(10000)
+  await page.waitForTimeout(10000) // wait for tests to complete
   // Ensure the page is fully loaded
   await page.waitForLoadState('networkidle')
   testTime = page.locator('#TestTime')
