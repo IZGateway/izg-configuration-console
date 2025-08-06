@@ -4,8 +4,10 @@ name: Test, Build and Publish to AWS DEV environment
 on:
   push:
     branches:
-      - develop
       - 'release/**'
+  pull_request:
+    branches:
+      - develop
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -187,6 +189,9 @@ jobs:
     name: Deploy to Dev AWS environment
     runs-on: ubuntu-latest
     needs: [build-and-push-image-aws]
+    if: |
+      github.ref == 'refs/heads/develop' || 
+      (github.event_name == 'pull_request' && github.base_ref == 'develop')
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -197,3 +202,9 @@ jobs:
       - name: Deploy to Dev AWS
         run: |
           aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
+      - name: Wait for ECS service to become stable
+        run: |
+          echo "Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+          --cluster izgateway-configuration-console \
+          --services izgateway-config-console
