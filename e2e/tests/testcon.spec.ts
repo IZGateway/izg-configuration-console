@@ -105,11 +105,10 @@ test('Test Navigation to Test Connection Page', async ({ page }) => {
   const testTimeText = await testTime.textContent()
   const testTimeRegex = /^\d{1,2}:\d{2}:\d{2} (AM|PM)$/
   expect.soft(testTimeText).toMatch(testTimeRegex)
-
+  await page.waitForTimeout(10000) 
   // User can re run tests with 'Re run test' button
   // Once test results are back, click on 'Re run Test' button
   await page.getByRole('button', { name: 'RERUN TEST' }).click()
-  await page.waitForTimeout(10000) // wait for tests to complete
   // Ensure the page is fully loaded
   await page.waitForLoadState('networkidle')
   testTime = page.locator('#TestTime')
