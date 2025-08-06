@@ -202,3 +202,9 @@ jobs:
       - name: Deploy to Dev AWS
         run: |
           aws ecs update-service --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command | jq ".service.deployments[].id"
+      - name: Wait for ECS service to become stable
+        run: |
+          echo "Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+          --cluster izgateway-configuration-console \
+          --services izgateway-config-console
