@@ -12,37 +12,25 @@ import logger from '../../../../logger'
 import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
+import { decrypt } from '../../security/cryptoSupport'
 
 const randomUUID = uuidv4()
 let hl7Message: string
 let requestBody: string
-let password: string
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 const TEST_NAME = 'Send a Submit Single Message with an HL7 QBP for test patient'
 export default class QBP extends ConnectionTest {
-  skip = (): Promise<ConnectionTestResult[]> => {
+  skip = (msg : string): Promise<ConnectionTestResult[]> => {
     return Promise.resolve([{
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
       status: TestStatus.SKIPPED,
-      message: 'QBP test skipped due to connectivity test failures',
+      message: msg ? msg : 'QBP test skipped due to connectivity test failures',
       detail: null,
     }])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
-
-    if (!destination?.password) {
-      password = await lookupDestinationPassword(
-        this.connectionTestRequest.destinationData.destId,
-        this.connectionTestRequest.destinationData.destinationType.typeId
-      )
-
-    }
-    const destinationVersion = await lookupDestinationVersion(
-      this.connectionTestRequest.destinationData.destId,
-      this.connectionTestRequest.destinationData.destinationType.typeId
-    )
     const hl7QueryTestResult: ConnectionTestResult = {
       name: TEST_NAME,
       order: this.connectionTestRequest.order,
@@ -80,55 +68,59 @@ export default class QBP extends ConnectionTest {
       'wv',
       'wy',
     ]
-    const setRequestBody = (version: string) => {
-      /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
-      const msh11 =
-        destination.destinationType.typeId == 5 ||
-          normalOnboardingDestinations.includes(destination.destId)
-          ? 'P'
-          : 'T'
+    const encPassword = destination.password || await lookupDestinationPassword(
+      destination.destId,
+      destination.destinationType.typeId
+    ) || ''
+    const password = decrypt(encPassword)
+    const destinationVersion = await lookupDestinationVersion(
+      destination.destId,
+      destination.destinationType.typeId
+    ) || ''
 
-      const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${destination?.MSH5
-        }|${destination?.MSH6}|${moment().format(
-          'YYYYMMDDHHmmssZZ'
-        )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination?.MSH22
-        }|
+    /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
+    const msh11 =
+      destination.destinationType.typeId == 5 ||
+        normalOnboardingDestinations.includes(destination.destId)
+        ? 'P'
+        : 'T'
+
+    const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${destination?.MSH5
+      }|${destination?.MSH6}|${moment().format(
+        'YYYYMMDDHHmmssZZ'
+      )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination?.MSH22
+      }|
 QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID.replace(
-          /-/g,
-          ''
-        )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
+        /-/g,
+        ''
+      )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
 RCP|I|10^RD&amp;Records&amp;HL70126`
-
-      if (version !== '2014') {
+    const requestBody = (destinationVersion !== '2014') ?
         // 2011 is default value if not set
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
-      <soap:Body>
-      <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
-      <iis:username>${destination?.username}</iis:username>
-      <iis:password>${destination?.password || password}</iis:password>
-      <iis:facilityID>${destination?.facilityId}</iis:facilityID>
-      <iis:hl7Message>${hl7msg}</iis:hl7Message>
-      </iis:submitSingleMessage>
-      </soap:Body>
-      </soap:Envelope>`
-      } else {
-        requestBody = `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" xmlns:iis="urn:cdc:iisb:2014">
-        <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
-          <wsa:Action>urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest</wsa:Action>
-          <wsa:MessageID>${randomUUID}</wsa:MessageID>
-        </soap:Header>
-        <soap:Body>
-          <iis:SubmitSingleMessageRequest>
-            <iis:Username>${destination?.username}</iis:Username>
-            <iis:Password>${destination?.password || password}</iis:Password>
-            <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
-            <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
-          </iis:SubmitSingleMessageRequest>
-        </soap:Body>
-      </soap:Envelope>`
-      }
-      return requestBody
-    }
+        `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+           <soap:Body>
+             <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
+               <iis:username>${destination?.username}</iis:username>
+               <iis:password>${password}</iis:password>
+               <iis:facilityID>${destination?.facilityId}</iis:facilityID>
+               <iis:hl7Message>${hl7msg}</iis:hl7Message>
+             </iis:submitSingleMessage>
+           </soap:Body>
+         </soap:Envelope>`
+      : `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+           <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
+             <wsa:Action>urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest</wsa:Action>
+             <wsa:MessageID>${randomUUID}</wsa:MessageID>
+           </soap:Header>
+           <soap:Body>
+             <iis:SubmitSingleMessageRequest xmlns:iis="urn:cdc:iisb:2014">
+               <iis:Username>${destination?.username}</iis:Username>
+               <iis:Password>${password}</iis:Password>
+               <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
+               <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
+             </iis:SubmitSingleMessageRequest>
+           </soap:Body>
+         </soap:Envelope>`;
 
     const httpsAgentOptions = {
       cert: fs.readFileSync(
@@ -183,12 +175,12 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
             if (result) {
               responseMessage = result as unknown as Element
             }
-            logger.debug('Response SOAP Message: ' + data)
+            //logger.debug('Response SOAP Message: ' + data)
             if (!responseMessage?.textContent) {
               resolve([
                 {
                   ...hl7QueryTestResult,
-                  detail: null,
+                  detail: `No message received for facility ${destination?.facilityId}`,
                   message: `${data}`,
                   status: TestStatus.FAIL,
                 },
@@ -200,6 +192,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
                   resolve([
                     {
                       ...hl7QueryTestResult,
+                      detail: `Message received for facility ${destination?.facilityId}`,
                       status: TestStatus.PASS,
                     },
                   ])
@@ -285,7 +278,7 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
           },
         ])
       })
-      req.write(setRequestBody(destinationVersion))
+      req.write(requestBody)
       req.end()
     })
   }

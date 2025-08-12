@@ -5,6 +5,6 @@ import { TestStatus } from './TestStatus'
 export default interface Testable {
   connectionTestRequest: ConnectionTestRequest
   status: TestStatus
-  skip: () => Promise<ConnectionTestResult[]>
+  skip: (msg?: string) => Promise<ConnectionTestResult[]>
   run: () => Promise<ConnectionTestResult[]>
 }

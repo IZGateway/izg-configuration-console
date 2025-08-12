@@ -93,7 +93,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                         primary={item.name}
                         secondary={
                           <Typography variant="body2" color="default">
-                            Test skipped due to connectivity test failures
+                            {item.message}
                           </Typography>
                         }
                       />
