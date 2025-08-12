@@ -39,16 +39,33 @@ jobs:
           aws-region: us-east-1
 
       - name: Start AWS Dev Service
+        env:
+          AWS_REGIONS: ${{ vars.AWS_REGIONS }}
+          ECS_DESIRED_COUNT: ${{ vars.ECS_DESIRED_COUNT }}
         run: |
-          echo "Starting ECS service..."
-          aws ecs update-service \
-            --cluster izgateway-configuration-console \
-            --service izgateway-config-console \
-            --desired-count 1 \
-            --enable-execute-command \
-            --force-new-deployment \
-            | jq ".service.deployments[].id"
-
+          if [ -z "$AWS_REGIONS" ]; then
+            echo "AWS_REGIONS not set, defaulting to us-east-1"
+            AWS_REGIONS="us-east-1"
+          fi
+          
+          if [ -z "$ECS_DESIRED_COUNT" ]; then
+            echo "ECS_DESIRED_COUNT not set, defaulting to 1"
+            ECS_DESIRED_COUNT="1"
+          fi
+          
+          for region in $AWS_REGIONS; do
+            echo "Update ECS services in $region (starting $ECS_DESIRED_COUNT containers)"
+            aws ecs update-service --region $region --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command --desired-count $ECS_DESIRED_COUNT | jq ".service.deployments[].id" &
+          done
+          
+          wait
+          
+          for region in $AWS_REGIONS; do
+            echo "Wait for ECS service stability in $region"
+            aws ecs wait services-stable --region $region --cluster izgateway-configuration-console --service izgateway-config-console &
+          done
+          
+          wait
       - name: Install dependencies
         run: npm ci --force
 
