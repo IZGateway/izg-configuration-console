@@ -8,7 +8,6 @@ import path from 'path'
 import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
-import logger from '../../../../logger'
 import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
@@ -16,7 +15,6 @@ import { decrypt } from '../../security/cryptoSupport'
 
 const randomUUID = uuidv4()
 let hl7Message: string
-let requestBody: string
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 const TEST_NAME = 'Send a Submit Single Message with an HL7 QBP for test patient'
 export default class QBP extends ConnectionTest {
