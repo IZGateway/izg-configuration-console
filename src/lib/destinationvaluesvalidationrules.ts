@@ -5,15 +5,15 @@ const maxUsernameLength = 50
 const validationRules = {
   newPassword: {
     regex:
-      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+      /^(?!==)(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
     message:
-      'Passwords must have a length of 15 characters. Passwords must include at least 2 of each: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
+      'Passwords must have a length of 15 characters, must not start with ==, and must include at least 2 of each: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
   },
   confirmPassword: {
     regex:
-      /^(?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
+      /^git (?=(?:.*\d){2})(?=(?:.*[a-z]){2})(?=(?:.*[A-Z]){2})(?=(?:.*[!@#$%^()&]){2}).{15,}$/,
     message:
-      'Passwords must have a length of 15 characters. Passwords must include at least 2 of each: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
+      'Passwords must have a length of 15 characters, must not start with ==, and must include at least 2 of each: Numbers (0 through 9), Lowercase letters (a through z), Uppercase letters (A through Z), and Special Characters (!@#$%^()&)',
   },
   facilityId: {
     regex: /^[A-Za-z0-9_-]{0,25}$/,
