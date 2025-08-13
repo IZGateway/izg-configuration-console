@@ -227,7 +227,7 @@ const ConnectionsTable = (props) => {
       headerName: 'DESTINATION ID',
       flex: 0.5,
       minWidth: 50,
-      maxWidth: 200,
+      maxWidth: 150,
     },
     {
       field: 'destTypeId',
@@ -260,8 +260,8 @@ const ConnectionsTable = (props) => {
       field: 'status',
       headerName: 'STATUS',
       flex: 0.75,
-      minWidth: 100,
-      maxWidth: 1000,
+      minWidth: 50,
+      maxWidth: 200,
       filterable: false,
       valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -410,6 +410,7 @@ const ConnectionsTable = (props) => {
       filterable: false,
       flex: 0.5,
       minWidth: 100,
+      maxWidth: 200,
       renderCell: (params) => {
         return (
           <div>
