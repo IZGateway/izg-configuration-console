@@ -4,6 +4,7 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import net from 'net'
 import { TestResponseMessages } from '../TestResponseMessages'
+import { ConnectionTestRequest } from '../types/ConnectionTestRequest'
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 const MY_IP_ADDRESS = await (await fetch('https://checkip.amazonaws.com', { cache: 'no-store' })).text()
 
@@ -11,7 +12,7 @@ export default class TCP extends ConnectionTest {
   private static readonly TIMEOUT_ERROR_CODE: string = 'ETIMEDOUT'
   private readonly TEST_NAME: string;
 
-  constructor(connectionTestRequest) {
+  constructor(connectionTestRequest : ConnectionTestRequest) {
     super(connectionTestRequest)
     this.TEST_NAME = `TCP Connectivity Test for ${this.connectionTestRequest.url.hostname}`
   }
@@ -26,7 +27,7 @@ export default class TCP extends ConnectionTest {
   }
 
   run = (): Promise<ConnectionTestResult[]> => {
-    const dnsConnectionTestResult: ConnectionTestResult = {
+    const tcpConnectionTestResult: ConnectionTestResult = {
       name: this.TEST_NAME,
       order: this.connectionTestRequest.order,
       message: '',
@@ -43,7 +44,7 @@ export default class TCP extends ConnectionTest {
         function () {
           resolve([
             {
-              ...dnsConnectionTestResult,
+              ...tcpConnectionTestResult,
               status: TestStatus.PASS,
             },
           ])
@@ -53,7 +54,7 @@ export default class TCP extends ConnectionTest {
       client.on('error', (error: any) => {
         resolve([
           {
-            ...dnsConnectionTestResult,
+            ...tcpConnectionTestResult,
             detail: error?.code,
             message: error
               ? error?.code === TCP.TIMEOUT_ERROR_CODE
@@ -68,7 +69,7 @@ export default class TCP extends ConnectionTest {
         client.destroy();
         resolve([
           {
-            ...dnsConnectionTestResult,
+            ...tcpConnectionTestResult,
             detail: 'ETIMEDOUT',
             message: TestResponseMessages.TCP_TIMEOUT(MY_IP_ADDRESS),
             status: TestStatus.FAIL,
