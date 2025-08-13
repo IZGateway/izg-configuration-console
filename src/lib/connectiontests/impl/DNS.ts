@@ -3,7 +3,13 @@ import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import { TestResponseMessages } from '../TestResponseMessages'
 import { ConnectionTestRequest } from '../types/ConnectionTestRequest'
+import { promises as dnsPromises } from 'dns';
+
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const resolver = new dnsPromises.Resolver({
+  "timeout": CONNECTION_TEST_TIMEOUT
+});
+resolver.setServers(['8.8.8.8', '8.8.4.4']); // Set Google's public DNS servers
 export default class DNS extends ConnectionTest {
   private readonly TEST_NAME : string
   private dnsConnectionTestResult: ConnectionTestResult 
@@ -24,42 +30,18 @@ export default class DNS extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: 'DNS test skipped due to connectivity test failures'    }])
   }
-  run = (): Promise<ConnectionTestResult[]> => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const dns = require('dns')
-
-
-    const dnsPromise = new Promise<ConnectionTestResult[]>((resolve) => {
-      dns.resolve4(
-        this.connectionTestRequest.url.hostname,
-        (error: NodeJS.ErrnoException, address: string[]) => {
-          resolve([
-            {
-              ...this.dnsConnectionTestResult,
-              detail: error?.code || address?.[0],
-              message: error
-                ? TestResponseMessages.DNS_LOOKUP_FAIL(this.connectionTestRequest.url.hostname)
-                : '',
-              status: error ? TestStatus.FAIL : TestStatus.PASS,
-            },
-          ])
-        }
-      )
-    })
-
-    const timeoutPromise = new Promise<ConnectionTestResult[]>((resolve) => {
-      setTimeout(() => {
-        resolve([
-          {
-            ...this.dnsConnectionTestResult,
-            detail: 'ETIMEDOUT',
-            message: `DNS resolution timed out after ${CONNECTION_TEST_TIMEOUT}ms`,
-            status: TestStatus.FAIL,
-          },
-        ])
-      }, CONNECTION_TEST_TIMEOUT)
-    })
-
-    return Promise.race([dnsPromise, timeoutPromise])
+  run = async (): Promise<ConnectionTestResult[]> => {
+    try {
+      const addresses = await resolver.resolve4(this.connectionTestRequest.url.hostname)
+      this.dnsConnectionTestResult.status = TestStatus.PASS
+      this.dnsConnectionTestResult.message = 'DNS Lookup Succeeded'
+      this.dnsConnectionTestResult.detail = addresses[0]
+      return [this.dnsConnectionTestResult]
+    } catch (err) {
+      this.dnsConnectionTestResult.status = TestStatus.FAIL
+      this.dnsConnectionTestResult.message = TestResponseMessages.DNS_LOOKUP_FAIL(this.connectionTestRequest.url.hostname)
+      this.dnsConnectionTestResult.detail = err.code
+      return [this.dnsConnectionTestResult]
+    }
   }
 }

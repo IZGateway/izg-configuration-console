@@ -1,3 +1,4 @@
+import moment from 'moment'
 import logger from '../../../logger'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import { Destination } from '../type/Destination'
@@ -136,7 +137,11 @@ const connectionTest = async (destination: Destination, userId: string) => {
           TestSuite[test],
           connectionTestRequest
         )
-        if (!skipTests) {
+        const isDex = destination.destVersion?.startsWith('DEX') || destination.destVersion?.startsWith('V202');
+        if (isDex && ['wsdl', 'connectivity', 'qbp'].includes(TestSuite[test])) {
+          // Disable WSDL, Connectivity and QBP tests for DEX2.0 and V2022-12-31
+          result = await T.skip(`Skipping ${TestSuite[test]} test for ADS Endpoints`)
+       } else if (!skipTests) {
           result = await T.run()
         } else {
           result = await T.skip()
@@ -159,8 +164,13 @@ const connectionTest = async (destination: Destination, userId: string) => {
 
 
       testResults.push(...result)
-      logger.debug(
-        `${TestSuite[test]} results: ${JSON.stringify(result, null, 3)}`
+      logger.info(
+        `${TestSuite[test]} completed`,
+          { ...result,
+            "timestamp": moment().toISOString(true),
+            "destId": destination.destId,
+            "username": destination.username
+          }
       )
       if (result[0]?.status === TestStatus.FAIL) {
         skipTests = true;
