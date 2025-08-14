@@ -6,7 +6,6 @@ import {
   fetchChangeRequestPassword,
 } from './destinationchangerequest'
 import destinationType from './destinationtype'
-import fetchDraftRecord from './draftrecord'
 import { fetchDestination, fetchDestinationPassword } from './destination'
 import fetchJurisdictionByDestId from './jurisdiction'
 import passwordComparison from './passwordComparison'
@@ -22,7 +21,6 @@ export {
   fetchDestinationChangeRequestById,
   fetchChangeRequestPassword,
   destinationType,
-  fetchDraftRecord,
   passwordComparison,
   isDatabaseConnected,
 }
