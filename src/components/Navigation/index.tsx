@@ -78,8 +78,33 @@ export type MenuItem = {
 
 const MiniDrawer = () => {
   const { data: session } = useSession()
-  const [open, setOpen] = React.useState(true)
+  const [isMobile, setIsMobile] = React.useState(false)
+  // Initialize drawer state based on screen size
+  const [open, setOpen] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1455
+    }
+    return true
+  })
   const [selectedIndex, setSelectedIndex] = React.useState(0)
+
+  // Handle responsive design for mobile
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1455
+      setIsMobile(mobile)
+      // Set drawer to closed by default on mobile
+      if (mobile) {
+        setOpen(false)
+      } else {
+        setOpen(true)
+      }
+    }
+
+    handleResize() // Set initial value
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handleClick = () => {
     setOpen(!open)
@@ -175,6 +200,14 @@ const MiniDrawer = () => {
         open={open}
         id="navigation"
         role="navigation"
+        sx={{
+          // Add mobile-specific styling if needed
+          ...(isMobile && {
+            '& .MuiDrawer-paper': {
+              zIndex: 1300, // Higher z-index on mobile to overlay content
+            },
+          }),
+        }}
       >
         <DrawerHeader
           sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 2 }}
