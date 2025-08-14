@@ -439,7 +439,6 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   return (
-
     <div>
       <Close buttonText="Cancel" />
       <Container sx={{ mb: 16 }} maxWidth="sm">
@@ -454,23 +453,165 @@ const EditConnection = (props: editConnectionProps) => {
           >
             Create Change Request
           </Typography>
-          <table border={0} cellPadding={5} width={'100%'}>
-            <thead style={{ background: '#005daa', color: 'white' }}>
-              <tr>
-                <th colSpan={2}>DESTINATION ID</th>
-                <th colSpan={2}>ENVIRONMENT</th>
-              </tr>
-            </thead>
-            <tr style={{ fontWeight: 'bold' }}>
-              <td colSpan={2} align="center">
-                {destData?.destId} ({destData?.jurisdiction.description})
-              </td>
+          <Box
+            sx={{
+              width: '100%',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              mb: 2,
+              '@media (max-width: 768px)': {
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                border: 'none',
+                borderRadius: 0,
+              },
+            }}
+          >
+            {/* Desktop view */}
+            <Box
+              sx={{
+                display: 'table',
+                width: '100%',
+                '@media (max-width: 768px)': {
+                  display: 'none',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'table-row',
+                  background: '#005daa',
+                  color: 'white',
+                }}
+              >
+                <Box
+                  component="div"
+                  sx={{
+                    display: 'table-cell',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    width: '50%',
+                  }}
+                >
+                  DESTINATION ID
+                </Box>
+                <Box
+                  component="div"
+                  sx={{
+                    display: 'table-cell',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    width: '50%',
+                  }}
+                >
+                  ENVIRONMENT
+                </Box>
+              </Box>
+              <Box sx={{ display: 'table-row' }}>
+                <Box
+                  component="div"
+                  sx={{
+                    display: 'table-cell',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    borderRight: '1px solid #ddd',
+                  }}
+                >
+                  {destData?.destId} ({destData?.jurisdiction.description})
+                </Box>
+                <Box
+                  component="div"
+                  sx={{
+                    display: 'table-cell',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {destData?.destinationType.type}
+                </Box>
+              </Box>
+            </Box>
 
-              <td colSpan={2} align="center">
-                {destData.destinationType.type}
-              </td>
-            </tr>
-          </table>
+            {/* Mobile stacked view */}
+            <Box
+              sx={{
+                display: 'none',
+                '@media (max-width: 768px)': {
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                },
+              }}
+            >
+              {/* Destination ID Section */}
+              <Box
+                sx={{
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    background: '#005daa',
+                    color: 'white',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  DESTINATION ID
+                </Box>
+                <Box
+                  sx={{
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  {destData?.destId} ({destData?.jurisdiction.description})
+                </Box>
+              </Box>
+
+              {/* Environment Section */}
+              <Box
+                sx={{
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    background: '#005daa',
+                    color: 'white',
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  ENVIRONMENT
+                </Box>
+                <Box
+                  sx={{
+                    padding: '12px',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    backgroundColor: 'white',
+                  }}
+                >
+                  {destData?.destinationType.type}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
           <Typography
             gutterBottom
             align="center"
