@@ -17,7 +17,7 @@ const versionFormat = winston.format((info) => {
 })
 
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'debug',
+  level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
     winston.format.uncolorize(),
     winston.format.errors({ stack: true }),
