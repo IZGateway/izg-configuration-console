@@ -99,6 +99,7 @@ export default class CIPHER extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: 'Cipher Suites Appropriate test skipped due to connectivity test failures',
       detail: null,
+      type: 'cipher'
     }])
   }
   run = (): Promise<ConnectionTestResult[]> => {
@@ -108,6 +109,7 @@ export default class CIPHER extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'cipher'
     }
 
     return Promise.allSettled([

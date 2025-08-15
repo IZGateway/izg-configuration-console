@@ -6,4 +6,5 @@ export type ConnectionTestResult = {
   message: string
   detail: string
   order: number
+  type: string
 }
