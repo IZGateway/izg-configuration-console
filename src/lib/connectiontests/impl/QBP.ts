@@ -11,7 +11,6 @@ import * as xml2js from 'xml2js'
 import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
-import { decrypt } from '../../security/cryptoSupport'
 
 const randomUUID = uuidv4()
 let hl7Message: string
