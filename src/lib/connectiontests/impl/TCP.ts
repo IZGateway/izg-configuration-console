@@ -23,6 +23,7 @@ export default class TCP extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: 'TCP test skipped due to connectivity test failures',
       detail: null,
+      type: 'tcp'
     }])
   }
 
@@ -33,6 +34,7 @@ export default class TCP extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'tcp'
     }
 
     return new Promise((resolve) => {

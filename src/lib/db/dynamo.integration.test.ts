@@ -103,11 +103,11 @@ describe('Dynamo Integration Tests', () => {
 
   it('fetchDestinationPassword should fetch the correct passwords for dev and 404', async () => {
     const devPass = await dynamo.fetchDestinationPassword('dev', 5)
-    expect(devPass).toEqual('pass')
+    expect(devPass).toEqual('passdev')
     const nfPass = await dynamo.fetchDestinationPassword('404', 5)
     expect(nfPass).toEqual('NONE')
     const wupPass = await dynamo.fetchDestinationPassword('devwup', 5)
-    expect(wupPass).toEqual('')
+    expect(wupPass).toEqual('passdevwup')
   });
 
   it('fetchLoggedInUsersDestinations should fetch same resources for ' + destIdValues, async () => {

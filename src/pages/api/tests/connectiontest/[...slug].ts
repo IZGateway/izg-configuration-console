@@ -149,6 +149,7 @@ const handler = async (
             status: null,
             order: -1,
             message: error,
+            type: '',
           },
         ],
       })
