@@ -34,6 +34,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
         status: null,
         order: -1,
         message: ``,
+        type: '',
       },
     ],
   }
@@ -69,6 +70,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
         status: null,
         order: -1,
         message: `The requested destination was not found in our records.`,
+        type: '',
       },
     ]
     //throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
@@ -85,6 +87,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
         status: null,
         order: -1,
         message: `The URL retrieved for ${destination.destId} is malformed`,
+        type: '',
       },
     ]
     logger.error(
@@ -129,6 +132,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
           message: '',
           detail: '',
           order: testCounter,
+          type: '',
         },
       ]
       connectionTestRequest.order = testCounter
@@ -157,6 +161,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
             message: error.message || 'An unexpected error occurred.',
             detail: '',
             order: testCounter,
+            type: '',
           },
         ]
       }

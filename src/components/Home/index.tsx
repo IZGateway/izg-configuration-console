@@ -309,7 +309,7 @@ function HomeComponent() {
             >
               <Typography variant="caption">
                 Version {pack.version}-{process.env.NEXT_PUBLIC_BUILD_ID} |
-                Immunization (IZ) Gateway Configuration Console 2024
+                Immunization (IZ) Gateway Configuration Console 2025
               </Typography>
               <Box
                 display={'flex'}

@@ -21,6 +21,7 @@ export default class WSDL extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: msg ? msg : 'WSDL test skipped due to connectivity test failures',
       detail: null,
+      type: 'wsdl'
     }])
   }
   run = (): Promise<ConnectionTestResult[]> => {
@@ -30,6 +31,7 @@ export default class WSDL extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'wsdl'
     }
 
     const httpsAgentOptions = {

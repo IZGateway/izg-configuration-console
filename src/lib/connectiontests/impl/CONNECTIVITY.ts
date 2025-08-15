@@ -20,6 +20,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: msg ? msg : 'Connectivity test skipped due to connectivity test failures',
       detail: null,
+      type: 'connectivity'
     }])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
@@ -29,6 +30,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'connectivity'
     }
     const destinationVersion = await lookupDestinationVersion(
       this.connectionTestRequest.destinationData.destId,

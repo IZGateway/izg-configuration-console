@@ -11,7 +11,6 @@ import * as xml2js from 'xml2js'
 import { DOMParser } from '@xmldom/xmldom'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
-import { decrypt } from '../../security/cryptoSupport'
 
 const randomUUID = uuidv4()
 let hl7Message: string
@@ -25,6 +24,7 @@ export default class QBP extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: msg ? msg : 'QBP test skipped due to connectivity test failures',
       detail: null,
+      type: 'qbp'
     }])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
@@ -35,6 +35,7 @@ export default class QBP extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'qbp'
     }
     /* msh11 should really be set by DB, but that must wait for core/hub changes to support it */
     const normalOnboardingDestinations = [
@@ -66,11 +67,10 @@ export default class QBP extends ConnectionTest {
       'wv',
       'wy',
     ]
-    const encPassword = destination.password || await lookupDestinationPassword(
+    const password = destination.password || await lookupDestinationPassword(
       destination.destId,
       destination.destinationType.typeId
     ) || ''
-    const password = decrypt(encPassword)
     const destinationVersion = await lookupDestinationVersion(
       destination.destId,
       destination.destinationType.typeId

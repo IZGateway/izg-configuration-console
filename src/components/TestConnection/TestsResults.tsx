@@ -63,9 +63,9 @@ const TestsResults = ({ testResults }: testListProps) => {
 
         return (
           <React.Fragment key={item.name}>
-            <ListItem id={item.name}>
+            <ListItem id={item.type}>
               <Table>
-                <TableRow>
+                <TableRow id={`${item.type}-test-result`}>
                   <TableCell
                     sx={{
                       padding: '4px',
