@@ -81,8 +81,79 @@ const TestsResults = ({ testResults }: testListProps) => {
                       flexDirection: { xs: 'column', md: 'row' },
                     }}
                   >
+                    {/* Mobile: Show check icon, info icon, and chip all on one line */}
+                    <Box
+                      sx={{
+                        display: { xs: 'flex', md: 'none' },
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        width: '100%',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        {/* Check/Error icon */}
+                        {item.status === 'PASS' && (
+                          <CheckCircleIcon color="primary" />
+                        )}
+                        {item.status === 'FAIL' && <ErrorIcon color="error" />}
+                        {item.status === 'WARNING' && (
+                          <ReportProblemIcon color="warning" />
+                        )}
+                        {item.status === 'SKIPPED' && (
+                          <ErrorOutlineIcon sx={{ color: palette.error }} />
+                        )}
+
+                        {/* Info icon */}
+                        <Tooltip
+                          arrow
+                          placement="bottom"
+                          componentsProps={{
+                            tooltip: {
+                              sx: {
+                                backgroundColor: palette.white,
+                                boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+                                border: `1px solid ${palette.border}`,
+                                color: palette.black,
+                                '& .MuiTooltip-arrow': {
+                                  color: palette.border,
+                                },
+                              },
+                            },
+                          }}
+                          title={
+                            <Typography>
+                              {tooltipText || 'No tooltip available'}
+                            </Typography>
+                          }
+                        >
+                          <InfoOutlinedIcon color="primary" />
+                        </Tooltip>
+                      </Box>
+
+                      {/* Status chip */}
+                      <Chip
+                        label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                        variant="outlined"
+                        color={
+                          item.status === 'PASS'
+                            ? 'primary'
+                            : item.status === 'SKIPPED'
+                            ? 'default'
+                            : 'error'
+                        }
+                        sx={{
+                          borderRadius: '4px',
+                        }}
+                      />
+                    </Box>
+
+                    {/* Desktop: Original layout with icon on left */}
                     <ListItemIcon
                       sx={{
+                        display: { xs: 'none', md: 'flex' },
                         minHeight: '56px',
                         float: 'inline-start',
                         alignItems: 'center',
@@ -145,6 +216,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                     display="flex"
                     alignItems="center"
                     flexDirection={{ xs: 'row', md: 'row' }}
+                    sx={{ display: { xs: 'none', md: 'flex' } }}
                   >
                     <Box sx={{ padding: '4px', textAlign: 'end' }}>
                       <Tooltip

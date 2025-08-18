@@ -523,7 +523,7 @@ const ConnectionsTable = (props) => {
       maxWidth: 160,
       renderCell: (params) => {
         return (
-          <div>
+          <>
             <ChangeRequestActionButtons
               tabIndex={params.tabIndex}
               destId={params.row.destId}
@@ -552,7 +552,7 @@ const ConnectionsTable = (props) => {
               row={params.row}
               updateRow={updateRow}
             />
-          </div>
+          </>
         )
       },
     },
@@ -650,7 +650,6 @@ const ConnectionsTable = (props) => {
               </Typography>
             </Box>
           </Box>
-
           {/* Content */}
           <Box sx={{ marginBottom: '12px' }}>
             <Typography
@@ -670,7 +669,7 @@ const ConnectionsTable = (props) => {
             <Typography
               variant="body2"
               color="textSecondary"
-              sx={{ marginBottom: '4px' }}
+              sx={{ marginBottom: '4px', overflowWrap: 'anywhere' }}
             >
               <strong>Endpoint:</strong> {row.destUri}
             </Typography>
@@ -678,7 +677,6 @@ const ConnectionsTable = (props) => {
               <strong>Last Updated:</strong> {asOfDate}
             </Typography>
           </Box>
-
           {/* Maintenance Status */}
           {(row.hasFutureMaintenance || row.hasActiveMaintenance) && (
             <Box
@@ -704,14 +702,13 @@ const ConnectionsTable = (props) => {
               </Typography>
             </Box>
           )}
-
           {/* Action Buttons */}
           <Box
             sx={{
               display: 'flex',
               gap: '8px',
               flexWrap: 'wrap',
-              justifyContent: 'flex-end',
+              justifyContent: 'flex-start',
             }}
           >
             <ChangeRequestActionButtons
@@ -740,8 +737,7 @@ const ConnectionsTable = (props) => {
               row={row}
               updateRow={updateRow}
             />
-          </Box>
-
+          </Box>{' '}
           {/* Checkbox for selection (when test reports mode is active) */}
           {showCheckbox && (
             <Box
@@ -884,7 +880,7 @@ const ConnectionsTable = (props) => {
               sx={{
                 position: 'fixed',
                 bottom: 0,
-                left: 0,
+                left: 70,
                 right: 0,
                 backgroundColor: palette.white,
                 padding: '16px',
@@ -897,6 +893,7 @@ const ConnectionsTable = (props) => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  paddingX: '16px',
                 }}
               >
                 <Typography

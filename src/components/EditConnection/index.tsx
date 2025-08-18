@@ -103,7 +103,7 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [scheduledDateTime, getDefaultDate])
   useEffect(() => {
-    if (hasCreateChangeRequestTicketError) {
+    if (hasCreateChangeRequestTicketError && destData) {
       setAlert({
         level: 'error',
         jurisdiction: destData.jurisdiction.description,
@@ -111,12 +111,7 @@ const EditConnection = (props: editConnectionProps) => {
         message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}. Please try again later!`,
       })
     }
-  }, [
-    hasCreateChangeRequestTicketError,
-    destData.jurisdiction.description,
-    destData.destinationType.type,
-    setAlert,
-  ])
+  }, [hasCreateChangeRequestTicketError, destData, setAlert])
 
   useEffect(() => {
     if (draftData) {
@@ -191,7 +186,7 @@ const EditConnection = (props: editConnectionProps) => {
   }, [activeStep, alert])
 
   useEffect(() => {
-    if (activeStep === 2) {
+    if (activeStep === 2 && destData && defaultFormValues && formValues) {
       setFormErrors(null)
       setFormValuesDelta(null)
       const changedValues = getDelta(defaultFormValues, formValues)
@@ -204,7 +199,7 @@ const EditConnection = (props: editConnectionProps) => {
       setFormValuesDelta(changedValues)
       setFormErrors(validationErrors)
     }
-  }, [activeStep, defaultFormValues, formValues, destData.destinationType.type])
+  }, [activeStep, defaultFormValues, formValues, destData])
 
   useEffect(() => {
     // Skip agreement acknowledgement if already accepted this session
@@ -538,7 +533,7 @@ const EditConnection = (props: editConnectionProps) => {
                     fontWeight: 'bold',
                   }}
                 >
-                  {destData?.destinationType.type}
+                  {destData.destinationType.type}
                 </Box>
               </Box>
             </Box>
