@@ -331,41 +331,35 @@ const ConnectionsTable = (props) => {
       headerName: 'DESTINATION ID',
       flex: 0.5,
       minWidth: 50,
-      maxWidth: 200,
-    },
-    {
-      field: 'destTypeId',
-      headerName: 'Dest Type ID',
-      flex: 0.5,
-      minWidth: 50,
+      maxWidth: 130,
     },
     {
       field: 'destType',
       headerName: 'ENVIRONMENT',
       flex: 0.5,
       minWidth: 50,
-      maxWidth: 200,
+      maxWidth: 157,
     },
     {
       field: 'jurisdictionName',
       headerName: 'ORGANIZATION',
       flex: 0.5,
       minWidth: 25,
-      maxWidth: 250,
+      maxWidth: 162,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
       flex: 0.5,
       minWidth: 50,
-      maxWidth: 1000,
+      maxWidth: 390,
     },
     {
       field: 'status',
       headerName: 'STATUS',
       flex: 0.75,
-      minWidth: 100,
-      maxWidth: 1000,
+      minWidth: 50,
+      maxWidth: 160,
       filterable: false,
       valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -526,6 +520,7 @@ const ConnectionsTable = (props) => {
       filterable: false,
       flex: 0.5,
       minWidth: 100,
+      maxWidth: 160,
       renderCell: (params) => {
         return (
           <div>

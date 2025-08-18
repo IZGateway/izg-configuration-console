@@ -22,6 +22,7 @@ export default class DNS extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'dns'
     }
   }
   skip = () : Promise<ConnectionTestResult[]> => {
