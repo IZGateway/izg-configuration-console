@@ -22,10 +22,6 @@ import {
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
 
-import Table from '@mui/material/Table'
-import TableCell from '@mui/material/TableCell'
-import TableRow from '@mui/material/TableRow'
-
 interface testListProps {
   testResults: any[]
 }

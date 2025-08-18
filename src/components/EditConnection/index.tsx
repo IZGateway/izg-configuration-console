@@ -5,7 +5,7 @@ import Identify from './identify'
 import Verify from './verify'
 import Jurisdiction from './jurisdiction'
 import { useRouter } from 'next/router'
-import { useState, useEffect, useContext } from 'react'
+import { useState, useEffect, useContext, useCallback } from 'react'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
@@ -91,17 +91,17 @@ const EditConnection = (props: editConnectionProps) => {
     return date
   }
 
-  const getDefaultDate = () => {
+  const getDefaultDate = useCallback(() => {
     const currentDate = moment.tz('America/New_York')
     const businessDate = getNextBusinessDay(currentDate, 2)
     return businessDate.hour(8).minute(0).second(0) // Set time to 8:00 AM
-  }
+  }, [])
 
   useEffect(() => {
     if (scheduledDateTime === null) {
       setScheduledDateTime(getDefaultDate())
     }
-  }, [scheduledDateTime])
+  }, [scheduledDateTime, getDefaultDate])
   useEffect(() => {
     if (hasCreateChangeRequestTicketError) {
       setAlert({
@@ -111,7 +111,12 @@ const EditConnection = (props: editConnectionProps) => {
         message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}. Please try again later!`,
       })
     }
-  }, [hasCreateChangeRequestTicketError])
+  }, [
+    hasCreateChangeRequestTicketError,
+    destData.jurisdiction.description,
+    destData.destinationType.type,
+    setAlert,
+  ])
 
   useEffect(() => {
     if (draftData) {
@@ -199,7 +204,7 @@ const EditConnection = (props: editConnectionProps) => {
       setFormValuesDelta(changedValues)
       setFormErrors(validationErrors)
     }
-  }, [activeStep, defaultFormValues, formValues])
+  }, [activeStep, defaultFormValues, formValues, destData.destinationType.type])
 
   useEffect(() => {
     // Skip agreement acknowledgement if already accepted this session
