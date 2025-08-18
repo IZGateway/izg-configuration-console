@@ -148,6 +148,12 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
             ${{ runner.os }}-nextjs-
 
+      - name: "Get Application Version"
+        run: |
+          echo "Setting the release version"
+          APPLICATION_VERSION=$(npm pkg get version | tr -d '"')
+          echo APPLICATION_VERSION="${APPLICATION_VERSION}" >> $GITHUB_ENV
+
       - name: Configure AWS credentials (APHL)
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
@@ -166,9 +172,7 @@ jobs:
           images: |
             ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
           tags: |
-            type=raw,value=izg-configuration-console_${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=izg-configuration-console_rc_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
-            type=raw,value=izg-configuration-console_release_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=izgw-cc-${{ env.APPLICATION_VERSION }}_${{github.run_number}}
           flavor: |
             latest=false
 
