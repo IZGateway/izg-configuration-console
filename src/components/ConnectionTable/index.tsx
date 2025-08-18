@@ -520,7 +520,7 @@ const ConnectionsTable = (props) => {
       filterable: false,
       flex: 0.5,
       minWidth: 100,
-      maxWidth: 160,
+      maxWidth: 175, // Adjusted maxWidth so all icons show
       renderCell: (params) => {
         return (
           <>
