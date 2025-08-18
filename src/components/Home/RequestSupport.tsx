@@ -29,7 +29,7 @@ const RequestSupport = () => {
         <IconButton sx={actionButtonStyle} href={linkToJira} target="_blank">
           <ContactSupportOutlinedIcon color="primary" />
         </IconButton>
-        <Typography align="center">
+        <Typography fontSize={{ xs: '0.8rem', md: '1rem' }} align="center">
           Request <br /> Support
         </Typography>
       </Box>

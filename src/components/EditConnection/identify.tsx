@@ -127,7 +127,8 @@ const Identify = (props: any) => {
       label: 'MSH-11',
       value: props.value.MSH11,
       group: 4,
-      title: 'MSH 11 specifies the value to use for the type of message processing',
+      title:
+        'MSH 11 specifies the value to use for the type of message processing',
     },
     {
       id: 'rxa11',
@@ -181,8 +182,8 @@ const Identify = (props: any) => {
                     ? 'text'
                     : 'password'
                   : showConfirmNewPassword
-                    ? 'text'
-                    : 'password'
+                  ? 'text'
+                  : 'password'
               }
               label={field.label}
               variant="outlined"
@@ -193,13 +194,13 @@ const Identify = (props: any) => {
               InputProps={
                 field.name === 'newPassword'
                   ? getPasswordInputProps(
-                    showNewPassword,
-                    toggleNewPasswordVisibility
-                  )
+                      showNewPassword,
+                      toggleNewPasswordVisibility
+                    )
                   : getPasswordInputProps(
-                    showConfirmNewPassword,
-                    toggleConfirmNewPasswordVisibility
-                  )
+                      showConfirmNewPassword,
+                      toggleConfirmNewPasswordVisibility
+                    )
               }
               error={_.get(props.formErrors, field.name, null)}
               helperText={_.get(props.formErrors, field.name, null)}
@@ -212,7 +213,7 @@ const Identify = (props: any) => {
   return (
     <>
       <form>
-        <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
+        <Card sx={{ minWidth: '100%', borderRadius: '0px 0px 30px 30px' }}>
           <CardHeader
             title={
               <Typography
@@ -232,7 +233,7 @@ const Identify = (props: any) => {
               sensitive information, which can be detrimental to individuals or
               organizations
             </div>
-            <Box display="flex" flexDirection="column" gap="1rem">
+            <Box display="flex" flexDirection="column" gap="1rem" width="100%">
               <TextField
                 id="destUri"
                 name="destUri"
@@ -303,7 +304,7 @@ const Identify = (props: any) => {
         </Card>
         <Card
           sx={{
-            minWidth: 275,
+            minWidth: '100%',
             borderRadius: '0px 0px 30px 30px',
             marginTop: 5,
           }}
@@ -327,8 +328,21 @@ const Identify = (props: any) => {
               It should not contain |^&~&quot;/ characters. If you think a value
               is incorrect, please contact your administrator
             </div>
-            <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: '2rem',
+                marginTop: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: '1rem',
+                  width: '100%',
+                }}
+              >
                 {formFields
                   .filter((field) => field.group === 1)
                   .map((field) => (
@@ -338,7 +352,7 @@ const Identify = (props: any) => {
                       label={field.label}
                       variant="outlined"
                       sx={{
-                        width: '50%',
+                        width: { xs: '100%', md: '50%' },
                       }}
                       value={field.value}
                       onChange={handleChange}
@@ -350,7 +364,14 @@ const Identify = (props: any) => {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: '1rem',
+                  width: '100%',
+                }}
+              >
                 {formFields
                   .filter((field) => field.group === 2)
                   .map((field) => (
@@ -360,7 +381,7 @@ const Identify = (props: any) => {
                       label={field.label}
                       variant="outlined"
                       sx={{
-                        width: '50%',
+                        width: { xs: '100%', md: '50%' },
                       }}
                       value={field.value}
                       onChange={handleChange}
@@ -372,7 +393,14 @@ const Identify = (props: any) => {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: '1rem',
+                  width: '100%',
+                }}
+              >
                 {formFields
                   .filter((field) => field.group === 3)
                   .map((field) => (
@@ -382,7 +410,7 @@ const Identify = (props: any) => {
                       label={field.label}
                       variant="outlined"
                       sx={{
-                        width: '50%',
+                        width: { xs: '100%', md: '50%' },
                       }}
                       value={field.value}
                       onChange={handleChange}
@@ -394,7 +422,14 @@ const Identify = (props: any) => {
               </Box>
             </Box>
             <Box sx={{ display: 'flex', gap: '2rem', marginTop: 2 }}>
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: '1rem',
+                  width: '100%',
+                }}
+              >
                 {formFields
                   .filter((field) => field.group === 4)
                   .map((field) => (
