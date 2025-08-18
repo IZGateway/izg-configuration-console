@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardContent,
   Button,
+  CircularProgress,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
@@ -48,6 +49,7 @@ const dataGridCustom = {
     border: `1px solid ${palette.border}`,
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+    overflowX: 'auto',
   },
   '& .MuiDataGrid-row:hover': {
     bgcolor: '#00000010',
@@ -55,9 +57,28 @@ const dataGridCustom = {
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
       width: '32vw',
+      '@media (max-width: 768px)': {
+        width: '100%',
+        maxWidth: '200px',
+      },
     },
   '& .MuiDataGrid-columnHeaders': {
     backgroundColor: palette.white,
+    '& .MuiDataGrid-columnHeaderTitle': {
+      fontSize: '0.75rem',
+      fontWeight: 600,
+      '@media (max-width: 768px)': {
+        fontSize: '0.65rem',
+      },
+    },
+  },
+  '& .MuiDataGrid-cell': {
+    '@media (max-width: 768px)': {
+      fontSize: '0.75rem',
+      padding: '4px 8px',
+      display: 'flex',
+      alignItems: 'center',
+    },
   },
   '& .MuiDataGrid-toolbarContainer': {
     backgroundColor: palette.white,
@@ -65,6 +86,12 @@ const dataGridCustom = {
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
     border: `1px solid ${palette.border}`,
     marginBottom: '8px',
+    '@media (max-width: 768px)': {
+      padding: '16px 12px 12px 12px',
+      flexDirection: 'column',
+      gap: '8px',
+      alignItems: 'stretch',
+    },
   },
   '& svg.MuiSvgIcon-root.MuiSvgIcon-fontSizeSmall.MuiDataGrid-sortIcon.css-ptiqhd-MuiSvgIcon-root':
     {
@@ -112,7 +139,17 @@ const CustomToolbar = ({
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
-      <div style={{ marginLeft: 'auto' }}>
+      <Box
+        sx={{
+          marginLeft: 'auto',
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '8px',
+          '@media (max-width: 768px)': {
+            flexDirection: 'column',
+          },
+        }}
+      >
         <Button
           color="secondary"
           onClick={onTestReportsClick}
@@ -120,15 +157,18 @@ const CustomToolbar = ({
           sx={{
             borderRadius: '24px',
             padding: '8px 16px',
-            mr: '8px',
             textTransform: 'none',
             fontWeight: 500,
+            '@media (max-width: 768px)': {
+              padding: '6px 12px',
+              fontSize: '0.75rem',
+            },
           }}
         >
           Test Report(s)
         </Button>
         <GridToolbarFilterButton ref={setFilterButtonEl} />
-      </div>
+      </Box>
     </GridToolbarContainer>
   )
 }
@@ -141,7 +181,71 @@ const ConnectionsTable = (props) => {
   const [selectedRows, setSelectedRows] = useState([])
   const [isBoxVisible, setIsBoxVisible] = useState(false) // State to control box visibility
   const [endpointStatuses, setEndpointStatuses] = useState(props.data)
+  const [isMobile, setIsMobile] = useState(false)
+  const [renderMode, setRenderMode] = useState('desktop') // 'mobile', 'desktop', 'transitioning'
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const router = useRouter()
+
+  // Handle responsive design with debounced resize and async rendering
+  React.useEffect(() => {
+    let resizeTimer
+
+    const handleResize = () => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        const newIsMobile = window.innerWidth < 768
+        if (newIsMobile !== isMobile) {
+          // Set transitioning state immediately for smooth UX
+          setRenderMode('transitioning')
+          setIsMobile(newIsMobile)
+
+          // Delay the actual render mode change to prevent blocking
+          setTimeout(() => {
+            setRenderMode(newIsMobile ? 'mobile' : 'desktop')
+          }, 50) // Small delay to allow state to update
+        }
+      }, 100) // Debounce resize events
+    }
+
+    const initialCheck = () => {
+      const initialIsMobile = window.innerWidth < 768
+      setIsMobile(initialIsMobile)
+      setRenderMode(initialIsMobile ? 'mobile' : 'desktop')
+    }
+
+    initialCheck() // Set initial value
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [isMobile]) // Debounce search term to improve performance
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // Filter data based on debounced search term
+  const filteredData = React.useMemo(() => {
+    if (!debouncedSearchTerm) return endpointStatuses
+
+    return endpointStatuses.filter((row) => {
+      const searchLower = debouncedSearchTerm.toLowerCase()
+      return (
+        row.destId?.toLowerCase().includes(searchLower) ||
+        row.jurisdictionName?.toLowerCase().includes(searchLower) ||
+        row.destType?.toLowerCase().includes(searchLower) ||
+        row.destUri?.toLowerCase().includes(searchLower) ||
+        row.status?.toLowerCase().includes(searchLower)
+      )
+    })
+  }, [endpointStatuses, debouncedSearchTerm])
+
   const handleSelectionChange = (selection) => {
     setSelectedRows(selection)
   }
@@ -376,8 +480,14 @@ const ConnectionsTable = (props) => {
               {!isConnected &&
                 !params.row.hasActiveMaintenance &&
                 !params.row.hasFutureMaintenance && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography>Not Connected</Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      mt: isMobile ? 0 : '1.5rem',
+                    }}
+                  >
+                    <Typography variant="body2">Not Connected</Typography>
                     <ErrorOutlineIcon
                       fontSize="small"
                       sx={{ marginLeft: 0.5 }}
@@ -387,8 +497,14 @@ const ConnectionsTable = (props) => {
               {isConnected &&
                 !params.row.hasActiveMaintenance &&
                 !params.row.hasFutureMaintenance && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography>Connected</Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      mt: isMobile ? 0 : '1.5rem',
+                    }}
+                  >
+                    <Typography variant="body2">Connected</Typography>
                     <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
                   </Box>
                 )}
@@ -455,6 +571,206 @@ const ConnectionsTable = (props) => {
     setEndpointStatuses(updatedEndpointStatus)
   }
 
+  // Mobile Card Component
+  const MobileCard = React.memo(
+    ({
+      row,
+      index,
+    }: {
+      row: {
+        destId: string
+        destTypeId: number
+        status?: string
+        statusAt?: string
+        jurisdictionName?: string
+        destType?: string
+        destUri?: string
+        hasActiveMaintenance?: boolean
+        hasFutureMaintenance?: boolean
+        maintenanceValues?: {
+          maint_start: string
+          maint_end: string
+        } | null
+        hasChangeRequest?: boolean
+        hasActiveDraft?: boolean
+      }
+      index: number
+    }) => {
+      const isConnected = row.status?.toLowerCase() === 'connected'
+      const asOfDate = row.statusAt
+        ? new Date(row.statusAt).toLocaleString()
+        : 'Unknown'
+
+      return (
+        <Card
+          key={row.destId + row.destTypeId}
+          sx={{
+            marginBottom: '12px',
+            padding: '16px',
+            border: '1px solid #e0e0e0',
+            borderRadius: '8px',
+            backgroundColor: row.hasActiveMaintenance
+              ? palette.errorHighLight
+              : 'white',
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {/* Header Row */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '12px',
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 'bold',
+                color: palette.primary,
+                fontSize: '1rem',
+              }}
+            >
+              {row.destId}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {isConnected ? (
+                <CheckIcon fontSize="small" />
+              ) : (
+                <ErrorOutlineIcon fontSize="small" />
+              )}
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 'bold',
+                }}
+              >
+                {isConnected ? 'Connected' : 'Not Connected'}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Content */}
+          <Box sx={{ marginBottom: '12px' }}>
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              sx={{ marginBottom: '4px' }}
+            >
+              <strong>Organization:</strong> {row.jurisdictionName}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              sx={{ marginBottom: '4px' }}
+            >
+              <strong>Environment:</strong> {row.destType}
+            </Typography>
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              sx={{ marginBottom: '4px' }}
+            >
+              <strong>Endpoint:</strong> {row.destUri}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              <strong>Last Updated:</strong> {asOfDate}
+            </Typography>
+          </Box>
+
+          {/* Maintenance Status */}
+          {(row.hasFutureMaintenance || row.hasActiveMaintenance) && (
+            <Box
+              sx={{
+                marginBottom: '12px',
+                padding: '8px',
+                backgroundColor: '#fff3cd',
+                borderRadius: '4px',
+              }}
+            >
+              <Typography variant="body2" sx={{ color: palette.warningDark }}>
+                {row.hasActiveMaintenance
+                  ? `Under maintenance until ${
+                      _.isNull(row.maintenanceValues)
+                        ? 'ended by user'
+                        : moment(
+                            new Date(row.maintenanceValues.maint_end)
+                          ).format('MMM DD, YYYY [at] h:mm A')
+                    }`
+                  : `Maintenance scheduled from ${moment(
+                      new Date(row.maintenanceValues.maint_start)
+                    ).format('MMM DD, YYYY [at] h:mm A')}`}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Action Buttons */}
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <ChangeRequestActionButtons
+              tabIndex={index}
+              destId={row.destId}
+              destTypeId={row.destTypeId}
+              hasChangeRequest={row.hasChangeRequest}
+              hasActiveDraft={row.hasActiveDraft}
+            />
+            {accessLevels.canRunConnectionTest && (
+              <TestConnectionButton
+                tabIndex={index}
+                destId={row.destId}
+                destTypeId={row.destTypeId}
+              />
+            )}
+            <PopOverActionButtons
+              destId={row.destId}
+              destTypeId={row.destTypeId}
+              status={row.status}
+              hasActiveMaintenance={
+                row.hasActiveMaintenance || row.hasFutureMaintenance
+              }
+              jurisdictionName={row.jurisdictionName}
+              destType={row.destType}
+              row={row}
+              updateRow={updateRow}
+            />
+          </Box>
+
+          {/* Checkbox for selection (when test reports mode is active) */}
+          {showCheckbox && (
+            <Box
+              sx={{ marginTop: '12px', display: 'flex', alignItems: 'center' }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedRows.includes(row.destId + row.destTypeId)}
+                onChange={(e) => {
+                  const rowId = row.destId + row.destTypeId
+                  if (e.target.checked) {
+                    setSelectedRows([...selectedRows, rowId])
+                  } else {
+                    setSelectedRows(selectedRows.filter((id) => id !== rowId))
+                  }
+                }}
+              />
+              <Typography variant="body2" sx={{ marginLeft: '8px' }}>
+                Select for Test Report
+              </Typography>
+            </Box>
+          )}
+        </Card>
+      )
+    }
+  )
+
+  MobileCard.displayName = 'MobileCard'
+
   return (
     <div>
       <Box>
@@ -479,88 +795,214 @@ const ConnectionsTable = (props) => {
         </Card>
       </Box>
 
-      <DataGrid
-        sx={dataGridCustom}
-        rows={endpointStatuses}
-        columns={columns}
-        checkboxSelection={showCheckbox}
-        pageSizeOptions={[5, 25, 50, 100]}
-        autoHeight
-        initialState={{
-          sorting: {
-            sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
-          },
-          pagination: { paginationModel: { pageSize } },
-          columns: {
-            columnVisibilityModel: {
-              destTypeId: false,
+      {/* Conditional Rendering Based on Mode */}
+      {renderMode === 'transitioning' ? (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '40px',
+            backgroundColor: palette.white,
+            marginTop: '16px',
+            borderRadius: '8px',
+          }}
+        >
+          <CircularProgress size={24} />
+          <Typography sx={{ marginLeft: '12px' }}>Switching view...</Typography>
+        </Box>
+      ) : renderMode === 'mobile' ? (
+        <Box>
+          {/* Mobile Toolbar */}
+          <Box
+            sx={{
+              backgroundColor: palette.white,
+              padding: '16px',
+              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+              border: `1px solid ${palette.border}`,
+              marginBottom: '16px',
+              marginTop: '16px',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+              {filteredData.length} Connections Found
+            </Typography>
+
+            {/* Search Input */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input
+                type="text"
+                placeholder="Search connections..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  border: `1px solid ${palette.border}`,
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  backgroundColor: 'white',
+                }}
+              />
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Button
+                color="secondary"
+                onClick={handleTestReportsClick}
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderRadius: '24px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                {showCheckbox ? 'Cancel Selection' : 'Test Report(s)'}
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Mobile Cards */}
+          <Box sx={{ padding: '0 8px' }}>
+            {filteredData.map((row, index) => (
+              <MobileCard
+                key={row.destId + row.destTypeId}
+                row={row}
+                index={index}
+              />
+            ))}
+          </Box>
+
+          {/* Mobile Footer for Test Reports */}
+          {isBoxVisible && (
+            <Box
+              sx={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: palette.white,
+                padding: '16px',
+                boxShadow: '0px -3px 5px rgba(0, 0, 0, 0.25)',
+                zIndex: 1000,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 'bold', color: '#005763' }}
+                >
+                  {selectedRows.length} Connections Selected
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleGenerateReport(selectedRows)}
+                  disabled={selectedRows.length === 0}
+                  size="small"
+                >
+                  Generate Report
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      ) : renderMode === 'desktop' ? (
+        /* Desktop View */
+        <DataGrid
+          sx={dataGridCustom}
+          rows={endpointStatuses}
+          columns={columns}
+          checkboxSelection={showCheckbox}
+          pageSizeOptions={[5, 25, 50, 100]}
+          autoHeight
+          initialState={{
+            sorting: {
+              sortModel: [{ field: 'ORGANIZATION', sort: 'asc' }],
             },
-          },
-        }}
-        onRowSelectionModelChange={handleSelectionChange}
-        disableRowSelectionOnClick
-        disableColumnMenu
-        disableColumnSelector
-        disableDensitySelector
-        onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-        getRowId={(row) => row.destId + row.destTypeId}
-        getRowClassName={(params) => {
-          return params.row.hasActiveMaintenance === true ? 'highlight' : ''
-        }}
-        density={'comfortable'}
-        pagination
-        slots={{
-          toolbar: CustomToolbar as GridSlots['toolbar'],
-          footer: () => <CustomFooter selectedRow={selectedRows} />,
-        }}
-        slotProps={{
-          toolbar: {
-            setFilterButtonEl,
-            showQuickFilter: true,
-            quickFilterProps: { debounceMs: 500 },
-            columns: { field: 'action', filterable: false },
-            onTestReportsClick: handleTestReportsClick,
-          },
-          panel: {
-            anchorEl: filterButtonEl,
-            sx: {
-              '& .MuiTypography-root': {
-                fontSize: 20,
-              },
-              '& .MuiDataGrid-filterForm': {
-                flexDirection: 'column',
-                gap: '8px',
-              },
-              '& .MuiDataGrid-filterFormColumnInput': {
-                width: '100%',
-                display: 'flex',
-              },
-              '& .MuiDataGrid-filterFormOperatorInput': {
-                width: '100%',
-              },
-              '& .MuiDataGrid-paper': {
-                marginTop: '16px',
-                paddingBottom: '3vh',
-                paddingTop: '1vh',
-                paddingRight: '1vh',
-                paddingLeft: '1vh',
-                borderRadius: '0 0 30px 30px',
-                border: `1px solid ${palette.border}`,
-                width: 'fit-content',
-              },
-              '& .MuiDataGrid-filterFormDeleteIcon': {
-                flexDirection: 'row',
-                marginRight: '-4px',
-                marginBottom: '-16px',
-                color: 'green',
-              },
-              '& .MuiDataGrid-filterFormValueInput': {
-                width: '100%',
+            pagination: { paginationModel: { pageSize } },
+            columns: {
+              columnVisibilityModel: {
+                destTypeId: false,
               },
             },
-          },
-        }}
-      />
+          }}
+          onRowSelectionModelChange={handleSelectionChange}
+          disableRowSelectionOnClick
+          disableColumnMenu
+          disableColumnSelector
+          disableDensitySelector
+          onPaginationModelChange={(model) => setPageSize(model.pageSize)}
+          getRowId={(row) => row.destId + row.destTypeId}
+          getRowClassName={(params) => {
+            return params.row.hasActiveMaintenance === true ? 'highlight' : ''
+          }}
+          density={isMobile ? 'standard' : 'comfortable'}
+          pagination
+          slots={{
+            toolbar: CustomToolbar as GridSlots['toolbar'],
+            footer: () => <CustomFooter selectedRow={selectedRows} />,
+          }}
+          slotProps={{
+            toolbar: {
+              setFilterButtonEl,
+              showQuickFilter: true,
+              quickFilterProps: { debounceMs: 500 },
+              columns: { field: 'action', filterable: false },
+              onTestReportsClick: handleTestReportsClick,
+            },
+            panel: {
+              anchorEl: filterButtonEl,
+              sx: {
+                '& .MuiTypography-root': {
+                  fontSize: 20,
+                },
+                '& .MuiDataGrid-filterForm': {
+                  flexDirection: 'column',
+                  gap: '8px',
+                },
+                '& .MuiDataGrid-filterFormColumnInput': {
+                  width: '100%',
+                  display: 'flex',
+                },
+                '& .MuiDataGrid-filterFormOperatorInput': {
+                  width: '100%',
+                },
+                '& .MuiDataGrid-paper': {
+                  marginTop: '16px',
+                  paddingBottom: '3vh',
+                  paddingTop: '1vh',
+                  paddingRight: '1vh',
+                  paddingLeft: '1vh',
+                  borderRadius: '0 0 30px 30px',
+                  border: `1px solid ${palette.border}`,
+                  width: 'fit-content',
+                },
+                '& .MuiDataGrid-filterFormDeleteIcon': {
+                  flexDirection: 'row',
+                  marginRight: '-4px',
+                  marginBottom: '-16px',
+                  color: 'green',
+                },
+                '& .MuiDataGrid-filterFormValueInput': {
+                  width: '100%',
+                },
+              },
+            },
+          }}
+        />
+      ) : null}
     </div>
   )
 }

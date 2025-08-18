@@ -22,10 +22,6 @@ import {
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
 
-import Table from '@mui/material/Table'
-import TableCell from '@mui/material/TableCell'
-import TableRow from '@mui/material/TableRow'
-
 interface testListProps {
   testResults: any[]
 }
@@ -63,18 +59,35 @@ const TestsResults = ({ testResults }: testListProps) => {
 
         return (
           <React.Fragment key={item.name}>
-            <ListItem id={item.type}>
-              <Table>
-                <TableRow id={`${item.type}-test-result`}>
-                  <TableCell
+            <ListItem
+              id={item.name}
+              sx={{ overflowWrap: 'anywhere!important' }}
+            >
+              <Box borderBottom="1px solid #ddd" width="100%" display="flex">
+                <Box
+                  display="flex"
+                  alignContent={'center'}
+                  flexDirection={{ xs: 'column', md: 'row' }}
+                  width="100%"
+                >
+                  <Box
                     sx={{
                       padding: '4px',
                       paddingBottom: '8px',
                       width: '100%',
                       textAlign: 'start',
+                      display: 'flex',
+                      alignItems: { xs: 'flex-start', md: 'center' },
+                      flexDirection: { xs: 'column', md: 'row' },
                     }}
                   >
-                    <ListItemIcon sx={{ float: 'inline-start' }}>
+                    <ListItemIcon
+                      sx={{
+                        minHeight: '56px',
+                        float: 'inline-start',
+                        alignItems: 'center',
+                      }}
+                    >
                       {item.status === 'PASS' && (
                         <CheckCircleIcon color="primary" />
                       )}
@@ -127,58 +140,64 @@ const TestsResults = ({ testResults }: testListProps) => {
                         }
                       />
                     )}
-                  </TableCell>
-                  <TableCell sx={{ padding: '4px', textAlign: 'end' }}>
-                    <Tooltip
-                      arrow
-                      placement="bottom"
-                      componentsProps={{
-                        tooltip: {
-                          sx: {
-                            backgroundColor: palette.white,
-                            boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                            border: `1px solid ${palette.border}`,
-                            color: palette.black,
-                            '& .MuiTooltip-arrow': {
-                              color: palette.border,
+                  </Box>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    flexDirection={{ xs: 'row', md: 'row' }}
+                  >
+                    <Box sx={{ padding: '4px', textAlign: 'end' }}>
+                      <Tooltip
+                        arrow
+                        placement="bottom"
+                        componentsProps={{
+                          tooltip: {
+                            sx: {
+                              backgroundColor: palette.white,
+                              boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+                              border: `1px solid ${palette.border}`,
+                              color: palette.black,
+                              '& .MuiTooltip-arrow': {
+                                color: palette.border,
+                              },
                             },
                           },
-                        },
-                      }}
-                      title={
-                        <Typography>
-                          {tooltipText || 'No tooltip available'}
-                        </Typography>
-                      }
+                        }}
+                        title={
+                          <Typography>
+                            {tooltipText || 'No tooltip available'}
+                          </Typography>
+                        }
+                      >
+                        <InfoOutlinedIcon
+                          color="primary"
+                          sx={{ marginRight: 2 }}
+                        />
+                      </Tooltip>
+                    </Box>
+                    <Box
+                      padding="none"
+                      sx={{ paddingBottom: '8px', textAlign: 'end' }}
                     >
-                      <InfoOutlinedIcon
-                        color="primary"
-                        sx={{ marginRight: 2 }}
+                      <Chip
+                        label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                        variant="outlined"
+                        color={
+                          item.status === 'PASS'
+                            ? 'primary'
+                            : item.status === 'SKIPPED'
+                            ? 'default'
+                            : 'error'
+                        }
+                        sx={{
+                          borderRadius: '4px',
+                          marginTop: '8px',
+                        }}
                       />
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell
-                    padding="none"
-                    sx={{ paddingBottom: '8px', textAlign: 'end' }}
-                  >
-                    <Chip
-                      label={item.status === 'SKIPPED' ? 'N/A' : item.status}
-                      variant="outlined"
-                      color={
-                        item.status === 'PASS'
-                          ? 'primary'
-                          : item.status === 'SKIPPED'
-                          ? 'default'
-                          : 'error'
-                      }
-                      sx={{
-                        borderRadius: '4px',
-                        marginTop: '8px',
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              </Table>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
             </ListItem>
           </React.Fragment>
         )
@@ -214,7 +233,8 @@ const TestsResults = ({ testResults }: testListProps) => {
         }}
       >
         <Typography variant="body1">
-          {passeddata} out of {totaldata} Test Passed at <span id='TestTime'>{testTime}</span>
+          {passeddata} out of {totaldata} Test Passed at{' '}
+          <span id="TestTime">{testTime}</span>
         </Typography>
         {displayList ? (
           <Button
