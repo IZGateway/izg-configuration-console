@@ -16,7 +16,7 @@ interface jurisdictionProps {
 const Jurisdiction = (props: jurisdictionProps) => {
   return (
     <>
-      <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
+      <Card sx={{ minWidth: '100%', borderRadius: '0px 0px 30px 30px' }}>
         <CardHeader
           title={
             <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">
@@ -47,7 +47,11 @@ const Jurisdiction = (props: jurisdictionProps) => {
         </CardContent>
       </Card>
       <Card
-        sx={{ minWidth: 275, marginTop: 5, borderRadius: '0px 0px 30px 30px' }}
+        sx={{
+          minWidth: '100%',
+          marginTop: 5,
+          borderRadius: '0px 0px 30px 30px',
+        }}
       >
         <CardHeader
           title={
