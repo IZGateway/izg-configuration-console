@@ -61,7 +61,10 @@ const TestsResults = ({ testResults }: testListProps) => {
           <React.Fragment key={item.name}>
             <ListItem
               id={item.name}
-              sx={{ overflowWrap: 'anywhere!important' }}
+              sx={{
+                overflowWrap: 'anywhere!important',
+                p: { xs: 0.2, md: 'auto' },
+              }}
             >
               <Box borderBottom="1px solid #ddd" width="100%" display="flex">
                 <Box
@@ -300,6 +303,7 @@ const TestsResults = ({ testResults }: testListProps) => {
       <Box
         sx={{
           display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
           justifyContent: 'space-between',
           alignItems: 'center',
         }}

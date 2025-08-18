@@ -56,6 +56,7 @@ const TestsList = ({
           data-testid="RerunIcon"
           sx={{
             borderRadius: '30px',
+            minHeight: { xs: '69px', sm: 'auto' },
           }}
         >
           RERUN TEST
@@ -69,6 +70,7 @@ const TestsList = ({
               endIcon={<PrintIcon />}
               sx={{
                 borderRadius: '30px',
+                minHeight: { xs: '69px', sm: 'auto' },
               }}
             >
               PRINT
@@ -90,7 +92,7 @@ const TestsList = ({
               align="center"
               variant="h1"
               fontWeight={700}
-              fontSize="32px"
+              fontSize={{ xs: '1.5rem', md: '2rem' }}
               id="test-connection"
             >
               Connection testing for{' '}
