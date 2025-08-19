@@ -3,7 +3,6 @@ import { render } from '@testing-library/react'
 import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
 import { Destination } from '../../lib/type/Destination'
-import zIndex from '@mui/material/styles/zIndex'
 
 jest.mock('../../lib/desttypehelper', () => ({
   destTypeFormattedToSyncWithApi: jest.fn((type: string) => type),
@@ -53,7 +52,6 @@ describe('ConnectionInfoDetail component', () => {
         destination={destination}
         open={true}
         display={displayMock}
-        sx={{ zIndex: 6000 }}
       />
     )
 
