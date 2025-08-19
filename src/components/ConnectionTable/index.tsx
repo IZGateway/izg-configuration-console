@@ -194,7 +194,7 @@ const ConnectionsTable = (props) => {
     const handleResize = () => {
       clearTimeout(resizeTimer)
       resizeTimer = setTimeout(() => {
-        const newIsMobile = window.innerWidth < 768
+        const newIsMobile = window.innerWidth < 992
         if (newIsMobile !== isMobile) {
           // Set transitioning state immediately for smooth UX
           setRenderMode('transitioning')
@@ -209,7 +209,7 @@ const ConnectionsTable = (props) => {
     }
 
     const initialCheck = () => {
-      const initialIsMobile = window.innerWidth < 768
+      const initialIsMobile = window.innerWidth < 992
       setIsMobile(initialIsMobile)
       setRenderMode(initialIsMobile ? 'mobile' : 'desktop')
     }
@@ -519,7 +519,7 @@ const ConnectionsTable = (props) => {
       sortable: false,
       filterable: false,
       flex: 0.5,
-      minWidth: 100,
+      minWidth: 175,
       maxWidth: 175, // Adjusted maxWidth so all icons show
       renderCell: (params) => {
         return (

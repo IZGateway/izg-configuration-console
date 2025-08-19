@@ -23,7 +23,12 @@ const ConnectionInfoDetail = ({
 }: ConnectionDetailProps) => {
   return (
     <div>
-      <Drawer anchor={'right'} open={open} onClose={display}>
+      <Drawer
+        sx={{ zIndex: 1300 }}
+        anchor={'right'}
+        open={open}
+        onClose={display}
+      >
         <CardContent id="detailDrawer">
           <Box
             display="flex"
