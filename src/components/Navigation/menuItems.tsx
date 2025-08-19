@@ -1,5 +1,6 @@
 import CallMergeIcon from '@mui/icons-material/CallMerge'
 import { MenuItem } from '.'
+import LockIcon from '@mui/icons-material/Lock'
 
 export const menuItems: MenuItem[] = [
   // {
@@ -18,5 +19,17 @@ export const menuItems: MenuItem[] = [
       />
     ),
     path: '/manageconnections',
+  },
+  {
+    label: 'Password Encryption',
+    icon: (
+      <LockIcon
+        sx={{
+          transform: 'rotate(90deg)',
+        }}
+        fontSize="large"
+      />
+    ),
+    path: '/passwordencryption',
   },
 ]
