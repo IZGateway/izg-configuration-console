@@ -1,16 +1,12 @@
 import * as React from 'react'
 import {
   Box,
-  Grid,
-  Paper,
   Typography,
   Button,
   Card,
   CardContent,
-  CardHeader,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
 } from '@mui/material'
 import Close from '../Close'
@@ -37,8 +33,20 @@ const PasswordEncryptionConsole = () => {
   return (
     <>
       <Close />
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        <Item sx={{ width: '60%', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 4,
+        }}
+      >
+        <Item
+          sx={{
+            width: { xs: '100%', md: '60%' },
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           <Card elevation={2} sx={{ borderRadius: 3 }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h4" component="h1">
@@ -50,17 +58,26 @@ const PasswordEncryptionConsole = () => {
             </CardContent>
           </Card>
           <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
-            <CardContent>
+            <CardContent sx={{ p: 4 }}>
               <Typography variant="subtitle1" gutterBottom>
                 Transform all plaintext passwords in your database using
                 FIPS-compliant encryption. This operation ensures maximum
                 security without requiring customer password resets.
               </Typography>
-              <Box sx={{ display: 'flex', gap: 4 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  justifyContent: 'space-between',
+                  gap: 4,
+                  mt: 2,
+                }}
+              >
                 <Box
                   sx={{
                     display: 'flex',
                     flexDirection: 'column',
+                    width: { xs: '100%', md: '50%' },
                   }}
                 >
                   <Box>
@@ -90,9 +107,9 @@ const PasswordEncryptionConsole = () => {
                     </List>
                   </Box>
                 </Box>
-                <Box>
+                <Box width={{ xs: '100%', md: '50%' }}>
                   <Typography variant="h5" component="h3" gutterBottom>
-                    <KeyIcon
+                    <SecurityIcon
                       sx={{
                         verticalAlign: 'middle',
                         marginRight: 1,
@@ -117,7 +134,7 @@ const PasswordEncryptionConsole = () => {
             </CardContent>
           </Card>
           <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
-            <CardContent>
+            <CardContent sx={{ px: 4 }}>
               <Button
                 variant="contained"
                 size="large"
@@ -132,31 +149,13 @@ const PasswordEncryptionConsole = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
-            <CardContent>
-              <Box
-                sx={{
-                  marginTop: {
-                    xs: '2em',
-                    sm: '2em',
-                    md: 'auto',
-                    lg: 'auto',
-                    xl: 'auto',
-                  },
-                  marginBottom: {
-                    xs: '-2em',
-                    sm: '-2em',
-                    md: 'auto',
-                    lg: 'auto',
-                    xl: 'auto',
-                  },
-                  bottom: '-1em',
-                }}
-              >
+          <Card sx={{ marginTop: 0, borderRadius: '0px 0px 16px 16px' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <Image
                   src={securityImage}
                   width={300}
-                  height={200}
+                  height={300}
                   alt="security image"
                 />
               </Box>
