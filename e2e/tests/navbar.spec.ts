@@ -1,8 +1,8 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 
-let context : BrowserContext
-let page : Page
+let context: BrowserContext
+let page: Page
 
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
@@ -29,8 +29,9 @@ test('Home page title and logo are correct', async () => {
 test('Navigation panel has expected links', async () => {
   const navPanel = await page.locator('#navigation')
   await expect.soft(navPanel).toBeVisible()
-
-  await expect.soft(navPanel.getByTestId('ChevronLeftIcon')).toBeVisible()
+  await expect
+    .soft(navPanel.getByRole('button', { name: 'toggle navigation drawer' }))
+    .toBeVisible()
 
   const manageConnectionsLink = navPanel
     .getByRole('link')
@@ -55,13 +56,17 @@ test('Navigation panel has expected links', async () => {
 test('Navigation panel can collapse and expand', async () => {
   const navPanel = page.locator('#navigation')
   const bb = await navPanel.boundingBox()
-
-  await navPanel.getByTestId('ChevronLeftIcon').click()
+  //Exapnded view
+  await navPanel
+    .getByRole('button', { name: 'toggle navigation drawer' })
+    .click()
   let bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBeLessThan(bb.width)
+  expect.soft(bb2.width).toBeGreaterThan(bb.width)
   expect.soft(bb2.height).toBe(bb.height)
-
-  await navPanel.getByTestId('ChevronRightIcon').click()
+  //Collapsed view
+  await navPanel
+    .getByRole('button', { name: 'toggle navigation drawer' })
+    .click()
   bb2 = await navPanel.boundingBox()
   expect.soft(bb2.width).toBe(bb.width)
   expect.soft(bb2.height).toBe(bb.height)

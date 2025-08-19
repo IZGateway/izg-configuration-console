@@ -88,14 +88,14 @@ test('Clicking "Policy" opens modal with "Legal agreements" link', async () => {
   )
 })
 
-test('Clicking Request Support icon contains correct mailto link', async () => {
+test('Clicking Request Support icon contains correct support link', async () => {
   const supportLink = page
     .locator('[data-testid="ContactSupportOutlinedIcon"]')
     .locator('xpath=ancestor::a')
   await expect(supportLink).toBeVisible()
   await expect(supportLink).toHaveAttribute(
     'href',
-    'mailto:izgateway@cdc.gov?subject=Configuration%20Console%20Support%20Request'
+    'https://help.izgateway.org/portal/1?createRequest=true&portalId=1&requestTypeId=16'
   )
 })
 
