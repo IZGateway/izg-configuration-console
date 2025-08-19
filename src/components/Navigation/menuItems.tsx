@@ -22,14 +22,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     label: 'Password Encryption',
-    icon: (
-      <LockIcon
-        sx={{
-          transform: 'rotate(90deg)',
-        }}
-        fontSize="large"
-      />
-    ),
+    icon: <LockIcon fontSize="large" />,
     path: '/passwordencryption',
   },
 ]

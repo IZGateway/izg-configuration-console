@@ -1,16 +1,12 @@
 import * as React from 'react'
 import {
   Box,
-  Grid,
-  Paper,
   Typography,
   Button,
   Card,
   CardContent,
-  CardHeader,
   List,
   ListItem,
-  ListItemIcon,
   ListItemText,
 } from '@mui/material'
 import Close from '../Close'
@@ -113,7 +109,7 @@ const PasswordEncryptionConsole = () => {
                 </Box>
                 <Box width={{ xs: '100%', md: '50%' }}>
                   <Typography variant="h5" component="h3" gutterBottom>
-                    <KeyIcon
+                    <SecurityIcon
                       sx={{
                         verticalAlign: 'middle',
                         marginRight: 1,
