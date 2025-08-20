@@ -51,7 +51,7 @@ const LegalDocumentation = () => {
         <IconButton sx={actionButtonStyle} onClick={handleClickOpen}>
           <PolicyOutlined color="primary" />
         </IconButton>
-        <Typography align="center">
+        <Typography fontSize={{ xs: '0.8rem', md: '1rem' }} align="center">
           Policy
           <br />
           Infrastructure

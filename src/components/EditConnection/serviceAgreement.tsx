@@ -19,7 +19,7 @@ interface PolicyProps {
 
 const ServiceAgreement = (props: PolicyProps) => {
   return (
-    <Card sx={{ minWidth: 275, borderRadius: '0px 0px 30px 30px' }}>
+    <Card sx={{ minWidth: 200, borderRadius: '0px 0px 30px 30px' }}>
       <CardHeader
         title={
           <Typography component="h2" sx={{ fontWeight: 'bold' }} variant="h6">

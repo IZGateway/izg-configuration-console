@@ -50,8 +50,20 @@ const ConnectionHistory = (props: connectionHistoryProps) => {
           Find users, view the test history and view additional information.
         </Typography>
       </Box>
-      <Box sx={{ display: 'flex', gap: 4 }}>
-        <Item sx={{ width: '40%', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 4,
+          flexDirection: { xs: 'column', md: 'row' },
+        }}
+      >
+        <Item
+          sx={{
+            width: { xs: '100%', md: '40%' },
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           <ConnectionInfo
             destId={props.destId}
             destTypeId={props.destTypeId}
