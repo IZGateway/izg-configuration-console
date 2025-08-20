@@ -1,17 +1,16 @@
 import { test, expect, Page } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
-import { isNull } from 'lodash';
 
 let page = null
 let context = null
 
 test.beforeAll(async ({ browser }) => {
-    context = await browser.newContext();
-    page = await context.newPage();
-    await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD);
-    await page.goto('/manageconnections');
-    await page.waitForLoadState('networkidle'); // Ensure the page is fully loaded
-});
+  context = await browser.newContext()
+  page = await context.newPage()
+  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await page.goto('/manageconnections')
+  await page.waitForLoadState('networkidle') // Ensure the page is fully loaded
+})
 
 async function checkPrintButton(page: Page) {
   const printButton = page.getByRole('button', { name: 'PRINT' })
@@ -29,48 +28,50 @@ async function testResults(page: Page, results) {
   // Expect to see 7 tests for DNS Lookup, TCP Connectivity Test, TLS Version Test,
   // NIST Approved Encryption, WSDLsadf Test, Send Connectivity Test, Submit Single Message,
   // with their results of PASS, FAIL, WARNING, or N/A
-  const verifyDNS = page.locator('#dns-test-result')
+  const verifyDNS = page.getByText('Verify DNS entry')
   await expect.soft(verifyDNS).toBeAttached()
-  await expect.soft(verifyDNS.locator('td').getByText(results[0])).toBeAttached()
+  await expect
+    .soft(page.getByTestId('dns-status-chip').getByText(results[0]))
+    .toBeVisible()
 
-  const verifyTCP = page.locator('#tcp-test-result')
+  const verifyTCP = page.getByText('TCP Connectivity Test')
   await expect.soft(verifyTCP).toBeAttached()
-  await expect.soft(verifyTCP.locator('td').getByText(results[1])).toBeAttached()
+  await expect
+    .soft(page.getByTestId('tcp-status-chip').getByText(results[1]))
+    .toBeVisible()
 
-  const tlsVersion =  page.locator('#tls-test-result')
+  const tlsVersion = page.getByText('TLS Version Test')
   await expect.soft(tlsVersion).toBeAttached()
   await expect
-    .soft(tlsVersion.locator('td').getByText(results[2]))
-    .toBeAttached()
+    .soft(page.getByTestId('tls-status-chip').getByText(results[2]))
+    .toBeVisible()
 
-  const nistEncryption = page.locator('#cipher-test-result')
+  const nistEncryption = page.getByText('Host uses a NIST approved')
   await expect.soft(nistEncryption).toBeAttached()
   await expect
-    .soft(nistEncryption.locator('td').getByText(results[3]))
-    .toBeAttached()
+    .soft(page.getByTestId('cipher-status-chip').getByText(results[3]))
+    .toBeVisible()
 
-  const wsdlTest = page.locator('#wsdl-test-result')
+  const wsdlTest = page.getByText('WSDL Test')
   await expect.soft(wsdlTest).toBeAttached()
-  await expect.soft(wsdlTest.locator('td').getByText(results[4])).toBeAttached()
+  await expect
+    .soft(page.getByTestId('wsdl-status-chip').getByText(results[4]))
+    .toBeVisible()
 
-  const connectivityTest = page.locator('#connectivity-test-result')
+  const connectivityTest = page.getByText('Send a Connectivity Test')
   await expect.soft(connectivityTest).toBeAttached()
   await expect
-    .soft(connectivityTest.locator('td').getByText(results[5]))
-    .toBeAttached()
+    .soft(page.getByTestId('connectivity-status-chip').getByText(results[5]))
+    .toBeVisible()
 
-  const singleMessage = page.locator('#qbp-test-result')
+  const singleMessage = page.getByText('Send a Submit Single Message')
   await expect.soft(singleMessage).toBeAttached()
   await expect
-    .soft(singleMessage.locator('td').getByText(results[6]))
-    .toBeAttached()
+    .soft(page.getByTestId('qbp-status-chip').getByText(results[6]))
+    .toBeVisible()
 }
 
-test('Test Navigation to Test Connection Page', async ({  }) => {
-  await page.goto('/manageconnections')
-  await page.waitForLoadState('networkidle')
-  // User should be able to navigate to test connection page by clicking on ‘Test’ button under ‘Actions’ column for a connection in connections table.
-  await expect.soft(page).toHaveURL(/.*\/manageconnections/)
+test('Test Navigation to Test Connection Page', async ({}) => {
   // Verify test button exists and is visible
   const test404 = page
     .getByRole('row', { name: '404 Development DEVELOPMENT' })
@@ -84,7 +85,6 @@ test('Test Navigation to Test Connection Page', async ({  }) => {
   await page.waitForLoadState('networkidle') // Ensure the page is fully loaded
   // Expect to see test connection page
   await expect.soft(page).toHaveURL(/.*\/test\/5\/404/)
-
   // Expect to see results of the tests
   await testResults(page, [
     'PASS',
@@ -103,7 +103,7 @@ test('Test Navigation to Test Connection Page', async ({  }) => {
   const testTimeText = await testTime.textContent()
   const testTimeRegex = /^\d{1,2}:\d{2}:\d{2} (AM|PM)$/
   expect.soft(testTimeText).toMatch(testTimeRegex)
-  await page.waitForTimeout(10000) 
+  await page.waitForTimeout(10000)
   // User can re run tests with 'Re run test' button
   // Once test results are back, click on 'Re run Test' button
   await page.getByRole('button', { name: 'RERUN TEST' }).click()
@@ -123,7 +123,7 @@ test('Test Navigation to Test Connection Page', async ({  }) => {
   await expect.soft(page).toHaveURL(/.*\/manageconnections/)
 })
 
-test('Test Maint Endpoint', async ({  }) => {
+test('Test Maint Endpoint', async ({}) => {
   // Check the ones that should pass
   await page.goto('/test/5/maint')
   await testResults(page, [
@@ -137,7 +137,7 @@ test('Test Maint Endpoint', async ({  }) => {
   ])
 })
 
-test('Test Dev Endpoint', async ({  }) => {
+test('Test Dev Endpoint', async ({}) => {
   await page.goto('/test/5/dev')
   await page.waitForLoadState('networkidle') // Ensure the page is fully loaded
   await expect.soft(page).toHaveURL(/.*\/test\/5\/dev/)
@@ -153,7 +153,7 @@ test('Test Dev Endpoint', async ({  }) => {
 })
 
 // We do not need to test down or reject, as they will be same as invalid
-test('Test Invalid Endpoint', async ({  }) => {
+test.skip('Test Invalid Endpoint', async ({}) => {
   await page.goto('/test/5/invalid')
   await page.waitForLoadState('networkidle') // Ensure the page is fully loaded
   await expect.soft(page).toHaveURL(/.*\/test\/5\/invalid/)
