@@ -67,6 +67,7 @@ const TestsResults = ({ testResults }: testListProps) => {
               <Table>
                 <TableRow id={`${item.type}-test-result`}>
                   <TableCell
+                    id={`${item.name}-status`}
                     sx={{
                       padding: '4px',
                       paddingBottom: '8px',
@@ -163,6 +164,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                   >
                     <Chip
                       label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                      data-testid={`${item.type}-status-chip`}
                       variant="outlined"
                       color={
                         item.status === 'PASS'
@@ -214,7 +216,8 @@ const TestsResults = ({ testResults }: testListProps) => {
         }}
       >
         <Typography variant="body1">
-          {passeddata} out of {totaldata} Test Passed at <span id='TestTime'>{testTime}</span>
+          {passeddata} out of {totaldata} Test Passed at{' '}
+          <span id="TestTime">{testTime}</span>
         </Typography>
         {displayList ? (
           <Button
