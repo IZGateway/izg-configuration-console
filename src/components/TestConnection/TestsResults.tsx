@@ -60,7 +60,7 @@ const TestsResults = ({ testResults }: testListProps) => {
         return (
           <React.Fragment key={item.name}>
             <ListItem
-              id={item.name}
+              id={item.type}
               sx={{
                 overflowWrap: 'anywhere!important',
                 p: { xs: 0.2, md: 'auto' },
@@ -74,6 +74,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                   width="100%"
                 >
                   <Box
+                    id={`${item.name}-status`}
                     sx={{
                       padding: '4px',
                       paddingBottom: '8px',
@@ -256,6 +257,7 @@ const TestsResults = ({ testResults }: testListProps) => {
                     >
                       <Chip
                         label={item.status === 'SKIPPED' ? 'N/A' : item.status}
+                        data-testid={`${item.type}-status-chip`}
                         variant="outlined"
                         color={
                           item.status === 'PASS'
