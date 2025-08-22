@@ -9,8 +9,8 @@ import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import { DOMParser } from '@xmldom/xmldom'
+import DbClientFactory from '../../db/DbClientFactory'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
-import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
 
 function escapeXml(unsafe : string): string {
     return unsafe.replace(/[<>&'"]/g, function (c) {
@@ -76,7 +76,8 @@ export default class QBP extends ConnectionTest {
       'wv',
       'wy',
     ]
-    const password = destination.password || await lookupDestinationPassword(
+    const dbClient = await DbClientFactory.getDbClient()
+    const password = destination.password || await dbClient.fetchDestinationPassword(
       destination.destId,
       destination.destinationType.typeId
     ) || ''

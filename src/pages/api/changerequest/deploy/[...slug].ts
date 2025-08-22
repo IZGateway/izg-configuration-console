@@ -3,10 +3,10 @@ import { authOptions } from '../../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
-import { dbClient } from '../../../../lib/utils/dbclient'
 import { Destination } from '../../../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../../../lib/type/DestinationChangeRequest'
 import logger from '../../../../../logger'
+import DbClientFactory from '../../../../lib/db/DbClientFactory'
 /**
  * @swagger
  * /api/changerequest/deploye/{id}:
@@ -50,6 +50,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
   const changeRequestId = _.toNumber(slug[0])
   const errorMessages = []
+  const dbClient = await DbClientFactory.getDbClient()
 
   if (req.method === 'GET') {
     const session = await getServerSession(req, res, authOptions)
