@@ -34,6 +34,8 @@ jobs:
   code-quality-check:
     name: Test and Lint
     runs-on: ubuntu-latest
+    outputs:
+      application_version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -47,6 +49,12 @@ jobs:
       #   run: npm run test
       - name: Lint
         run: npm run code-quality-check
+      - name: Get Application Version
+        id: get-version
+        run: |
+          APPLICATION_VERSION=$(npm pkg get version | tr -d '"')
+          echo "version=${APPLICATION_VERSION}" >> $GITHUB_OUTPUT
+          echo "Application version: ${APPLICATION_VERSION}"
 
   create-tag:
     name: Create tag
@@ -105,9 +113,9 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ contains(github.ref, 'refs/heads/release/') }}
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
           tags: |
-            type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=release,enable=${{ contains(github.ref, 'refs/heads/release/') }}
-            type=raw,value=snapshot,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=${{ needs.get-application-version.outputs.version }}-${{github.run_number}}
+            type=raw,value=${{ needs.get-application-version.outputs.version }}-${{github.run_number}}-release,enable=${{ contains(github.ref, 'refs/heads/release/') }}
+            type=raw,value=${{ needs.get-application-version.outputs.version }}-${{github.run_number}}-snapshot,enable=${{ github.ref == 'refs/heads/develop' }}
           flavor: |
             latest=true
 
@@ -166,9 +174,7 @@ jobs:
           images: |
             ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
           tags: |
-            type=raw,value=izg-configuration-console_${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=izg-configuration-console_rc_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
-            type=raw,value=izg-configuration-console_release_${{ needs.generate-release-timestamp.outputs.releaseDate }},enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=izgw-cc-${{ needs.get-application-version.outputs.version }}-${{github.run_number}}
           flavor: |
             latest=false
 
