@@ -1,23 +1,36 @@
+import DbClient from './DbClient'
 import Dynamo from './dynamo'
 import JDBC from './jdbc'
-import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
-import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
-import { encrypt, decrypt } from '../security/cryptoSupport'
+import { encrypt, decrypt, initCryptoSupport } from '../security/crypto/cryptoSupport'
 
-export default class DBClientFactory {
-  static getDB(dbType: string) {
-    const type = dbType.toLowerCase();
-    let db: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository | null = null;
-    if (type === 'jdbc') {
-      db = new JDBC();
-    } else if (type === 'dynamo') {
-      db = new Dynamo();
+export default class DbClientFactory {
+  static defaultClient: DbClient | null = null
+  static async getDbClient(dbType?: string) : Promise<DbClient> {
+    let type = dbType ? dbType.toLowerCase() : null
+    if (!type) {
+      if (DbClientFactory.defaultClient) {
+        return DbClientFactory.defaultClient
+      } else {
+        type = process.env.DB_TYPE || 'dynamo'
+      }
     }
-    return db ? new EncryptedRepository(db) : null;
+    let db: DbClient | null = null;
+    if (type === 'jdbc') {
+      db = new JDBC()
+    } else if (type === 'dynamo') {
+      db = new Dynamo()
+    }
+    await initCryptoSupport() // Ensure crypto support is initialized
+
+    db = db ? new EncryptedRepository(db) : null
+    if (!dbType) {
+      DbClientFactory.defaultClient = db
+    }
+    return db
   }
 }
 
@@ -26,20 +39,27 @@ export default class DBClientFactory {
  * it and decrypts it after reading it. Calls which do not involve sensitive data are passed through
  * without any encryption or decryption operations.
  */
-class EncryptedRepository implements ConfigConsoleFetchRepository, ConfigConsoleMutateRepository {
-  isDatabaseConnected!: () => Promise<boolean>;
+class EncryptedRepository implements DbClient {
+  isDatabaseConnected!: () => Promise<boolean>
+  fetchAllDestinations!: () => Promise<Destination[]>
   fetchDestinationType!: (destType: string) => Promise<DestinationType>;
   fetchDestinationAuditHistory!: (destId: string, destTypeId: number) => Promise<DestinationAudit[]>;
   deleteDestinationChangeRequest!: (id: number) => Promise<boolean>;
-  private repository: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository
+  private repository: DbClient
 
-  constructor(repository: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository) {
+  constructor(repository: DbClient) {
     this.repository = repository;
     this.deleteDestinationChangeRequest = repository.deleteDestinationChangeRequest.bind(repository);
+    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository);
     this.fetchDestinationAuditHistory = repository.fetchDestinationAuditHistory.bind(repository);
     this.fetchDestinationType = repository.fetchDestinationType.bind(repository);
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository);
   }
+  /** Return the base repository */
+  getRepository(): DbClient {
+    return this.repository;
+  }
+
   /** 
    * The isPasswordChanged method does password comparison between the destination 
    * and its change request using fetch operations instead of direct database queries.

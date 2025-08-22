@@ -7,7 +7,7 @@ import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
-import { dbClient } from '../../../lib/utils/dbclient'
+import dbClientFactory from '../../../lib/db/DbClientFactory'
 /**
  * @swagger
  * /api/deephealthcheck:
@@ -25,6 +25,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const databaseStatus = async () => {
     let dbConnectionCheck = {}
     try {
+      const dbClient = await dbClientFactory.getDbClient()
       if (await dbClient.isDatabaseConnected()) {
         dbConnectionCheck = {
           component: 'DB',

@@ -6,7 +6,7 @@ import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
-import { dbClient } from '../../../lib/utils/dbclient'
+import dbClientFactory from '../../../lib/db/DbClientFactory'
 import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 /**
@@ -61,7 +61,7 @@ const isJiraConfigured = () => {
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
-
+  const dbClient = await dbClientFactory.getDbClient()
   if (!isJiraConfigured) {
     throw new Error(
       'Jira connection is not configured correctly. Ensure the necessary variables have been configured for the environment.'
@@ -200,6 +200,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 const upsertChangeRequest = async (
   changeRequestDetails: DestinationChangeRequest
 ) => {
+  const dbClient = await dbClientFactory.getDbClient()
   const response = await dbClient.upsertDestinationChangeRequest({
     id: changeRequestDetails.id,
     isDraft: changeRequestDetails.isDraft,
