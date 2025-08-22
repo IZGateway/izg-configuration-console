@@ -7,7 +7,7 @@ import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import axios from 'axios'
-import dbClientFactory from '../../../lib/db/DBClientFactory'
+import dbClientFactory from '../../../lib/db/DbClientFactory'
 /**
  * @swagger
  * /api/deephealthcheck:

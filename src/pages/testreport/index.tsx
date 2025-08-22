@@ -6,7 +6,7 @@ import connectionTest from '../../lib/connectiontests'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
-import DbClientFactory from '../../lib/db/DBClientFactory'
+import DbClientFactory from '../../lib/db/DbClientFactory'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>

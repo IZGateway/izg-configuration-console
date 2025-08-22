@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
-import DbClientFactory from '../../lib/db/DBClientFactory'
+import DbClientFactory from '../../lib/db/DbClientFactory'
 import { Destination } from '../../lib/type/Destination'
 import {
   hasActiveMaintenance,

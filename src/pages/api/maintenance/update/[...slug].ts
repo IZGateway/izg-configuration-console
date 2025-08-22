@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
 import logger from '../../../../../logger'
-import DbClientFactory from '../../../../lib/db/DBClientFactory' 
+import DbClientFactory from '../../../../lib/db/DbClientFactory' 
 
 /**
  * @swagger

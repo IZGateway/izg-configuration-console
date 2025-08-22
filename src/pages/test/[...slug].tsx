@@ -7,7 +7,7 @@ import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import connectionTest from '../../lib/connectiontests'
-import DbClientFactory from '../../lib/db/DBClientFactory'
+import DbClientFactory from '../../lib/db/DbClientFactory'
 
 export async function getServerSideProps(context) {
   const { req, res } = context

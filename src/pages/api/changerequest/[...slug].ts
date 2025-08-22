@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
-import dbClientFactory from '../../../lib/db/DBClientFactory'
+import dbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
 /**

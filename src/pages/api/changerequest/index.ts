@@ -6,7 +6,7 @@ import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
-import dbClientFactory from '../../../lib/db/DBClientFactory'
+import dbClientFactory from '../../../lib/db/DbClientFactory'
 import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 /**

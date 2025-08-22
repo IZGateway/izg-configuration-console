@@ -9,7 +9,7 @@ import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
-import DbClientFactory from '../../lib/db/DBClientFactory'
+import DbClientFactory from '../../lib/db/DbClientFactory'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>

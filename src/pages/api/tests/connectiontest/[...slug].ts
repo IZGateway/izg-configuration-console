@@ -7,7 +7,7 @@ import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
-import DbClientFactory from '../../../../lib/db/DBClientFactory'
+import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { Destination } from '../../../../lib/type/Destination'
 /**
  * @swagger
