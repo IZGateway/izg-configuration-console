@@ -37,3 +37,4 @@ docker-compose.override.yml
 .env.test
 test-results
 playwright-report
+/docker/

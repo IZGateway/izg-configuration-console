@@ -27,7 +27,12 @@ const TestDrawer = ({
   testResults,
 }: TestDrawerProps) => {
   return (
-    <Drawer anchor={'right'} open={open} onClose={onClose}>
+    <Drawer
+      sx={{ zIndex: 1300 }}
+      anchor={'right'}
+      open={open}
+      onClose={onClose}
+    >
       <Container maxWidth="md">
         <Box sx={{ marginTop: 2 }}>
           <Typography

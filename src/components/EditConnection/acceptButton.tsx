@@ -13,9 +13,9 @@ const AcceptButton = (props: { handleAccept: any; agreed: boolean }) => {
         sx={{
           background: 'secondary',
           borderRadius: '37.5px',
-          margin: '1em',
+          mt: '1em',
           alignItems: 'center',
-          width: 350,
+          width: { xs: '100%', md: '350px' },
         }}
       >
         ACCEPT

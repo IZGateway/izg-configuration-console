@@ -52,7 +52,7 @@ const ReleaseNotes = () => {
         <IconButton sx={actionButtonStyle} onClick={handleClickOpen}>
           <NotesOutlined color="primary" />
         </IconButton>
-        <Typography align="center">
+        <Typography fontSize={{ xs: '0.8rem', md: '1rem' }} align="center">
           Release <br /> Notes
         </Typography>
       </Box>
