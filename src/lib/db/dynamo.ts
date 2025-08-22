@@ -23,6 +23,7 @@ import {
 
 import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
+import DbClient from './DbClient'
 
 // DynamoDB Configuration
 const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
@@ -39,17 +40,16 @@ if (awsAccessKeyId && awsSecretAccessKey) {
   }
 }
 
-const marshallOptions = {
-  convertEmptyValues: false,
-  removeUndefinedValues: true,
-  convertClassInstanceToMap: false,
+const translateConfig = { 
+  marshalOptions: {
+    convertEmptyValues: false,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: false,
+  },
+  unmarshallOptions: {
+    wrapNumbers: false,
+  },
 }
-
-const unmarshallOptions = {
-  wrapNumbers: false,
-}
-
-const translateConfig = { marshallOptions, unmarshallOptions }
 
 const dynamodDbClient = new DynamoDBClient(clientConfig)
 export const dynamodDbDocClient = DynamoDBDocumentClient.from(
@@ -68,7 +68,22 @@ const DEST_TYPES = [
   'UNKNOWN',
 ]
 
-class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
+class Dynamo implements DbClient {
+  getRepository(): DbClient {
+    return this;
+  }
+
+  async fetchAllDestinations(): Promise<Destination[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'Destination',
+      },
+    };
+    const result = await dynamodDbDocClient.send(new QueryCommand(params));
+    return await this.convertResponseToDestinations(result.Items || []);
+  }
   private jurisdictionsCache = new Map<string, any>()
 
   getTableName(): string {
@@ -529,11 +544,16 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
         params.ExpressionAttributeValues[`:${key}`] = destination[key]
-          ? destination[key]
+          ? destination[key].toISOString()
           : null
       }
     }
-    await dynamodDbDocClient.send(new UpdateCommand(params))
+    try {
+      await dynamodDbDocClient.send(new UpdateCommand(params))
+    } catch (error) {
+      logger.error(`Error updating destination: ${destination.destId}`, error)
+      return false
+    }
     return true
   }
 }
