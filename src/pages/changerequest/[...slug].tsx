@@ -9,7 +9,7 @@ import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
-import { dbClient } from '../../lib/utils/dbclient'
+import DbClientFactory from '../../lib/db/DBClientFactory'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -40,11 +40,11 @@ export const getServerSideProps = async (context) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (hasAccessToDestId(destId, session)) {
-    const result =
-      await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
-        destId,
-        destTypeId
-      )
+    const dbClient = await DbClientFactory.getDbClient()
+    const result = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+      destId,
+      destTypeId
+    )
     return {
       props: {
         changeRequest: JSON.parse(JSON.stringify(result)),

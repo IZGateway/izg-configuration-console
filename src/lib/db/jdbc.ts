@@ -1,5 +1,6 @@
 import {
   fetchDestination,
+  fetchAllDestinations,
   fetchLoggedInUsersDestinations,
   destinationaudithistory,
   fetchDestinationChangeRequestByDestIdAndDestType,
@@ -19,11 +20,12 @@ import {
 import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
 import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
-class JDBC
-  implements ConfigConsoleFetchRepository, ConfigConsoleMutateRepository
+import DbClient from './DbClient'
+class JDBC implements DbClient
 {
   //fetch
   fetchDestination = fetchDestination
+  fetchAllDestinations = fetchAllDestinations
   fetchLoggedInUsersDestinations = fetchLoggedInUsersDestinations
   fetchDestinationAuditHistory = destinationaudithistory
   fetchDestinationChangeRequestByDestIdAndDestType =
@@ -40,5 +42,9 @@ class JDBC
   deleteDestinationChangeRequest = deleteChangeRequest
   updateDestination = withIZGHubRefresh(updateDestination)
   createDestinationChangeRequestDeploymentAudit = createDestinationAudit
+
+  getRepository() {
+    return this;
+  }
 }
 export default JDBC

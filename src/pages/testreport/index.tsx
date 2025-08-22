@@ -6,7 +6,7 @@ import connectionTest from '../../lib/connectiontests'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
-import { dbClient } from '../../lib/utils/dbclient'
+import DbClientFactory from '../../lib/db/DBClientFactory'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -48,6 +48,7 @@ export async function getServerSideProps(context) {
   })
   const results = await Promise.all(
     destinations.map(async (dest) => {
+      const dbClient = await DbClientFactory.getDbClient()
       const destinationToTest = await dbClient.fetchDestination(
         dest.destId,
         dest.destTypeId
