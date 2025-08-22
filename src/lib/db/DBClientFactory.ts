@@ -9,7 +9,6 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { encrypt, decrypt, initCryptoSupport } from '../security/crypto/cryptoSupport'
 
-export default interface DbClientFactory extends ConfigConsoleFetchRepository, ConfigConsoleMutateRepository {}
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
   static async getDbClient(dbType?: string) : Promise<DbClient> {
