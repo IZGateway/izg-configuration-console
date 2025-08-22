@@ -26,7 +26,7 @@ describe('cryptoSupport', () => {
   ]
 
   it('should produce unique ciphertexts for the same input', () => {
-    testPasswords.forEach(([desc, password]) => {
+    testPasswords.forEach(([, password]) => {
       const encrypted = encryptWithKey(password, key)
       const encryptedAgain = encryptWithKey(password, key)
       if (password) expect(encrypted).not.toBe(encryptedAgain)
