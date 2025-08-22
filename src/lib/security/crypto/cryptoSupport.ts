@@ -1,6 +1,5 @@
 import crypto from 'crypto'
 import { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand, PutSecretValueCommand } from '@aws-sdk/client-secrets-manager'
-import { initialize } from 'next/dist/server/lib/render-server'
 
 const IV_LENGTH = 16 // AES block size
 const TAG_LENGTH = 16 // GCM tag size
@@ -78,7 +77,7 @@ export async function storeKeyInSecretsManager(keyBuffer: Buffer): Promise<void>
       SecretString: hexKey,
     });
     await SECRETS_CLIENT.send(createCommand);
-  } catch (err: any) {
+  } catch (err) {
     // If the secret already exists, update it
     if (err.name === 'ResourceExistsException') {
       const putCommand = new PutSecretValueCommand({

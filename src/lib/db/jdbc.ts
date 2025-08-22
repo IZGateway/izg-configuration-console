@@ -17,8 +17,6 @@ import {
   updateDestination,
   createDestinationAudit,
 } from './queries/jdbc/mutate'
-import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
-import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { withIZGHubRefresh } from '../hubrefresher'
 import DbClient from './DbClient'
 class JDBC implements DbClient

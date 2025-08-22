@@ -1,5 +1,4 @@
 import {encryptWithKey, decryptWithKey, initCryptoSupport, isEncryptionEnabled} from './cryptoSupport'
-import crypto from 'crypto'
 
 describe('cryptoSupport', () => {
   const key = Buffer.from('ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', 'utf8')
@@ -35,7 +34,7 @@ describe('cryptoSupport', () => {
   })
 
   it('should decrypt to the original password', () => {
-    testPasswords.forEach(([desc, password]) => {
+    testPasswords.forEach(([, password]) => {
       const encrypted = encryptWithKey(password, key)
       const decrypted = decryptWithKey(encrypted, key)
       expect(decrypted).toBe(password)
@@ -43,7 +42,7 @@ describe('cryptoSupport', () => {
   })
   
   it('should not reencrypt an already encrypted password', () => {
-    testPasswords.forEach(([desc, password]) => {
+    testPasswords.forEach(([, password]) => {
       const encrypted = encryptWithKey(password, key)
       const reEncrypted = encryptWithKey(encrypted, key)
       expect(reEncrypted).toBe(encrypted)
@@ -51,7 +50,7 @@ describe('cryptoSupport', () => {
   })
 
   it('should throw an authentication error with the wrong key', () => {
-    testPasswords.forEach(([desc, password]) => {
+    testPasswords.forEach(([, password]) => {
       const encrypted = encryptWithKey(password, key)
       if (password) expect(() => decryptWithKey(encrypted, key2)).toThrow(/authenticate/i)
     })

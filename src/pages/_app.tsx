@@ -15,9 +15,6 @@ import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
 import NavigationLoader from '../components/NavigationLoader'
-// Ensure that cryptoSupport is initialized at start of app so that failure to init happens at startup
-import { encrypt, decrypt }  from '../lib/security/crypto/cryptoSupport'
-import logger from '../../logger'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')

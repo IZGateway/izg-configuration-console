@@ -71,7 +71,7 @@ export const fetchDestination = async (
   }
 }
 
-export async function fetchAllDestinations(): Promise<any[]> {
+export async function fetchAllDestinations(): Promise<Destination[]> {
   const results = await prismacontext.prisma.destinations.findMany({
     select: {
       dest_id: true,
