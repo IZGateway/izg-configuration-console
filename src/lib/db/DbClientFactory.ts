@@ -1,8 +1,6 @@
 import DbClient from './DbClient'
 import Dynamo from './dynamo'
 import JDBC from './jdbc'
-import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
-import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
