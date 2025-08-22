@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import React from 'react'
 import { Tooltip, Box, Fab } from '@mui/material'
 import { useState } from 'react'
 import palette from '../../styles/theme/palette'
@@ -15,6 +16,18 @@ const FloatingActionButtons = (props: {
   resetDraft: any
 }) => {
   const [openReset, setOpenReset] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    handleResize() // Set initial value
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const handleClickOpenReset = () => {
     setOpenReset(true)
   }
@@ -29,12 +42,21 @@ const FloatingActionButtons = (props: {
 
   return (
     <Box>
-      <Tooltip arrow placement="left" title="Test">
+      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Test">
         <Fab
+          size="small"
           sx={{
-            position: 'absolute',
-            bottom: 160,
-            right: 16,
+            position: 'fixed',
+            ...(isMobile
+              ? {
+                  bottom: 16,
+                  right: 16,
+                  zIndex: 1000,
+                }
+              : {
+                  bottom: 160,
+                  right: 16,
+                }),
             backgroundColor: palette.white,
             border: `1px solid ${palette.white}`,
             '&:hover': {
@@ -49,12 +71,21 @@ const FloatingActionButtons = (props: {
           <MonitorHeartOutlinedIcon color="primary" fontSize="small" />
         </Fab>
       </Tooltip>
-      <Tooltip arrow placement="left" title="Save">
+      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Save">
         <Fab
+          size="small"
           sx={{
-            position: 'absolute',
-            bottom: 96,
-            right: 16,
+            position: 'fixed',
+            ...(isMobile
+              ? {
+                  bottom: 16,
+                  right: 66,
+                  zIndex: 1000,
+                }
+              : {
+                  bottom: 96,
+                  right: 16,
+                }),
             backgroundColor: palette.white,
             border: `1px solid ${palette.white}`,
             '&:hover': {
@@ -69,12 +100,21 @@ const FloatingActionButtons = (props: {
           <SaveIcon color="primary" fontSize="small" />
         </Fab>
       </Tooltip>
-      <Tooltip arrow placement="left" title="Reset">
+      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Reset">
         <Fab
+          size="small"
           sx={{
-            position: 'absolute',
-            bottom: 32,
-            right: 16,
+            position: 'fixed',
+            ...(isMobile
+              ? {
+                  bottom: 16,
+                  right: 116,
+                  zIndex: 1000,
+                }
+              : {
+                  bottom: 32,
+                  right: 16,
+                }),
             backgroundColor: palette.white,
             border: `1px solid ${palette.white}`,
             '&:hover': {

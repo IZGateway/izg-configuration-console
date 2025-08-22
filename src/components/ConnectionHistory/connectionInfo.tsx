@@ -64,7 +64,13 @@ const ConnectionInfo = (props) => {
         )}
         <Divider />
         <CardContent>
-          <Box sx={{ display: 'flex', gap: '2rem' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: '2rem',
+            }}
+          >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
               <Box>
                 <Typography variant="subtitle1" component="div">
