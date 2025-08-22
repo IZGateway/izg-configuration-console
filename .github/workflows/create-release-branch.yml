@@ -111,8 +111,8 @@ jobs:
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console
             ${{ steps.login-ecr.outputs.registry }}/izg-configuration-console
           tags: |
-            type=raw,value=${{ needs.generate-release-timestamp.outputs.releaseDate }}
-            type=raw,value=release
+            type=raw,value=${{ needs.get-application-version.outputs.version }}-${{github.run_number}}
+            type=raw,value=release-${{ needs.get-application-version.outputs.version }}-${{github.run_number}}
           flavor: |
             latest=true
 
