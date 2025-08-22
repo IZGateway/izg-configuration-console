@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
-import dbClientFactory from '../../../lib/db/DbClientFactory'
+import DbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
 /**
@@ -27,7 +27,7 @@ import logger from '../../../../logger'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
-  const dbClient = await dbClientFactory.getDbClient()
+  const dbClient = await DbClientFactory.getDbClient()
   if (req.method === 'GET') {
     const destId = slug[1]
     const destTypeId = _.toNumber(slug[0])
