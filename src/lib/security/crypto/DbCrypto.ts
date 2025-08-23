@@ -97,35 +97,37 @@ async function encryptAllDestinationsWithKey(dbClient: DbClient, newKey: Buffer 
   }
 }
 
-
-
 /**
- * Resets the password for every destination in the database to a fixed pattern.
+ * Resets the password for every IIS destination in the database to a fixed pattern.  This does
+ * not touch passwords on ADS endpoints.
+ * 
  * Throws an error if attempted in production, onboarding or staging environment.
  * This operation is not reversible.  It is useful to reset a database to a known state.
  * 
  * @param dbClient The database client implementing DbClient
  */
 export async function resetDb(dbClient: DbClient): Promise<void> {
-  const destinations = await dbClient.fetchAllDestinations();
+  const destinations = await dbClient.fetchAllDestinations()
+  let success = true
   for (const dest of destinations) {
+    // Ensure we only mess with test and development environments with this function!
     if (dest.destinationType.typeId !== 2 && dest.destinationType.typeId !== 5) {
       throw new Error(`Will NOT reset passwords for production, onboarding or staging: ${dest.destinationType.typeId}`)
     }
-    // Create a fixed password for each destination that is based on the destination information
-    const password = 'pass' + dest.destId + ' PASS' + dest.destId + dest.destinationType.typeId + dest.destId.charAt(0)
-    const username = 'user' + dest.destId
-    const facilityId = dest.destId
-    // Create a copy to avoid mutating the original
-    const updated: Destination = { 
-      ...dest, 
-      password: password,
-      username: username,
-      facilityId: facilityId
-
-    };
-    await dbClient.getRepository().updateDestination(updated);
+    // Do NOT reset passwords for endpoints which take a SAS token, we don't control those!
+    if (!dest.password.includes('&sv=') && !dest.password.includes('&sig=')) {
+      // Create a fixed password for each destination that is based on the destination information
+      const password = 'pass' + dest.destId + ' PASS' + dest.destId + dest.destinationType.typeId + dest.destId.charAt(0)
+      const username = 'user' + dest.destId
+      const facilityId = dest.destId
+      // Create a copy to avoid mutating the original
+      const updated: Destination = { 
+        ...dest, 
+        password: password,
+        username: username,
+        facilityId: facilityId
+      }
+      success = success && await dbClient.getRepository().updateDestination(updated);
+    }
   }
-}
-
-
+} 

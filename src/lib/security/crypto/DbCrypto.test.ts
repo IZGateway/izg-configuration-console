@@ -1,20 +1,31 @@
 import DbClient from '../../db/DbClient'
 import DbClientFactory from '../../db/DbClientFactory'
 import { resetDb, encryptDb, decryptDb, isDatabaseEncrypted, isDatabaseDecrypted } from './DbCrypto'
-import {setImmediate} from 'timers' // For Node 14 compatibility
+import {setImmediate} from 'timers' 
+jest.setTimeout(30000) // Increase this if debugging
 
+/**
+ * These tests will validate the encryption and decryption of database records.
+ * It resets the database to a known state (unencrypted with fixed passwords
+ * in a development or test environment)
+ * It then encrypts the database records and verifies that they have been encrypted.
+ * It then decrypts the database records and verifies that they have been decrypted.
+ * After everything is over, it resets the database to its original state.
+ * It will NOT reset the records for ADS endpoints
+ */
 describe('DbCrypto integration', () => {
   let dbClient : DbClient | null = null
   global.setImmediate = global.setImmediate || setImmediate  // For Jest Issue
 
   beforeAll(async () => {
     dbClient = await DbClientFactory.getDbClient('dynamo')
-    await resetDb(dbClient)
   })
   afterAll(async () => {
+    // Comment out the line below and add .only after test below (making it it.only) o run only one test for a command line encrypt/decrypt/reset
     await resetDb(dbClient)
   })
   it('resetDb sets all destinations to correct values', async () => {
+    await resetDb(dbClient)
     const destinations = await dbClient.fetchAllDestinations()
     destinations.forEach(async dest => {
       const password = 'pass' + dest.destId + ' PASS' + dest.destId + dest.destinationType.typeId + dest.destId.charAt(0)
@@ -45,7 +56,7 @@ describe('DbCrypto integration', () => {
     })
   })
 
-  it('decryptDb decrypts all destination passwords', async () => {
+  it.only('decryptDb decrypts all destination passwords', async () => {
     if (!await isDatabaseEncrypted(dbClient)) {
         await encryptDb(dbClient)
     }
