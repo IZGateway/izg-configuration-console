@@ -56,7 +56,7 @@ describe('DbCrypto integration', () => {
     })
   })
 
-  it.only('decryptDb decrypts all destination passwords', async () => {
+  it('decryptDb decrypts all destination passwords', async () => {
     if (!await isDatabaseEncrypted(dbClient)) {
         await encryptDb(dbClient)
     }
