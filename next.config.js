@@ -5,6 +5,7 @@ const {
 } = require('next/constants')
 const winston = require('winston')
 const ecsFormat = require('@elastic/ecs-winston-format')
+let logged = false;
 
 module.exports = async (phase, { defaultConfig }) => {
   /** @type {import('next').NextConfig} */
@@ -60,7 +61,6 @@ module.exports = async (phase, { defaultConfig }) => {
     transports: [new winston.transports.Console()],
     exitOnError: false,
   })
-
   if (process.env.NODE_ENV === 'production') {
     logger.add(
       new winston.transports.File({
@@ -70,24 +70,27 @@ module.exports = async (phase, { defaultConfig }) => {
       })
     )
   }
-  if (phase === PHASE_DEVELOPMENT_SERVER) {
-    logger.info('Config Console Service started', {
-      'startup-phase': phase,
-    })
-  } else if (
-    process.argv.includes('start') &&
-    phase === PHASE_PRODUCTION_SERVER
-  ) {
-    logger.info('Config Console Service started ', {
-      'startup-phase': phase,
-    })
-  } else if (
-    process.argv.includes('build') &&
-    phase === PHASE_PRODUCTION_BUILD
-  ) {
-    logger.info('Config Console Service building', {
-      'build-phase': phase,
-    })
+  if (!logged) {
+    logged = true
+    if (phase === PHASE_DEVELOPMENT_SERVER) {
+      logger.info(`Config Console Service started in ${process.uptime()} s`, {
+        'startup-phase': phase,
+      })
+    } else if (
+      process.argv.includes('start') &&
+      phase === PHASE_PRODUCTION_SERVER
+    ) {
+      logger.info('Config Console Service started in ${process.uptime()} s', {
+        'startup-phase': phase,
+      })
+    } else if (
+      process.argv.includes('build') &&
+      phase === PHASE_PRODUCTION_BUILD
+    ) {
+      logger.info('Config Console Service built in ${process.uptime()} s', {
+        'build-phase': phase,
+      })
+    }
   }
   return nextConfig
 }
