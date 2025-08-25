@@ -573,9 +573,10 @@ class Dynamo implements DbClient {
       if (destination[key] !== undefined) {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
-        params.ExpressionAttributeValues[`:${key}`] = destination[key]
-          ? destination[key].toISOString()
-          : null
+        const value = typeof destination[key] === 'object'
+            ? destination[key].toISOString()
+            : destination[key]
+        params.ExpressionAttributeValues[`:${key}`] = value ? value : null
       }
     }
     const data = await dynamodDbDocClient.send(new UpdateCommand(params))
