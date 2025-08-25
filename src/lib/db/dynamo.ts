@@ -573,7 +573,7 @@ class Dynamo implements DbClient {
       if (destination[key] !== undefined) {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
-        const value = typeof destination[key] === 'object'
+        const value = destination[key] instanceof Date
             ? destination[key].toISOString()
             : destination[key]
         params.ExpressionAttributeValues[`:${key}`] = value ? value : null
