@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../api-middleware-helper'
-import { dbClient } from '../../../lib/utils/dbclient'
+import DbClientFactory from '../../../lib/db/DbClientFactory'
 
 /**
  * @swagger
@@ -31,6 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
 
   if (req.method === 'GET') {
+    const dbClient = await DbClientFactory.getDbClient()
     const result = await dbClient.fetchDestinationAuditHistory(
       destId,
       destTypeId
