@@ -85,7 +85,7 @@ async function getConnectionInfo() {
 }
 
 class Dynamo implements DbClient {
-  static loggedIt: boolean = false
+  static loggedIt = false
   constructor() {
     if (!Dynamo.loggedIt) {
       Dynamo.loggedIt = true
