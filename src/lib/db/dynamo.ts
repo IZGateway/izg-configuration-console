@@ -4,8 +4,6 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
-import ConfigConsoleRepository from './ConfigConsoleFetchRepository'
-import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 
 import {
   DeleteCommand,
@@ -21,35 +19,38 @@ import {
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb'
 
-import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb'
+import { DynamoDBClient, DynamoDBClientConfig, ListTablesCommand } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
+import DbClient from './DbClient'
+import {setImmediate} from 'timers' 
+global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
 const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
 
 const clientConfig: DynamoDBClientConfig = endpoint
-  ? { endpoint, region: 'us-east-1' }
-  : {}
-if (awsAccessKeyId && awsSecretAccessKey) {
+  ? { endpoint: endpoint,
+      region: process.env.AWS_REGION || 'us-east-1' 
+  } : {}
+
+if (process.env.AWS_ACCESS_KEY_ID) {
   clientConfig.credentials = {
-    accessKeyId: awsAccessKeyId,
-    secretAccessKey: awsSecretAccessKey,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN,
   }
 }
 
-const marshallOptions = {
-  convertEmptyValues: false,
-  removeUndefinedValues: true,
-  convertClassInstanceToMap: false,
+const translateConfig = { 
+  marshalOptions: {
+    convertEmptyValues: false,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: false,
+  },
+  unmarshallOptions: {
+    wrapNumbers: false,
+  },
 }
-
-const unmarshallOptions = {
-  wrapNumbers: false,
-}
-
-const translateConfig = { marshallOptions, unmarshallOptions }
 
 const dynamodDbClient = new DynamoDBClient(clientConfig)
 export const dynamodDbDocClient = DynamoDBDocumentClient.from(
@@ -58,6 +59,7 @@ export const dynamodDbDocClient = DynamoDBDocumentClient.from(
 )
 
 const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
+
 const DEST_TYPES = [
   null,
   'PRODUCTION',
@@ -68,7 +70,49 @@ const DEST_TYPES = [
   'UNKNOWN',
 ]
 
-class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
+async function getConnectionInfo() {
+  let connected = false
+  const region = await dynamodDbClient.config.region()
+  const endpoint = dynamodDbClient.config.endpoint ? await dynamodDbClient.config.endpoint() : `https://dynamodb.${region}.amazonaws.com`
+  try {
+    await dynamodDbClient.send(new ListTablesCommand({ Limit: 1 }));
+    connected = true
+  } catch (err) {
+    logger.error(`DynamoDB connection error: ${err.message}`)
+    connected = false
+  }
+  return { region: region, endpoint: endpoint, connected: connected }
+}
+
+class Dynamo implements DbClient {
+  static loggedIt = false
+  constructor() {
+    if (!Dynamo.loggedIt) {
+      Dynamo.loggedIt = true
+      // Fire-and-forget async logging
+      getConnectionInfo().then(
+        (info) => {
+          logger.info(`DynamoDB ${info.connected ? 'connected' : 'not connected'} to ${info.endpoint}/${TABLE_NAME} in ${info.region}`)
+        }
+      )
+    }
+  }
+
+  getRepository(): DbClient {
+    return this
+  }
+
+  async fetchAllDestinations(): Promise<Destination[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'Destination',
+      },
+    };
+    const result = await dynamodDbDocClient.send(new QueryCommand(params));
+    return await this.convertResponseToDestinations(result.Items || []);
+  }
   private jurisdictionsCache = new Map<string, any>()
 
   getTableName(): string {
@@ -490,6 +534,7 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
       },
       UpdateExpression: '',
       ExpressionAttributeValues: {},
+      ReturnValues: 'ALL_NEW',
     }
     let separator = 'set'
     const stringKeys = [
@@ -529,11 +574,11 @@ class Dynamo implements ConfigConsoleRepository, ConfigConsoleMutateRepository {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
         params.ExpressionAttributeValues[`:${key}`] = destination[key]
-          ? destination[key]
+          ? destination[key].toISOString()
           : null
       }
     }
-    await dynamodDbDocClient.send(new UpdateCommand(params))
+    const data = await dynamodDbDocClient.send(new UpdateCommand(params))
     return true
   }
 }

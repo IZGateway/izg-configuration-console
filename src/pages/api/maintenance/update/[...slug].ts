@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
 import logger from '../../../../../logger'
-import { dbClient } from '../../../../lib/utils/dbclient'
+import DbClientFactory from '../../../../lib/db/DbClientFactory' 
 
 /**
  * @swagger
@@ -31,6 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destTypeId = _.toNumber(slug[0])
   const maintData = req.body
   if (req.method === 'POST') {
+    const dbClient = await DbClientFactory.getDbClient()
     const result = await dbClient.updateDestination({
       destId: destId,
       destinationType: {

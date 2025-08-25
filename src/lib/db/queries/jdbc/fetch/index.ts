@@ -6,7 +6,7 @@ import {
   fetchChangeRequestPassword,
 } from './destinationchangerequest'
 import destinationType from './destinationtype'
-import { fetchDestination, fetchDestinationPassword } from './destination'
+import { fetchDestination, fetchAllDestinations, fetchDestinationPassword } from './destination'
 import fetchJurisdictionByDestId from './jurisdiction'
 import passwordComparison from './passwordComparison'
 import isDatabaseConnected from './DBConnectionCheck'
@@ -14,6 +14,7 @@ import isDatabaseConnected from './DBConnectionCheck'
 export {
   fetchJurisdictionByDestId,
   fetchDestination,
+  fetchAllDestinations,
   fetchDestinationPassword,
   fetchLoggedInUsersDestinations,
   destinationaudithistory,
