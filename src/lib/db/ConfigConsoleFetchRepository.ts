@@ -5,6 +5,7 @@ import { DestinationType } from '../type/DestinationType'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
+  fetchAllDestinations(): Promise<Destination[]>
   fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: Array<string>
