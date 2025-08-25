@@ -2,6 +2,7 @@ import DbClient from '../../db/DbClient';
 import crypto from 'crypto'
 import { KEY_LENGTH, encrypt, encryptWithKey, initCryptoSupport, storeKeyInSecretsManager } from './cryptoSupport';
 import { Destination } from '../../type/Destination';
+import { DestinationChangeRequest } from '../../type/DestinationChangeRequest';
 
 /**
  * Returns true if all passwords in the database are encrypted, or empty.  Returns false if any password 
@@ -12,9 +13,16 @@ import { Destination } from '../../type/Destination';
 export async function isDatabaseEncrypted(dbClient: DbClient): Promise<boolean> {
   const destinations = await dbClient.fetchAllDestinations();
   for (const dest of destinations) {
-    const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
+    const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
     if (password && !password.startsWith('==')) {
       return false;
+    }
+    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+    if (cr) {
+      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id);
+      if (crPassword && !crPassword.startsWith('==')) {
+        return false
+      }
     }
   }
   // If all passwords are encrypted, return true
@@ -32,7 +40,14 @@ export async function isDatabaseDecrypted(dbClient: DbClient): Promise<boolean> 
   for (const dest of destinations) {
     const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
     if (password && password.startsWith('==')) {
-      return false;
+      return false
+    }
+    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+    if (cr) {
+      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+      if (crPassword && crPassword.startsWith('==')) {
+        return false
+      }
     }
   }
   // If all passwords are encrypted, return true
@@ -53,6 +68,18 @@ export async function encryptDb(dbClient: DbClient): Promise<void> {
       // Create a copy to avoid mutating the original
       const updated: Destination = { ...dest, password: encrypted };
       await dbClient.getRepository().updateDestination(updated);
+    }
+
+    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+    if (cr) {
+      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+      if (crPassword && !crPassword.startsWith('==')) {
+        const encrypted = encrypt(crPassword);
+        const updatedCr: DestinationChangeRequest = { ...cr, 
+          requested : { ... cr.requested, password: encrypted }
+        };
+        await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+      }
     }
   }
 }
@@ -93,6 +120,17 @@ async function encryptAllDestinationsWithKey(dbClient: DbClient, newKey: Buffer 
       const encrypted = newKey ? encryptWithKey(password, newKey) : password
       const updated: Destination = { ...dest, password: encrypted }
       await dbClient.getRepository().updateDestination(updated)
+    }
+    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+    if (cr) {
+      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+      if (crPassword && !crPassword.startsWith('==')) {
+        const encrypted = newKey ? encryptWithKey(crPassword, newKey) : crPassword
+        const updatedCr: DestinationChangeRequest = { ...cr, 
+          requested : { ... cr.requested, password: encrypted }
+        };
+        await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+      }
     }
   }
 }

@@ -1,3 +1,42 @@
+/**
+ * Remap a raw DB result to a DestinationChangeRequest object.
+ */
+const remapToDestinationChangeRequest = async (result): Promise<DestinationChangeRequest> => {
+  if (!result) return null;
+  return {
+    id: result.id,
+    destId: result.dest_id,
+    destType: {
+      type: result.destinations.destination_type.type,
+      typeId: result.destinations.destination_type.type_id,
+    },
+    jurisdiction: {
+      jurisdictionId: result.destinations.jurisdiction.jurisdiction_id,
+      name: result.destinations.jurisdiction.name,
+      description: result.destinations.jurisdiction.description,
+    },
+    jiraId: result.jira_id,
+    isDraft: result.jira_id ? false : true,
+    requestedAt: result.requestedAt,
+    requestedBy: result.requestedBy,
+    scheduledAt: result.scheduledAt,
+    requested: {
+      destUri: result.dest_uri,
+      username: result.username,
+      MSH6: result.MSH6,
+      MSH22: result.MSH22,
+      MSH3: result.MSH3,
+      MSH4: result.MSH4,
+      MSH5: result.MSH5,
+      RXA11: result.RXA11,
+      facilityId: result.facility_id,
+    },
+    current: await getCurrentDestinationSettings(result.dest_id, result.dest_type),
+    isPasswordDifferent: await getPasswordComparison(result.dest_id, result.dest_type),
+  };
+};
+
+
 import logger from '../../../../../../logger'
 import { prismacontext } from '../../../../prismacontext'
 import { DestinationChangeRequest } from '../../../../type/DestinationChangeRequest'
@@ -53,43 +92,7 @@ export const fetchDestinationChangeRequestByDestIdAndDestType = async (
     )
     return null
   }
-  return {
-    id: result.id,
-    destId: result.dest_id,
-    destType: {
-      type: result.destinations.destination_type.type,
-      typeId: result.destinations.destination_type.type_id,
-    },
-    jurisdiction: {
-      jurisdictionId: result.destinations.jurisdiction.jurisdiction_id,
-      name: result.destinations.jurisdiction.name,
-      description: result.destinations.jurisdiction.description,
-    },
-    jiraId: result.jira_id,
-    isDraft: result.jira_id ? false : true,
-    requestedAt: result.requestedAt,
-    requestedBy: result.requestedBy,
-    scheduledAt: result.scheduledAt,
-    requested: {
-      destUri: result.dest_uri,
-      username: result.username,
-      MSH6: result.MSH6,
-      MSH22: result.MSH22,
-      MSH3: result.MSH3,
-      MSH4: result.MSH4,
-      MSH5: result.MSH5,
-      RXA11: result.RXA11,
-      facilityId: result.facility_id,
-    },
-    current: await getCurrentDestinationSettings(
-      result.dest_id,
-      result.dest_type
-    ),
-    isPasswordDifferent: await getPasswordComparison(
-      result.dest_id,
-      result.dest_type
-    ),
-  }
+  return remapToDestinationChangeRequest(result);
 }
 
 export const fetchDestinationChangeRequestById = async (
@@ -138,43 +141,7 @@ export const fetchDestinationChangeRequestById = async (
     logger.debug(`Destination Change Request not found`)
     return null
   }
-  return {
-    id: result.id,
-    destId: result.dest_id,
-    destType: {
-      type: result.destinations.destination_type.type,
-      typeId: result.destinations.destination_type.type_id,
-    },
-    jurisdiction: {
-      jurisdictionId: result.destinations.jurisdiction.jurisdiction_id,
-      name: result.destinations.jurisdiction.name,
-      description: result.destinations.jurisdiction.description,
-    },
-    jiraId: result.jira_id,
-    isDraft: result.jira_id ? false : true,
-    requestedAt: result.requestedAt,
-    requestedBy: result.requestedBy,
-    scheduledAt: result.scheduledAt,
-    requested: {
-      destUri: result.dest_uri,
-      username: result.username,
-      MSH6: result.MSH6,
-      MSH22: result.MSH22,
-      MSH3: result.MSH3,
-      MSH4: result.MSH4,
-      MSH5: result.MSH5,
-      RXA11: result.RXA11,
-      facilityId: result.facility_id,
-    },
-    current: await getCurrentDestinationSettings(
-      result.dest_id,
-      result.dest_type
-    ),
-    isPasswordDifferent: await getPasswordComparison(
-      result.dest_id,
-      result.dest_type
-    ),
-  }
+  return remapToDestinationChangeRequest(result);
 }
 
 export const fetchChangeRequestPassword = async (
