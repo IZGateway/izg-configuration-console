@@ -14,11 +14,15 @@ import SecurityIcon from '@mui/icons-material/Security'
 import KeyIcon from '@mui/icons-material/Key'
 import Image from 'next/image'
 import securityImage from '../../public/CriticalSecruityOperation.svg'
+import ConfirmationDialog from './confirmationDialog'
 
 const PasswordEncryptionConsole = () => {
-  const handleInitialize = () => {
-    console.log('hi')
+  const [openDialog, setOpenDialog] = React.useState(false)
+  const handleDialog = () => {
+    setOpenDialog(!openDialog)
   }
+  const handleInitialization = () => {}
+
   function Item(props) {
     const { sx, ...other } = props
     return (
@@ -140,7 +144,7 @@ const PasswordEncryptionConsole = () => {
                 size="large"
                 color="primary"
                 sx={{ textTransform: 'uppercase' }}
-                onClick={handleInitialize}
+                onClick={handleDialog}
               >
                 Initialize Password Encryption
               </Button>
@@ -171,6 +175,13 @@ const PasswordEncryptionConsole = () => {
           </Card>
         </Item>
       </Box>
+      {openDialog && (
+        <ConfirmationDialog
+          open={openDialog}
+          handleClose={handleDialog}
+          handleInitialization={handleInitialization}
+        />
+      )}
     </>
   )
 }

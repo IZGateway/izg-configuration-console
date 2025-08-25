@@ -19,10 +19,12 @@ export const menuItems: MenuItem[] = [
       />
     ),
     path: '/manageconnections',
+    adminOnly: false,
   },
   {
     label: 'Password Encryption',
     icon: <LockIcon fontSize="large" />,
     path: '/passwordencryption',
+    adminOnly: true,
   },
 ]

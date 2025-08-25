@@ -74,6 +74,7 @@ export type MenuItem = {
   label: string
   icon: any
   path: string
+  adminOnly?: boolean
 }
 
 const MiniDrawer = () => {
@@ -123,47 +124,49 @@ const MiniDrawer = () => {
           },
         }}
       >
-        {menuItems.map((item: MenuItem, index) => (
-          <ListItem
-            key={item.label}
-            id={item.label}
-            sx={{
-              padding: '0 0',
-            }}
-          >
-            <NextLink
+        {menuItems
+          .filter((item) => !item.adminOnly || session.user.isAdmin)
+          .map((item: MenuItem, index) => (
+            <ListItem
               key={item.label}
-              href={item.path}
-              style={{ textDecoration: 'none', color: 'white' }}
-              passHref
+              id={item.label}
+              sx={{
+                padding: '0 0',
+              }}
             >
-              <ListItemButton
-                sx={{
-                  padding: '1rem 1.5rem',
-                  borderBottom: `1px solid ${palette.primaryLight}`,
-                  '&& .Mui-selected , && .Mui-selected:hover': {
-                    fontWeight: '700',
-                  },
-                  width: '150%',
-                }}
+              <NextLink
                 key={item.label}
-                selected={selectedIndex === index}
-                onClick={(event) => handleListItemClick(event, index)}
-                id={item.label + '_button'}
+                href={item.path}
+                style={{ textDecoration: 'none', color: 'white' }}
+                passHref
               >
-                <ListItemIcon
+                <ListItemButton
                   sx={{
-                    color: 'white',
+                    padding: '1rem 1.5rem',
+                    borderBottom: `1px solid ${palette.primaryLight}`,
+                    '&& .Mui-selected , && .Mui-selected:hover': {
+                      fontWeight: '700',
+                    },
+                    width: '150%',
                   }}
+                  key={item.label}
+                  selected={selectedIndex === index}
+                  onClick={(event) => handleListItemClick(event, index)}
+                  id={item.label + '_button'}
                 >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItemButton>
-            </NextLink>
-            <Divider color={palette.primaryLight} />
-          </ListItem>
-        ))}
+                  <ListItemIcon
+                    sx={{
+                      color: 'white',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              </NextLink>
+              <Divider color={palette.primaryLight} />
+            </ListItem>
+          ))}
       </List>
     </>
   )
