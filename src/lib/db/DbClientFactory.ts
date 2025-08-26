@@ -1,45 +1,86 @@
+import DbClient from './DbClient'
 import Dynamo from './dynamo'
 import JDBC from './jdbc'
-import ConfigConsoleFetchRepository from './ConfigConsoleFetchRepository'
-import ConfigConsoleMutateRepository from './ConfigConsoleMutateRepository'
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
-import { encrypt, decrypt } from '../security/cryptoSupport'
+import { encrypt, decrypt, initCryptoSupport } from '../security/crypto/cryptoSupport'
 
-export default class DBClientFactory {
-  static getDB(dbType: string) {
-    const type = dbType.toLowerCase();
-    let db: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository | null = null;
-    if (type === 'jdbc') {
-      db = new JDBC();
-    } else if (type === 'dynamo') {
-      db = new Dynamo();
+export default class DbClientFactory {
+  static defaultClient: DbClient | null = null
+  static async getDbClient(dbType?: string) : Promise<DbClient> {
+    let type = dbType ? dbType.toLowerCase() : null
+    if (!type) {
+      if (DbClientFactory.defaultClient) {
+        return DbClientFactory.defaultClient
+      } else {
+        type = process.env.DB_TYPE || 'dynamo'
+      }
     }
-    return db ? new EncryptedRepository(db) : null;
+    let db: DbClient | null = null;
+    if (type === 'jdbc') {
+      db = new JDBC()
+    } else if (type === 'dynamo') {
+      db = new Dynamo()
+    }
+    await initCryptoSupport() // Ensure crypto support is initialized
+
+    db = db ? new EncryptedRepository(db) : null
+    if (!dbType) {
+      DbClientFactory.defaultClient = db
+    }
+    return db
   }
 }
 
+/**
+ * Decrypts a password with retries in case of failure because of a key rotation
+ * 
+ * @param password The password to decrypt
+ * @returns The decrypted password
+ */
+async function decryptWithRetries(password: string): Promise<string> {
+  try {
+    return decrypt(password)
+  } catch (error) {
+    if (error.message?.match(/authenticate/i)) {
+      // We failed with current, and previous, did someone rotate keys
+      // while we weren't looking?
+      await initCryptoSupport() // reinitialize keys
+      return decrypt(password)
+    }
+    throw error;
+  }
+} 
 /**
  * The EncryptedRepository wraps a database repository and encrypts sensitive data before storing
  * it and decrypts it after reading it. Calls which do not involve sensitive data are passed through
  * without any encryption or decryption operations.
  */
-class EncryptedRepository implements ConfigConsoleFetchRepository, ConfigConsoleMutateRepository {
-  isDatabaseConnected!: () => Promise<boolean>;
+class EncryptedRepository implements DbClient {
+  isDatabaseConnected!: () => Promise<boolean>
+  fetchAllDestinations!: () => Promise<Destination[]>
   fetchDestinationType!: (destType: string) => Promise<DestinationType>;
   fetchDestinationAuditHistory!: (destId: string, destTypeId: number) => Promise<DestinationAudit[]>;
   deleteDestinationChangeRequest!: (id: number) => Promise<boolean>;
-  private repository: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository
+  private repository: DbClient
 
-  constructor(repository: ConfigConsoleFetchRepository & ConfigConsoleMutateRepository) {
+  constructor(repository: DbClient) {
     this.repository = repository;
     this.deleteDestinationChangeRequest = repository.deleteDestinationChangeRequest.bind(repository);
+    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository);
     this.fetchDestinationAuditHistory = repository.fetchDestinationAuditHistory.bind(repository);
     this.fetchDestinationType = repository.fetchDestinationType.bind(repository);
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository);
   }
+  /** Return the base repository */
+  getRepository(): DbClient {
+    return this.repository;
+  }
+
+
+
   /** 
    * The isPasswordChanged method does password comparison between the destination 
    * and its change request using fetch operations instead of direct database queries.
@@ -83,44 +124,44 @@ class EncryptedRepository implements ConfigConsoleFetchRepository, ConfigConsole
   async fetchDestination(destId: string, destType: number): Promise<Destination> {
     const result = await this.repository.fetchDestination(destId, destType);
     if (result && typeof result.password === 'string') {
-      result.password = decrypt(result.password);
+      result.password = await decryptWithRetries(result.password);
     }
     return result;
   }
   async fetchLoggedInUsersDestinations(isAdmin: boolean, jurisdictions: Array<string>): Promise<Destination[]> {
     const results = await this.repository.fetchLoggedInUsersDestinations(isAdmin, jurisdictions);
-    return results.map(dest => {
+    for (const dest of results) {
       if (dest && typeof dest.password === 'string') {
-        return { ...dest, password: decrypt(dest.password) };
+        dest.password = await decryptWithRetries(dest.password)
       }
-      return dest;
-    });
+    }
+    return results
   }
   async fetchDestinationChangeRequestById(id: number): Promise<DestinationChangeRequest> {
     const result = await this.repository.fetchDestinationChangeRequestById(id);
     if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: decrypt(result.requested.password) };
+      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
     }
     return result;
   }
   async fetchDestinationChangeRequestByDestIdAndDestType(destId: string, destTypeId: number): Promise<DestinationChangeRequest> {
     const result = await this.repository.fetchDestinationChangeRequestByDestIdAndDestType(destId, destTypeId);
     if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: decrypt(result.requested.password) };
+      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
     }
     return result;
   }
   async fetchChangeRequestPassword(id: number): Promise<string> {
     const result = await this.repository.fetchChangeRequestPassword(id);
     if (typeof result === 'string') {
-      return decrypt(result);
+      return await decryptWithRetries(result);
     }
     return result;
   }
   async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
     const result = await this.repository.fetchDestinationPassword(destId, destType);
     if (typeof result === 'string') {
-      return decrypt(result);
+      return await decryptWithRetries(result);
     }
     return result;
   }
