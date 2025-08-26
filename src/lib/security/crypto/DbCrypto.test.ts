@@ -53,6 +53,12 @@ describe('DbCrypto integration', () => {
     destinations.forEach(async dest => {
       const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
       expect(password).toMatch(/^==[A-Za-z0-9+/=]+$/) // Encrypted passwords start with '=='
+
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword) expect(crPassword).toMatch(/^==[A-Za-z0-9+/=]+$/)
+      }
     })
   })
 
@@ -67,6 +73,11 @@ describe('DbCrypto integration', () => {
       const expectedPassword = 'pass' + dest.destId + ' PASS' + dest.destId + dest.destinationType.typeId + dest.destId.charAt(0)
       const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
       if (password) expect(password).toMatch(expectedPassword) 
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword) expect(crPassword).not.toMatch(/^==[A-Za-z0-9+/=]+$/)
+      }
     })
   })
 })
