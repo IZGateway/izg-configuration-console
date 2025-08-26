@@ -2,6 +2,14 @@
 const nextJest = require('next/jest')
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dotenv = require('dotenv');
+
+module.exports = {
+  presets: [
+    ['@babel/preset-env', {targets: {node: 'current'}}],
+    '@babel/preset-typescript',
+  ]
+}
+
 dotenv.config({ path: '.env.test.local' });
 const createJestConfig = nextJest({
   // Provide the path to your Next.js app to load next.config.js and .env files in your test environment
