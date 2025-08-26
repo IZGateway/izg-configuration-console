@@ -15,13 +15,51 @@ import KeyIcon from '@mui/icons-material/Key'
 import Image from 'next/image'
 import securityImage from '../../public/CriticalSecruityOperation.svg'
 import ConfirmationDialog from './confirmationDialog'
+import CombinedContext from '../../contexts/app'
+import CustomSnackbar from '../SnackBar'
 
 const PasswordEncryptionConsole = () => {
+  const { setAlert, alert } = React.useContext(CombinedContext)
   const [openDialog, setOpenDialog] = React.useState(false)
+  const [showSnackbar, setShowSnackbar] = React.useState(false)
   const handleDialog = () => {
     setOpenDialog(!openDialog)
   }
-  const handleInitialization = () => {}
+  const handleInitialization = async () => {
+    try {
+      const res = await fetch('/api/encrypt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setShowSnackbar(true)
+        setAlert({
+          level: 'success',
+          message: `Passwords encrypted successfully`,
+        })
+      } else {
+        setShowSnackbar(true)
+        setAlert({
+          level: 'error',
+          message: `${data.error || 'Unknown error'}`,
+        })
+      }
+    } catch (error) {
+      throw new Error(error)
+    } finally {
+      setOpenDialog(false)
+    }
+  }
+
+  const handleCloseSnackBar = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      message: '',
+    })
+  }
 
   function Item(props) {
     const { sx, ...other } = props
@@ -175,6 +213,12 @@ const PasswordEncryptionConsole = () => {
           </Card>
         </Item>
       </Box>
+      <CustomSnackbar
+        open={showSnackbar}
+        severity={alert.level}
+        message={alert.message}
+        onClose={handleCloseSnackBar}
+      />
       {openDialog && (
         <ConfirmationDialog
           open={openDialog}
