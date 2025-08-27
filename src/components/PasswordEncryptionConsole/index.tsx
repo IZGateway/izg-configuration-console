@@ -17,11 +17,26 @@ import securityImage from '../../public/CriticalSecruityOperation.svg'
 import ConfirmationDialog from './confirmationDialog'
 import CombinedContext from '../../contexts/app'
 import CustomSnackbar from '../SnackBar'
+import { useEffect } from 'react'
 
 const PasswordEncryptionConsole = () => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [openDialog, setOpenDialog] = React.useState(false)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
+  const [isEncrypted, setIsEncrypted] = React.useState(false)
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/encryptionStatus')
+        const data = await res.json()
+        setIsEncrypted(data.encrypted)
+      } catch (err) {
+        console.error('Error fetching DB status', err)
+      }
+    }
+    fetchStatus()
+  }, [])
+
   const handleDialog = () => {
     setOpenDialog(!openDialog)
   }
@@ -38,6 +53,35 @@ const PasswordEncryptionConsole = () => {
         setAlert({
           level: 'success',
           message: `Passwords encrypted successfully`,
+        })
+        setIsEncrypted(true)
+      } else {
+        setShowSnackbar(true)
+        setAlert({
+          level: 'error',
+          message: `${data.error || 'Unknown error'}`,
+        })
+      }
+    } catch (error) {
+      throw new Error(error)
+    } finally {
+      setOpenDialog(false)
+    }
+  }
+
+  const handleRotate = async () => {
+    try {
+      const res = await fetch('/api/rotatekey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        setShowSnackbar(true)
+        setAlert({
+          level: 'success',
+          message: `Password encryption rotation keys is successful`,
         })
       } else {
         setShowSnackbar(true)
@@ -177,15 +221,27 @@ const PasswordEncryptionConsole = () => {
           </Card>
           <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
             <CardContent sx={{ px: 4 }}>
-              <Button
-                variant="contained"
-                size="large"
-                color="primary"
-                sx={{ textTransform: 'uppercase' }}
-                onClick={handleDialog}
-              >
-                Initialize Password Encryption
-              </Button>
+              {!isEncrypted ? (
+                <Button
+                  variant="contained"
+                  size="large"
+                  color="primary"
+                  sx={{ textTransform: 'uppercase' }}
+                  onClick={handleDialog}
+                >
+                  Initialize Password Encryption
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  size="large"
+                  color="primary"
+                  sx={{ textTransform: 'uppercase' }}
+                  onClick={handleRotate}
+                >
+                  Rotate Password Encryption
+                </Button>
+              )}
             </CardContent>
           </Card>
         </Item>
