@@ -67,7 +67,7 @@ const ConfirmationDialog = (props) => {
                 cannot be undone.
               </Typography>
               <Typography variant="body1" color={palette.greyDarkTypography}>
-                Type "Encrypt" to confirm this critical operation:
+                Type &quot;Encrypt&quot; to confirm this critical operation:
               </Typography>
               <TextField
                 label="Type 'Encrypt' to confirm"

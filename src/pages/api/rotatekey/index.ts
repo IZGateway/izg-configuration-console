@@ -21,14 +21,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       success: true,
       message: 'Password encryption rotation keys is successful',
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Encryption error:', err)
-    res
-      .status(500)
-      .json({
-        success: false,
-        error: 'Failed to rotate keys for password encryption',
-      })
+    res.status(500).json({
+      success: false,
+      error: 'Failed to rotate keys for password encryption',
+    })
   }
 }
 

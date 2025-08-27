@@ -15,7 +15,7 @@ const GoogleAnalytics = () => {
       page_path: window.location.pathname,
       send_to: TRACKING_ID,
     })
-  }, [])
+  }, [router.isPreview])
   // 👇 send page views on route change
   useEffect(() => {
     const handleRouteChange = (url: string) => {

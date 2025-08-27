@@ -20,7 +20,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res
       .status(200)
       .json({ success: true, message: 'Passwords encrypted successfully' })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Encryption error:', err)
     res
       .status(500)
