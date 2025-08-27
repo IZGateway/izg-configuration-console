@@ -20,13 +20,14 @@ import CustomSnackbar from '../SnackBar'
 import { useEffect } from 'react'
 import Loader from '../Loader'
 
-const PasswordEncryptionConsole = () => {
+const PasswordEncryptionConsole = ({ hasKeyName }) => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [openDialog, setOpenDialog] = React.useState(false)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
   const [isEncrypted, setIsEncrypted] = React.useState(null)
   const [loadingInit, setLoadingInit] = React.useState(false)
   const [loadingRotate, setLoadingRotate] = React.useState(false)
+
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -88,7 +89,7 @@ const PasswordEncryptionConsole = () => {
         setShowSnackbar(true)
         setAlert({
           level: 'success',
-          message: `Password encryption rotation keys is successful`,
+          message: `Password encryption key rotation is successful`,
         })
       } else {
         setShowSnackbar(true)
@@ -187,13 +188,7 @@ const PasswordEncryptionConsole = () => {
                     </Typography>
                     <List sx={{ listStyleType: 'disc', paddingLeft: 2 }}>
                       <ListItem sx={{ display: 'list-item', px: 0 }}>
-                        <ListItemText primary="Quantum-safe 256-bit key generation" />
-                      </ListItem>
-                      <ListItem sx={{ display: 'list-item', px: 0 }}>
                         <ListItemText primary="AWS Secret Store integration" />
-                      </ListItem>
-                      <ListItem sx={{ display: 'list-item', px: 0 }}>
-                        <ListItemText primary="Environment-isolated processing" />
                       </ListItem>
                       <ListItem sx={{ display: 'list-item', px: 0 }}>
                         <ListItemText primary="Individual transaction commits" />
@@ -213,9 +208,6 @@ const PasswordEncryptionConsole = () => {
                     Safety Measures
                   </Typography>
                   <List sx={{ listStyleType: 'disc', paddingLeft: 2 }}>
-                    <ListItem sx={{ display: 'list-item', px: 0 }}>
-                      <ListItemText primary="Automatic backup verification" />
-                    </ListItem>
                     <ListItem sx={{ display: 'list-item', px: 0 }}>
                       <ListItemText primary="Error handling and recovery" />
                     </ListItem>
@@ -238,6 +230,7 @@ const PasswordEncryptionConsole = () => {
                   color="primary"
                   sx={{ textTransform: 'uppercase' }}
                   onClick={handleDialog}
+                  disabled={!hasKeyName}
                 >
                   Initialize Password Encryption
                 </Button>

@@ -19,7 +19,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     await rotateKey(dbClient)
     res.status(200).json({
       success: true,
-      message: 'Password encryption rotation keys is successful',
+      message: 'Password encryption key rotation is successful',
     })
   } catch (err) {
     console.error('Encryption error:', err)
