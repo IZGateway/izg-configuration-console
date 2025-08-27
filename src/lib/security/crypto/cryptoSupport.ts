@@ -4,7 +4,7 @@ import { SecretsManagerClient, GetSecretValueCommand, CreateSecretCommand, PutSe
 const IV_LENGTH = 16 // AES block size
 const TAG_LENGTH = 16 // GCM tag size
 export const KEY_LENGTH = 32 // AES-256 key size
-const KEY_NAME = process.env.DDB_ENCRYPTION_KEYNAME || 'devdb-test'
+const KEY_NAME = process.env.DDB_ENCRYPTION_KEYNAME || null
 const SECRETS_CLIENT = new SecretsManagerClient()
 const CIPHER_ALGORITHM = 'aes-256-gcm'
 const CIPHER_OPTIONS = { "authTagLength": TAG_LENGTH } 
