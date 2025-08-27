@@ -18,12 +18,15 @@ import ConfirmationDialog from './confirmationDialog'
 import CombinedContext from '../../contexts/app'
 import CustomSnackbar from '../SnackBar'
 import { useEffect } from 'react'
+import Loader from '../Loader'
 
 const PasswordEncryptionConsole = () => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [openDialog, setOpenDialog] = React.useState(false)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
-  const [isEncrypted, setIsEncrypted] = React.useState(false)
+  const [isEncrypted, setIsEncrypted] = React.useState(null)
+  const [loadingInit, setLoadingInit] = React.useState(false)
+  const [loadingRotate, setLoadingRotate] = React.useState(false)
   useEffect(() => {
     const fetchStatus = async () => {
       try {
@@ -32,6 +35,7 @@ const PasswordEncryptionConsole = () => {
         setIsEncrypted(data.encrypted)
       } catch (err) {
         console.error('Error fetching DB status', err)
+        setIsEncrypted(false)
       }
     }
     fetchStatus()
@@ -41,6 +45,7 @@ const PasswordEncryptionConsole = () => {
     setOpenDialog(!openDialog)
   }
   const handleInitialization = async () => {
+    setLoadingInit(true)
     try {
       const res = await fetch('/api/encrypt', {
         method: 'POST',
@@ -66,10 +71,12 @@ const PasswordEncryptionConsole = () => {
       throw new Error(error)
     } finally {
       setOpenDialog(false)
+      setLoadingInit(false)
     }
   }
 
   const handleRotate = async () => {
+    setLoadingRotate(true)
     try {
       const res = await fetch('/api/rotatekey', {
         method: 'POST',
@@ -94,6 +101,7 @@ const PasswordEncryptionConsole = () => {
       throw new Error(error)
     } finally {
       setOpenDialog(false)
+      setLoadingRotate(false)
     }
   }
 
@@ -221,7 +229,9 @@ const PasswordEncryptionConsole = () => {
           </Card>
           <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
             <CardContent sx={{ px: 4 }}>
-              {!isEncrypted ? (
+              {isEncrypted === null ? (
+                <Loader open={true} />
+              ) : !isEncrypted ? (
                 <Button
                   variant="contained"
                   size="large"
@@ -242,6 +252,7 @@ const PasswordEncryptionConsole = () => {
                   Rotate Password Encryption
                 </Button>
               )}
+              <Loader open={loadingInit || loadingRotate} />
             </CardContent>
           </Card>
         </Item>

@@ -150,7 +150,19 @@ const MiniDrawer = () => {
         }}
       >
         {menuItems
-          .filter((item) => !item.adminOnly || session.user.isAdmin)
+          .filter((item) => {
+            if (item.adminOnly && !session?.user.isAdmin) return false
+
+            // If it's password encryption and keyName is missing/null, hide it
+            if (
+              item.label === 'Password Encryption' &&
+              !process.env.NEXT_PUBLIC_DDB_ENCRYPTION_KEYNAME
+            ) {
+              return false
+            }
+
+            return true
+          })
           .map((item: MenuItem, index) => (
             <ListItem
               key={item.label}
