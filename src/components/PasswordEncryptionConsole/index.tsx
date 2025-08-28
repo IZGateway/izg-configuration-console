@@ -241,6 +241,7 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
                   color="primary"
                   sx={{ textTransform: 'uppercase' }}
                   onClick={handleRotate}
+                  disabled={!hasKeyName}
                 >
                   Rotate Password Encryption
                 </Button>
