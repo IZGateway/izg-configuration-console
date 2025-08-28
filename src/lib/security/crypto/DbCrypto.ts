@@ -19,7 +19,7 @@ export async function isDatabaseEncrypted(dbClient: DbClient): Promise<boolean> 
     }
     const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
     if (cr) {
-      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id);
+      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
       if (crPassword && !crPassword.startsWith('==')) {
         return false
       }

@@ -61,18 +61,23 @@ async function decryptWithRetries(password: string): Promise<string> {
 class EncryptedRepository implements DbClient {
   isDatabaseConnected!: () => Promise<boolean>
   fetchAllDestinations!: () => Promise<Destination[]>
-  fetchDestinationType!: (destType: string) => Promise<DestinationType>;
-  fetchDestinationAuditHistory!: (destId: string, destTypeId: number) => Promise<DestinationAudit[]>;
-  deleteDestinationChangeRequest!: (id: number) => Promise<boolean>;
+  fetchDestinationType!: (destType: string) => Promise<DestinationType>
+  fetchDestinationAuditHistory!: (destId: string, destTypeId: number) => Promise<DestinationAudit[]>
+  deleteDestinationChangeRequest!: (id: number) => Promise<boolean>
+  fetchDestinationChangeRequestById!: (id: number) => Promise<DestinationChangeRequest>
+  fetchDestinationChangeRequestByDestIdAndDestType!: (destId: string, destTypeId: number) => Promise<DestinationChangeRequest>
+
   private repository: DbClient
 
   constructor(repository: DbClient) {
-    this.repository = repository;
-    this.deleteDestinationChangeRequest = repository.deleteDestinationChangeRequest.bind(repository);
-    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository);
-    this.fetchDestinationAuditHistory = repository.fetchDestinationAuditHistory.bind(repository);
-    this.fetchDestinationType = repository.fetchDestinationType.bind(repository);
-    this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository);
+    this.repository = repository
+    this.deleteDestinationChangeRequest = repository.deleteDestinationChangeRequest.bind(repository)
+    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository)
+    this.fetchDestinationAuditHistory = repository.fetchDestinationAuditHistory.bind(repository)
+    this.fetchDestinationType = repository.fetchDestinationType.bind(repository)
+    this.fetchDestinationChangeRequestById = repository.fetchDestinationChangeRequestById.bind(repository)
+    this.fetchDestinationChangeRequestByDestIdAndDestType = repository.fetchDestinationChangeRequestByDestIdAndDestType.bind(repository)
+    this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
@@ -137,20 +142,7 @@ class EncryptedRepository implements DbClient {
     }
     return results
   }
-  async fetchDestinationChangeRequestById(id: number): Promise<DestinationChangeRequest> {
-    const result = await this.repository.fetchDestinationChangeRequestById(id);
-    if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
-    }
-    return result;
-  }
-  async fetchDestinationChangeRequestByDestIdAndDestType(destId: string, destTypeId: number): Promise<DestinationChangeRequest> {
-    const result = await this.repository.fetchDestinationChangeRequestByDestIdAndDestType(destId, destTypeId);
-    if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
-    }
-    return result;
-  }
+  
   async fetchChangeRequestPassword(id: number): Promise<string> {
     const result = await this.repository.fetchChangeRequestPassword(id);
     if (typeof result === 'string') {
