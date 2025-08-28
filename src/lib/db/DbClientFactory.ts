@@ -145,14 +145,14 @@ class EncryptedRepository implements DbClient {
   
   async fetchChangeRequestPassword(id: number): Promise<string> {
     const result = await this.repository.fetchChangeRequestPassword(id);
-    if (typeof result === 'string') {
+    if (result && typeof result === 'string') {
       return await decryptWithRetries(result);
     }
     return result;
   }
   async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
     const result = await this.repository.fetchDestinationPassword(destId, destType);
-    if (typeof result === 'string') {
+    if (result && typeof result === 'string') {
       return await decryptWithRetries(result);
     }
     return result;

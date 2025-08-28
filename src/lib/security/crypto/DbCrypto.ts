@@ -13,16 +13,24 @@ import { DestinationChangeRequest } from '../../type/DestinationChangeRequest';
 export async function isDatabaseEncrypted(dbClient: DbClient): Promise<boolean> {
   const destinations = await dbClient.fetchAllDestinations();
   for (const dest of destinations) {
-    const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
-    if (password && !password.startsWith('==')) {
-      return false;
-    }
-    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
-    if (cr) {
-      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
-      if (crPassword && !crPassword.startsWith('==')) {
-        return false
+    try {
+      const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
+      if (password && !password.startsWith('==')) {
+        return false;
       }
+    } catch (error) {
+      console.error(`Error fetching destination password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
+    }
+    try {
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword && !crPassword.startsWith('==')) {
+          return false
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching change request password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
     }
   }
   // If all passwords are encrypted, return true
@@ -38,19 +46,27 @@ export async function isDatabaseEncrypted(dbClient: DbClient): Promise<boolean> 
 export async function isDatabaseDecrypted(dbClient: DbClient): Promise<boolean> {
   const destinations = await dbClient.fetchAllDestinations();
   for (const dest of destinations) {
-    const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
-    if (password && password.startsWith('==')) {
-      return false
-    }
-    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
-    if (cr) {
-      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
-      if (crPassword && crPassword.startsWith('==')) {
-        return false
+    try {
+      const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
+      if (password && password.startsWith('==')) {
+        return false;
       }
+    } catch (error) {
+      console.error(`Error fetching destination password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
+    }
+    try {
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword && crPassword.startsWith('==')) {
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error(`Error fetching change request password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
     }
   }
-  // If all passwords are encrypted, return true
+  // If all passwords are decrypted, return true
   return true;
 }
 /**
@@ -60,26 +76,32 @@ export async function isDatabaseDecrypted(dbClient: DbClient): Promise<boolean> 
 export async function encryptDb(dbClient: DbClient): Promise<void> {
   const destinations = await dbClient.fetchAllDestinations();
   for (const dest of destinations) {
-    // Use the dbClient method to fetch the password for this destination
-    const password = await dbClient.fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
-
-    if (password) {
-      const encrypted = encrypt(password);
-      // Create a copy to avoid mutating the original
-      const updated: Destination = { ...dest, password: encrypted };
-      await dbClient.getRepository().updateDestination(updated);
-    }
-
-    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
-    if (cr) {
-      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
-      if (crPassword && !crPassword.startsWith('==')) {
-        const encrypted = encrypt(crPassword);
-        const updatedCr: DestinationChangeRequest = { ...cr, 
-          requested : { ... cr.requested, password: encrypted }
-        };
-        await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+    try {
+      // Use the dbClient method to fetch the password for this destination
+      const password = await dbClient.fetchDestinationPassword(dest.destId, dest.destinationType.typeId);
+      if (password) {
+        const encrypted = encrypt(password);
+        // Create a copy to avoid mutating the original
+        const updated: Destination = { ...dest, password: encrypted };
+        await dbClient.getRepository().updateDestination(updated);
       }
+    } catch (error) {
+      console.error(`Error encrypting destination password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
+    }
+    try {
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword && !crPassword.startsWith('==')) {
+          const encrypted = encrypt(crPassword);
+          const updatedCr: DestinationChangeRequest = { ...cr, 
+            requested : { ... cr.requested, password: encrypted }
+          };
+          await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+        }
+      }
+    } catch (error) {
+      console.error(`Error encrypting change request password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
     }
   }
 }
@@ -115,22 +137,30 @@ export async function rotateKey(dbClient: DbClient): Promise<void> {
 async function encryptAllDestinationsWithKey(dbClient: DbClient, newKey: Buffer | null): Promise<void> {
   const destinations = await dbClient.fetchAllDestinations()
   for (const dest of destinations) {
-    const password = await dbClient.fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
-    if (typeof password === 'string' && password) {
-      const encrypted = newKey ? encryptWithKey(password, newKey) : password
-      const updated: Destination = { ...dest, password: encrypted }
-      await dbClient.getRepository().updateDestination(updated)
-    }
-    const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
-    if (cr) {
-      const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
-      if (crPassword && !crPassword.startsWith('==')) {
-        const encrypted = newKey ? encryptWithKey(crPassword, newKey) : crPassword
-        const updatedCr: DestinationChangeRequest = { ...cr, 
-          requested : { ... cr.requested, password: encrypted }
-        };
-        await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+    try {
+      const password = await dbClient.fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
+      if (typeof password === 'string' && password) {
+        const encrypted = newKey ? encryptWithKey(password, newKey) : password
+        const updated: Destination = { ...dest, password: encrypted }
+        await dbClient.getRepository().updateDestination(updated)
       }
+    } catch (error) {
+      console.error(`Error rotating key for destination password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
+    }
+    try {
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.fetchChangeRequestPassword(cr.id)
+        if (crPassword) {
+          const encrypted = newKey ? encryptWithKey(crPassword, newKey) : crPassword
+          const updatedCr: DestinationChangeRequest = { ...cr, 
+            requested : { ... cr.requested, password: encrypted }
+          };
+          await dbClient.getRepository().upsertDestinationChangeRequest(updatedCr)
+        }
+      }
+    } catch (error) {
+      console.error(`Error rotating key for change request password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
     }
   }
 }
