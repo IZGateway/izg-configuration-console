@@ -360,7 +360,7 @@ class Dynamo implements DbClient {
       ProjectionExpression: 'password',
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result.Item.password
+    return result.Item ? result.Item.password : null
   }
 
   async fetchDestinationPassword(
@@ -377,7 +377,7 @@ class Dynamo implements DbClient {
       ProjectionExpression: 'password',
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result.Item.password
+    return result.Item ? result.Item.password : null
   }
 
   async isPasswordChanged(destId: string, destType: number): Promise<boolean> {
