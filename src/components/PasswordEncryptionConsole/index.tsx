@@ -156,8 +156,7 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
             <CardContent sx={{ p: 4 }}>
               <Typography variant="subtitle1" gutterBottom>
                 Transform all plaintext passwords in your database using
-                FIPS-compliant encryption. This operation ensures maximum
-                security without requiring customer password resets.
+                FIPS-compliant encryption.
               </Typography>
               <Box
                 sx={{
