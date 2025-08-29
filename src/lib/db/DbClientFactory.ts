@@ -5,11 +5,15 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
-import { encrypt, decrypt, initCryptoSupport } from '../security/crypto/cryptoSupport'
+import {
+  encrypt,
+  decrypt,
+  initCryptoSupport,
+} from '../security/crypto/cryptoSupport'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
-  static async getDbClient(dbType?: string) : Promise<DbClient> {
+  static async getDbClient(dbType?: string): Promise<DbClient> {
     let type = dbType ? dbType.toLowerCase() : null
     if (!type) {
       if (DbClientFactory.defaultClient) {
@@ -18,7 +22,7 @@ export default class DbClientFactory {
         type = process.env.DB_TYPE || 'dynamo'
       }
     }
-    let db: DbClient | null = null;
+    let db: DbClient | null = null
     if (type === 'jdbc') {
       db = new JDBC()
     } else if (type === 'dynamo') {
@@ -36,7 +40,7 @@ export default class DbClientFactory {
 
 /**
  * Decrypts a password with retries in case of failure because of a key rotation
- * 
+ *
  * @param password The password to decrypt
  * @returns The decrypted password
  */
@@ -50,9 +54,9 @@ async function decryptWithRetries(password: string): Promise<string> {
       await initCryptoSupport() // reinitialize keys
       return decrypt(password)
     }
-    throw error;
+    throw error
   }
-} 
+}
 /**
  * The EncryptedRepository wraps a database repository and encrypts sensitive data before storing
  * it and decrypts it after reading it. Calls which do not involve sensitive data are passed through
@@ -61,28 +65,45 @@ async function decryptWithRetries(password: string): Promise<string> {
 class EncryptedRepository implements DbClient {
   isDatabaseConnected!: () => Promise<boolean>
   fetchAllDestinations!: () => Promise<Destination[]>
-  fetchDestinationType!: (destType: string) => Promise<DestinationType>;
-  fetchDestinationAuditHistory!: (destId: string, destTypeId: number) => Promise<DestinationAudit[]>;
-  deleteDestinationChangeRequest!: (id: number) => Promise<boolean>;
+  fetchDestinationType!: (destType: string) => Promise<DestinationType>
+  fetchDestinationAuditHistory!: (
+    destId: string,
+    destTypeId: number
+  ) => Promise<DestinationAudit[]>
+  deleteDestinationChangeRequest!: (id: number) => Promise<boolean>
+  fetchDestinationChangeRequestById!: (
+    id: number
+  ) => Promise<DestinationChangeRequest>
+  fetchDestinationChangeRequestByDestIdAndDestType!: (
+    destId: string,
+    destTypeId: number
+  ) => Promise<DestinationChangeRequest>
+
   private repository: DbClient
 
   constructor(repository: DbClient) {
-    this.repository = repository;
-    this.deleteDestinationChangeRequest = repository.deleteDestinationChangeRequest.bind(repository);
-    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository);
-    this.fetchDestinationAuditHistory = repository.fetchDestinationAuditHistory.bind(repository);
-    this.fetchDestinationType = repository.fetchDestinationType.bind(repository);
-    this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository);
+    this.repository = repository
+    this.deleteDestinationChangeRequest =
+      repository.deleteDestinationChangeRequest.bind(repository)
+    this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository)
+    this.fetchDestinationAuditHistory =
+      repository.fetchDestinationAuditHistory.bind(repository)
+    this.fetchDestinationType = repository.fetchDestinationType.bind(repository)
+    this.fetchDestinationChangeRequestById =
+      repository.fetchDestinationChangeRequestById.bind(repository)
+    this.fetchDestinationChangeRequestByDestIdAndDestType =
+      repository.fetchDestinationChangeRequestByDestIdAndDestType.bind(
+        repository
+      )
+    this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
-    return this.repository;
+    return this.repository
   }
 
-
-
-  /** 
-   * The isPasswordChanged method does password comparison between the destination 
+  /**
+   * The isPasswordChanged method does password comparison between the destination
    * and its change request using fetch operations instead of direct database queries.
    * This is because each password is encrypted with its own initialization vector, and
    * no two passwords are encrypted the same way, even if they have the same value.
@@ -91,45 +112,80 @@ class EncryptedRepository implements DbClient {
     // Fetch destination and change request, compare passwords
     const [destination, changeRequest] = await Promise.all([
       this.fetchDestination(destId, dest_type),
-      this.fetchDestinationChangeRequestByDestIdAndDestType(destId, dest_type)
-    ]);
-    const destPassword = destination?.password || '';
-    const crPassword = changeRequest?.requested?.password || '';
-    return destPassword !== crPassword;
+      this.fetchDestinationChangeRequestByDestIdAndDestType(destId, dest_type),
+    ])
+    const destPassword = destination?.password || ''
+    const crPassword = changeRequest?.requested?.password || ''
+    return destPassword !== crPassword
   }
-  async upsertDestinationChangeRequest(changeRequestData: DestinationChangeRequest): Promise<DestinationChangeRequest> {
+  async upsertDestinationChangeRequest(
+    changeRequestData: DestinationChangeRequest
+  ): Promise<DestinationChangeRequest> {
     // Encrypt password if present
-    const dataCopy = { ...changeRequestData };
+    const dataCopy = { ...changeRequestData }
     if (dataCopy.requested && typeof dataCopy.requested.password === 'string') {
-      dataCopy.requested = { ...dataCopy.requested, password: encrypt(dataCopy.requested.password) };
+      dataCopy.requested = {
+        ...dataCopy.requested,
+        password: encrypt(dataCopy.requested.password),
+      }
     }
-    return await this.repository.upsertDestinationChangeRequest(dataCopy);
+    return await this.repository.upsertDestinationChangeRequest(dataCopy)
   }
-  async createDestinationChangeRequestDeploymentAudit(changeRequest: DestinationChangeRequest, user: string): Promise<boolean> {
+  async createDestinationChangeRequestDeploymentAudit(
+    changeRequest: DestinationChangeRequest,
+    user: string
+  ): Promise<boolean> {
     // Encrypt password if present
-    const dataCopy = { ...changeRequest };
+    const dataCopy = { ...changeRequest }
     if (dataCopy.requested && typeof dataCopy.requested.password === 'string') {
-      dataCopy.requested = { ...dataCopy.requested, password: encrypt(dataCopy.requested.password) };
+      dataCopy.requested = {
+        ...dataCopy.requested,
+        password: encrypt(dataCopy.requested.password),
+      }
     }
-    return await this.repository.createDestinationChangeRequestDeploymentAudit(dataCopy, user);
+    return await this.repository.createDestinationChangeRequestDeploymentAudit(
+      dataCopy,
+      user
+    )
   }
   async updateDestination(destination: Destination): Promise<boolean> {
     // Encrypt password if present
-    const destCopy = { ...destination };
+    const destCopy = { ...destination }
     if (typeof destCopy.password === 'string') {
-      destCopy.password = encrypt(destCopy.password);
+      destCopy.password = encrypt(destCopy.password)
     }
-    return await this.repository.updateDestination(destCopy);
+    return await this.repository.updateDestination(destCopy)
   }
-  async fetchDestination(destId: string, destType: number): Promise<Destination> {
-    const result = await this.repository.fetchDestination(destId, destType);
+  async fetchDestination(
+    destId: string,
+    destType: number
+  ): Promise<Destination> {
+    const result = await this.repository.fetchDestination(destId, destType)
     if (result && typeof result.password === 'string') {
-      result.password = await decryptWithRetries(result.password);
+      result.password = await decryptWithRetries(result.password)
     }
-    return result;
+    return result
   }
-  async fetchLoggedInUsersDestinations(isAdmin: boolean, jurisdictions: Array<string>): Promise<Destination[]> {
-    const results = await this.repository.fetchLoggedInUsersDestinations(isAdmin, jurisdictions);
+
+  async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
+    const result = await this.repository.fetchDestinationPassword(
+      destId,
+      destType
+    )
+    if (result && typeof result === 'string') {
+      return await decryptWithRetries(result)
+    }
+    return result
+  }
+  
+  async fetchLoggedInUsersDestinations(
+    isAdmin: boolean,
+    jurisdictions: Array<string>
+  ): Promise<Destination[]> {
+    const results = await this.repository.fetchLoggedInUsersDestinations(
+      isAdmin,
+      jurisdictions
+    )
     for (const dest of results) {
       if (dest && typeof dest.password === 'string') {
         dest.password = await decryptWithRetries(dest.password)
@@ -137,32 +193,12 @@ class EncryptedRepository implements DbClient {
     }
     return results
   }
-  async fetchDestinationChangeRequestById(id: number): Promise<DestinationChangeRequest> {
-    const result = await this.repository.fetchDestinationChangeRequestById(id);
-    if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
-    }
-    return result;
-  }
-  async fetchDestinationChangeRequestByDestIdAndDestType(destId: string, destTypeId: number): Promise<DestinationChangeRequest> {
-    const result = await this.repository.fetchDestinationChangeRequestByDestIdAndDestType(destId, destTypeId);
-    if (result && result.requested && typeof result.requested.password === 'string') {
-      result.requested = { ...result.requested, password: await decryptWithRetries(result.requested.password) };
-    }
-    return result;
-  }
+
   async fetchChangeRequestPassword(id: number): Promise<string> {
-    const result = await this.repository.fetchChangeRequestPassword(id);
-    if (typeof result === 'string') {
-      return await decryptWithRetries(result);
+    const result = await this.repository.fetchChangeRequestPassword(id)
+    if (result && typeof result === 'string') {
+      return await decryptWithRetries(result)
     }
-    return result;
-  }
-  async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
-    const result = await this.repository.fetchDestinationPassword(destId, destType);
-    if (typeof result === 'string') {
-      return await decryptWithRetries(result);
-    }
-    return result;
+    return result
   }
 }
