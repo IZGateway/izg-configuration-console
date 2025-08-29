@@ -10,6 +10,7 @@ import {
   decrypt,
   initCryptoSupport,
 } from '../security/crypto/cryptoSupport'
+import logger from '../../../logger'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -168,16 +169,18 @@ class EncryptedRepository implements DbClient {
   }
 
   async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
-    const result = await this.repository.fetchDestinationPassword(
+    let result = await this.repository.fetchDestinationPassword(
       destId,
       destType
     )
     if (result && typeof result === 'string') {
-      return await decryptWithRetries(result)
+      logger.info(`Decrypting password ${result} for destination ${destId}/${destType}`)
+      result = await decryptWithRetries(result)
+      logger.info(`Decrypted password ${result} for destination ${destId}/${destType}`)
     }
     return result
   }
-  
+
   async fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: Array<string>
