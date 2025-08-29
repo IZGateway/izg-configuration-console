@@ -9,6 +9,7 @@ import {
   encrypt,
   decrypt,
   initCryptoSupport,
+  KEY_NAME,
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
 
@@ -31,7 +32,11 @@ export default class DbClientFactory {
     }
     await initCryptoSupport() // Ensure crypto support is initialized
 
-    db = db ? new EncryptedRepository(db) : null
+    // Don't bother to wrap with EncryptedRepository if KEY_NAME is not set
+    db = db != null && KEY_NAME ? new EncryptedRepository(db) : db
+    if (!KEY_NAME) {
+      logger.warn(`No encryption key configured for database ${type}`);
+    }
     if (!dbType) {
       DbClientFactory.defaultClient = db
     }
@@ -174,9 +179,7 @@ class EncryptedRepository implements DbClient {
       destType
     )
     if (result && typeof result === 'string') {
-      logger.info(`Decrypting password ${result} for destination ${destId}/${destType}`)
       result = await decryptWithRetries(result)
-      logger.info(`Decrypted password ${result} for destination ${destId}/${destType}`)
     }
     return result
   }
