@@ -78,10 +78,6 @@ class EncryptedRepository implements DbClient {
     destId: string,
     destTypeId: number
   ) => Promise<DestinationChangeRequest>
-  fetchDestinationPassword!: (
-    destId: string,
-    destType: number
-  ) => Promise<string>
 
   private repository: DbClient
 
@@ -100,8 +96,6 @@ class EncryptedRepository implements DbClient {
         repository
       )
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
-    this.fetchDestinationPassword =
-      repository.fetchDestinationPassword.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
@@ -172,6 +166,18 @@ class EncryptedRepository implements DbClient {
     }
     return result
   }
+
+  async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
+    const result = await this.repository.fetchDestinationPassword(
+      destId,
+      destType
+    )
+    if (result && typeof result === 'string') {
+      return await decryptWithRetries(result)
+    }
+    return result
+  }
+  
   async fetchLoggedInUsersDestinations(
     isAdmin: boolean,
     jurisdictions: Array<string>
