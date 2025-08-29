@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { KEY_LENGTH, encrypt, encryptWithKey, initCryptoSupport, storeKeyInSecretsManager } from './cryptoSupport';
 import { Destination } from '../../type/Destination';
 import { DestinationChangeRequest } from '../../type/DestinationChangeRequest';
+import logger from '../../../../logger';
 
 /**
  * Returns true if all passwords in the database are encrypted, or empty.  Returns false if any password 
@@ -140,9 +141,13 @@ async function encryptAllDestinationsWithKey(dbClient: DbClient, newKey: Buffer 
     try {
       const password = await dbClient.fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
       if (typeof password === 'string' && password) {
+        logger.info(`Encrypting password ${password} for destination ${dest.destId}/${dest.destinationType.typeId}`)
         const encrypted = newKey ? encryptWithKey(password, newKey) : password
+        logger.info(`Encrypted password ${encrypted} for destination ${dest.destId}/${dest.destinationType.typeId}`)
         const updated: Destination = { ...dest, password: encrypted }
         await dbClient.getRepository().updateDestination(updated)
+        logger.info(`Updated destination ${dest.destId}/${dest.destinationType.typeId}`, updated)
+
       }
     } catch (error) {
       console.error(`Error rotating key for destination password for ${dest.destId}/${dest.destinationType.typeId}:`, error);
@@ -183,7 +188,9 @@ export async function resetDb(dbClient: DbClient): Promise<void> {
       throw new Error(`Will NOT reset passwords for production, onboarding or staging: ${dest.destinationType.typeId}`)
     }
     // Do NOT reset passwords for endpoints which take a SAS token, we don't control those!
-    if (!dest.password.includes('&sv=') && !dest.password.includes('&sig=')) {
+    if (!dest.password || 
+        (!dest.password.includes('&sv=') && !dest.password.includes('&sig='))
+    ) {
       // Create a fixed password for each destination that is based on the destination information
       const password = 'pass' + dest.destId + ' PASS' + dest.destId + dest.destinationType.typeId + dest.destId.charAt(0)
       const username = 'user' + dest.destId
