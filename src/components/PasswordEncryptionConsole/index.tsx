@@ -231,6 +231,7 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
                   sx={{ textTransform: 'uppercase' }}
                   onClick={handleDialog}
                   disabled={!hasKeyName}
+                  title={!hasKeyName ? "Encryption key is not set, the database cannot be encrypted." : "Click to encrypt destination passwords"}
                 >
                   Initialize Password Encryption
                 </Button>
@@ -242,8 +243,9 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
                   sx={{ textTransform: 'uppercase' }}
                   onClick={handleRotate}
                   disabled={!hasKeyName}
+                  title={!hasKeyName ? "Encryption key is not set but database is encrypted! Some functionality will be impaired." : "Click to rotate the password encryption key"}
                 >
-                  Rotate Password Encryption
+                  Rotate Password Encryption Key
                 </Button>
               )}
               <Loader open={loadingInit || loadingRotate} />

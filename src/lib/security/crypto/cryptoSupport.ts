@@ -9,8 +9,10 @@ import {
 const IV_LENGTH = 16 // AES block size
 const TAG_LENGTH = 16 // GCM tag size
 export const KEY_LENGTH = 32 // AES-256 key size
-const KEY_NAME = process.env.DDB_ENCRYPTION_KEYNAME || null
+export const KEY_NAME = process.env.DB_ENCRYPTION_KEYNAME || null
+
 const SECRETS_CLIENT = new SecretsManagerClient()
+
 const CIPHER_ALGORITHM = 'aes-256-gcm'
 const CIPHER_OPTIONS = { authTagLength: TAG_LENGTH }
 let cachedKeys: (Buffer | null)[] = [null, null]
@@ -39,9 +41,9 @@ async function getKeyFromSecretsManager(
     return [null, null]
   }
   // Get current version
-  const currentCommand = new GetSecretValueCommand({ SecretId: secretName })
-  const currentResponse = await SECRETS_CLIENT.send(currentCommand)
-  let currentKey: Buffer | null = null
+  const currentCommand = new GetSecretValueCommand({ SecretId: secretName });
+  const currentResponse = await SECRETS_CLIENT.send(currentCommand);
+  let currentKey: Buffer | null = null;
   if (currentResponse.SecretString) {
     currentKey = Buffer.from(currentResponse.SecretString, 'hex')
     if (currentKey.length !== KEY_LENGTH) {
@@ -54,11 +56,8 @@ async function getKeyFromSecretsManager(
   // Get previous version
   let previousKey: Buffer | null = null
   try {
-    const previousCommand = new GetSecretValueCommand({
-      SecretId: secretName,
-      VersionStage: 'AWSPREVIOUS',
-    })
-    const previousResponse = await SECRETS_CLIENT.send(previousCommand)
+    const previousCommand = new GetSecretValueCommand({ SecretId: secretName, VersionStage: 'AWSPREVIOUS' });
+    const previousResponse = await SECRETS_CLIENT.send(previousCommand);
     if (previousResponse.SecretString) {
       previousKey = Buffer.from(previousResponse.SecretString, 'hex')
       if (previousKey.length !== KEY_LENGTH) {
@@ -80,20 +79,17 @@ async function getKeyFromSecretsManager(
  * If the secret does not exist, it will be created. If it exists, it will be updated.
  * @param keyBuffer - The key to store (must be 32 bytes for AES-256)
  */
-export async function storeKeyInSecretsManager(
-  keyBuffer: Buffer
-): Promise<void> {
-  if (!KEY_NAME) throw new Error('KEY_NAME is not defined')
-  if (!keyBuffer || keyBuffer.length !== KEY_LENGTH)
-    throw new Error('Key must be 32 bytes')
-  const hexKey = keyBuffer.toString('hex')
+export async function storeKeyInSecretsManager(keyBuffer: Buffer): Promise<void> {
+  if (!KEY_NAME) throw new Error('KEY_NAME is not defined');
+  if (!keyBuffer || keyBuffer.length !== KEY_LENGTH) throw new Error('Key must be 32 bytes');
+  const hexKey = keyBuffer.toString('hex');
   try {
     // Try to create the secret
     const createCommand = new CreateSecretCommand({
       Name: KEY_NAME,
       SecretString: hexKey,
-    })
-    await SECRETS_CLIENT.send(createCommand)
+    });
+    await SECRETS_CLIENT.send(createCommand);
   } catch (err) {
     // If the secret already exists, update it
     if (err.name === 'ResourceExistsException') {
