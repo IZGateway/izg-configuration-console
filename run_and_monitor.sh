@@ -53,9 +53,18 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 -out /etc/nginx/ssl/cert.pem \
 -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
 
-# ***************
-# * Start nginx *
-# ***************
+# *****************************
+# * Configure and start nginx *
+# *****************************
+
+# Set default value if NGINX_READ_TIMEOUT is not set
+export NGINX_READ_TIMEOUT=${NGINX_READ_TIMEOUT:-60s}
+
+# Process the nginx configuration template
+envsubst '${NGINX_READ_TIMEOUT}' < /app/nginx.conf.template > /etc/nginx/nginx.conf
+
+log_message "nginx configuration processed, proxy_read_timeout set to: $NGINX_READ_TIMEOUT"
+
 nginx -g 'daemon off;' &
 NGINX_PID=$!
 log_message "nginx started, PID $NGINX_PID"
