@@ -1,6 +1,6 @@
 import DbClient from '../../db/DbClient'
 import DbClientFactory from '../../db/DbClientFactory'
-import { resetDb, encryptDb, decryptDb, isDatabaseEncrypted, isDatabaseDecrypted } from './DbCrypto'
+import { resetDb, encryptDb, decryptDb, isDatabaseEncrypted, isDatabaseDecrypted, rotateKey } from './DbCrypto'
 import {setImmediate} from 'timers' 
 jest.setTimeout(30000) // Increase this if debugging
 
@@ -58,6 +58,37 @@ describe('DbCrypto integration', () => {
       if (cr) {
         const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
         if (crPassword) expect(crPassword).toMatch(/^==[A-Za-z0-9+/=]+$/)
+      }
+    })
+  })
+
+  it('rotateKey reencrypts all destination passwords', async () => {
+    await encryptDb(dbClient)  // Ensure all are encrypted
+    expect(await isDatabaseEncrypted(dbClient)).toBeTruthy()
+
+    const destinations = await dbClient.fetchAllDestinations()
+    // Save all old encrypted passwords
+    destinations.forEach(async dest => {
+      const password = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
+      dest.password = password
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        dest.RXA11 = crPassword  // Use RXA11 field to store old CR password temporarily
+      }
+    })
+    await rotateKey(dbClient)
+    destinations.forEach(async dest => {
+      const rotatedPassword = await dbClient.getRepository().fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
+      expect(rotatedPassword).not.toBe(dest.password)
+      expect(rotatedPassword).toMatch(/^==[A-Za-z0-9+/=]+$/)
+      const cr = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(dest.destId, dest.destinationType.typeId)
+      if (cr) {
+        const crPassword = await dbClient.getRepository().fetchChangeRequestPassword(cr.id)
+        if (crPassword) {
+          expect(crPassword).not.toBe(dest.RXA11)
+          expect(crPassword).toMatch(/^==[A-Za-z0-9+/=]+$/)
+        }
       }
     })
   })
