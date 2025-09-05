@@ -20,7 +20,7 @@ const PasswordEncryption = ({ hasKeyName }) => {
 export const getServerSideProps: GetServerSideProps<{
   hasKeyName: boolean
 }> = async () => {
-  const hasKeyName = !!process.env.DDB_ENCRYPTION_KEYNAME?.trim()
+  const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
   return { props: { hasKeyName } }
 }
 
