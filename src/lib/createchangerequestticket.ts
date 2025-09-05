@@ -43,31 +43,70 @@ const createChangeRequestTicket = async (
     destType.type
   } to be updated ${isAsap ? 'ASAP' : `on ${scheduledDateTime}`}`
   const changeRequestDetailsTemplate = `*Destination Id*: ${destId}\r\n*Environment*: ${
-  destType.type
-}\r\n*Requested By*: ${requestedBy}\r\n|| ||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Endpoint URL*|${
-  _.isEmpty(current.destUri) ? CURRENT_EMPTY_VALUE : current.destUri
-}|${getRequestedValue(requested, 'destUri')}|\r\n|*Username*|${
-  _.isEmpty(current.username) ? CHANGE_REQUESTED_EMPTY_VALUE : current.username
-}|${getRequestedValue(requested, 'username')}|\r\n|*Password*|REDACTED |${
-  !_.isEmpty(requested.password) ? '<UPDATED>' : 'REDACTED - NOT UPDATED'
-} |\r\n|*Facility id*|${
-  _.isEmpty(current.facilityId) ? CURRENT_EMPTY_VALUE : current.facilityId
-}|${getRequestedValue(requested, 'facilityId')}|\r\n|*MSH3*|${
-  _.isEmpty(current.MSH3) ? CURRENT_EMPTY_VALUE : current.MSH3
-}|${getRequestedValue(requested, 'MSH3')}|\r\n|*MSH4*|${
-  _.isEmpty(current.MSH4) ? CURRENT_EMPTY_VALUE : current.MSH4
-}|${getRequestedValue(requested, 'MSH4')}|\r\n|*MSH5*|${
-  _.isEmpty(current.MSH5) ? CURRENT_EMPTY_VALUE : current.MSH5
-}|${getRequestedValue(requested, 'MSH5')}|\r\n|*MSH6*|${
-  _.isEmpty(current.MSH6) ? CURRENT_EMPTY_VALUE : current.MSH6
-}|${getRequestedValue(requested, 'MSH6')}|\r\n|*MSH22*|${
-  _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH22
-}|${getRequestedValue(requested, 'MSH22')}|\r\n|*MSH11*|${
-  _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH11
-}|${getRequestedValue(requested, 'MSH11')}|\r\n|*RXA11*|${
-  _.isEmpty(current.RXA11) ? CURRENT_EMPTY_VALUE : current.RXA11
-}|${getRequestedValue(requested, 'RXA11')}|\r\n*Deploy Datetime*: ${scheduledDateTime}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: ${CHANGE_REQUEST_URL}/changerequest/${destType.typeId}/${destId}`
+    destType.type
+  }\r\n*Requested By*: ${requestedBy}\r\n|| ||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Endpoint URL*|${
+    _.isEmpty(current.destUri) ? CURRENT_EMPTY_VALUE : current.destUri
+  }|${getRequestedValue(requested, 'destUri')}|\r\n|*Username*|${
+    _.isEmpty(current.username)
+      ? CHANGE_REQUESTED_EMPTY_VALUE
+      : current.username
+  }|${getRequestedValue(requested, 'username')}|\r\n|*Password*|REDACTED |${
+    !_.isEmpty(requested.password) ? '<UPDATED>' : 'REDACTED - NOT UPDATED'
+  } |\r\n|*Facility id*|${
+    _.isEmpty(current.facilityId) ? CURRENT_EMPTY_VALUE : current.facilityId
+  }|${getRequestedValue(requested, 'facilityId')}|\r\n|*MSH3*|${
+    _.isEmpty(current.MSH3) ? CURRENT_EMPTY_VALUE : current.MSH3
+  }|${getRequestedValue(requested, 'MSH3')}|\r\n|*MSH4*|${
+    _.isEmpty(current.MSH4) ? CURRENT_EMPTY_VALUE : current.MSH4
+  }|${getRequestedValue(requested, 'MSH4')}|\r\n|*MSH5*|${
+    _.isEmpty(current.MSH5) ? CURRENT_EMPTY_VALUE : current.MSH5
+  }|${getRequestedValue(requested, 'MSH5')}|\r\n|*MSH6*|${
+    _.isEmpty(current.MSH6) ? CURRENT_EMPTY_VALUE : current.MSH6
+  }|${getRequestedValue(requested, 'MSH6')}|\r\n|*MSH22*|${
+    _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH22
+  }|${getRequestedValue(requested, 'MSH22')}|\r\n|*MSH11*|${
+    _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH11
+  }|${getRequestedValue(requested, 'MSH11')}|\r\n|*RXA11*|${
+    _.isEmpty(current.RXA11) ? CURRENT_EMPTY_VALUE : current.RXA11
+  }|${getRequestedValue(
+    requested,
+    'RXA11'
+  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: ${CHANGE_REQUEST_URL}/changerequest/${
+    destType.typeId
+  }/${destId}`
 
+  const getChangedValues = (current, requested): string => {
+    const changed: string[] = []
+
+    const fieldsToCheck = [
+      'destUri',
+      'username',
+      'password',
+      'facilityId',
+      'MSH3',
+      'MSH4',
+      'MSH5',
+      'MSH6',
+      'MSH22',
+      'MSH11',
+      'RXA11',
+    ]
+
+    fieldsToCheck.forEach((field) => {
+      const currentValue = current[field] || ''
+      const requestedValue = requested[field] || ''
+
+      if (field === 'password') {
+        if (requestedValue && requestedValue !== '') {
+          changed.push(`${field}`)
+        }
+      } else if (currentValue !== requestedValue) {
+        changed.push(`${field}`)
+      }
+    })
+
+    return changed.length > 0 ? changed.join(', ') : 'No changes'
+  }
   const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
     method: 'POST',
     headers: new Headers({
@@ -84,6 +123,10 @@ const createChangeRequestTicket = async (
         issuetype: {
           id: JIRA_API_ISSUE_TYPE,
         },
+        customfield_10516: scheduledDateTime,
+        customfield_10485: `${destId} on envirnment ${destType.type}`,
+        customfield_10484: requestedBy,
+        customfield_10487: getChangedValues(current, requested),
       },
     }),
   })
