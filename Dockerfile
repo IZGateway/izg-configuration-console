@@ -28,7 +28,7 @@ RUN adduser --system --uid 1001 nextjs
 RUN apk add bash
 
 # Install Nginx, gettext (for envsubst), and tini
-RUN apk add --no-cache nginx tini
+RUN apk add --no-cache nginx gettext tini
 
 COPY prisma ./prisma/
 COPY package.json package-lock.json ./
@@ -54,9 +54,9 @@ RUN apk add curl libc6-compat
      rm -rf /metricbeat.yml && \
      cp ../app/metricbeat.yml ./metricbeat.yml
 
-# Configure Nginx
+# Copy Nginx Configuration Template
 RUN mkdir -p /etc/nginx/conf.d
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY nginx.conf.template /app/nginx.conf.template
 
 #USER nextjs
 RUN chmod a+x replace-variable.sh
