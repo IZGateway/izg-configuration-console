@@ -75,7 +75,7 @@ const createChangeRequestTicket = async (
     destType.typeId
   }/${destId}`
 
-  const getChangedValues = (current: any, requested: any): string => {
+  const getChangedValues = (current, requested): string => {
     const changed: string[] = []
 
     const fieldsToCheck = [
