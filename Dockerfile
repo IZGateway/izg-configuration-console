@@ -57,6 +57,7 @@ RUN apk add curl libc6-compat
 # Copy Nginx Configuration Template
 RUN mkdir -p /etc/nginx/conf.d
 COPY nginx.conf.template /app/nginx.conf.template
+COPY nginx.conf /etc/nginx/nginx.conf
 
 #USER nextjs
 RUN chmod a+x replace-variable.sh
