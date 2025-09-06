@@ -58,7 +58,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 # *****************************
 
 # Set default value if NGINX_READ_TIMEOUT is not set
-export NGINX_READ_TIMEOUT=${NGINX_READ_TIMEOUT:-60}
+export NGINX_READ_TIMEOUT=${NGINX_READ_TIMEOUT:-60s}
 
 # Process the nginx configuration template
 envsubst '${NGINX_READ_TIMEOUT}' < /app/nginx.conf.template > /etc/nginx/nginx.conf
