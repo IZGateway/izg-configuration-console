@@ -66,7 +66,7 @@ const createChangeRequestTicket = async (
   }|${getRequestedValue(requested, 'MSH6')}|\r\n|*MSH22*|${
     _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH22
   }|${getRequestedValue(requested, 'MSH22')}|\r\n|*MSH11*|${
-    _.isEmpty(current.MSH22) ? CURRENT_EMPTY_VALUE : current.MSH11
+    _.isEmpty(current.MSH11) ? CURRENT_EMPTY_VALUE : current.MSH11
   }|${getRequestedValue(requested, 'MSH11')}|\r\n|*RXA11*|${
     _.isEmpty(current.RXA11) ? CURRENT_EMPTY_VALUE : current.RXA11
   }|${getRequestedValue(
