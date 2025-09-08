@@ -36,6 +36,7 @@ const createChangeRequestTicket = async (
     scheduledAt,
     isAsap,
   } = changeRequestData
+
   const scheduledDateTime = moment(scheduledAt)
     .tz('America/New_York')
     .format('ddd MMM DD YYYY HH:mm:ss [ET]')
@@ -124,7 +125,7 @@ const createChangeRequestTicket = async (
           id: JIRA_API_ISSUE_TYPE,
         },
         customfield_10516: scheduledDateTime,
-        customfield_10485: `${destId} on envirnment ${destType.type}`,
+        customfield_10485: `Destination ${destId} on environment ${destType.type}`,
         customfield_10484: requestedBy,
         customfield_10487: getChangedValues(current, requested),
       },
