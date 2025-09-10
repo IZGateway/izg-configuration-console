@@ -9,10 +9,18 @@ import moment from 'moment'
 import { v4 as uuidv4 } from 'uuid'
 import * as xml2js from 'xml2js'
 import { DOMParser } from '@xmldom/xmldom'
+import DbClientFactory from '../../db/DbClientFactory'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
-import { lookupDestinationPassword } from '../../utils/lookupDestinationPassword'
-import { decrypt } from '../../security/cryptoSupport'
 
+function escapeXml(unsafe : string): string {
+    return unsafe.replace(/[<>&'"]/g, function (c) {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+        }
+    });
+}
 const randomUUID = uuidv4()
 let hl7Message: string
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
@@ -25,6 +33,7 @@ export default class QBP extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: msg ? msg : 'QBP test skipped due to connectivity test failures',
       detail: null,
+      type: 'qbp'
     }])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
@@ -35,6 +44,7 @@ export default class QBP extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'qbp'
     }
     /* msh11 should really be set by DB, but that must wait for core/hub changes to support it */
     const normalOnboardingDestinations = [
@@ -66,11 +76,11 @@ export default class QBP extends ConnectionTest {
       'wv',
       'wy',
     ]
-    const encPassword = destination.password || await lookupDestinationPassword(
+    const dbClient = await DbClientFactory.getDbClient()
+    const password = destination.password || await dbClient.fetchDestinationPassword(
       destination.destId,
       destination.destinationType.typeId
     ) || ''
-    const password = decrypt(encPassword)
     const destinationVersion = await lookupDestinationVersion(
       destination.destId,
       destination.destinationType.typeId
@@ -98,10 +108,10 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
         `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
            <soap:Body>
              <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
-               <iis:username>${destination?.username}</iis:username>
-               <iis:password>${password}</iis:password>
-               <iis:facilityID>${destination?.facilityId}</iis:facilityID>
-               <iis:hl7Message>${hl7msg}</iis:hl7Message>
+               <iis:username>${escapeXml(destination?.username)}</iis:username>
+               <iis:password>${escapeXml(password)}</iis:password>
+               <iis:facilityID>${escapeXml(destination?.facilityId)}</iis:facilityID>
+               <iis:hl7Message>${escapeXml(hl7msg)}</iis:hl7Message>
              </iis:submitSingleMessage>
            </soap:Body>
          </soap:Envelope>`
@@ -112,10 +122,10 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
            </soap:Header>
            <soap:Body>
              <iis:SubmitSingleMessageRequest xmlns:iis="urn:cdc:iisb:2014">
-               <iis:Username>${destination?.username}</iis:Username>
-               <iis:Password>${password}</iis:Password>
-               <iis:FacilityID>${destination?.facilityId}</iis:FacilityID>
-               <iis:Hl7Message>${hl7msg}</iis:Hl7Message>
+               <iis:Username>${escapeXml(destination?.username)}</iis:Username>
+               <iis:Password>${escapeXml(password)}</iis:Password>
+               <iis:FacilityID>${escapeXml(destination?.facilityId)}</iis:FacilityID>
+               <iis:Hl7Message>${escapeXml(hl7msg)}</iis:Hl7Message>
              </iis:SubmitSingleMessageRequest>
            </soap:Body>
          </soap:Envelope>`;

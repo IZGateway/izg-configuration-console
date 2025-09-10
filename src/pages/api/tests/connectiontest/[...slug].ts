@@ -7,7 +7,7 @@ import withMiddleware from '../../api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
-import { dbClient } from '../../../../lib/utils/dbclient'
+import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { Destination } from '../../../../lib/type/Destination'
 /**
  * @swagger
@@ -63,6 +63,7 @@ const getFetchedDestination = async (
     destTypeValue = values.destinationType.type
     jurisdictionDescriptionValue = values.jurisdiction.description
   } else if (configuration === 'deploy') {
+    const dbClient = await DbClientFactory.getDbClient()
     data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
       destId,
       destTypeId
@@ -94,6 +95,8 @@ const getPasswordForTesting = async (
 ): Promise<string> => {
   let data = null
   let passwordForTesting = null
+  const dbClient = await DbClientFactory.getDbClient()
+
   if (_.isEmpty(values?.newPassword) && _.isEmpty(values?.confirmPassword)) {
     data = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
       destId,
@@ -149,6 +152,7 @@ const handler = async (
             status: null,
             order: -1,
             message: error,
+            type: '',
           },
         ],
       })

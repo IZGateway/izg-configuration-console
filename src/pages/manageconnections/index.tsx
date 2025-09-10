@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
 import AppHeaderBar from '../../components/AppHeader'
-import { dbClient } from '../../lib/utils/dbclient'
+import DbClientFactory from '../../lib/db/DbClientFactory'
 import { Destination } from '../../lib/type/Destination'
 import {
   hasActiveMaintenance,
@@ -64,6 +64,7 @@ export const getServerSideProps = async (context) => {
 
   const endpoints = await Promise.all(
     endpointStatuses.map(async (endpoint) => {
+      const dbClient = await DbClientFactory.getDbClient()
       const destination = await dbClient.fetchDestination(
         endpoint.destId,
         endpoint.destTypeId

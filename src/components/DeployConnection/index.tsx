@@ -60,12 +60,12 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
         sx={{
           display: 'flex',
           gap: 4,
-          flexDirection: 'row',
           alignItems: 'flex-start',
           marginTop: 4,
+          flexDirection: { xs: 'column', md: 'row' },
         }}
       >
-        <Box sx={{ width: '33%' }}>
+        <Box sx={{ width: { xs: '100%', md: '40%' } }}>
           {accessLevels.canRunHealthCheck && (
             <HealthCheck
               destId={changeRequest.destId}
@@ -87,7 +87,7 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
               <MakeChanges {...changeRequest} />
             )}
         </Box>
-        <Box sx={{ width: '66%' }}>
+        <Box sx={{ width: { xs: '100%', md: '60%' } }}>
           {accessLevels.canViewDetails && (
             <DetailsChangeRequest changeRequestData={changeRequest} />
           )}

@@ -14,13 +14,9 @@ const actionButtonStyle = {
     transform: 'scale3d(1.15, 1.15, 1)',
   },
 }
-
+const linkToJira =
+  'https://help.izgateway.org/portal/1?createRequest=true&portalId=1&requestTypeId=16'
 const RequestSupport = () => {
-  const subject = 'Configuration Console Support Request'
-  const body = ''
-  const mailToLink = `mailto:izgateway@cdc.gov${
-    subject ? `?subject=${encodeURIComponent(subject)}` : ''
-  }${body ? `${subject ? '&' : '?'}body=${encodeURIComponent(body)}` : ''}`
   return (
     <div>
       <Box
@@ -30,10 +26,10 @@ const RequestSupport = () => {
         justifyContent={'center'}
         gap={2}
       >
-        <IconButton sx={actionButtonStyle} href={mailToLink} target="_blank">
+        <IconButton sx={actionButtonStyle} href={linkToJira} target="_blank">
           <ContactSupportOutlinedIcon color="primary" />
         </IconButton>
-        <Typography align="center">
+        <Typography fontSize={{ xs: '0.8rem', md: '1rem' }} align="center">
           Request <br /> Support
         </Typography>
       </Box>

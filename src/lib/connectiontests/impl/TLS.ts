@@ -24,6 +24,7 @@ export default class TLS extends ConnectionTest {
       status: TestStatus.SKIPPED,
       message: 'TLS test skipped due to connectivity test failures',
       detail: null,
+      type: 'tls'
     }])
   } 
   run = (): Promise<ConnectionTestResult[]> => {
@@ -33,6 +34,7 @@ export default class TLS extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
+      type: 'tls'
     }
 
     const httpsAgentOptions = {

@@ -37,6 +37,7 @@ services:
       ELASTIC_API_KEY: ${ELASTIC_API_KEY}
       ELASTIC_INDEX: ${ELASTIC_INDEX}
       ELASTIC_INDEX_NGINX: ${ELASTIC_INDEX_NGINX}
+      NGINX_READ_TIMEOUT: ${NGINX_READ_TIMEOUT}
     volumes:
       - type: bind
         source: ${SSL_SOURCE}
