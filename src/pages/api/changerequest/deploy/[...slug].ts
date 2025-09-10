@@ -129,10 +129,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             `Jira change request ${changeRequest.jiraId} deployed successfully`
           )
           res.status(200).json('update successful')
+          logger.info(
+            'Changes for ' +
+              changeRequest.destId +
+              ' endpoint ' +
+              changeRequest.destType.type +
+              ' deployed by ' +
+              session.user.name,
+            {
+              userName: session.user.name,
+              oldValues: changeRequest.current,
+              newValues: changeRequest.requested,
+              passwordChanged: changeRequest.isPasswordDifferent,
+              createdAt: new Date(),
+            }
+          )
         }
-        logger.info(
-          `Jira change request ${changeRequest.jiraId} deployment error(s) detected...`
-        )
         results.map((result, index) => {
           let errorMessage = ''
           if (result.status === 'rejected') {
