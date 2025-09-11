@@ -61,7 +61,7 @@ test('Navigation panel can collapse and expand', async () => {
     .getByRole('button', { name: 'toggle navigation drawer' })
     .click()
   let bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBeLessThan(bb.width)
+  expect.soft(bb2.width).toBeGreaterThan(bb.width)
   expect.soft(bb2.height).toBe(bb.height)
   //Collapsed view
   await navPanel
