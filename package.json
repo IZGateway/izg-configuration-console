@@ -1,7 +1,7 @@
 {
   "name": "izg-configuration-console",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.7.1",
   "scripts": {
     "dev": "next",
     "build": "next build",
