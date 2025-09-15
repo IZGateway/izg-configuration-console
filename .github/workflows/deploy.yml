@@ -179,7 +179,7 @@ jobs:
           images: |
             ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
           tags: |
-            type=raw,value=izgw-cc-${{ needs.generate-release-timestamp.application_version }}-${{github.run_number}}
+            type=raw,value=izgw-cc-${{ needs.generate-release-timestamp.outputs.application_version }}
           flavor: |
             latest=false
 
