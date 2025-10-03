@@ -6,7 +6,6 @@ import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
-import { destinationType } from '../db/queries/jdbc/fetch'
 
 const connectionTest = async (destination: Destination, userId: string) => {
   enum TestSuite {
