@@ -57,7 +57,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return response.data
       })
       .catch((error) => {
-        logger.error('Something went wrong ' + endpoint, { err: error })
+        logger.error('Failed to fetch endpoint status', {
+          endpoint,
+          destinationId: destId,
+          destinationType: destTypeId,
+          errorMessage: error.message,
+          errorType: error.name,
+          statusCode: axios.isAxiosError(error)
+            ? error.response?.status
+            : undefined,
+          responseData: axios.isAxiosError(error)
+            ? error.response?.data
+            : undefined,
+          stack: error.stack,
+          operation: 'fetchEndpointStatus',
+        })
       })
     return responseData
   }

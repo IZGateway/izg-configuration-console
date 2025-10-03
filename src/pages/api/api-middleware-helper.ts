@@ -11,10 +11,18 @@ const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 const captureErrors: Middleware = async (req, res, next) => {
   try {
     await next()
-  } catch (err) {
-    logger.error('Error with ' + req.url, { err: err })
+  } catch (error) {
+    logger.error('Unhandled error in request', {
+      url: req.url,
+      method: req.method,
+      query: req.query,
+      statusCode: 500,
+      errorMessage: error.message,
+      errorType: error.name,
+      stack: error.stack,
+    })
     res.status(500)
-    res.json({ error: err })
+    res.json({ error: error })
   }
 }
 

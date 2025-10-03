@@ -36,8 +36,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (result) {
       res.json(result)
     } else {
+      logger.error('Database lookup failed for destination', {
+        destinationId: destId,
+        destinationType: destTypeId,
+        operation: 'fetchDestination',
+        httpMethod: req.method,
+        endpoint: req.url,
+      })
       const errorMessage = `Database lookup failed for destination id: ${destId} and destination type: ${destTypeId}`
-      logger.error(errorMessage)
       res.status(500)
       res.json({
         error: errorMessage,

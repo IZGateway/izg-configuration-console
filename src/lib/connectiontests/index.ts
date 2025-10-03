@@ -90,11 +90,13 @@ const connectionTest = async (destination: Destination, userId: string) => {
         type: '',
       },
     ]
-    logger.error(
-      `URL for destination is malformed: ${JSON.stringify(
-        connectionTestResult.testResults
-      )}`
-    )
+
+    logger.error('URL for destination is malformed', {
+      testResults: connectionTestResult.testResults,
+      destination: connectionTestResult.destId,
+      destinationType: connectionTestResult.destType,
+      url: connectionTestResult.destUrl,
+    })
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else {
     const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
@@ -141,19 +143,32 @@ const connectionTest = async (destination: Destination, userId: string) => {
           TestSuite[test],
           connectionTestRequest
         )
-        const isDex = destination.destVersion?.startsWith('DEX') || destination.destVersion?.startsWith('V202');
-        if (isDex && ['wsdl', 'connectivity', 'qbp'].includes(TestSuite[test])) {
+        const isDex =
+          destination.destVersion?.startsWith('DEX') ||
+          destination.destVersion?.startsWith('V202')
+        if (
+          isDex &&
+          ['wsdl', 'connectivity', 'qbp'].includes(TestSuite[test])
+        ) {
           // Disable WSDL, Connectivity and QBP tests for DEX2.0 and V2022-12-31
-          result = await T.skip(`Skipping ${TestSuite[test]} test for ADS Endpoints`)
-       } else if (!skipTests) {
+          result = await T.skip(
+            `Skipping ${TestSuite[test]} test for ADS Endpoints`
+          )
+        } else if (!skipTests) {
           result = await T.run()
         } else {
           result = await T.skip()
         }
       } catch (error) {
-        logger.error(
-          `Error running test ${TestSuite[test]}: ${error.message || error}`
-        )
+        logger.error('Error running tests', {
+          testName: TestSuite[test],
+          testType: test,
+          errorMessage: error.message,
+          errorType: error.name,
+          stack: error.stack,
+          destinationId: destination.destId,
+          destinationType: destination.destinationType,
+        })
         result = [
           {
             name: TestSuite[test],
@@ -165,23 +180,19 @@ const connectionTest = async (destination: Destination, userId: string) => {
           },
         ]
       }
-      
-
 
       testResults.push(...result)
-      logger.info(
-        `${TestSuite[test]} completed`,
-          { ...result,
-            "timestamp": moment().toISOString(true),
-            "destId": destination.destId,
-            "username": destination.username
-          }
-      )
+      logger.info(`${TestSuite[test]} completed`, {
+        ...result,
+        timestamp: moment().toISOString(true),
+        destId: destination.destId,
+        username: destination.username,
+      })
       if (result[0]?.status === TestStatus.FAIL) {
-        skipTests = true;
+        skipTests = true
       }
       if (TestSuite[test] === 'dns') {
-        connectionTestRequest.ip = result[0]?.detail;
+        connectionTestRequest.ip = result[0]?.detail
       }
       logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
