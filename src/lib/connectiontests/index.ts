@@ -118,9 +118,13 @@ const connectionTest = async (destination: Destination, userId: string) => {
       destinationData: destination,
     }
 
-    logger.info(
-      `STARTING TESTS ON DEST ID: ${destination.destId} USING URL: ${connectionTestRequest.url.hostname} ON PORT: ${connectionTestRequest.port} INITIATED BY: ${userId}`
-    )
+    logger.info('Starting connection tests', {
+      destId: destination.destId,
+      hostname: connectionTestRequest.url.hostname,
+      port: connectionTestRequest.port,
+      userId: userId,
+      operation: 'start_connection_tests',
+    })
 
     let testCounter = 0
     let skipTests = false
