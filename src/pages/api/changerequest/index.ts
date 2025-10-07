@@ -73,7 +73,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (isDraft === true) {
         const draft = await upsertChangeRequest(requestBody)
         if (draft) {
-          logger.info('Draft was saved successfully for ' + requestBody.destId)
+          logger.info('Change request draft saved successfully', {
+            destId: requestBody.destId,
+            userId: session?.user?.email,
+            draftId: draft.id,
+            operation: 'save_draft',
+          })
           res.status(200)
           res.json(draft)
         } else {
@@ -107,9 +112,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               ...requestBody,
               jiraId: changeRequestTicketResponse.key,
             })
-            logger.info(
-              `Change request ticket created for destination id ${requestBody.destId} on environment ${requestBody.destType.type}. Jira ticket id is ${changeRequestTicketResponse?.key}`
-            )
+            logger.info('Change request ticket created successfully', {
+              destId: requestBody.destId,
+              destType: requestBody.destType.type,
+              jiraTicketId: changeRequestTicketResponse?.key,
+              userId: session?.user?.email,
+              operation: 'create_change_request_ticket',
+            })
           }
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
@@ -181,7 +190,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     } else if (req.method === 'DELETE') {
       try {
         await dbClient.deleteDestinationChangeRequest(requestBody.id)
-        logger.info(`Change Request with ID ${requestBody.id} is deleted.`)
+        logger.info('Change request deleted successfully', {
+          changeRequestId: requestBody.id,
+          userId: session?.user?.email,
+          operation: 'delete_change_request',
+        })
         res.status(200).json('Change Request is deleted')
       } catch (error) {
         logger.debug(error)

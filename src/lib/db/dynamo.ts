@@ -19,19 +19,22 @@ import {
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb'
 
-import { DynamoDBClient, DynamoDBClientConfig, ListTablesCommand } from '@aws-sdk/client-dynamodb'
+import {
+  DynamoDBClient,
+  DynamoDBClientConfig,
+  ListTablesCommand,
+} from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
-import {setImmediate} from 'timers' 
+import { setImmediate } from 'timers'
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
 const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
 
 const clientConfig: DynamoDBClientConfig = endpoint
-  ? { endpoint: endpoint,
-      region: process.env.AWS_REGION || 'us-east-1' 
-  } : {}
+  ? { endpoint: endpoint, region: process.env.AWS_REGION || 'us-east-1' }
+  : {}
 
 if (process.env.AWS_ACCESS_KEY_ID) {
   clientConfig.credentials = {
@@ -41,7 +44,7 @@ if (process.env.AWS_ACCESS_KEY_ID) {
   }
 }
 
-const translateConfig = { 
+const translateConfig = {
   marshalOptions: {
     convertEmptyValues: false,
     removeUndefinedValues: true,
@@ -73,12 +76,19 @@ const DEST_TYPES = [
 async function getConnectionInfo() {
   let connected = false
   const region = await dynamodDbClient.config.region()
-  const endpoint = dynamodDbClient.config.endpoint ? await dynamodDbClient.config.endpoint() : `https://dynamodb.${region}.amazonaws.com`
+  const endpoint = dynamodDbClient.config.endpoint
+    ? await dynamodDbClient.config.endpoint()
+    : `https://dynamodb.${region}.amazonaws.com`
   try {
-    await dynamodDbClient.send(new ListTablesCommand({ Limit: 1 }));
+    await dynamodDbClient.send(new ListTablesCommand({ Limit: 1 }))
     connected = true
-  } catch (err) {
-    logger.error(`DynamoDB connection error: ${err.message}`)
+  } catch (error) {
+    logger.error('DynamoDB connection error', {
+      errorMessage: error.message,
+      errorType: error.name,
+      stack: error.stack,
+      service: 'DynamoDB',
+    })
     connected = false
   }
   return { region: region, endpoint: endpoint, connected: connected }
@@ -90,11 +100,13 @@ class Dynamo implements DbClient {
     if (!Dynamo.loggedIt) {
       Dynamo.loggedIt = true
       // Fire-and-forget async logging
-      getConnectionInfo().then(
-        (info) => {
-          logger.info(`DynamoDB ${info.connected ? 'connected' : 'not connected'} to ${info.endpoint}/${TABLE_NAME} in ${info.region}`)
-        }
-      )
+      getConnectionInfo().then((info) => {
+        logger.info(
+          `DynamoDB ${info.connected ? 'connected' : 'not connected'} to ${
+            info.endpoint
+          }/${TABLE_NAME} in ${info.region}`
+        )
+      })
     }
   }
 
@@ -109,9 +121,9 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {
         ':entityType': 'Destination',
       },
-    };
-    const result = await dynamodDbDocClient.send(new QueryCommand(params));
-    return await this.convertResponseToDestinations(result.Items || []);
+    }
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+    return await this.convertResponseToDestinations(result.Items || [])
   }
   private jurisdictionsCache = new Map<string, any>()
 
@@ -132,7 +144,15 @@ class Dynamo implements DbClient {
         const result = await dynamodDbDocClient.send(new GetCommand(params))
         this.jurisdictionsCache.set(jurisdictionId, result.Item || null)
       } catch (error) {
-        logger.error(`Error fetching jurisdiction: ${error.message}`)
+        logger.error('Error fetching jurisdiction from DynamoDB', {
+          jurisdictionId,
+          tableName: TABLE_NAME,
+          entityType: 'Jurisdiction',
+          errorMessage: error.message,
+          errorType: error.name,
+          stack: error.stack,
+          operation: 'getJurisdiction',
+        })
         throw error
       }
     }
@@ -160,7 +180,16 @@ class Dynamo implements DbClient {
       }
       return await this.convertResponseToDestination(result.Item)
     } catch (error) {
-      logger.error(`Error fetching destination: ${error.message}`)
+      logger.error('Error fetching destination from DynamoDB', {
+        destId,
+        destTypeId,
+        tableName: TABLE_NAME,
+        entityType: 'Destination',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchDestination',
+      })
       throw error
     }
   }
@@ -253,7 +282,16 @@ class Dynamo implements DbClient {
         id: item.sortKey,
       })) as DestinationAudit[]
     } catch (error) {
-      logger.error(`Error fetching destination audit history: ${error.message}`)
+      logger.error('Error fetching destination audit history from DynamoDB', {
+        destId,
+        destTypeId,
+        tableName: TABLE_NAME,
+        entityType: 'DestinationAudit',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchDestinationAuditHistory',
+      })
       throw error
     }
   }
@@ -408,7 +446,14 @@ class Dynamo implements DbClient {
       logger.debug('DynamoDB connection successful')
       return !!result
     } catch (error) {
-      logger.error('Error with database connection check:', error)
+      logger.error('Error with database connection check', {
+        tableName: TABLE_NAME,
+        entityType: 'Destination',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'isDatabaseConnected',
+      })
       return false
     }
   }
@@ -573,7 +618,8 @@ class Dynamo implements DbClient {
       if (destination[key] !== undefined) {
         params.UpdateExpression += `${separator} ${key} = :${key}`
         separator = ','
-        const value = destination[key] instanceof Date
+        const value =
+          destination[key] instanceof Date
             ? destination[key].toISOString()
             : destination[key]
         params.ExpressionAttributeValues[`:${key}`] = value ? value : null
