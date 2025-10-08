@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { isDatabaseEncrypted } from '../../../lib/security/crypto/DbCrypto'
+import logger from '../../../../logger'
 
 let dbClient: Awaited<ReturnType<typeof DbClientFactory.getDbClient>>
 
@@ -19,7 +20,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const encrypted = await isDatabaseEncrypted(dbClient)
     res.status(200).json({ encrypted })
   } catch (e) {
-    console.error(e)
+    logger.error('Failed to check encryption status', {
+      error: e.message,
+      stack: e.stack,
+      operation: 'check_encryption_status',
+    })
     res.status(500).json({ error: 'Failed to check encryption status' })
   }
 }
