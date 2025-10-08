@@ -16,6 +16,18 @@ process_running() {
   fi
 }
 
+cleanup() {
+  log_message "Received shutdown signal, forwarding to Node.js..."
+  if [ -n "$APP_PID" ]; then
+    kill -TERM $APP_PID 2>/dev/null || true
+    wait $APP_PID 2>/dev/null || true
+  fi
+  exit 0
+}
+
+trap cleanup SIGTERM SIGINT SIGQUIT
+
+
 # **********************************************
 # * Start Filebeat (if ELASTIC_API_KEY is set) *
 # **********************************************
@@ -77,7 +89,7 @@ log_message "nginx started, PID $NGINX_PID"
 # **************************
 # * Start node application *
 # **************************
-cd /app && npm start &
+cd /app && node /app/node_modules/.bin/next start &
 APP_PID=$!
 log_message "node application started, PID $APP_PID"
 

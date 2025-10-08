@@ -22,6 +22,7 @@ FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_MANUAL_SIG_HANDLE true
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
