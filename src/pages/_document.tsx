@@ -34,37 +34,6 @@ export default class MyDocument extends Document {
   }
 }
 
-logger.debug(
-  'NEXT_MANUAL_SIG_HANDLE set to ' + process.env.NEXT_MANUAL_SIG_HANDLE
-)
-
-if (process.env.NEXT_MANUAL_SIG_HANDLE) {
-  const signals = [
-    'SIGHUP',
-    'SIGINT',
-    'SIGQUIT',
-    'SIGILL',
-    'SIGTRAP',
-    'SIGABRT',
-    'SIGBUS',
-    'SIGFPE',
-    'SIGUSR1',
-    'SIGSEGV',
-    'SIGUSR2',
-    'SIGTERM',
-  ]
-
-  for (const signal of signals) {
-    process.on(signal, () => {
-      logger.info(`Received ${signal} - Config Console server shutting down`, {
-        signal: signal,
-        'shutdown-reason': 'signal-received',
-      })
-      process.exit(0)
-    })
-  }
-}
-
 // `getInitialProps` belongs to `_document` (instead of `_app`),
 // it's compatible with static-site generation (SSG).
 MyDocument.getInitialProps = async (ctx) => {
