@@ -16,6 +16,7 @@ process_running() {
   fi
 }
 
+
 # **********************************************
 # * Start Filebeat (if ELASTIC_API_KEY is set) *
 # **********************************************
@@ -77,7 +78,7 @@ log_message "nginx started, PID $NGINX_PID"
 # **************************
 # * Start node application *
 # **************************
-cd /app && npm start &
+cd /app && exec node /app/node_modules/.bin/next start &
 APP_PID=$!
 log_message "node application started, PID $APP_PID"
 
