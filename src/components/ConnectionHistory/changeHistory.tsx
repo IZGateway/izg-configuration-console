@@ -37,15 +37,22 @@ const findDifferentKeysAndValues = (newObj, oldObj) => {
 
   _.each(modifiedKeys, (key) => {
     if (!_.isEqual(newObj[key], oldObj[key])) {
-      differentKeysValues[key] = {
-        newValue: newObj[key],
-        oldValue: oldObj[key],
+      if (key === 'password') {
+        differentKeysValues[key] = {
+          newValue: '.........',
+          oldValue: '.........',
+        }
+      } else {
+        differentKeysValues[key] = {
+          newValue: newObj[key],
+          oldValue: oldObj[key],
+        }
       }
     }
   })
 
-  if (differentKeysValues?.['password']) {
-    differentKeysValues['password'] = {
+  if (newObj.is_password_different === '1') {
+    differentKeysValues['Password'] = {
       newValue: '.........',
       oldValue: '.........',
     }
