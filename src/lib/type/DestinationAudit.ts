@@ -5,6 +5,7 @@ export interface DestinationAudit {
   tableName: string
   userName: string
   changeType: string
+  isPasswordDifferent?: boolean
   oldValues: JSON
   newValues: JSON
   createdAt: Date
