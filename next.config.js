@@ -5,7 +5,7 @@ const {
 } = require('next/constants')
 const winston = require('winston')
 const ecsFormat = require('@elastic/ecs-winston-format')
-let logged = false;
+let logged = false
 
 module.exports = async (phase, { defaultConfig }) => {
   /** @type {import('next').NextConfig} */
@@ -92,5 +92,6 @@ module.exports = async (phase, { defaultConfig }) => {
       })
     }
   }
+
   return nextConfig
 }

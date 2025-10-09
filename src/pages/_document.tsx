@@ -2,6 +2,7 @@ import * as React from 'react'
 import Document, { Html, Head, Main, NextScript } from 'next/document'
 import createEmotionServer from '@emotion/server/create-instance'
 import createEmotionCache from '../utility/createEmotionCache'
+import logger from '../../logger'
 
 export default class MyDocument extends Document {
   render() {
@@ -30,6 +31,37 @@ export default class MyDocument extends Document {
         </body>
       </Html>
     )
+  }
+}
+
+logger.debug(
+  'NEXT_MANUAL_SIG_HANDLE set to ' + process.env.NEXT_MANUAL_SIG_HANDLE
+)
+
+if (process.env.NEXT_MANUAL_SIG_HANDLE) {
+  const signals = [
+    'SIGHUP',
+    'SIGINT',
+    'SIGQUIT',
+    'SIGILL',
+    'SIGTRAP',
+    'SIGABRT',
+    'SIGBUS',
+    'SIGFPE',
+    'SIGUSR1',
+    'SIGSEGV',
+    'SIGUSR2',
+    'SIGTERM',
+  ]
+
+  for (const signal of signals) {
+    process.on(signal, () => {
+      logger.info(`Received ${signal} - Config Console server shutting down`, {
+        signal: signal,
+        'shutdown-reason': 'signal-received',
+      })
+      process.exit(0)
+    })
   }
 }
 
