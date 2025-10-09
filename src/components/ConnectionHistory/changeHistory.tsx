@@ -44,8 +44,8 @@ const findDifferentKeysAndValues = (newObj, oldObj) => {
     }
   })
 
-  if (newObj.is_password_different === '1') {
-    differentKeysValues['Password'] = {
+  if (differentKeysValues?.['password']) {
+    differentKeysValues['password'] = {
       newValue: '.........',
       oldValue: '.........',
     }
