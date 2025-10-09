@@ -287,6 +287,7 @@ class Dynamo implements DbClient {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
       return result.Items.map((item) => ({
         ...item,
+        isPasswordDifferent: item.isPasswordDifferent === '1' || (item.newValues?.password !== item.oldValues?.password),
         createdAt: new Date(item.createdAt),
         id: item.sortKey,
       })) as DestinationAudit[]
@@ -563,6 +564,7 @@ class Dynamo implements DbClient {
       destType: changeRequest.destType.typeId,
       userName: user,
       changeType: 'Update',
+      isPasswordDifferent: changeRequest.isPasswordDifferent,
       oldValues: maskPassword(changeRequest.current),
       newValues: maskPassword(changeRequest.requested),
       createdAt: new Date().toISOString(),
