@@ -27,6 +27,7 @@ import {
 import logger from '../../../logger'
 import DbClient from './DbClient'
 import { setImmediate } from 'timers'
+import { DestinationConnectionSettings } from '../type/DestinationConnectionSettings'
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
@@ -42,6 +43,14 @@ if (process.env.AWS_ACCESS_KEY_ID) {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     sessionToken: process.env.AWS_SESSION_TOKEN,
   }
+}
+
+function maskPassword(auditData: any) {
+  if (auditData && auditData['password']) {
+    auditData = { ...auditData }
+    auditData['password'] = '.........'
+  }
+  return auditData
 }
 
 const translateConfig = {
@@ -278,6 +287,7 @@ class Dynamo implements DbClient {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
       return result.Items.map((item) => ({
         ...item,
+        isPasswordDifferent: item.isPasswordDifferent || (item.newValues?.password !== item.oldValues?.password),
         createdAt: new Date(item.createdAt),
         id: item.sortKey,
       })) as DestinationAudit[]
@@ -554,8 +564,9 @@ class Dynamo implements DbClient {
       destType: changeRequest.destType.typeId,
       userName: user,
       changeType: 'Update',
-      oldValues: changeRequest.current,
-      newValues: changeRequest.requested,
+      isPasswordDifferent: changeRequest.isPasswordDifferent,
+      oldValues: maskPassword(changeRequest.current),
+      newValues: maskPassword(changeRequest.requested),
       createdAt: new Date().toISOString(),
     }
     const params: PutCommandInput = {
@@ -631,3 +642,4 @@ class Dynamo implements DbClient {
 }
 
 export default Dynamo
+

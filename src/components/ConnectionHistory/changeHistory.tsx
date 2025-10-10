@@ -25,7 +25,7 @@ interface ChangeHistoryProps {
   destTypeId: string
 }
 
-const findDifferentKeysAndValues = (newObj, oldObj) => {
+const findDifferentKeysAndValues = (newObj, oldObj, isPasswordDifferent:boolean) => {
   if (!newObj || !oldObj) {
     console.error('One or both objects are undefined or null.')
     return {}
@@ -37,15 +37,22 @@ const findDifferentKeysAndValues = (newObj, oldObj) => {
 
   _.each(modifiedKeys, (key) => {
     if (!_.isEqual(newObj[key], oldObj[key])) {
-      differentKeysValues[key] = {
-        newValue: newObj[key],
-        oldValue: oldObj[key],
+      if (key === 'password') {
+        differentKeysValues[key] = {
+          newValue: '.........',
+          oldValue: '.........',
+        }
+      } else {
+        differentKeysValues[key] = {
+          newValue: newObj[key],
+          oldValue: oldObj[key],
+        }
       }
     }
   })
 
-  if (newObj.is_password_different === '1') {
-    differentKeysValues['Password'] = {
+  if (newObj.is_password_different === '1' || isPasswordDifferent) {
+    differentKeysValues['password'] = {
       newValue: '.........',
       oldValue: '.........',
     }
@@ -73,7 +80,7 @@ const ChangeHistory = (props: ChangeHistoryProps) => {
     })
   }
   const updatedFields = (data) => {
-    return findDifferentKeysAndValues(data.newValues, data.oldValues)
+    return findDifferentKeysAndValues(data.newValues, data.oldValues, data.isPasswordDifferent)
   }
 
   const updatedKeys = (data) => {
