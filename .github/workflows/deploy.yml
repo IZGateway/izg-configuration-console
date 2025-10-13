@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - 'release/**'
+      - 'develop'
   pull_request:
     branches:
-      - develop
+      - 'release/**'
+      - 'develop'
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -179,7 +181,7 @@ jobs:
           images: |
             ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
           tags: |
-            type=raw,value=izgw-cc-${{ needs.generate-release-timestamp.application_version }}-${{github.run_number}}
+            type=raw,value=izgw-cc-${{ needs.generate-release-timestamp.outputs.application_version }}
           flavor: |
             latest=false
 
@@ -201,8 +203,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-push-image-aws]
     if: |
-      github.ref == 'refs/heads/develop' || 
-      (github.event_name == 'pull_request' && github.base_ref == 'develop')
+      github.ref == 'refs/heads/develop' ||
+      contains(github.ref, 'refs/heads/release/') ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'develop' || contains(github.base_ref, 'release/')))
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

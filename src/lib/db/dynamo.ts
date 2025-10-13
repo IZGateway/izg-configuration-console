@@ -53,7 +53,7 @@ function maskPassword(auditData: any) {
   return auditData
 }
 
-const translateConfig = {
+const translateConfig = { 
   marshalOptions: {
     convertEmptyValues: false,
     removeUndefinedValues: true,
