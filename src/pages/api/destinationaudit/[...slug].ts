@@ -36,6 +36,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       destId,
       destTypeId
     )
+    for (const record of result) {
+      if (record.oldValues?.['password']) {
+        record.oldValues['password'] = '.........'
+      }
+      if (record.newValues?.['password']) {
+        record.newValues['password'] = '.........'
+      }
+    }
     res.json(result)
   } else {
     throw new Error(
