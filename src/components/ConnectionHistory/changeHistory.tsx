@@ -43,11 +43,11 @@ const findDifferentKeysAndValues = (newObj, oldObj, isPasswordDifferent:boolean)
           oldValue: '.........',
         }
       } else {
-      differentKeysValues[key] = {
-        newValue: newObj[key],
-        oldValue: oldObj[key],
+        differentKeysValues[key] = {
+          newValue: newObj[key],
+          oldValue: oldObj[key],
+        }
       }
-    }
     }
   })
 

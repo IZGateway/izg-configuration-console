@@ -29,16 +29,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '24.x'
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Start AWS Dev Service
+      - name: Start IZG Hub and IZG CC in AWS Dev
         env:
           AWS_REGIONS: ${{ vars.AWS_REGIONS }}
           ECS_DESIRED_COUNT: ${{ vars.ECS_DESIRED_COUNT }}
@@ -52,16 +52,26 @@ jobs:
             echo "ECS_DESIRED_COUNT not set, defaulting to 1"
             ECS_DESIRED_COUNT="1"
           fi
+
+          for region in $AWS_REGIONS; do
+            echo "Start IZG Hub in $region (starting $ECS_DESIRED_COUNT containers)"
+            aws ecs update-service --region $region --cluster izgateway-dev-izgateway-services --service izgateway-devalb-service --force-new-deployment --enable-execute-command --desired-count $ECS_DESIRED_COUNT | jq ".service.deployments[].id" &
+          done
           
           for region in $AWS_REGIONS; do
-            echo "Update ECS services in $region (starting $ECS_DESIRED_COUNT containers)"
+            echo "Wait for IZG Hub service stability in $region"
+            aws ecs wait services-stable --region $region --cluster izgateway-dev-izgateway-services --service izgateway-devalb-service &
+          done
+          
+          for region in $AWS_REGIONS; do
+            echo "Start IZG CC in $region (starting $ECS_DESIRED_COUNT containers)"
             aws ecs update-service --region $region --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command --desired-count $ECS_DESIRED_COUNT | jq ".service.deployments[].id" &
           done
           
           wait
           
           for region in $AWS_REGIONS; do
-            echo "Wait for ECS service stability in $region"
+            echo "Wait for IZG CC service stability in $region"
             aws ecs wait services-stable --region $region --cluster izgateway-configuration-console --service izgateway-config-console &
           done
           
@@ -82,13 +92,25 @@ jobs:
           name: playwright-report
           path: playwright-report
 
-      - name: Shutdown AWS Dev Service
-        if: github.event_name == 'schedule'
+      - name: Stop IZG Hub and IZG CC in AWS Dev
+        env:
+          AWS_REGIONS: ${{ vars.AWS_REGIONS }}
+          ECS_DESIRED_COUNT: ${{ vars.ECS_DESIRED_COUNT }}
         run: |
-          echo "Stopping ECS service..."
-          aws ecs update-service \
-            --cluster izgateway-configuration-console \
-            --service izgateway-config-console \
-            --desired-count 0 \
-            --force-new-deployment \
-            | jq ".service.deployments[].id"
+          if [ -z "$AWS_REGIONS" ]; then
+            echo "AWS_REGIONS not set, defaulting to us-east-1"
+            AWS_REGIONS="us-east-1"
+          fi
+          
+          if [ -z "$ECS_DESIRED_COUNT" ]; then
+            echo "ECS_DESIRED_COUNT not set, defaulting to 1"
+            ECS_DESIRED_COUNT="1"
+          fi
+          
+          for region in $AWS_REGIONS; do
+            echo "Stopping IZG Hub in $region
+            aws ecs update-service --region $region --cluster izgateway-dev-izgateway-services --service izgateway-devalb-service --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
+          
+            echo "Stopping IZG CC in $region
+            aws ecs update-service --region $region --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
+          done

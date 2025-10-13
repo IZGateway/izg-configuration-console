@@ -26,7 +26,7 @@ import {
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
-import {setImmediate} from 'timers' 
+import { setImmediate } from 'timers'
 import { DestinationConnectionSettings } from '../type/DestinationConnectionSettings'
 global.setImmediate = global.setImmediate || setImmediate
 
@@ -114,7 +114,7 @@ class Dynamo implements DbClient {
           `DynamoDB ${info.connected ? 'connected' : 'not connected'} to ${
             info.endpoint
           }/${TABLE_NAME} in ${info.region}`
-      )
+        )
       })
     }
   }
@@ -130,7 +130,7 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {
         ':entityType': 'Destination',
       },
-  }
+    }
     const result = await dynamodDbDocClient.send(new QueryCommand(params))
     return await this.convertResponseToDestinations(result.Items || [])
   }
@@ -642,3 +642,4 @@ class Dynamo implements DbClient {
 }
 
 export default Dynamo
+
