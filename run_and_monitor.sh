@@ -82,6 +82,30 @@ cd /app && exec node /app/node_modules/.bin/next start &
 APP_PID=$!
 log_message "node application started, PID $APP_PID"
 
+cleanup() {
+    echo "Received termination signal, shutting down gracefully..."
+    
+    # Send SIGTERM to Node.js process
+    if [ -n "$APP_PID" ] && kill -0 "$APP_PID" 2>/dev/null; then
+        echo "Sending SIGTERM to Node.js process (PID: $APP_PID)"
+        kill -TERM "$APP_PID"
+        
+        # Wait for graceful shutdown
+        sleep 10
+        
+        # Force kill if still running
+        if kill -0 "$APP_PID" 2>/dev/null; then
+            echo "Force killing Node.js process"
+            kill -KILL "$APP_PID"
+        fi
+    fi
+    
+    exit 0
+}
+
+# Set up signal traps
+trap cleanup SIGTERM SIGINT SIGQUIT SIGHUP
+
 # Monitor
 while true; do
 
