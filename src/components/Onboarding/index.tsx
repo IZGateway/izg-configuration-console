@@ -28,6 +28,7 @@ import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { mockSenderData, type SenderData } from './mockData'
 import EditSender from './EditSender'
+import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
 
 const dataGridCustom = {
@@ -116,13 +117,9 @@ interface CustomToolbarProps {
   setFilterButtonEl: React.Dispatch<
     React.SetStateAction<HTMLButtonElement | null>
   >
-  onAddSenderClick: () => void
 }
 
-const CustomToolbar = ({
-  setFilterButtonEl,
-  onAddSenderClick,
-}: CustomToolbarProps) => {
+const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
@@ -137,28 +134,14 @@ const CustomToolbar = ({
           },
         }}
       >
-        <Button
-          color="primary"
-          onClick={onAddSenderClick}
-          variant="outlined"
-          startIcon={<AddIcon />}
-          sx={{
-            borderRadius: '24px',
-            padding: '8px 16px',
-            textTransform: 'none',
-            fontWeight: 500,
-            '@media (max-width: 768px)': {
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-            },
-          }}
-        >
-          Add Sender
-        </Button>
         <GridToolbarFilterButton ref={setFilterButtonEl} />
       </Box>
     </GridToolbarContainer>
   )
+}
+
+const CustomFooter = () => {
+  return <GridFooter />
 }
 
 interface OnboardSenderProps {
@@ -178,6 +161,9 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   // Edit state management
   const [isEditMode, setIsEditMode] = useState(false)
   const [editingSender, setEditingSender] = useState<SenderData | null>(null)
+
+  // Add mode state management
+  const [isAddMode, setIsAddMode] = useState(false)
 
   // Sender data state management
   const [senderData, setSenderData] = useState<SenderData[]>(
@@ -204,8 +190,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   }, [data])
 
   const handleAddSenderClick = () => {
-    // TODO: Implement add sender functionality
-    console.log('Add sender clicked')
+    setIsAddMode(true)
   }
 
   const handleWifiToggle = (senderId: string) => {
@@ -246,8 +231,18 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     setEditingSender(null)
   }
 
+  const handleSaveAdd = (newSender: SenderData) => {
+    // Add the new sender to the sender data state
+    setSenderData((prevData) => [...prevData, newSender])
+
+    console.log('Adding new sender:', newSender)
+    setIsAddMode(false)
+    setEditingSender(null)
+  }
+
   const handleCancelEdit = () => {
     setIsEditMode(false)
+    setIsAddMode(false)
     setEditingSender(null)
   }
 
@@ -564,6 +559,11 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     )
   }
 
+  // Show AddSender component when in add mode
+  if (isAddMode) {
+    return <AddSender onSave={handleSaveAdd} onCancel={handleCancelEdit} />
+  }
+
   // Show EditSender component when in edit mode
   if (isEditMode && editingSender) {
     return (
@@ -594,7 +594,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             display: 'flex',
             flexDirection: 'column',
             padding: 2,
-            gap: 1,
           }}
         >
           <Typography
@@ -658,23 +657,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
                 }}
               />
             </Box>
-
-            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Button
-                color="primary"
-                onClick={handleAddSenderClick}
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                sx={{
-                  borderRadius: '24px',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                Add Sender
-              </Button>
-            </Box>
           </Box>
 
           {/* Mobile Cards */}
@@ -683,10 +665,35 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
               <MobileCard key={row.id} row={row} />
             ))}
           </Box>
+
+          {/* Mobile Add Button */}
+          <Box
+            sx={{
+              padding: '16px',
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: '16px',
+            }}
+          >
+            <Button
+              color="primary"
+              onClick={handleAddSenderClick}
+              variant="outlined"
+              startIcon={<AddIcon />}
+              sx={{
+                borderRadius: '24px',
+                padding: '12px 24px',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Add Sender
+            </Button>
+          </Box>
         </Box>
       ) : (
         /* Desktop DataGrid */
-        <Box sx={{ mt: 0 }}>
+        <Box sx={{ mt: -4 }}>
           <DataGrid
             sx={dataGridCustom}
             rows={filteredData}
@@ -709,39 +716,58 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             pagination
             slots={{
               toolbar: CustomToolbar as GridSlots['toolbar'],
-              footer: GridFooter as GridSlots['footer'],
+              footer: CustomFooter as GridSlots['footer'],
             }}
             slotProps={{
               toolbar: {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-                onAddSenderClick: handleAddSenderClick,
               },
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {
-                  '& .MuiTypography-root': {
-                    fontSize: 20,
+                  '& .MuiPaper-root': {
+                    padding: '16px',
+                    minWidth: '300px',
+                    borderRadius: '8px',
+                    border: `1px solid ${palette.border}`,
+                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
                   },
                   '& .MuiDataGrid-filterForm': {
+                    display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
-                  },
-                  '& .MuiDataGrid-paper': {
-                    marginTop: '16px',
-                    paddingBottom: '3vh',
-                    paddingTop: '1vh',
-                    paddingRight: '1vh',
-                    paddingLeft: '1vh',
-                    borderRadius: '0 0 30px 30px',
-                    border: `1px solid ${palette.border}`,
-                    width: 'fit-content',
+                    gap: '12px',
                   },
                 },
               },
             }}
           />
+
+          {/* Desktop Add Sender Button */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              alignItems: 'center',
+              marginTop: '16px',
+            }}
+          >
+            <Button
+              color="primary"
+              onClick={handleAddSenderClick}
+              variant="outlined"
+              startIcon={<AddIcon />}
+              sx={{
+                borderRadius: '24px',
+                padding: '12px 24px',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Add Sender
+            </Button>
+          </Box>
         </Box>
       )}
     </>
