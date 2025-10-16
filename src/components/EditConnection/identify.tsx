@@ -204,6 +204,7 @@ const Identify = (props: any) => {
               }
               error={_.get(props.formErrors, field.name, null)}
               helperText={_.get(props.formErrors, field.name, null)}
+              FormHelperTextProps={{ id: `${field.id}-helper-text` }}
             />
           ))}
       </div>
@@ -359,6 +360,7 @@ const Identify = (props: any) => {
                       InputProps={getInputProps(field.title)}
                       error={_.get(props.formErrors, field.name, null)}
                       helperText={_.get(props.formErrors, field.name, null)}
+                      FormHelperTextProps={{ id: `${field.id}-helper-text` }}
                     />
                   ))}
               </Box>
@@ -388,6 +390,7 @@ const Identify = (props: any) => {
                       InputProps={getInputProps(field.title)}
                       error={_.get(props.formErrors, field.name, null)}
                       helperText={_.get(props.formErrors, field.name, null)}
+                      FormHelperTextProps={{ id: `${field.id}-helper-text` }}
                     />
                   ))}
               </Box>
@@ -417,6 +420,7 @@ const Identify = (props: any) => {
                       InputProps={getInputProps(field.title)}
                       error={_.get(props.formErrors, field.name, null)}
                       helperText={_.get(props.formErrors, field.name, null)}
+                      FormHelperTextProps={{ id: `${field.id}-helper-text` }}
                     />
                   ))}
               </Box>
@@ -444,6 +448,7 @@ const Identify = (props: any) => {
                       InputProps={getInputProps(field.title)}
                       error={_.get(props.formErrors, field.name, null)}
                       helperText={_.get(props.formErrors, field.name, null)}
+                      FormHelperTextProps={{ id: `${field.id}-helper-text` }}
                     />
                   ))}
               </Box>
