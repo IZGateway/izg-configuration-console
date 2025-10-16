@@ -1,14 +1,18 @@
-import React, { useState } from 'react'
-import { Box, Typography, Tabs, Tab } from '@mui/material'
-import {
-  PersonAdd as PersonAddIcon,
-  Group as GroupIcon,
-  Block as BlockIcon,
-} from '@mui/icons-material'
+import React, { useState, useContext, useEffect } from 'react'
+import { Box, Typography, Tabs, Tab, IconButton } from '@mui/material'
+import GroupIcon from '@mui/icons-material/Group'
+import BlockIcon from '@mui/icons-material/Block'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import palette from '../../styles/theme/palette'
-import OnboardSender from './OnboardSender'
+
 import AccessGroups from './AccessGroups'
 import DenyList from './DenyList'
+
+import EditAccessGroup from './EditAccessGroup'
+import CustomSnackbar from '../SnackBar'
+import CombinedContext from '../../contexts/app'
+
+import { type AccessGroup, mockAccessGroups } from './mockData'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -34,10 +38,117 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const AccessControlComponent = () => {
+  const { alert, setAlert } = useContext(CombinedContext)
   const [tabValue, setTabValue] = useState(0)
+  const [editGroupMode, setEditGroupMode] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<AccessGroup | null>(null)
+  const [isAddingGroup, setIsAddingGroup] = useState(false)
+  const [showSnackbar, setShowSnackbar] = useState(false)
+
+  // Manage actual data state
+  const [accessGroupsData, setAccessGroupsData] =
+    useState<AccessGroup[]>(mockAccessGroups)
+
+  // Handle snackbar visibility
+  useEffect(() => {
+    setShowSnackbar(!!alert.level)
+  }, [alert])
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+  }
+
+  const handleEditGroup = (groupData: AccessGroup) => {
+    setSelectedGroup(groupData)
+    setEditGroupMode(true)
+  }
+
+  const handleAddGroup = () => {
+    setIsAddingGroup(true)
+    setEditGroupMode(true)
+  }
+
+  const handleDeleteGroup = (groupId: string) => {
+    // Remove the group from state
+    setAccessGroupsData((prevGroups) =>
+      prevGroups.filter((group) => group.id !== groupId)
+    )
+
+    // Show success message
+    setAlert({
+      level: 'success',
+      jurisdiction: '',
+      dest_type: '',
+      message: `Access group has been successfully deleted.`,
+    })
+
+    // TODO: Implement API call to delete group
+    console.log('Delete group:', groupId)
+  }
+
+  const handleBackToGroups = () => {
+    setEditGroupMode(false)
+    setSelectedGroup(null)
+    setIsAddingGroup(false)
+  }
+
+  const handleSaveGroup = (updatedData: AccessGroup) => {
+    if (isAddingGroup) {
+      // Adding new group - generate new ID and add to state
+      const newGroup: AccessGroup = {
+        ...updatedData,
+        id: `group-${Date.now()}`, // Generate unique ID
+        memberCount: updatedData.members.length, // Ensure member count is correct
+      }
+      setAccessGroupsData((prevGroups) => [...prevGroups, newGroup])
+
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Access group "${updatedData.groupName}" has been successfully created.`,
+      })
+    } else {
+      // Editing existing group - update in state
+      setAccessGroupsData((prevGroups) =>
+        prevGroups.map((group) =>
+          group.id === updatedData.id
+            ? { ...updatedData, memberCount: updatedData.members.length }
+            : group
+        )
+      )
+
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Access group "${updatedData.groupName}" has been successfully updated.`,
+      })
+    }
+
+    // Reset edit mode
+    setEditGroupMode(false)
+    setSelectedGroup(null)
+    setIsAddingGroup(false)
+
+    // TODO: Implement API call to save/update group
+    console.log('Saving group data:', updatedData)
+  }
+
+  const handleCancelGroupEdit = () => {
+    setEditGroupMode(false)
+    setSelectedGroup(null)
+    setIsAddingGroup(false)
+  }
+
+  const handleCloseSnackbar = () => {
+    setShowSnackbar(false)
+    setAlert({
+      level: '',
+      jurisdiction: '',
+      dest_type: '',
+      message: '',
+    })
   }
 
   return (
@@ -53,74 +164,131 @@ const AccessControlComponent = () => {
             backgroundColor: palette.white,
           }}
         >
-          <Typography
-            id="title-table"
-            sx={{ padding: 2, fontSize: '1.75rem', fontWeight: 700 }}
-            flexGrow={1}
-            display="flex"
-            align="center"
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              padding: 2,
+              gap: 1,
+            }}
           >
-            Access Control
-          </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              <Typography
+                id="title-table"
+                sx={{ fontSize: '1.75rem', fontWeight: 700 }}
+                flexGrow={1}
+              >
+                {editGroupMode
+                  ? isAddingGroup
+                    ? 'Add New Access Group'
+                    : selectedGroup
+                    ? `Edit ${selectedGroup.groupName}`
+                    : 'Edit Access Group'
+                  : 'Access Control'}
+              </Typography>
+              {editGroupMode && (
+                <IconButton
+                  onClick={handleBackToGroups}
+                  sx={{
+                    color: palette.primary,
+                    marginLeft: 2,
+                    '&:hover': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                    },
+                  }}
+                >
+                  <ArrowBackIcon />
+                </IconButton>
+              )}
+            </Box>
+            {editGroupMode && (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: palette.grey,
+                }}
+              >
+                {isAddingGroup
+                  ? 'Create a new access group with roles and members. All fields marked with * are required.'
+                  : 'Update the access group details, roles, and members. Changes will affect all users in this group.'}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Box>
 
       {/* Tab Content */}
       <Box sx={{ mt: 0.8, borderRadius: 3, boxShadow: 0 }}>
-        {/* Tabs */}
-        <Box
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            backgroundColor: palette.white,
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-          }}
-        >
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="access control tabs"
-            sx={{ pt: 1 }}
-          >
-            <Tab
-              icon={<PersonAddIcon />}
-              label="ONBOARD SENDER"
-              iconPosition="start"
+        {editGroupMode ? (
+          // Show EditAccessGroup component when in group edit mode
+          <EditAccessGroup
+            group={selectedGroup || undefined}
+            onSave={handleSaveGroup}
+            onCancel={handleCancelGroupEdit}
+          />
+        ) : (
+          <>
+            {/* Tabs */}
+            <Box
               sx={{
-                fontWeight: 'bold',
-                '&:hover': { bgcolor: 'action.hover' },
+                borderBottom: 1,
+                borderColor: 'divider',
+                backgroundColor: palette.white,
+                boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
               }}
-            />
-            <Tab
-              icon={<GroupIcon />}
-              label="ACCESS GROUPS"
-              iconPosition="start"
-              sx={{ fontWeight: 'bold' }}
-            />
-            <Tab
-              icon={<BlockIcon />}
-              label="DENY LIST"
-              iconPosition="start"
-              sx={{ fontWeight: 'bold' }}
-            />
-          </Tabs>
-        </Box>
+            >
+              <Tabs
+                value={tabValue}
+                onChange={handleTabChange}
+                aria-label="access control tabs"
+                sx={{ pt: 1 }}
+              >
+                <Tab
+                  icon={<GroupIcon />}
+                  label="ACCESS GROUPS"
+                  iconPosition="start"
+                  sx={{ fontWeight: 'bold' }}
+                />
+                <Tab
+                  icon={<BlockIcon />}
+                  label="DENY LIST"
+                  iconPosition="start"
+                  sx={{ fontWeight: 'bold' }}
+                />
+              </Tabs>
+            </Box>
 
-        {/* Tab Panel 0 - Onboard Sender */}
-        <TabPanel value={tabValue} index={0}>
-          <OnboardSender />
-        </TabPanel>
+            {/* Tab Panel 0 - Access Groups */}
+            <TabPanel value={tabValue} index={0}>
+              <AccessGroups
+                data={accessGroupsData}
+                onEditGroup={handleEditGroup}
+                onAddGroup={handleAddGroup}
+                onDeleteGroup={handleDeleteGroup}
+              />
+            </TabPanel>
 
-        {/* Tab Panel 1 - Access Groups */}
-        <TabPanel value={tabValue} index={1}>
-          <AccessGroups />
-        </TabPanel>
-
-        {/* Tab Panel 2 - Deny List */}
-        <TabPanel value={tabValue} index={2}>
-          <DenyList />
-        </TabPanel>
+            {/* Tab Panel 1 - Deny List */}
+            <TabPanel value={tabValue} index={1}>
+              <DenyList />
+            </TabPanel>
+          </>
+        )}
       </Box>
+
+      {/* Success/Error Snackbar */}
+      <CustomSnackbar
+        open={showSnackbar}
+        severity={alert.level}
+        message={alert.message}
+        onClose={handleCloseSnackbar}
+      />
     </div>
   )
 }

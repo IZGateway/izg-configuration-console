@@ -8,12 +8,8 @@ import {
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
 } from '@mui/x-data-grid'
-import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material'
-import {
-  Add as AddIcon,
-  Delete as DeleteIcon,
-  Block as BlockIcon,
-} from '@mui/icons-material'
+import { Box, Typography } from '@mui/material'
+import BlockIcon from '@mui/icons-material/Block'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
 import { mockDenyListData, type DenyListItem } from './mockData'
@@ -84,12 +80,6 @@ const dataGridCustom = {
   '& .MuiTablePagination-actions': {
     color: palette.primary,
   },
-  '& .MuiTablePagination-root': {
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-    backgroundColor: palette.white,
-    borderRadius: '60px',
-    margin: '2em 0',
-  },
   '& .MuiDataGrid-virtualScroller': {
     overflow: 'hidden',
   },
@@ -100,17 +90,38 @@ const dataGridCustom = {
   },
 }
 
-interface CustomToolbarProps {
-  setFilterButtonEl: React.Dispatch<
-    React.SetStateAction<HTMLButtonElement | null>
-  >
-  onAddToBlacklistClick: () => void
+const CustomFooter = () => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '16px',
+        margin: '2em 0',
+      }}
+    >
+      {/* Pagination Box */}
+      <Box
+        sx={{
+          backgroundColor: palette.white,
+          borderRadius: '60px',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+        }}
+      >
+        <GridFooter />
+      </Box>
+    </Box>
+  )
 }
 
 const CustomToolbar = ({
   setFilterButtonEl,
-  onAddToBlacklistClick,
-}: CustomToolbarProps) => {
+}: {
+  setFilterButtonEl: React.Dispatch<
+    React.SetStateAction<HTMLButtonElement | null>
+  >
+}) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
@@ -125,24 +136,6 @@ const CustomToolbar = ({
           },
         }}
       >
-        <Button
-          color="primary"
-          onClick={onAddToBlacklistClick}
-          variant="outlined"
-          startIcon={<AddIcon />}
-          sx={{
-            borderRadius: '24px',
-            padding: '8px 16px',
-            textTransform: 'none',
-            fontWeight: 500,
-            '@media (max-width: 768px)': {
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-            },
-          }}
-        >
-          Add to Blacklist
-        </Button>
         <GridToolbarFilterButton ref={setFilterButtonEl} />
       </Box>
     </GridToolbarContainer>
@@ -151,17 +144,6 @@ const CustomToolbar = ({
 
 // Mobile Card Component
 const MobileCard = ({ row }) => {
-  const actionButtonStyle = {
-    borderRadius: 90,
-    background: palette.white,
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-    width: 35,
-    height: 35,
-    '&:hover': {
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.50)',
-    },
-  }
-
   return (
     <Box
       sx={{
@@ -173,40 +155,25 @@ const MobileCard = ({ row }) => {
         backgroundColor: palette.white,
       }}
     >
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Box>
-          <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
-            {row.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Reason: {row.reason}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Date Denied: {row.dateDenied}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Denied By: {row.deniedBy}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Tooltip arrow title="Delete">
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              color="error"
-              onClick={() => console.log('Delete clicked')}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+          {row.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Certification Name: {row.certificationName || 'N/A'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Environment: {row.environment || 'Onboarding'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Reason: {row.reason}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Date Denied: {row.dateDenied}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Denied By: {row.deniedBy}
+        </Typography>
       </Box>
     </Box>
   )
@@ -243,11 +210,6 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const handleAddToBlacklistClick = () => {
-    // TODO: Implement add to blacklist functionality
-    console.log('Add to blacklist clicked')
-  }
-
   // Filter data based on search term
   const filteredData = React.useMemo(() => {
     const dataToFilter = data.length > 0 ? data : mockDenyListData
@@ -264,17 +226,6 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
     })
   }, [data, searchTerm])
 
-  const actionButtonStyle = {
-    borderRadius: 90,
-    background: palette.white,
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-    width: 35,
-    height: 35,
-    '&:hover': {
-      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.50)',
-    },
-  }
-
   const columns: GridColDef[] = [
     {
       field: 'name',
@@ -288,6 +239,35 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
             {params.value}
           </Typography>
         </Box>
+      ),
+    },
+    {
+      field: 'certificationName',
+      headerName: 'CERTIFICATION NAME',
+      flex: 1,
+      minWidth: 180,
+      renderCell: (params) => (
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {params.value || 'N/A'}
+        </Typography>
+      ),
+    },
+    {
+      field: 'environment',
+      headerName: 'ENVIRONMENT',
+      flex: 1,
+      minWidth: 140,
+      renderCell: (params) => (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 500,
+            color:
+              params.value === 'Production' ? 'success.main' : 'warning.main',
+          }}
+        >
+          {params.value || 'Onboarding'}
+        </Typography>
       ),
     },
     {
@@ -326,29 +306,6 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
         <Typography variant="body2" color="text.secondary">
           {params.value}
         </Typography>
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: 'ACTIONS',
-      sortable: false,
-      filterable: false,
-      flex: 0.3,
-      minWidth: 80,
-      maxWidth: 120,
-      renderCell: () => (
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <Tooltip arrow title="Delete">
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              color="error"
-              onClick={() => console.log('Delete clicked')}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
       ),
     },
   ]
@@ -397,23 +354,6 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
                 }}
               />
             </Box>
-
-            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Button
-                color="primary"
-                onClick={handleAddToBlacklistClick}
-                variant="outlined"
-                size="small"
-                startIcon={<AddIcon />}
-                sx={{
-                  borderRadius: '24px',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                Add to Blacklist
-              </Button>
-            </Box>
           </Box>
 
           {/* Mobile Cards */}
@@ -448,14 +388,13 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
             pagination
             slots={{
               toolbar: CustomToolbar as GridSlots['toolbar'],
-              footer: GridFooter as GridSlots['footer'],
+              footer: () => <CustomFooter />,
             }}
             slotProps={{
               toolbar: {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-                onAddToBlacklistClick: handleAddToBlacklistClick,
               },
               panel: {
                 anchorEl: filterButtonEl,

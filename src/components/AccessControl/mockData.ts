@@ -10,14 +10,17 @@ export interface SenderData {
   accessLevel: string
   status: string
   lastActive: string
+  connectionType: 'production' | 'onboarding'
+  isConnected: boolean
 }
 
 export interface AccessGroup {
   id: string
   groupName: string
   description: string
-  userCount: number
+  memberCount: number
   roles: string[]
+  members: string[]
 }
 
 export interface DenyListItem {
@@ -26,9 +29,11 @@ export interface DenyListItem {
   reason: string
   dateDenied: string
   deniedBy: string
+  certificationName?: string
+  environment?: 'Production' | 'Onboarding'
 }
 
-// Mock data for OnboardSender component
+// Mock data for AccessControl components - simplified examples
 export const mockSenderData: SenderData[] = [
   {
     id: 'CDC-ATL-001',
@@ -37,28 +42,22 @@ export const mockSenderData: SenderData[] = [
     destination: 'Georgia GRITS (Onboarding)',
     destinationCode: 'GA-GRITS',
     accessLevel: 'Full Access',
-    status: 'Approved',
+    status: 'Test Validate',
     lastActive: '09/22/2025',
+    connectionType: 'onboarding' as const,
+    isConnected: true,
   },
   {
-    id: 'FL-SHOTS-001',
-    sender: 'Florida SHOTS',
-    senderDetails: 'fl-shots.health.state.fl.us',
-    destination: 'CDC AIRA Hub (Production)',
-    destinationCode: 'CDC-AIRA-HUB',
-    accessLevel: 'No Access',
-    status: 'Draft',
-    lastActive: '07/01/2025',
-  },
-  {
-    id: 'CA-CALLA-001',
-    sender: 'CALLA',
-    senderDetails: 'cal-la.immunizations.gov',
-    destination: 'CDC AIRA Hub (Production)',
-    destinationCode: 'CDC-AIRA-HUB',
-    accessLevel: 'Testing Only',
-    status: 'Disconnect',
-    lastActive: '06/21/2025',
+    id: 'CDC-ATL-002',
+    sender: 'CDC Atlanta IIS',
+    senderDetails: 'cdc-atlanta.immunizations.gov',
+    destination: 'Georgia GRITS (Production)',
+    destinationCode: 'GA-GRITS',
+    accessLevel: 'Full Access',
+    status: 'Production Live',
+    lastActive: '10/10/2025',
+    connectionType: 'production' as const,
+    isConnected: true,
   },
 ]
 
@@ -68,22 +67,25 @@ export const mockAccessGroups: AccessGroup[] = [
     id: '1',
     groupName: 'Administrators',
     description: 'All hospitals authorized for State A3',
-    userCount: 23,
-    roles: ['Admin (5)', 'Super User (18)'],
+    memberCount: 23,
+    roles: ['Admin', 'OPS', 'ADS'],
+    members: ['eHealthSign', 'APHL OPS', 'IZG OPS', 'Administrations'],
   },
   {
     id: '2',
     groupName: 'Operating Staff',
     description: 'All hospitals authorized for State A3',
-    userCount: 34,
-    roles: ['Standard (34)'],
+    memberCount: 34,
+    roles: ['OPS', 'SOAP'],
+    members: ['APHL OPS', 'IZG OPS', 'eHealthSign'],
   },
   {
     id: '3',
     groupName: 'ADS Users',
     description: 'Administrators is added here',
-    userCount: 1,
-    roles: ['Basic (1)'],
+    memberCount: 1,
+    roles: ['ADS', 'Admin'],
+    members: ['Administrations', 'APHL OPS'],
   },
 ]
 
@@ -95,6 +97,8 @@ export const mockDenyListData: DenyListItem[] = [
     reason: 'Security violation - unauthorized data transmission',
     dateDenied: '2025-03-20',
     deniedBy: 'admin@izgateway.gov',
+    certificationName: 'CERT-2024-001',
+    environment: 'Production',
   },
   {
     id: 'BLOCKED-002',
@@ -102,6 +106,8 @@ export const mockDenyListData: DenyListItem[] = [
     reason: 'Multiple failed authentication attempts',
     dateDenied: '2025-02-15',
     deniedBy: 'security@izgateway.gov',
+    certificationName: 'CERT-2024-045',
+    environment: 'Onboarding',
   },
   {
     id: 'BLOCKED-003',
@@ -109,6 +115,7 @@ export const mockDenyListData: DenyListItem[] = [
     reason: 'Detected malicious activity patterns',
     dateDenied: '2025-01-10',
     deniedBy: 'admin@izgateway.gov',
+    environment: 'Onboarding',
   },
 ]
 
@@ -117,10 +124,10 @@ export const mockDenyListData: DenyListItem[] = [
  *
  * To replace mock data with real API data, follow these steps:
  *
- * 1. ONBOARD SENDER DATA:
- *    - Create API service: fetchSenderData()
- *    - Replace mockSenderData import in OnboardSender component
- *    - Ensure API returns SenderData[] format
+ * 1. ACCESS CONTROL SENDER DATA:
+ *    - Create API service: fetchProductionSenderData()
+ *    - Replace mockSenderData import in AccessControl components
+ *    - Ensure API returns SenderData[] format with connectionType: 'production'
  *
  * 2. ACCESS GROUPS DATA:
  *    - Create API service: fetchAccessGroups()
@@ -135,8 +142,8 @@ export const mockDenyListData: DenyListItem[] = [
  * 4. EXAMPLE API SERVICE STRUCTURE:
  *
  *    // services/accessControlApi.ts
- *    export const fetchSenderData = async (): Promise<SenderData[]> => {
- *      const response = await fetch('/api/senders')
+ *    export const fetchProductionSenderData = async (): Promise<SenderData[]> => {
+ *      const response = await fetch('/api/access-control/senders')
  *      return response.json()
  *    }
  *
