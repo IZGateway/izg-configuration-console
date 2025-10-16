@@ -1,6 +1,9 @@
 import { MenuItem } from '.'
-import { CallMerge, Lock, Group } from '@mui/icons-material'
-
+import CallMergeIcon from '@mui/icons-material/CallMerge'
+import LockIcon from '@mui/icons-material/Lock'
+import GroupIcon from '@mui/icons-material/Group'
+import AddIcon from '@mui/icons-material/Add'
+import React from 'react'
 const iconSx = {
   fontSize: '2rem',
 }
@@ -14,7 +17,7 @@ export const menuItems: MenuItem[] = [
   {
     label: 'Manage Connections',
     icon: (
-      <CallMerge
+      <CallMergeIcon
         sx={{
           ...iconSx,
           transform: 'rotate(90deg)',
@@ -26,14 +29,20 @@ export const menuItems: MenuItem[] = [
   },
   {
     label: 'Password Encryption',
-    icon: <Lock sx={iconSx} />,
+    icon: <LockIcon sx={iconSx} />,
     path: '/passwordencryption',
     adminOnly: true,
   },
   {
     label: 'Access Control',
-    icon: <Group sx={iconSx} />,
+    icon: <GroupIcon sx={iconSx} />,
     path: '/accesscontrol',
+    adminOnly: true,
+  },
+  {
+    label: 'Onboarding Senders',
+    icon: <AddIcon sx={iconSx} />,
+    path: '/onboarding',
     adminOnly: false,
   },
 ]
