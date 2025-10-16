@@ -175,6 +175,7 @@ const Identify = (props: any) => {
           .map((field) => (
             <TextField
               key={field.id}
+              id={field.id}
               name={field.name}
               type={
                 field.name === 'newPassword'
@@ -348,6 +349,7 @@ const Identify = (props: any) => {
                   .map((field) => (
                     <TextField
                       key={field.id}
+                      id={field.id}
                       name={field.name}
                       label={field.label}
                       variant="outlined"
@@ -377,6 +379,7 @@ const Identify = (props: any) => {
                   .map((field) => (
                     <TextField
                       key={field.id}
+                      id={field.id}
                       name={field.name}
                       label={field.label}
                       variant="outlined"
@@ -406,6 +409,7 @@ const Identify = (props: any) => {
                   .map((field) => (
                     <TextField
                       key={field.id}
+                      id={field.id}
                       name={field.name}
                       label={field.label}
                       variant="outlined"
@@ -435,6 +439,7 @@ const Identify = (props: any) => {
                   .map((field) => (
                     <TextField
                       key={field.id}
+                      id={field.id}
                       name={field.name}
                       label={field.label}
                       variant="outlined"
