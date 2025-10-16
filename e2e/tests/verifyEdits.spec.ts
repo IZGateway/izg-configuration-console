@@ -1,6 +1,7 @@
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
+import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 let context
 let page: Page
@@ -32,14 +33,6 @@ const badValues = {
     withMultipleInvalid: 'user|name&test', // Multiple invalid characters
   },
 };
-
-async function filterByDestinationId(page: Page, destId: string) {
-  await page.locator('button[aria-label="Show filters"]').click()
-  await page.locator('[role="combobox"]:has-text("contains")').click()
-  await page.getByRole('option', { name: 'equals' }).click()
-  await page.getByRole('textbox', { name: /value/i }).fill(destId)
-  await page.getByText('My Connections').click() // Click anywhere to close filter pop up
-}
 
 test('Validate invalid usernames not accepted', async () => {
   const destId = '404'
@@ -82,7 +75,7 @@ test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
   const destId = '404'
   const editButton = page.locator('button[aria-label="edit"]')
   const nextButton = page.locator('#next')
-  //const msh3ErrorMessage = page.locator('#:r37:-helper-text')
+  const msh3ErrorMessage = page.locator('#msh3-helper-text')
 
   // filter table by dest id
   await filterByDestinationId(page, destId)
@@ -115,9 +108,7 @@ test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
   await page.locator('body').click()
 
   // Verify error message appears
-  // await expect.soft(msh3ErrorMessage).toBeVisible()
-  // await expect.soft(msh3ErrorMessage).toHaveText('At least one of MSH-3 and MSH-4 must be provided')
-  await expect.soft(page.getByText('At least one of MSH-3 and MSH')).toBeVisible()
+  await expect.soft(msh3ErrorMessage).toBeVisible()
 
   // Verify next button is disabled
   await expect.soft(nextButton).toBeDisabled()
@@ -128,8 +119,7 @@ test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
     await page.locator('body').click()
 
     // Verify error message is not visible
-    //await expect(msh3ErrorMessage).not.toBeVisible()
-    await expect.soft(page.getByText('At least one of MSH-3 and MSH')).not.toBeVisible()
+    await expect.soft(msh3ErrorMessage).not.toBeVisible()
 
     // Verify next button is enabled
     await expect(nextButton).toBeEnabled()
