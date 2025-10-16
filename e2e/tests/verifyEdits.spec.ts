@@ -20,6 +20,30 @@ test.afterAll(async () => {
   await context.close()
 })
 
+async function navigateToEditIdentifyStep(page: Page, destId: string) {
+  const editButton = page.locator('button[aria-label="edit"]')
+  const nextButton = page.locator('#next')
+
+  // Filter table by dest id
+  await filterByDestinationId(page, destId)
+  const hasEditButton = (await editButton.count()) > 0
+
+  // Skip if edit button is not available
+  if (!hasEditButton) {
+    return { shouldSkip: true, editButton: null, nextButton: null }
+  }
+
+  // Click edit and accept the agreement if needed
+  await editButton.click()
+  if (await page.getByTestId('agree-button').isVisible()) {
+    await page.getByTestId('agree-button').click()
+    await page.locator('#accept').click()
+  }
+  await nextButton.click()
+
+  return { shouldSkip: false, editButton, nextButton }
+}
+
 const badValues = {
   username: {
     tooLong: 'a'.repeat(51), // 51 characters - exceeds max of 50
