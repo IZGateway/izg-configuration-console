@@ -78,3 +78,64 @@ test('Validate invalid usernames not accepted', async () => {
   }
 })
 
+test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
+  const destId = '404'
+  const editButton = page.locator('button[aria-label="edit"]')
+  const nextButton = page.locator('#next')
+  //const msh3ErrorMessage = page.locator('#:r37:-helper-text')
+
+  // filter table by dest id
+  await filterByDestinationId(page, destId)
+  const hasEditButton = (await editButton.count()) > 0
+
+  // There is a change request set for this destination already
+  test.skip(!hasEditButton, 'Edit button is not available for this destination')
+
+  // There is NOT a change request set for this destination already
+  // Click edit and then accept the agreement
+  await editButton.click()
+  if (page.getByTestId('agree-button').isVisible()) {
+    await page.getByTestId('agree-button').click()
+    await page.locator('#accept').click()
+  }
+  await nextButton.click()
+
+  const msh3Field = page.locator('input[name="MSH3"]')
+  const msh4Field = page.locator('input[name="MSH4"]')
+
+  // Store original values to restore later
+  const originalMsh3 = await msh3Field.inputValue()
+  const originalMsh4 = await msh4Field.inputValue()
+
+  // Clear MSH-3
+  await msh3Field.clear()
+  // Clear MSH-4
+  await msh4Field.clear()
+  // Click away to trigger validation
+  await page.locator('body').click()
+
+  // Verify error message appears
+  // await expect.soft(msh3ErrorMessage).toBeVisible()
+  // await expect.soft(msh3ErrorMessage).toHaveText('At least one of MSH-3 and MSH-4 must be provided')
+  await expect.soft(page.getByText('At least one of MSH-3 and MSH')).toBeVisible()
+
+  // Verify next button is disabled
+  await expect.soft(nextButton).toBeDisabled()
+
+  await test.step('Restore MSH-3 value and verify error clears', async () => {
+    // Fill MSH-3 with original value
+    await msh3Field.fill(originalMsh3)
+    await page.locator('body').click()
+
+    // Verify error message is not visible
+    //await expect(msh3ErrorMessage).not.toBeVisible()
+    await expect.soft(page.getByText('At least one of MSH-3 and MSH')).not.toBeVisible()
+
+    // Verify next button is enabled
+    await expect(nextButton).toBeEnabled()
+  })
+
+  // Restore original values
+  await msh4Field.fill(originalMsh4)
+
+})
