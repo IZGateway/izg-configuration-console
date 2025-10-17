@@ -1,6 +1,7 @@
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
+import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 /*
   Test for https://izgateway.atlassian.net/wiki/spaces/IGDD/pages/22184696/UAT+Test+Plan+for+Config+Console+0.1
@@ -71,14 +72,6 @@ test.afterAll(async () => {
   await page.close()
   await context.close()
 })
-
-async function filterByDestinationId(page: Page, destId: string) {
-  await page.locator('button[aria-label="Show filters"]').click()
-  await page.locator('[role="combobox"]:has-text("contains")').click()
-  await page.getByRole('option', { name: 'equals' }).click()
-  await page.getByRole('textbox', { name: /value/i }).fill(destId)
-  await page.getByText('My Connections').click() // Click anywhere to close filter pop up
-}
 
 async function getToEditScreen(page: Page, destId: string) {
   const editButton = page.locator('button[aria-label="edit"]')
