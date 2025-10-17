@@ -30,6 +30,9 @@ const badValues = {
     withSpace: 'bad value', // Contains space which is not allowed (despite error message saying otherwise)
     withMultipleInvalid: 'bad|value&test', // Multiple invalid characters
   },
+  msh11: {
+    invalid: 'X',
+  }
 }
 
 test.beforeAll(async ({ browser }) => {
@@ -88,25 +91,85 @@ async function getToEditScreen(page: Page, destId: string) {
   return { shouldSkip: false, nextButton }
 }
 
-test('Invalid usernames not accepted', async () => {
-  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
+test.describe('Field validation - invalid values', () => {
+  const fieldsToValidate = [
+    {
+      displayName: 'Username',
+      inputName: 'username',
+      errorId: 'username-helper-text',
+      badValuesKey: 'username' as const,
+    },
+    {
+      displayName: 'Facility ID',
+      inputName: 'facilityId',
+      errorId: 'facilityId-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-3',
+      inputName: 'MSH3',
+      errorId: 'msh3-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-4',
+      inputName: 'MSH4',
+      errorId: 'msh4-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-5',
+      inputName: 'MSH5',
+      errorId: 'msh5-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-6',
+      inputName: 'MSH6',
+      errorId: 'msh6-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-22',
+      inputName: 'MSH22',
+      errorId: 'msh22-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+    {
+      displayName: 'MSH-11',
+      inputName: 'MSH11',
+      errorId: 'msh11-helper-text',
+      badValuesKey: 'msh11' as const,
+    },
+    {
+      displayName: 'RXA-11',
+      inputName: 'RXA11',
+      errorId: 'rxa11-helper-text',
+      badValuesKey: 'hl7Fields' as const,
+    },
+  ]
 
-  test.skip(shouldSkip, 'Edit button is not available for this destination')
+  fieldsToValidate.forEach(({ displayName, inputName, errorId, badValuesKey }) => {
+    test(`Invalid ${displayName} values not accepted`, async () => {
+      const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
+      test.skip(shouldSkip, 'Edit button is not available for this destination')
 
-  const usernameField = page.locator('#username')
-  const usernameErrorMessage = page.locator('#username-helper-text')
+      const field = page.locator(`input[name="${inputName}"]`)
+      const errorMessage = page.locator(`#${errorId}`)
 
-  // Test each invalid username
-  for (const [key, value] of Object.entries(badValues.username)) {
-    await test.step(`Test invalid username: ${key} ("${value}")`, async () => {
-      await usernameField.clear()
-      await usernameField.fill(value)
-      await page.locator('body').click()
+      // Test each invalid value
+      for (const [key, value] of Object.entries(badValues[badValuesKey])) {
+        await test.step(`Test invalid ${displayName}: ${key} ("${value}")`, async () => {
+          await field.clear()
+          await field.fill(value as string)
+          await page.locator('body').click()
 
-      await expect.soft(usernameErrorMessage).toBeVisible()
-      await expect.soft(nextButton).toBeDisabled()
+          await expect.soft(errorMessage).toBeVisible()
+          await expect.soft(nextButton).toBeDisabled()
+        })
+      }
     })
-  }
+  })
 })
 
 test.describe('MSH field pair validation', () => {
