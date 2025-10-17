@@ -9,7 +9,7 @@ const AccessControl = () => {
     <Container title="Access Control">
       <AppHeaderBar open />
       <ErrorBoundary>
-        <AccessControlComponent hasKeyName={true} />
+        <AccessControlComponent />
       </ErrorBoundary>
     </Container>
   )
