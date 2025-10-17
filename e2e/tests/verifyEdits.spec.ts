@@ -5,6 +5,33 @@ import { logout } from '../helpers/logout'
 let context
 let page: Page
 
+const destId = '404'
+
+const badValues = {
+  username: {
+    tooLong: 'a'.repeat(51), // 51 characters - exceeds max of 50
+    withPipe: 'user|name', // Contains | which is not allowed
+    withCaret: 'user^name', // Contains ^ which is not allowed
+    withAmpersand: 'user&name', // Contains & which is not allowed
+    withTilde: 'user~name', // Contains ~ which is not allowed
+    withQuote: 'user"name', // Contains " which is not allowed
+    withSlash: 'user/name', // Contains / which is not allowed
+    withSpace: 'user name', // Contains space which is not allowed (despite error message saying otherwise)
+    withMultipleInvalid: 'user|name&test', // Multiple invalid characters
+  },
+  hl7Fields: {
+    tooLong: 'a'.repeat(26), // 26 characters - exceeds max of 25
+    withPipe: 'bad|value', // Contains | which is not allowed
+    withCaret: 'bad^value', // Contains ^ which is not allowed
+    withAmpersand: 'bad&value', // Contains & which is not allowed
+    withTilde: 'bad~value', // Contains ~ which is not allowed
+    withQuote: 'bad"value', // Contains " which is not allowed
+    withSlash: 'bad/value', // Contains / which is not allowed
+    withSpace: 'bad value', // Contains space which is not allowed (despite error message saying otherwise)
+    withMultipleInvalid: 'bad|value&test', // Multiple invalid characters
+  },
+}
+
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
   page = await context.newPage()
@@ -23,20 +50,6 @@ test.afterAll(async () => {
   await page.close()
   await context.close()
 })
-
-const badValues = {
-  username: {
-    tooLong: 'a'.repeat(51), // 51 characters - exceeds max of 50
-    withPipe: 'user|name', // Contains | which is not allowed
-    withCaret: 'user^name', // Contains ^ which is not allowed
-    withAmpersand: 'user&name', // Contains & which is not allowed
-    withTilde: 'user~name', // Contains ~ which is not allowed
-    withQuote: 'user"name', // Contains " which is not allowed
-    withSlash: 'user/name', // Contains / which is not allowed
-    withSpace: 'user name', // Contains space which is not allowed (despite error message saying otherwise)
-    withMultipleInvalid: 'user|name&test', // Multiple invalid characters
-  },
-}
 
 async function filterByDestinationId(page: Page, destId: string) {
   await page.locator('button[aria-label="Show filters"]').click()
@@ -75,9 +88,7 @@ async function getToEditScreen(page: Page, destId: string) {
   return { shouldSkip: false, nextButton }
 }
 
-test('Validate invalid usernames not accepted', async () => {
-  const destId = '404'
-
+test('Invalid usernames not accepted', async () => {
   const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
 
   test.skip(shouldSkip, 'Edit button is not available for this destination')
@@ -99,7 +110,6 @@ test('Validate invalid usernames not accepted', async () => {
 })
 
 test('MSH-3 and MSH-4 cannot be blank at the same time', async () => {
-  const destId = '404'
 
   const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
 
@@ -141,5 +151,48 @@ test('MSH-3 and MSH-4 cannot be blank at the same time', async () => {
   // Restore original values
   await msh4Field.fill(originalMsh4)
 
+})
+
+test('MSH-5 and MSH-6 cannot be blank at the same time', async () => {
+
+  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
+
+  test.skip(shouldSkip, 'Edit button is not available for this destination')
+
+  const msh5Field = page.locator('input[name="MSH5"]')
+  const msh6Field = page.locator('input[name="MSH6"]')
+  const msh5ErrorMessage = page.locator('#msh5-helper-text')
+
+  // Store original values to restore later
+  const originalMsh5 = await msh5Field.inputValue()
+  const originalMsh6 = await msh6Field.inputValue()
+
+  // Clear MSH-5
+  await msh5Field.clear()
+  // Clear MSH-6
+  await msh6Field.clear()
+  // Click away to trigger validation
+  await page.locator('body').click()
+
+  // Verify error message appears
+  await expect.soft(msh5ErrorMessage).toBeVisible()
+
+  // Verify next button is disabled
+  await expect.soft(nextButton).toBeDisabled()
+
+  await test.step('Restore MSH-5 value and verify error clears', async () => {
+    // Fill MSH-5 with original value
+    await msh5Field.fill(originalMsh5)
+    await page.locator('body').click()
+
+    // Verify error message is not visible
+    await expect.soft(msh5ErrorMessage).not.toBeVisible()
+
+    // Verify next button is enabled
+    await expect.soft(nextButton).toBeEnabled()
+  })
+
+  // Restore original values
+  await msh6Field.fill(originalMsh6)
 
 })
