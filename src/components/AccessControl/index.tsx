@@ -9,6 +9,7 @@ import AccessGroups from './AccessGroups'
 import DenyList from './DenyList'
 
 import EditAccessGroup from './EditAccessGroup'
+import AddAccessGroup from './AddAccessGroup'
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 
@@ -219,12 +220,19 @@ const AccessControlComponent = () => {
       {/* Tab Content */}
       <Box sx={{ mt: 0.8, borderRadius: 3, boxShadow: 0 }}>
         {editGroupMode ? (
-          // Show EditAccessGroup component when in group edit mode
-          <EditAccessGroup
-            group={selectedGroup || undefined}
-            onSave={handleSaveGroup}
-            onCancel={handleCancelGroupEdit}
-          />
+          // Show AddAccessGroup or EditAccessGroup component when in group edit mode
+          isAddingGroup ? (
+            <AddAccessGroup
+              onSave={handleSaveGroup}
+              onCancel={handleCancelGroupEdit}
+            />
+          ) : (
+            <EditAccessGroup
+              group={selectedGroup || undefined}
+              onSave={handleSaveGroup}
+              onCancel={handleCancelGroupEdit}
+            />
+          )
         ) : (
           <>
             {/* Tabs */}

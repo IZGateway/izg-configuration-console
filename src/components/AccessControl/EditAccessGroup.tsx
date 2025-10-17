@@ -10,8 +10,12 @@ import {
   Select,
   MenuItem,
   OutlinedInput,
+  IconButton,
 } from '@mui/material'
-import CloseIcon from '@mui/icons-material/Close'
+import {
+  Close as CloseIcon,
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type AccessGroup } from './mockData'
 
@@ -81,6 +85,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
   }
 
   const isEditing = Boolean(group?.id)
+  const isAddMode = !isEditing
 
   return (
     <Box
@@ -88,6 +93,60 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
         width: '100%',
       }}
     >
+      {/* Title Header */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 10,
+          height: 'auto',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          marginBottom: '-16px',
+          backgroundColor: palette.white,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 2,
+            gap: 1,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography
+              id="title-table"
+              sx={{ fontSize: '1.75rem', fontWeight: 700 }}
+            >
+              {isAddMode
+                ? 'Add New Access Group'
+                : `Edit Access Group: ${formData.groupName}`}
+            </Typography>
+            <IconButton
+              onClick={onCancel}
+              sx={{
+                color: palette.primary,
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                },
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
+          </Box>
+          <Typography variant="body2" color="text.secondary">
+            {isAddMode
+              ? 'Create a new access group to organize users with similar permissions'
+              : `Modify the access group settings, roles, and member assignments`}
+          </Typography>
+        </Box>
+      </Box>
+
       {/* Main Form Container */}
       <Box
         sx={{
