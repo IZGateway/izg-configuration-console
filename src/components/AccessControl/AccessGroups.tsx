@@ -17,6 +17,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
 import palette from '../../styles/theme/palette'
 import { mockAccessGroups, type AccessGroup } from './mockData'
 
@@ -271,8 +272,8 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
         aria-describedby="delete-dialog-description"
         PaperProps={{
           sx: {
-            borderRadius: '12px',
-            padding: '8px',
+            boxShadow: 'none',
+            border: `1px solid ${palette.border}`,
           },
         }}
       >
@@ -282,9 +283,22 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
             fontWeight: 600,
             fontSize: '1.25rem',
             pb: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingBottom: '8px',
           }}
         >
           Delete Access Group
+          <IconButton
+            onClick={handleCancelDelete}
+            sx={{
+              textTransform: 'none',
+              color: palette.primary,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           <DialogContentText
@@ -321,31 +335,9 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
           }}
         >
           <Button
-            onClick={handleCancelDelete}
-            variant="outlined"
-            sx={{
-              borderRadius: '24px',
-              textTransform: 'none',
-              fontWeight: 500,
-              minWidth: 80,
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
             onClick={handleConfirmDelete}
-            variant="contained"
+            variant="outlined"
             color="error"
-            sx={{
-              borderRadius: '24px',
-              textTransform: 'none',
-              fontWeight: 500,
-              minWidth: 80,
-              backgroundColor: '#d32f2f',
-              '&:hover': {
-                backgroundColor: '#b71c1c',
-              },
-            }}
           >
             Delete Group
           </Button>

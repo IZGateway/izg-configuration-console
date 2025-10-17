@@ -206,12 +206,7 @@ const AccessControlComponent = () => {
               )}
             </Box>
             {editGroupMode && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: palette.grey,
-                }}
-              >
+              <Typography variant="body2" color="text.secondary">
                 {isAddingGroup
                   ? 'Create a new access group with roles and members. All fields marked with * are required.'
                   : 'Update the access group details, roles, and members. Changes will affect all users in this group.'}
