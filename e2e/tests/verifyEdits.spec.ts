@@ -109,90 +109,54 @@ test('Invalid usernames not accepted', async () => {
   }
 })
 
-test('MSH-3 and MSH-4 cannot be blank at the same time', async () => {
+test.describe('MSH field pair validation', () => {
+  const fieldPairs = [
+    {
+      firstField: 'MSH3',
+      secondField: 'MSH4',
+      errorId: 'msh3-helper-text',
+      description: 'MSH-3 and MSH-4',
+    },
+    {
+      firstField: 'MSH5',
+      secondField: 'MSH6',
+      errorId: 'msh5-helper-text',
+      description: 'MSH-5 and MSH-6',
+    },
+  ]
 
-  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
+  fieldPairs.forEach(({ firstField, secondField, errorId, description }) => {
+    test(`${description} cannot be blank at the same time`, async () => {
+      const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
+      test.skip(shouldSkip, 'Edit button is not available for this destination')
 
-  test.skip(shouldSkip, 'Edit button is not available for this destination')
+      const field1 = page.locator(`input[name="${firstField}"]`)
+      const field2 = page.locator(`input[name="${secondField}"]`)
+      const errorMessage = page.locator(`#${errorId}`)
 
-  const msh3Field = page.locator('input[name="MSH3"]')
-  const msh4Field = page.locator('input[name="MSH4"]')
-  const msh3ErrorMessage = page.locator('#msh3-helper-text')
+      // Store original values
+      const originalField1 = await field1.inputValue()
+      const originalField2 = await field2.inputValue()
 
-  // Store original values to restore later
-  const originalMsh3 = await msh3Field.inputValue()
-  const originalMsh4 = await msh4Field.inputValue()
+      // Clear both fields and trigger validation
+      await field1.clear()
+      await field2.clear()
+      await page.locator('body').click()
 
-  // Clear MSH-3
-  await msh3Field.clear()
-  // Clear MSH-4
-  await msh4Field.clear()
-  // Click away to trigger validation
-  await page.locator('body').click()
+      // Verify error and disabled state
+      await expect.soft(errorMessage).toBeVisible()
+      await expect.soft(nextButton).toBeDisabled()
 
-  // Verify error message appears
-  await expect.soft(msh3ErrorMessage).toBeVisible()
+      await test.step(`Restore ${firstField} value and verify error clears`, async () => {
+        await field1.fill(originalField1)
+        await page.locator('body').click()
 
-  // Verify next button is disabled
-  await expect.soft(nextButton).toBeDisabled()
+        await expect.soft(errorMessage).not.toBeVisible()
+        await expect.soft(nextButton).toBeEnabled()
+      })
 
-  await test.step('Restore MSH-3 value and verify error clears', async () => {
-    // Fill MSH-3 with original value
-    await msh3Field.fill(originalMsh3)
-    await page.locator('body').click()
-
-    // Verify error message is not visible
-    await expect.soft(msh3ErrorMessage).not.toBeVisible()
-
-    // Verify next button is enabled
-    await expect.soft(nextButton).toBeEnabled()
+      // Restore original values
+      await field2.fill(originalField2)
+    })
   })
-
-  // Restore original values
-  await msh4Field.fill(originalMsh4)
-
-})
-
-test('MSH-5 and MSH-6 cannot be blank at the same time', async () => {
-
-  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
-
-  test.skip(shouldSkip, 'Edit button is not available for this destination')
-
-  const msh5Field = page.locator('input[name="MSH5"]')
-  const msh6Field = page.locator('input[name="MSH6"]')
-  const msh5ErrorMessage = page.locator('#msh5-helper-text')
-
-  // Store original values to restore later
-  const originalMsh5 = await msh5Field.inputValue()
-  const originalMsh6 = await msh6Field.inputValue()
-
-  // Clear MSH-5
-  await msh5Field.clear()
-  // Clear MSH-6
-  await msh6Field.clear()
-  // Click away to trigger validation
-  await page.locator('body').click()
-
-  // Verify error message appears
-  await expect.soft(msh5ErrorMessage).toBeVisible()
-
-  // Verify next button is disabled
-  await expect.soft(nextButton).toBeDisabled()
-
-  await test.step('Restore MSH-5 value and verify error clears', async () => {
-    // Fill MSH-5 with original value
-    await msh5Field.fill(originalMsh5)
-    await page.locator('body').click()
-
-    // Verify error message is not visible
-    await expect.soft(msh5ErrorMessage).not.toBeVisible()
-
-    // Verify next button is enabled
-    await expect.soft(nextButton).toBeEnabled()
-  })
-
-  // Restore original values
-  await msh6Field.fill(originalMsh6)
-
 })
