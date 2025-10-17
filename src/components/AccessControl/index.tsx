@@ -83,7 +83,6 @@ const AccessControlComponent = () => {
     })
 
     // TODO: Implement API call to delete group
-    console.log('Delete group:', groupId)
   }
 
   const handleBackToGroups = () => {
@@ -132,7 +131,6 @@ const AccessControlComponent = () => {
     setIsAddingGroup(false)
 
     // TODO: Implement API call to save/update group
-    console.log('Saving group data:', updatedData)
   }
 
   const handleCancelGroupEdit = () => {

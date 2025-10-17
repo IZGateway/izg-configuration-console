@@ -189,7 +189,7 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
   const setPageSize =
     sessionContext?.setPageSize ||
     (() => {
-      console.log('setPageSize not available')
+      // setPageSize not available
     })
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
@@ -405,6 +405,14 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
                   '& .MuiDataGrid-filterForm': {
                     flexDirection: 'column',
                     gap: '8px',
+                    width: '100%',
+                  },
+                  '& .MuiDataGrid-filterFormColumnInput': {
+                    width: '100%',
+                    display: 'flex',
+                  },
+                  '& .MuiDataGrid-filterFormOperatorInput': {
+                    width: '100%',
                   },
                   '& .MuiDataGrid-paper': {
                     marginTop: '16px',
@@ -415,6 +423,15 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
                     borderRadius: '0 0 30px 30px',
                     border: `1px solid ${palette.border}`,
                     width: 'fit-content',
+                  },
+                  '& .MuiDataGrid-filterFormDeleteIcon': {
+                    flexDirection: 'row',
+                    marginRight: '-4px',
+                    marginBottom: '-16px',
+                    color: 'green',
+                  },
+                  '& .MuiDataGrid-filterFormValueInput': {
+                    width: '100%',
                   },
                 },
               },

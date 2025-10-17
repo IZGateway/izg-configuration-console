@@ -92,7 +92,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
       <Box
         sx={{
           backgroundColor: 'white',
-          borderRadius: '12px',
+          borderRadius: '0 0 32px 32px',
           boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
           margin: '0 auto',
           padding: '32px 16px',
@@ -300,8 +300,8 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
       <Box
         sx={{
           backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px 32px',
+          borderRadius: '64px',
+          padding: '16px',
           boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
           margin: '16px auto 0',
           display: 'flex',
