@@ -1,7 +1,6 @@
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
-import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 let context
 let page: Page
@@ -14,35 +13,16 @@ test.beforeAll(async ({ browser }) => {
   await page.waitForLoadState('networkidle')
 })
 
+test.beforeEach(async () => {
+  await page.goto('/manageconnections')
+  await page.waitForLoadState('networkidle')
+})
+
 test.afterAll(async () => {
   await logout(page)
   await page.close()
   await context.close()
 })
-
-async function navigateToEditIdentifyStep(page: Page, destId: string) {
-  const editButton = page.locator('button[aria-label="edit"]')
-  const nextButton = page.locator('#next')
-
-  // Filter table by dest id
-  await filterByDestinationId(page, destId)
-  const hasEditButton = (await editButton.count()) > 0
-
-  // Skip if edit button is not available
-  if (!hasEditButton) {
-    return { shouldSkip: true, editButton: null, nextButton: null }
-  }
-
-  // Click edit and accept the agreement if needed
-  await editButton.click()
-  if (await page.getByTestId('agree-button').isVisible()) {
-    await page.getByTestId('agree-button').click()
-    await page.locator('#accept').click()
-  }
-  await nextButton.click()
-
-  return { shouldSkip: false, editButton, nextButton }
-}
 
 const badValues = {
   username: {
@@ -56,10 +36,17 @@ const badValues = {
     withSpace: 'user name', // Contains space which is not allowed (despite error message saying otherwise)
     withMultipleInvalid: 'user|name&test', // Multiple invalid characters
   },
-};
+}
 
-test('Validate invalid usernames not accepted', async () => {
-  const destId = '404'
+async function filterByDestinationId(page: Page, destId: string) {
+  await page.locator('button[aria-label="Show filters"]').click()
+  await page.locator('[role="combobox"]:has-text("contains")').click()
+  await page.getByRole('option', { name: 'equals' }).click()
+  await page.getByRole('textbox', { name: /value/i }).fill(destId)
+  await page.getByText('My Connections').click() // Click anywhere to close filter pop up
+}
+
+async function getToEditScreen(page: Page, destId: string) {
   const editButton = page.locator('button[aria-label="edit"]')
   const nextButton = page.locator('#next')
 
@@ -68,16 +55,32 @@ test('Validate invalid usernames not accepted', async () => {
   const hasEditButton = (await editButton.count()) > 0
 
   // There is a change request set for this destination already
-  test.skip(!hasEditButton, 'Edit button is not available for this destination')
+  // Return true for shouldSkip
+  if (!hasEditButton) {
+    return { shouldSkip: true, nextButton }
+  }
 
   // There is NOT a change request set for this destination already
-  // Click edit and then accept the agreement
+  // Click edit and then accept the agreement if it appears
   await editButton.click()
-  if (page.getByTestId('agree-button').isVisible()) {
+  try {
+    await page.getByTestId('agree-button').waitFor({ timeout: 2000 })
     await page.getByTestId('agree-button').click()
     await page.locator('#accept').click()
+  } catch {
+    // Agreement already accepted in this session, continue
   }
   await nextButton.click()
+
+  return { shouldSkip: false, nextButton }
+}
+
+test('Validate invalid usernames not accepted', async () => {
+  const destId = '404'
+
+  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
+
+  test.skip(shouldSkip, 'Edit button is not available for this destination')
 
   const usernameField = page.locator('#username')
   const usernameErrorMessage = page.locator('#username-helper-text')
@@ -95,30 +98,16 @@ test('Validate invalid usernames not accepted', async () => {
   }
 })
 
-test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
+test('MSH-3 and MSH-4 cannot be blank at the same time', async () => {
   const destId = '404'
-  const editButton = page.locator('button[aria-label="edit"]')
-  const nextButton = page.locator('#next')
-  const msh3ErrorMessage = page.locator('#msh3-helper-text')
 
-  // filter table by dest id
-  await filterByDestinationId(page, destId)
-  const hasEditButton = (await editButton.count()) > 0
+  const {shouldSkip, nextButton} = await getToEditScreen(page, destId)
 
-  // There is a change request set for this destination already
-  test.skip(!hasEditButton, 'Edit button is not available for this destination')
-
-  // There is NOT a change request set for this destination already
-  // Click edit and then accept the agreement
-  await editButton.click()
-  if (page.getByTestId('agree-button').isVisible()) {
-    await page.getByTestId('agree-button').click()
-    await page.locator('#accept').click()
-  }
-  await nextButton.click()
+  test.skip(shouldSkip, 'Edit button is not available for this destination')
 
   const msh3Field = page.locator('input[name="MSH3"]')
   const msh4Field = page.locator('input[name="MSH4"]')
+  const msh3ErrorMessage = page.locator('#msh3-helper-text')
 
   // Store original values to restore later
   const originalMsh3 = await msh3Field.inputValue()
@@ -146,10 +135,11 @@ test('Validate MSH-3 and MSH-4 cannot both be empty', async () => {
     await expect.soft(msh3ErrorMessage).not.toBeVisible()
 
     // Verify next button is enabled
-    await expect(nextButton).toBeEnabled()
+    await expect.soft(nextButton).toBeEnabled()
   })
 
   // Restore original values
   await msh4Field.fill(originalMsh4)
+
 
 })
