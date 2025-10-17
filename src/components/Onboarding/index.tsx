@@ -16,6 +16,10 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -23,6 +27,7 @@ import {
   DeleteOutline as DeleteOutlineIcon,
   WifiOff as WifiOffIcon,
   Wifi as WifiIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
@@ -30,6 +35,7 @@ import { mockSenderData, type SenderData } from './mockData'
 import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
+import CustomSnackbar from '../SnackBar'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -140,10 +146,6 @@ const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
   )
 }
 
-const CustomFooter = () => {
-  return <GridFooter />
-}
-
 interface OnboardSenderProps {
   data?: SenderData[]
 }
@@ -164,6 +166,17 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
 
   // Add mode state management
   const [isAddMode, setIsAddMode] = useState(false)
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [senderToDelete, setSenderToDelete] = useState<SenderData | null>(null)
+
+  // Snackbar state
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarSeverity, setSnackbarSeverity] = useState<
+    'success' | 'error' | 'warning' | 'info'
+  >('success')
 
   // Sender data state management
   const [senderData, setSenderData] = useState<SenderData[]>(
@@ -194,20 +207,26 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   }
 
   const handleWifiToggle = (senderId: string) => {
+    const sender = senderData.find((s) => s.id === senderId)
     setSenderData((prevData) =>
       prevData.map((sender) => {
         if (sender.id === senderId) {
           const newConnectionState = !sender.isConnected
-          console.log(
-            `${
-              newConnectionState ? 'Connected' : 'Disconnected'
-            } sender: ${senderId}`
-          )
           return { ...sender, isConnected: newConnectionState }
         }
         return sender
       })
     )
+
+    // Show snackbar notification
+    if (sender) {
+      const action = sender.isConnected ? 'disconnected from' : 'connected to'
+      setSnackbarMessage(
+        `Sender "${sender.sender}" has been ${action} the system.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    }
   }
 
   const handleEditSender = (senderId: string) => {
@@ -226,7 +245,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       )
     )
 
-    console.log('Saving sender:', updatedSender)
+    // Show snackbar notification
+    setSnackbarMessage(
+      `Sender "${updatedSender.sender}" has been successfully updated.`
+    )
+    setSnackbarSeverity('success')
+    setSnackbarOpen(true)
+
     setIsEditMode(false)
     setEditingSender(null)
   }
@@ -235,7 +260,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     // Add the new sender to the sender data state
     setSenderData((prevData) => [...prevData, newSender])
 
-    console.log('Adding new sender:', newSender)
+    // Show snackbar notification
+    setSnackbarMessage(
+      `Sender "${newSender.sender}" has been successfully added to onboarding.`
+    )
+    setSnackbarSeverity('success')
+    setSnackbarOpen(true)
+
     setIsAddMode(false)
     setEditingSender(null)
   }
@@ -272,19 +303,60 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   }
 
   const handleStatusUpdate = (senderId: string, newStatus: string) => {
+    const sender = senderData.find((s) => s.id === senderId)
     setSenderData((prevData) =>
       prevData.map((sender) => {
         if (sender.id === senderId) {
-          console.log(`Updated sender ${senderId} status to ${newStatus}`)
           return { ...sender, status: newStatus }
         }
         return sender
       })
     )
+
+    // Show snackbar notification
+    if (sender) {
+      setSnackbarMessage(
+        `Sender "${sender.sender}" status updated to "${newStatus}".`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    }
+  }
+
+  const handleDeleteSender = (senderId: string) => {
+    const sender = senderData.find((s) => s.id === senderId)
+    if (sender) {
+      setSenderToDelete(sender)
+      setDeleteDialogOpen(true)
+    }
+  }
+
+  const handleConfirmDelete = () => {
+    if (senderToDelete) {
+      setSenderData((prevData) =>
+        prevData.filter((sender) => sender.id !== senderToDelete.id)
+      )
+      setSnackbarMessage(
+        `Sender "${senderToDelete.sender}" has been permanently deleted from onboarding.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+      setDeleteDialogOpen(false)
+      setSenderToDelete(null)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false)
+    setSenderToDelete(null)
+  }
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false)
   }
 
   // DataGrid columns definition
-  const columns: GridColDef[] = [
+  const columns: GridColDef<SenderData>[] = [
     {
       field: 'sender',
       headerName: 'SENDERS',
@@ -393,7 +465,12 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             </IconButton>
           </Tooltip>
           <Tooltip arrow title="Delete">
-            <IconButton sx={actionButtonStyle} size="small" color="error">
+            <IconButton
+              sx={actionButtonStyle}
+              size="small"
+              color="error"
+              onClick={() => handleDeleteSender(params.row.id)}
+            >
               <DeleteOutlineIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -403,145 +480,168 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   ]
 
   // Mobile Card Component
-  const MobileCard = React.memo(
-    ({
-      row,
-    }: {
-      row: {
-        id: string
-        sender: string
-        senderDetails: string
-        destination: string
-        destinationCode: string
-        accessLevel: string
-        status: string
-        lastUpdated: string
-        isConnected: boolean
-      }
-    }) => {
-      return (
+  const MobileCard = React.memo(({ row }: { row: SenderData }) => {
+    return (
+      <Box
+        sx={{
+          marginBottom: '12px',
+          padding: '16px',
+          border: '1px solid #e0e0e0',
+          borderRadius: '8px',
+          backgroundColor: 'white',
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        {/* Header Row */}
         <Box
           sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: '12px',
-            padding: '16px',
-            border: '1px solid #e0e0e0',
-            borderRadius: '8px',
-            backgroundColor: 'white',
-            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
           }}
         >
-          {/* Header Row */}
-          <Box
+          <Typography
+            variant="h6"
             sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '12px',
+              fontWeight: 'bold',
+              color: palette.primary,
+              fontSize: '1rem',
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 'bold',
-                color: palette.primary,
-                fontSize: '1rem',
-              }}
-            >
-              {row.sender}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <StatusPromoteDemote
-                sender={row}
-                onStatusChange={handleStatusUpdate}
-                size="small"
-              />
-            </Box>
-          </Box>
-
-          {/* Content */}
-          <Box sx={{ marginBottom: '12px' }}>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              sx={{ marginBottom: '4px' }}
-            >
-              <strong>Sender Details:</strong> {row.senderDetails}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              sx={{ marginBottom: '4px' }}
-            >
-              <strong>Destination:</strong> {row.destination}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              sx={{ marginBottom: '4px' }}
-            >
-              <strong>Destination Code:</strong> {row.destinationCode}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="textSecondary"
-              sx={{ marginBottom: '4px' }}
-            >
-              <strong>Access Level:</strong> {row.accessLevel}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              <strong>Last Updated:</strong> {row.lastUpdated}
-            </Typography>
-          </Box>
-
-          {/* Action Buttons */}
-          <Box
-            sx={{
-              display: 'flex',
-              gap: '8px',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-start',
-            }}
-          >
-            <Button
+            {row.sender}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <StatusPromoteDemote
+              sender={row}
+              onStatusChange={handleStatusUpdate}
               size="small"
-              startIcon={<EditIcon />}
-              variant="outlined"
-              color="primary"
-              sx={actionButtonStyle}
-              onClick={() => handleEditSender(row.id)}
-            >
-              Edit
-            </Button>
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              onClick={() => handleWifiToggle(row.id)}
-            >
-              {row.isConnected ? (
-                <WifiIcon color="secondary" fontSize="small" />
-              ) : (
-                <WifiOffIcon
-                  sx={{ color: palette.secondaryDark }}
-                  fontSize="small"
-                />
-              )}
-            </IconButton>
-            <Button
-              size="small"
-              startIcon={<DeleteOutlineIcon />}
-              variant="outlined"
-              color="error"
-              sx={actionButtonStyle}
-            >
-              Delete
-            </Button>
+            />
           </Box>
         </Box>
-      )
-    }
-  )
+
+        {/* Content */}
+        <Box sx={{ marginBottom: '12px' }}>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ marginBottom: '4px' }}
+          >
+            <strong>Sender Details:</strong> {row.senderDetails}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ marginBottom: '4px' }}
+          >
+            <strong>Destination:</strong> {row.destination}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ marginBottom: '4px' }}
+          >
+            <strong>Destination Code:</strong> {row.destinationCode}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            sx={{ marginBottom: '4px' }}
+          >
+            <strong>Access Level:</strong> {row.accessLevel}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            <strong>Last Updated:</strong> {row.lastUpdated}
+          </Typography>
+        </Box>
+
+        {/* Action Buttons */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-start',
+          }}
+        >
+          <Button
+            size="small"
+            startIcon={<EditIcon />}
+            variant="outlined"
+            color="primary"
+            sx={actionButtonStyle}
+            onClick={() => handleEditSender(row.id)}
+          >
+            Edit
+          </Button>
+          <IconButton
+            sx={actionButtonStyle}
+            size="small"
+            onClick={() => handleWifiToggle(row.id)}
+          >
+            {row.isConnected ? (
+              <WifiIcon color="secondary" fontSize="small" />
+            ) : (
+              <WifiOffIcon
+                sx={{ color: palette.secondaryDark }}
+                fontSize="small"
+              />
+            )}
+          </IconButton>
+          <Button
+            size="small"
+            startIcon={<DeleteOutlineIcon />}
+            variant="outlined"
+            color="error"
+            sx={actionButtonStyle}
+            onClick={() => handleDeleteSender(row.id)}
+          >
+            Delete
+          </Button>
+        </Box>
+      </Box>
+    )
+  })
 
   MobileCard.displayName = 'MobileCard'
+
+  // Custom Footer with Add Button
+  const CustomFooterWithButton = () => {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: 'white',
+            padding: '8px',
+            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+            borderRadius: '64px',
+          }}
+        >
+          <Button
+            color="primary"
+            onClick={handleAddSenderClick}
+            variant="text"
+            startIcon={<AddIcon />}
+            sx={{
+              borderRadius: '24px',
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Add Sender
+          </Button>
+        </Box>
+        <GridFooter />
+      </Box>
+    )
+  }
 
   if (renderMode === 'transitioning') {
     return (
@@ -716,7 +816,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             pagination
             slots={{
               toolbar: CustomToolbar as GridSlots['toolbar'],
-              footer: CustomFooter as GridSlots['footer'],
+              footer: CustomFooterWithButton as GridSlots['footer'],
             }}
             slotProps={{
               toolbar: {
@@ -727,49 +827,145 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {
-                  '& .MuiPaper-root': {
-                    padding: '16px',
-                    minWidth: '300px',
-                    borderRadius: '8px',
-                    border: `1px solid ${palette.border}`,
-                    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+                  '& .MuiTypography-root': {
+                    fontSize: 20,
                   },
                   '& .MuiDataGrid-filterForm': {
-                    display: 'flex',
                     flexDirection: 'column',
-                    gap: '12px',
+                    gap: '8px',
+                    width: '100%',
+                  },
+                  '& .MuiDataGrid-filterFormColumnInput': {
+                    width: '100%',
+                    display: 'flex',
+                  },
+                  '& .MuiDataGrid-filterFormOperatorInput': {
+                    width: '100%',
+                  },
+                  '& .MuiDataGrid-paper': {
+                    marginTop: '16px',
+                    paddingBottom: '3vh',
+                    paddingTop: '1vh',
+                    paddingRight: '1vh',
+                    paddingLeft: '1vh',
+                    borderRadius: '0 0 30px 30px',
+                    border: `1px solid ${palette.border}`,
+                    width: 'fit-content',
+                  },
+                  '& .MuiDataGrid-filterFormDeleteIcon': {
+                    flexDirection: 'row',
+                    marginRight: '-4px',
+                    marginBottom: '-16px',
+                    color: 'green',
+                  },
+                  '& .MuiDataGrid-filterFormValueInput': {
+                    width: '100%',
                   },
                 },
               },
             }}
           />
-
-          {/* Desktop Add Sender Button */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'flex-start',
-              alignItems: 'center',
-              marginTop: '16px',
-            }}
-          >
-            <Button
-              color="primary"
-              onClick={handleAddSenderClick}
-              variant="outlined"
-              startIcon={<AddIcon />}
-              sx={{
-                borderRadius: '24px',
-                padding: '12px 24px',
-                textTransform: 'none',
-                fontWeight: 500,
-              }}
-            >
-              Add Sender
-            </Button>
-          </Box>
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            boxShadow: 'none',
+            border: `1px solid ${palette.border}`,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingBottom: '8px',
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Confirm Delete Sender
+          </Typography>
+          <Box>
+            <IconButton
+              onClick={handleCancelDelete}
+              sx={{
+                textTransform: 'none',
+                color: palette.primary,
+              }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ marginBottom: 2 }}>
+            Are you sure you want to permanently delete this sender from
+            onboarding? This action cannot be undone.
+          </Typography>
+          {senderToDelete && (
+            <Box
+              sx={{
+                backgroundColor: palette.grey[50],
+                padding: 2,
+                borderRadius: 1,
+                border: `1px solid ${palette.border}`,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 600, marginBottom: 1 }}
+              >
+                Sender Details:
+              </Typography>
+              <Typography variant="body2">
+                <strong>Sender:</strong> {senderToDelete.sender}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Sender Details:</strong> {senderToDelete.senderDetails}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Destination:</strong> {senderToDelete.destination}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Status:</strong> {senderToDelete.status}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px' }}>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="outlined"
+            color="error"
+            sx={{
+              borderRadius: '24px',
+              padding: '8px 24px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: 'rgba(211, 47, 47, 0.04)',
+              },
+            }}
+          >
+            Delete Permanently
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <CustomSnackbar
+        open={snackbarOpen}
+        severity={snackbarSeverity}
+        message={snackbarMessage}
+        onClose={handleSnackbarClose}
+      />
     </>
   )
 }

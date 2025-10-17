@@ -21,7 +21,11 @@ import {
   TableRow,
   Paper,
 } from '@mui/material'
-import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
+import {
+  Info as InfoIcon,
+  Close as CloseIcon,
+  ArrowBack as ArrowBackIcon,
+} from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 
@@ -140,25 +144,36 @@ const EditSender: React.FC<EditSenderProps> = ({
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2,
+              justifyContent: 'space-between',
             }}
           >
             <Typography
               id="title-table"
               sx={{ fontSize: '1.75rem', fontWeight: 700 }}
-              flexGrow={1}
             >
               {isAddMode ? 'Add New Sender' : `Edit Sender: ${formData.sender}`}
             </Typography>
+            <IconButton
+              onClick={onCancel}
+              sx={{
+                color: palette.primary,
+                '&:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                },
+              }}
+            >
+              <ArrowBackIcon />
+            </IconButton>
           </Box>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ fontWeight: 500 }}
-          >
-            {isAddMode
-              ? 'Create a new sender entry for the onboarding system'
-              : `Destination: ${formData.destination} • Status: ${formData.status} • Certificate: ${formData.senderDetails}`}
+          <Typography variant="body2" color="text.secondary">
+            {isAddMode ? (
+              'Create a new sender entry for the onboarding system'
+            ) : (
+              <>
+                Reference - Destination: {formData.destination} • Status:{' '}
+                {formData.status} • Certificate: {formData.senderDetails}
+              </>
+            )}
           </Typography>
         </Box>
       </Box>
@@ -167,11 +182,10 @@ const EditSender: React.FC<EditSenderProps> = ({
       <Box
         sx={{
           backgroundColor: 'white',
-          borderRadius: '12px',
+          borderRadius: '0 0 32px 32px',
           boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
           margin: '0 auto',
           padding: '32px 16px',
-          marginTop: '16px',
         }}
       >
         {/* Instructions */}
@@ -180,8 +194,8 @@ const EditSender: React.FC<EditSenderProps> = ({
           sx={{
             marginBottom: '24px',
             color: palette.black,
-            lineHeight: 1.6,
-            fontWeight: 500,
+            lineHeight: 1.3,
+            maxWidth: '1000px',
           }}
         >
           {isAddMode
@@ -389,7 +403,6 @@ const EditSender: React.FC<EditSenderProps> = ({
               fontWeight: 600,
               fontSize: '1.25rem',
               color: palette.black,
-              marginBottom: '16px',
             }}
           >
             Connection Type
@@ -413,8 +426,28 @@ const EditSender: React.FC<EditSenderProps> = ({
               value="production"
               control={<Radio color="secondary" />}
               label="Production"
+              disabled={isAddMode}
+              sx={
+                isAddMode
+                  ? {
+                      opacity: 0.5,
+                      '& .MuiFormControlLabel-label': {
+                        color: 'text.disabled',
+                      },
+                    }
+                  : {}
+              }
             />
           </RadioGroup>
+          {isAddMode && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ mt: 1, display: 'block' }}
+            >
+              *New senders must start with onboarding connection type
+            </Typography>
+          )}
         </Box>
 
         {/* Status Section */}
@@ -505,8 +538,8 @@ const EditSender: React.FC<EditSenderProps> = ({
       <Box
         sx={{
           backgroundColor: 'white',
-          borderRadius: '12px',
-          padding: '24px 32px',
+          borderRadius: '64px',
+          padding: '16px',
           boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
           margin: '16px auto 0',
           display: 'flex',

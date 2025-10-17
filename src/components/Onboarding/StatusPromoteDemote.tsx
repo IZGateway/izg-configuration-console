@@ -244,22 +244,6 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
           </DialogContent>
           <DialogActions sx={{ padding: '16px 24px' }}>
             <Button
-              onClick={handleCancel}
-              variant="outlined"
-              color="error"
-              sx={{
-                borderRadius: '24px',
-                padding: '8px 24px',
-                textTransform: 'none',
-                fontWeight: 500,
-                '&:hover': {
-                  backgroundColor: 'rgba(211, 47, 47, 0.04)',
-                },
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
               onClick={handleConfirm}
               variant="outlined"
               sx={{
@@ -385,22 +369,6 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
           </DialogContent>
           <DialogActions sx={{ padding: '16px 24px' }}>
             <Button
-              onClick={handleCancel}
-              variant="outlined"
-              color="error"
-              sx={{
-                borderRadius: '24px',
-                padding: '8px 24px',
-                textTransform: 'none',
-                fontWeight: 500,
-                '&:hover': {
-                  backgroundColor: 'rgba(211, 47, 47, 0.04)',
-                },
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
               onClick={handleConfirm}
               variant="outlined"
               sx={{
@@ -504,22 +472,6 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
           </Box>
         </DialogContent>
         <DialogActions sx={{ padding: '16px 24px' }}>
-          <Button
-            onClick={handleCancel}
-            variant="outlined"
-            color="error"
-            sx={{
-              borderRadius: '24px',
-              padding: '8px 24px',
-              textTransform: 'none',
-              fontWeight: 500,
-              '&:hover': {
-                backgroundColor: 'rgba(211, 47, 47, 0.04)',
-              },
-            }}
-          >
-            Cancel
-          </Button>
           <Button
             onClick={handleConfirm}
             variant="outlined"
