@@ -2,6 +2,11 @@ import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 
+/*
+  Test for https://izgateway.atlassian.net/wiki/spaces/IGDD/pages/22184696/UAT+Test+Plan+for+Config+Console+0.1
+  Section 12 -> h -> iii
+ */
+
 let context
 let page: Page
 
@@ -32,6 +37,19 @@ const badValues = {
   },
   msh11: {
     invalid: 'X',
+  },
+  password: {
+    tooShort: 'Short1!A', // Only 8 characters - needs 15
+    noDigits: 'NoDigitsHere!!AA', // No numbers
+    onlyOneDigit: 'OnlyOneDigit1!!AA', // Only 1 digit - needs 2
+    noLowercase: 'NOLOWERCASE11!!', // No lowercase letters
+    onlyOneLowercase: 'ONLYONELOWERa11!!', // Only 1 lowercase - needs 2
+    noUppercase: 'nouppercase11!!', // No uppercase letters
+    onlyOneUppercase: 'onlyoneupperA11!!', // Only 1 uppercase - needs 2
+    noSpecialChars: 'NoSpecialChars11AA', // No special characters
+    onlyOneSpecialChar: 'OnlyOneSpecial11AA!', // Only 1 special char - needs 2
+    startsWithEquals: '==ValidPassword11!!AA', // Starts with == which is not allowed
+    invalidSpecialChar: 'InvalidChar11AAzz*', // Contains * which is not in the allowed set
   }
 }
 
@@ -89,6 +107,19 @@ async function getToEditScreen(page: Page, destId: string) {
   await nextButton.click()
 
   return { shouldSkip: false, nextButton }
+}
+
+async function enablePasswordFields(page: Page) {
+  // Check if password fields are already visible
+  const newPasswordField = page.locator('input[name="newPassword"]')
+  const isVisible = await newPasswordField.isVisible().catch(() => false)
+
+  if (!isVisible) {
+    // Click the "CHANGE PASSWORD" button to reveal the password fields
+    // Searching for it this way because it didn't have an id
+    await page.getByRole('button', { name: /change password/i }).click()
+    await newPasswordField.waitFor({ state: 'visible' })
+  }
 }
 
 test.describe('Field validation - invalid values', () => {
@@ -220,6 +251,85 @@ test.describe('MSH field pair validation', () => {
 
       // Restore original values
       await field2.fill(originalField2)
+    })
+  })
+})
+
+test.describe('Password validation', () => {
+  const passwordFields = [
+    {
+      displayName: 'New Password',
+      inputName: 'newPassword',
+      errorId: 'new-password-helper-text',
+    },
+    {
+      displayName: 'Confirm Password',
+      inputName: 'confirmPassword',
+      errorId: 'confirm-new-password-helper-text',
+    },
+  ]
+
+  passwordFields.forEach(({ displayName, inputName, errorId }) => {
+    test(`Invalid ${displayName} values not accepted`, async () => {
+      const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
+      test.skip(shouldSkip, 'Edit button is not available for this destination')
+
+      // Enable password fields by clicking the "CHANGE PASSWORD" button
+      await enablePasswordFields(page)
+
+      const field = page.locator(`input[name="${inputName}"]`)
+      const errorMessage = page.locator(`#${errorId}`)
+
+      // Test each invalid password
+      for (const [key, value] of Object.entries(badValues.password)) {
+        await test.step(`Test invalid ${displayName}: ${key} ("${value}")`, async () => {
+          await field.clear()
+          await field.fill(value)
+          await page.locator('body').click()
+
+          await expect.soft(errorMessage).toBeVisible()
+          await expect.soft(nextButton).toBeDisabled()
+        })
+      }
+    })
+  })
+
+  test('Password mismatch is not accepted', async () => {
+    const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
+    test.skip(shouldSkip, 'Edit button is not available for this destination')
+
+    // Enable password fields by clicking the "CHANGE PASSWORD" button
+    await enablePasswordFields(page)
+
+    const newPasswordField = page.locator('input[name="newPassword"]')
+    const confirmPasswordField = page.locator('input[name="confirmPassword"]')
+    const confirmPasswordError = page.locator('#confirm-new-password-helper-text')
+
+    // Valid passwords but different values
+    const validPassword1 = 'ValidPassword11!!'
+    const validPassword2 = 'DifferentPass22@@'
+
+    await test.step('Fill newPassword and confirmPassword with different valid values', async () => {
+      await newPasswordField.clear()
+      await newPasswordField.fill(validPassword1)
+      await confirmPasswordField.clear()
+      await confirmPasswordField.fill(validPassword2)
+      await page.locator('body').click()
+
+      // Should show error for password mismatch
+      await expect.soft(confirmPasswordError).toBeVisible()
+      await expect.soft(confirmPasswordError).toContainText(/must match/i)
+      await expect.soft(nextButton).toBeDisabled()
+    })
+
+    await test.step('Update confirmPassword to match newPassword', async () => {
+      await confirmPasswordField.clear()
+      await confirmPasswordField.fill(validPassword1)
+      await page.locator('body').click()
+
+      // Error should clear when passwords match
+      await expect.soft(confirmPasswordError).not.toBeVisible()
+      await expect.soft(nextButton).toBeEnabled()
     })
   })
 })
