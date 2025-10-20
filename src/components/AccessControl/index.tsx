@@ -1,8 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react'
-import { Box, Typography, Tabs, Tab, IconButton } from '@mui/material'
+import { Box, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import palette from '../../styles/theme/palette'
 
 import AccessGroups from './AccessGroups'
@@ -86,12 +85,6 @@ const AccessControlComponent = () => {
     // TODO: Implement API call to delete group
   }
 
-  const handleBackToGroups = () => {
-    setEditGroupMode(false)
-    setSelectedGroup(null)
-    setIsAddingGroup(false)
-  }
-
   const handleSaveGroup = (updatedData: AccessGroup) => {
     if (isAddingGroup) {
       // Adding new group - generate new ID and add to state
@@ -152,71 +145,6 @@ const AccessControlComponent = () => {
 
   return (
     <div>
-      <Box>
-        <Box
-          sx={{
-            position: 'relative',
-            zIndex: 10,
-            height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-            marginBottom: '-16px',
-            backgroundColor: palette.white,
-          }}
-        >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              padding: 2,
-              gap: 1,
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <Typography
-                id="title-table"
-                sx={{ fontSize: '1.75rem', fontWeight: 700 }}
-                flexGrow={1}
-              >
-                {editGroupMode
-                  ? isAddingGroup
-                    ? 'Add New Access Group'
-                    : selectedGroup
-                    ? `Edit ${selectedGroup.groupName}`
-                    : 'Edit Access Group'
-                  : 'Access Control'}
-              </Typography>
-              {editGroupMode && (
-                <IconButton
-                  onClick={handleBackToGroups}
-                  sx={{
-                    color: palette.primary,
-                    marginLeft: 2,
-                    '&:hover': {
-                      backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                    },
-                  }}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-              )}
-            </Box>
-            {editGroupMode && (
-              <Typography variant="body2" color="text.secondary">
-                {isAddingGroup
-                  ? 'Create a new access group with roles and members. All fields marked with * are required.'
-                  : 'Update the access group details, roles, and members. Changes will affect all users in this group.'}
-              </Typography>
-            )}
-          </Box>
-        </Box>
-      </Box>
-
       {/* Tab Content */}
       <Box sx={{ mt: 0.8, borderRadius: 3, boxShadow: 0 }}>
         {editGroupMode ? (
