@@ -20,12 +20,13 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Tooltip,
 } from '@mui/material'
-import {
-  Info as InfoIcon,
-  Close as CloseIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material'
+import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 
@@ -45,6 +46,45 @@ const EditSender: React.FC<EditSenderProps> = ({
   const [formData, setFormData] = useState<SenderData>(senderData)
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
 
+  // Helper function to create labels with red asterisks
+  const createLabelWithRedAsterisk = (text: string) => (
+    <>
+      {text.replace(' *', '')}{' '}
+      <Box component="span" sx={{ color: palette.error }}>
+        *
+      </Box>
+    </>
+  )
+
+  // Available sender options for dropdown in add mode
+  const availableSenders = [
+    { name: 'CDC Atlanta IIS', certificate: 'cdc-atlanta.immunizations.gov' },
+    {
+      name: 'State Health Department IIS',
+      certificate: 'state-health-dept.gov',
+    },
+    { name: 'Regional Medical Center', certificate: 'regional-med-center.com' },
+    { name: 'County Public Health', certificate: 'county-public-health.org' },
+    {
+      name: 'University Hospital System',
+      certificate: 'university-hospital.edu',
+    },
+    {
+      name: 'Private Practice Network',
+      certificate: 'private-practice-net.com',
+    },
+    { name: 'Pharmacy Chain IIS', certificate: 'pharmacy-chain.com' },
+    {
+      name: 'Laboratory Information System',
+      certificate: 'lab-info-system.net',
+    },
+    { name: 'Electronic Health Record System', certificate: 'ehr-system.com' },
+    {
+      name: 'Other Healthcare Provider',
+      certificate: 'healthcare-provider.org',
+    },
+  ]
+
   const handleInputChange = (
     field: keyof SenderData,
     value: string | boolean
@@ -53,6 +93,37 @@ const EditSender: React.FC<EditSenderProps> = ({
       ...prev,
       [field]: value,
     }))
+  }
+
+  const handleSenderChange = (senderName: string) => {
+    const selectedSender = availableSenders.find(
+      (sender) => sender.name === senderName
+    )
+    setFormData((prev) => ({
+      ...prev,
+      sender: senderName,
+      senderDetails: selectedSender?.certificate || '',
+    }))
+  }
+
+  // Form validation for required fields
+  const isFormValid = () => {
+    const requiredFields = [
+      'id',
+      'sender',
+      'senderDetails',
+      'destination',
+      'destinationCode',
+      'msh3',
+      'msh4',
+      'facilityId',
+      'status',
+    ]
+
+    return requiredFields.every((field) => {
+      const value = formData[field as keyof SenderData]
+      return value !== null && value !== undefined && value !== ''
+    })
   }
 
   const getStatusOptions = () => {
@@ -153,8 +224,11 @@ const EditSender: React.FC<EditSenderProps> = ({
             >
               {isAddMode ? 'Add New Sender' : `Edit Sender: ${formData.sender}`}
             </Typography>
-            <IconButton
+            <Button
               onClick={onCancel}
+              variant="text"
+              size="small"
+              endIcon={<CloseIcon />}
               sx={{
                 color: palette.primary,
                 '&:hover': {
@@ -162,8 +236,8 @@ const EditSender: React.FC<EditSenderProps> = ({
                 },
               }}
             >
-              <ArrowBackIcon />
-            </IconButton>
+              Close
+            </Button>
           </Box>
           <Typography variant="body2" color="text.secondary">
             {isAddMode ? (
@@ -225,7 +299,7 @@ const EditSender: React.FC<EditSenderProps> = ({
             }}
           >
             <TextField
-              label="Sender Identifier *"
+              label={createLabelWithRedAsterisk('Sender Identifier *')}
               value={formData.id}
               onChange={(e) => handleInputChange('id', e.target.value)}
               variant="outlined"
@@ -246,36 +320,59 @@ const EditSender: React.FC<EditSenderProps> = ({
               gap: '16px',
             }}
           >
+            {isAddMode ? (
+              <FormControl fullWidth size="medium">
+                <InputLabel>
+                  {createLabelWithRedAsterisk('Sender Name *')}
+                </InputLabel>
+                <Select
+                  value={formData.sender}
+                  label="Sender Name *"
+                  onChange={(e) => handleSenderChange(e.target.value)}
+                  sx={{
+                    borderRadius: '8px',
+                  }}
+                >
+                  {availableSenders.map((sender) => (
+                    <MenuItem key={sender.name} value={sender.name}>
+                      {sender.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <TextField
+                label={createLabelWithRedAsterisk('Sender Name *')}
+                value={formData.sender}
+                onChange={(e) => handleInputChange('sender', e.target.value)}
+                variant="outlined"
+                fullWidth
+                size="medium"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '8px',
+                  },
+                }}
+              />
+            )}
             <TextField
-              label="Sender Name *"
-              value={formData.sender}
-              onChange={(e) => handleInputChange('sender', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label="Sender Certificate Name *"
+              label={createLabelWithRedAsterisk('Sender Certificate Name *')}
               value={formData.senderDetails}
-              onChange={(e) =>
-                handleInputChange('senderDetails', e.target.value)
-              }
               variant="outlined"
               fullWidth
               size="medium"
-              disabled={!isAddMode}
+              InputProps={{
+                readOnly: true,
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',
                   fontFamily: 'monospace',
+                  backgroundColor: '#f5f5f5',
                 },
                 '& .MuiInputBase-input': {
                   fontFamily: 'monospace',
+                  cursor: 'default',
                 },
               }}
             />
@@ -303,7 +400,7 @@ const EditSender: React.FC<EditSenderProps> = ({
             }}
           >
             <TextField
-              label="Destination *"
+              label={createLabelWithRedAsterisk('Destination *')}
               value={formData.destination}
               onChange={(e) => handleInputChange('destination', e.target.value)}
               variant="outlined"
@@ -316,7 +413,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               }}
             />
             <TextField
-              label="Destination Code *"
+              label={createLabelWithRedAsterisk('Destination Code *')}
               value={formData.destinationCode}
               onChange={(e) =>
                 handleInputChange('destinationCode', e.target.value)
@@ -354,7 +451,7 @@ const EditSender: React.FC<EditSenderProps> = ({
             }}
           >
             <TextField
-              label="MSH-3 *"
+              label={createLabelWithRedAsterisk('MSH-3 *')}
               value={formData.msh3}
               onChange={(e) => handleInputChange('msh3', e.target.value)}
               variant="outlined"
@@ -367,7 +464,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               }}
             />
             <TextField
-              label="MSH-4 *"
+              label={createLabelWithRedAsterisk('MSH-4 *')}
               value={formData.msh4}
               onChange={(e) => handleInputChange('msh4', e.target.value)}
               variant="outlined"
@@ -380,7 +477,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               }}
             />
             <TextField
-              label="Facility ID *"
+              label={createLabelWithRedAsterisk('Facility ID *')}
               value={formData.facilityId}
               onChange={(e) => handleInputChange('facilityId', e.target.value)}
               variant="outlined"
@@ -395,60 +492,28 @@ const EditSender: React.FC<EditSenderProps> = ({
           </Box>
         </Box>
 
-        {/* Connection Type Section */}
-        <Box sx={{ marginBottom: '32px' }}>
-          <FormLabel
-            component="legend"
-            sx={{
-              fontWeight: 600,
-              fontSize: '1.25rem',
-              color: palette.black,
-            }}
-          >
-            Connection Type
-          </FormLabel>
-          <RadioGroup
-            value={formData.connectionType}
-            onChange={(e) =>
-              handleInputChange(
-                'connectionType',
-                e.target.value as 'production' | 'onboarding'
-              )
-            }
-            row
-          >
-            <FormControlLabel
-              value="onboarding"
-              control={<Radio color="secondary" />}
-              label="Onboarding"
-            />
-            <FormControlLabel
-              value="production"
-              control={<Radio color="secondary" />}
-              label="Production"
-              disabled={isAddMode}
-              sx={
-                isAddMode
-                  ? {
-                      opacity: 0.5,
-                      '& .MuiFormControlLabel-label': {
-                        color: 'text.disabled',
-                      },
-                    }
-                  : {}
-              }
-            />
-          </RadioGroup>
-          {isAddMode && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ mt: 1, display: 'block' }}
+        {/* Connection Type Callout - Only shown in Add Mode */}
+        {isAddMode && (
+          <Box sx={{ marginBottom: '32px' }}>
+            <Box
+              sx={{
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                padding: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
             >
-              *New senders must start with onboarding connection type
-            </Typography>
-          )}
-        </Box>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Connection Type:</strong> New senders must start with
+                onboarding connection type and can be upgraded to production
+                after validation.
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         {/* Status Section */}
         <Box sx={{ marginBottom: '32px' }}>
@@ -490,7 +555,14 @@ const EditSender: React.FC<EditSenderProps> = ({
         </Box>
 
         {/* Connection Section */}
-        <Box sx={{ marginBottom: '32px' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 1,
+            mb: -2,
+          }}
+        >
           <Typography
             variant="h6"
             sx={{
@@ -501,21 +573,89 @@ const EditSender: React.FC<EditSenderProps> = ({
           >
             Connection
           </Typography>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 1,
+            }}
+          >
             <Switch
               checked={formData.isConnected}
               onChange={(e) =>
                 handleInputChange('isConnected', e.target.checked)
               }
               color="secondary"
+              sx={{
+                width: 62,
+                height: 30,
+                padding: 0,
+                '& .MuiSwitch-switchBase': {
+                  padding: 0,
+                  boxShadow: 'none',
+
+                  transitionDuration: '300ms',
+                  '&.Mui-checked': {
+                    transform: 'translateX(32px)',
+                    color: '#fff',
+                    '& + .MuiSwitch-track': {
+                      opacity: 1,
+                      border: 0,
+                      boxShadow: 'none',
+                    },
+                    '&.Mui-disabled + .MuiSwitch-track': {},
+                  },
+                  '&.Mui-focusVisible .MuiSwitch-thumb': {
+                    color: palette.secondary,
+                  },
+                  '&.Mui-disabled .MuiSwitch-thumb': {
+                    color: '#fafafa',
+                  },
+                  '&.Mui-disabled + .MuiSwitch-track': {
+                    opacity: 0.3,
+                  },
+                },
+                '& .MuiSwitch-thumb': {
+                  boxShadow: 'none',
+                  width: 30,
+                  height: 30,
+                  border: `1px solid ${palette.secondary}`,
+                },
+                '& .MuiSwitch-track': {
+                  borderRadius: 64 / 2,
+                  backgroundColor: '#E9E9EA',
+                  opacity: 1,
+                  transition: 'background-color 0.3s',
+                  position: 'relative',
+                  dropShadow: 'none',
+
+                  '&::before, &::after': {
+                    content: '""',
+                    position: 'absolute',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 16,
+                    height: 16,
+                  },
+                  '&::before': {
+                    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' height='16' width='16' viewBox='0 0 24 24'><text x='50%' y='50%' text-anchor='middle' dy='0.3em' font-family='Arial' font-size='8' fill='white'>ON</text></svg>")`,
+                    left: 8,
+                  },
+                  '&::after': {
+                    backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' height='16' width='16' viewBox='0 0 24 24'><text x='50%' y='50%' text-anchor='middle' dy='0.3em' font-family='Arial' font-size='7' fill='%23666'>OFF</text></svg>")`,
+                    right: 8,
+                  },
+                },
+              }}
             />
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              {formData.isConnected ? 'Connected' : 'Disconnected'}
-            </Typography>
           </Box>
         </Box>
-
+        <Typography mb={2} variant="caption" color={'ButtonText'}>
+          {formData.isConnected
+            ? 'The connection is connected'
+            : 'The connection is disconnected'}
+        </Typography>
         {/* Help Text */}
         <Box>
           <Typography variant="body2" color="text.secondary">
@@ -563,24 +703,63 @@ const EditSender: React.FC<EditSenderProps> = ({
         >
           Cancel
         </Button>
-        <Button
-          variant="outlined"
-          onClick={handleSave}
+
+        <Box
           sx={{
-            borderRadius: '24px',
-            padding: '12px 32px',
-            textTransform: 'none',
-            fontWeight: 500,
-            borderColor: palette.primary,
-            color: palette.primary,
-            '&:hover': {
-              borderColor: palette.primaryDark,
-              backgroundColor: 'rgba(25, 118, 210, 0.04)',
-            },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 1,
           }}
         >
-          {isAddMode ? 'Add Sender' : 'Save Changes'}
-        </Button>
+          <Tooltip
+            title={
+              isAddMode && !isFormValid()
+                ? 'Please fill out all required fields before submitting'
+                : ''
+            }
+            placement="top"
+            arrow
+          >
+            <span>
+              <Button
+                variant="outlined"
+                onClick={handleSave}
+                disabled={isAddMode && !isFormValid()}
+                sx={{
+                  borderRadius: '24px',
+                  padding: '12px 32px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderColor:
+                    isAddMode && !isFormValid()
+                      ? 'rgba(0, 0, 0, 0.23)'
+                      : palette.primary,
+                  color:
+                    isAddMode && !isFormValid()
+                      ? 'rgba(0, 0, 0, 0.26)'
+                      : palette.primary,
+                  '&:hover': {
+                    borderColor:
+                      isAddMode && !isFormValid()
+                        ? 'rgba(0, 0, 0, 0.23)'
+                        : palette.primaryDark,
+                    backgroundColor:
+                      isAddMode && !isFormValid()
+                        ? 'transparent'
+                        : 'rgba(25, 118, 210, 0.04)',
+                  },
+                  '&:disabled': {
+                    borderColor: 'rgba(0, 0, 0, 0.12)',
+                    color: 'rgba(0, 0, 0, 0.26)',
+                  },
+                }}
+              >
+                {isAddMode ? 'Add Sender' : 'Save Changes'}
+              </Button>
+            </span>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* Status Information Dialog */}
@@ -610,7 +789,7 @@ const EditSender: React.FC<EditSenderProps> = ({
                 ? 'Production'
                 : 'Onboarding'}{' '}
             </Typography>
-            <IconButton
+            <Button
               onClick={() => setStatusInfoOpen(false)}
               sx={{
                 textTransform: 'none',
@@ -618,7 +797,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               }}
             >
               <CloseIcon />
-            </IconButton>
+            </Button>
           </Box>
         </DialogTitle>
         <DialogContent>
