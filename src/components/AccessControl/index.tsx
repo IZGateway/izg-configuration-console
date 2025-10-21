@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react'
-import { Box, Tabs, Tab } from '@mui/material'
+import { Box, Typography, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
 import palette from '../../styles/theme/palette'
@@ -145,6 +145,46 @@ const AccessControlComponent = () => {
 
   return (
     <div>
+      <Box>
+        {!editGroupMode && (
+          <Box
+            sx={{
+              position: 'relative',
+              zIndex: 10,
+              height: 'auto',
+              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+              marginBottom: '-16px',
+              backgroundColor: palette.white,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                padding: 2,
+                gap: 1,
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <Typography
+                  id="title-table"
+                  sx={{ fontSize: '1.75rem', fontWeight: 700 }}
+                  flexGrow={1}
+                >
+                  Access Control
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        )}
+      </Box>
+
       {/* Tab Content */}
       <Box sx={{ mt: 0.8, borderRadius: 3, boxShadow: 0 }}>
         {editGroupMode ? (

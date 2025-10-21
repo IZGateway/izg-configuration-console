@@ -10,12 +10,8 @@ import {
   Select,
   MenuItem,
   OutlinedInput,
-  IconButton,
 } from '@mui/material'
-import {
-  Close as CloseIcon,
-  ArrowBack as ArrowBackIcon,
-} from '@mui/icons-material'
+import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type AccessGroup } from './mockData'
 
@@ -127,8 +123,10 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
                 ? 'Add New Access Group'
                 : `Edit Access Group: ${formData.groupName}`}
             </Typography>
-            <IconButton
+            <Button
               onClick={onCancel}
+              endIcon={<CloseIcon />}
+              size="small"
               sx={{
                 color: palette.primary,
                 '&:hover': {
@@ -136,8 +134,8 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
                 },
               }}
             >
-              <ArrowBackIcon />
-            </IconButton>
+              Close
+            </Button>
           </Box>
           <Typography variant="body2" color="text.secondary">
             {isAddMode
@@ -186,6 +184,9 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
               },
+              '& .MuiInputLabel-asterisk': {
+                color: palette.error,
+              },
             }}
           />
 
@@ -198,7 +199,6 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             fullWidth
             multiline
             rows={3}
-            required
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
@@ -276,8 +276,17 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
 
           {/* Roles Section */}
           <Box>
-            <FormControl fullWidth>
-              <InputLabel shrink>Roles</InputLabel>
+            <FormControl fullWidth required>
+              <InputLabel
+                shrink
+                sx={{
+                  '& .MuiInputLabel-asterisk': {
+                    color: palette.error,
+                  },
+                }}
+              >
+                Roles
+              </InputLabel>
               <Select
                 multiple
                 value={formData.roles}
@@ -387,7 +396,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
         <Button
           variant="outlined"
           onClick={handleSave}
-          disabled={!formData.groupName.trim() || !formData.description.trim()}
+          disabled={!formData.groupName.trim() || formData.roles.length === 0}
           sx={{
             borderRadius: '24px',
             padding: '12px 32px',

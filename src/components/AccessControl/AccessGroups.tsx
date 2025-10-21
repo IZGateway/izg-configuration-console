@@ -338,6 +338,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
             onClick={handleConfirmDelete}
             variant="outlined"
             color="error"
+            sx={{ textTransform: 'none' }}
           >
             Delete Group
           </Button>
