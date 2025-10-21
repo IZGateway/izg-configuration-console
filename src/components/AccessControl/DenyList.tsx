@@ -1,23 +1,29 @@
 import React, { useContext, useState } from 'react'
+import { DataGrid, GridColDef, GridFooter } from '@mui/x-data-grid'
 import {
-  DataGrid,
-  GridColDef,
-  GridFooter,
-  GridSlots,
-  GridToolbarContainer,
-  GridToolbarFilterButton,
-  GridToolbarQuickFilter,
-} from '@mui/x-data-grid'
-import { Box, Typography } from '@mui/material'
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+} from '@mui/material'
 import BlockIcon from '@mui/icons-material/Block'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
 import { mockDenyListData, type DenyListItem } from './mockData'
+import { useSession } from 'next-auth/react'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
-      marginTop: '-8px',
+      marginTop: '-7px',
       zIndex: 1,
       paddingTop: '1em',
       border: 'none',
@@ -90,18 +96,36 @@ const dataGridCustom = {
   },
 }
 
-const CustomFooter = () => {
+const CustomFooter = ({ onAdd, canAdd }) => {
   return (
     <Box
       sx={{
         display: 'flex',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
         alignItems: 'center',
         gap: '16px',
         margin: '2em 0',
+        width: '100%',
       }}
     >
-      {/* Pagination Box */}
+      {canAdd ? (
+        <Button
+          color="primary"
+          onClick={onAdd}
+          variant="text"
+          startIcon={<AddIcon />}
+          sx={{
+            textTransform: 'none',
+            fontWeight: 500,
+            borderRadius: '60px',
+            backgroundColor: palette.white,
+            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+            padding: '16px 24px',
+          }}
+        >
+          Add to Deny List
+        </Button>
+      ) : null}
       <Box
         sx={{
           backgroundColor: palette.white,
@@ -112,33 +136,6 @@ const CustomFooter = () => {
         <GridFooter />
       </Box>
     </Box>
-  )
-}
-
-const CustomToolbar = ({
-  setFilterButtonEl,
-}: {
-  setFilterButtonEl: React.Dispatch<
-    React.SetStateAction<HTMLButtonElement | null>
-  >
-}) => {
-  return (
-    <GridToolbarContainer>
-      <GridToolbarQuickFilter />
-      <Box
-        sx={{
-          marginLeft: 'auto',
-          display: 'flex',
-          flexDirection: 'row',
-          gap: '8px',
-          '@media (max-width: 768px)': {
-            flexDirection: 'column',
-          },
-        }}
-      >
-        <GridToolbarFilterButton ref={setFilterButtonEl} />
-      </Box>
-    </GridToolbarContainer>
   )
 }
 
@@ -183,7 +180,19 @@ interface DenyListProps {
   data?: DenyListItem[]
 }
 
-const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
+interface DenyListComponentProps extends DenyListProps {
+  onAddDeny?: () => void
+  onDeleteDeny?: (id: string) => void
+}
+
+const DenyList: React.FC<DenyListComponentProps> = ({
+  data = [],
+  onAddDeny,
+  onDeleteDeny,
+}) => {
+  const { data: session } = useSession()
+  const isAdminOrIZGOp =
+    session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
   const pageSize = sessionContext?.pageSize || 25
   const setPageSize =
@@ -191,12 +200,15 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
     (() => {
       // setPageSize not available
     })
-  const [filterButtonEl, setFilterButtonEl] =
-    React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [renderMode, setRenderMode] = useState<
     'mobile' | 'desktop' | 'transitioning'
   >('desktop')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [rowToDelete, setRowToDelete] = useState<DenyListItem | null>(null)
+  // Derive displayed data from parent prop so updates (add/delete) are reflected
+  const denyListData: DenyListItem[] =
+    data && data.length > 0 ? data : mockDenyListData
 
   // Handle responsive design
   React.useEffect(() => {
@@ -212,7 +224,7 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
 
   // Filter data based on search term
   const filteredData = React.useMemo(() => {
-    const dataToFilter = data.length > 0 ? data : mockDenyListData
+    const dataToFilter = denyListData
 
     if (!searchTerm) return dataToFilter
 
@@ -224,7 +236,29 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
         row.deniedBy?.toLowerCase().includes(searchLower)
       )
     })
-  }, [data, searchTerm])
+  }, [denyListData, searchTerm])
+
+  // Call parent handler for add
+  const handleAdd = () => {
+    if (onAddDeny) onAddDeny()
+  }
+
+  const handleDelete = (row) => {
+    setRowToDelete(row)
+    setDeleteDialogOpen(true)
+  }
+  const handleConfirmDelete = () => {
+    // Delegate actual delete to parent so data source stays in sync
+    if (rowToDelete && typeof onDeleteDeny === 'function') {
+      onDeleteDeny(rowToDelete.id)
+    }
+    setDeleteDialogOpen(false)
+    setRowToDelete(null)
+  }
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false)
+    setRowToDelete(null)
+  }
 
   const columns: GridColDef[] = [
     {
@@ -308,6 +342,34 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
         </Typography>
       ),
     },
+    {
+      field: 'actions',
+      headerName: 'ACTIONS',
+      sortable: false,
+      filterable: false,
+      width: 80,
+      align: 'center',
+      headerAlign: 'center',
+      renderCell: (params) =>
+        isAdminOrIZGOp ? (
+          <Tooltip arrow title="Delete">
+            <IconButton
+              size="small"
+              color="error"
+              sx={{
+                borderRadius: 90,
+                background: palette.white,
+                boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+                width: 35,
+                height: 35,
+              }}
+              onClick={() => handleDelete(params.row)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        ) : null,
+    },
   ]
 
   return (
@@ -365,7 +427,7 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
         </Box>
       ) : (
         /* Desktop DataGrid */
-        <Box sx={{ mt: -1.8 }}>
+        <Box>
           <DataGrid
             sx={dataGridCustom}
             rows={filteredData}
@@ -387,17 +449,12 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
             density={'comfortable'}
             pagination
             slots={{
-              toolbar: CustomToolbar as GridSlots['toolbar'],
-              footer: () => <CustomFooter />,
+              footer: () => (
+                <CustomFooter onAdd={handleAdd} canAdd={isAdminOrIZGOp} />
+              ),
             }}
             slotProps={{
-              toolbar: {
-                setFilterButtonEl,
-                showQuickFilter: true,
-                quickFilterProps: { debounceMs: 500 },
-              },
               panel: {
-                anchorEl: filterButtonEl,
                 sx: {
                   '& .MuiTypography-root': {
                     fontSize: 20,
@@ -439,6 +496,60 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
           />
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+        PaperProps={{
+          sx: {
+            boxShadow: 'none',
+            border: `1px solid ${palette.border}`,
+          },
+        }}
+      >
+        <DialogTitle
+          id="delete-dialog-title"
+          sx={{ fontWeight: 600, fontSize: '1.25rem', pb: 1 }}
+        >
+          Delete Deny List Entry
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText
+            id="delete-dialog-description"
+            sx={{ color: 'text.primary', fontSize: '1rem', lineHeight: 1.6 }}
+          >
+            Are you sure you want to delete the denied item &quot;
+            <Box component="span" sx={{ fontWeight: 600 }}>
+              {rowToDelete?.name}
+            </Box>
+            &quot;?
+          </DialogContentText>
+          <DialogContentText
+            sx={{
+              color: 'text.secondary',
+              fontSize: '0.875rem',
+              mt: 2,
+              lineHeight: 1.5,
+            }}
+          >
+            This action cannot be undone. Please confirm that you want to
+            proceed with this deletion.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ padding: '16px 24px', gap: 1 }}>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="outlined"
+            color="error"
+            sx={{ textTransform: 'none' }}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }

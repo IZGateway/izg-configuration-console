@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Box, Typography, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
@@ -6,13 +7,19 @@ import palette from '../../styles/theme/palette'
 
 import AccessGroups from './AccessGroups'
 import DenyList from './DenyList'
+import AddDenyList from './AddDenyList'
 
 import EditAccessGroup from './EditAccessGroup'
 import AddAccessGroup from './AddAccessGroup'
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 
-import { type AccessGroup, mockAccessGroups } from './mockData'
+import {
+  type AccessGroup,
+  mockAccessGroups,
+  mockDenyListData,
+  type DenyListItem,
+} from './mockData'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -44,6 +51,36 @@ const AccessControlComponent = () => {
   const [selectedGroup, setSelectedGroup] = useState<AccessGroup | null>(null)
   const [isAddingGroup, setIsAddingGroup] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
+  // Deny List add mode state
+  const [isAddingDeny, setIsAddingDeny] = useState(false)
+  // Deny List data state (seeded with mock data so table shows demo rows and new entries append)
+  const [denyListData, setDenyListData] =
+    useState<DenyListItem[]>(mockDenyListData)
+  // Deny List add logic
+  const handleAddDeny = () => setIsAddingDeny(true)
+  const handleSaveDeny = (item) => {
+    setDenyListData((prev) => [...prev, item])
+    setIsAddingDeny(false)
+    setAlert({
+      level: 'success',
+      jurisdiction: '',
+      dest_type: '',
+      message: `Deny list entry has been successfully added.`,
+    })
+  }
+  const handleDeleteDeny = (id: string) => {
+    setDenyListData((prev) => prev.filter((item) => item.id !== id))
+    setAlert({
+      level: 'success',
+      jurisdiction: '',
+      dest_type: '',
+      message: `Deny list entry has been successfully deleted.`,
+    })
+  }
+  const handleCancelDeny = () => setIsAddingDeny(false)
+
+  const { data: session } = useSession()
+  const currentUserName = session?.user?.name || 'Unknown'
 
   // Manage actual data state
   const [accessGroupsData, setAccessGroupsData] =
@@ -141,6 +178,16 @@ const AccessControlComponent = () => {
       dest_type: '',
       message: '',
     })
+  }
+
+  if (isAddingDeny) {
+    return (
+      <AddDenyList
+        onSave={handleSaveDeny}
+        onCancel={handleCancelDeny}
+        userName={currentUserName}
+      />
+    )
   }
 
   return (
@@ -246,7 +293,11 @@ const AccessControlComponent = () => {
 
             {/* Tab Panel 1 - Deny List */}
             <TabPanel value={tabValue} index={1}>
-              <DenyList />
+              <DenyList
+                data={denyListData}
+                onAddDeny={handleAddDeny}
+                onDeleteDeny={handleDeleteDeny}
+              />
             </TabPanel>
           </>
         )}
