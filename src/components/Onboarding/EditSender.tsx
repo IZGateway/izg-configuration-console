@@ -129,8 +129,8 @@ const EditSender: React.FC<EditSenderProps> = ({
   const getStatusOptions = () => {
     if (formData.connectionType === 'production') {
       return [
+        { value: 'Production Validate', label: 'Production Validate' },
         { value: 'Production Live', label: 'Production Live' },
-        { value: 'Production Ready', label: 'Production Ready' },
       ]
     } else {
       return [
@@ -144,14 +144,14 @@ const EditSender: React.FC<EditSenderProps> = ({
     if (formData.connectionType === 'production') {
       return [
         {
+          status: 'Production Validate',
+          description: 'Sender is approved for production but not yet active',
+          requirements: 'All testing passed, awaiting go-live approval',
+        },
+        {
           status: 'Production Live',
           description: 'Sender is actively transmitting production data',
           requirements: 'Full validation complete, certificates verified',
-        },
-        {
-          status: 'Production Ready',
-          description: 'Sender is approved for production but not yet active',
-          requirements: 'All testing passed, awaiting go-live approval',
         },
       ]
     } else {
@@ -559,8 +559,8 @@ const EditSender: React.FC<EditSenderProps> = ({
           sx={{
             display: 'flex',
             flexDirection: 'row',
-            gap: 1,
-            mb: -2,
+            gap: 3,
+            mb: -1,
           }}
         >
           <Typography
@@ -578,7 +578,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: 1,
+              gap: 4,
             }}
           >
             <Switch
@@ -599,6 +599,9 @@ const EditSender: React.FC<EditSenderProps> = ({
                   '&.Mui-checked': {
                     transform: 'translateX(32px)',
                     color: '#fff',
+                    '& .MuiSwitch-thumb': {
+                      border: `1px solid ${palette.secondary}`,
+                    },
                     '& + .MuiSwitch-track': {
                       opacity: 1,
                       border: 0,
@@ -610,17 +613,18 @@ const EditSender: React.FC<EditSenderProps> = ({
                     color: palette.secondary,
                   },
                   '&.Mui-disabled .MuiSwitch-thumb': {
-                    color: '#fafafa',
+                    color: '#FFFFFF',
+                    border: `1px solid ${palette.divider}`,
                   },
                   '&.Mui-disabled + .MuiSwitch-track': {
-                    opacity: 0.3,
+                    opacity: 1,
                   },
                 },
                 '& .MuiSwitch-thumb': {
                   boxShadow: 'none',
                   width: 30,
                   height: 30,
-                  border: `1px solid ${palette.secondary}`,
+                  border: `1px solid ${palette.divider}`,
                 },
                 '& .MuiSwitch-track': {
                   borderRadius: 64 / 2,
@@ -651,13 +655,15 @@ const EditSender: React.FC<EditSenderProps> = ({
             />
           </Box>
         </Box>
-        <Typography mb={2} variant="caption" color={'ButtonText'}>
-          {formData.isConnected
-            ? 'The connection is connected'
-            : 'The connection is disconnected'}
-        </Typography>
-        {/* Help Text */}
         <Box>
+          <Typography variant="caption" color={'ButtonText'}>
+            {formData.isConnected
+              ? 'Connected to the server'
+              : 'Disconnected from the server'}
+          </Typography>
+        </Box>
+        {/* Help Text */}
+        <Box sx={{ marginTop: '32px' }}>
           <Typography variant="body2" color="text.secondary">
             Need help? Or have a unique requests, please contact:{' '}
             <Box

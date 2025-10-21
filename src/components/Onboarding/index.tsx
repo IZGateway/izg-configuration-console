@@ -49,13 +49,25 @@ const dataGridCustom = {
     marginTop: '-8px',
     backgroundColor: palette.white,
     borderRadius: '0 0 30px 30px',
-    border: `1px solid ${palette.border}`,
+    borderLeft: `1px solid ${palette.border}`,
+    borderRight: `1px solid ${palette.border}`,
+    borderTop: `1px solid ${palette.border}`,
+    borderBottom: 'none',
     paddingBottom: '1em',
     boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
     overflowX: 'auto',
   },
+  // Remove top border from the DataGrid footer container
+  '& .MuiDataGrid-footerContainer': {
+    borderTop: 'none',
+    justifyContent: 'flex-end',
+  },
   '& .MuiDataGrid-row:hover': {
     bgcolor: '#00000010',
+  },
+  // Remove bottom border from the last row
+  '& .MuiDataGrid-row:last-of-type .MuiDataGrid-cell': {
+    borderBottom: 'none',
   },
   '& .MuiFormControl-root.MuiTextField-root.css-3be3ve-MuiFormControl-root-MuiTextField-root-MuiDataGrid-toolbarQuickFilter':
     {
@@ -99,6 +111,7 @@ const dataGridCustom = {
   },
   '& .MuiDataGrid-footerContainer': {
     justifyContent: 'flex-end',
+    borderTop: 'none',
   },
   '& .MuiTablePagination-actions': {
     color: palette.primary,
@@ -361,8 +374,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       field: 'sender',
       headerName: 'SENDERS',
       flex: 0.5,
-      minWidth: 200,
-      maxWidth: 300,
+      minWidth: 100,
       renderCell: (params) => (
         <Box display={'flex'} flexDirection="column" gap={0.5}>
           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -383,7 +395,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       headerName: 'DESTINATIONS',
       flex: 0.5,
       minWidth: 200,
-      maxWidth: 300,
       renderCell: (params) => (
         <Box display={'flex'} flexDirection="column" gap={0.5}>
           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
@@ -402,8 +413,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       field: 'lastUpdated',
       headerName: 'LAST UPDATED',
       flex: 0.3,
-      minWidth: 120,
-      maxWidth: 200,
+      minWidth: 80,
       renderCell: (params) => (
         <Typography variant="body2">{params.row.lastUpdated}</Typography>
       ),
@@ -413,7 +423,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       headerName: 'STATUS',
       flex: 0.3,
       minWidth: 120,
-      maxWidth: 200,
       renderCell: (params) => {
         return (
           <StatusPromoteDemote
@@ -505,7 +514,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             variant="h6"
             sx={{
               fontWeight: 'bold',
-              color: palette.primary,
+              color: 'textPrimary',
               fontSize: '1rem',
             }}
           >
@@ -564,16 +573,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             justifyContent: 'flex-start',
           }}
         >
-          <Button
+          <IconButton
             size="small"
-            startIcon={<EditIcon />}
-            variant="outlined"
             color="primary"
             sx={actionButtonStyle}
             onClick={() => handleEditSender(row.id)}
           >
-            Edit
-          </Button>
+            <EditIcon fontSize="small" />
+          </IconButton>
           <IconButton
             sx={actionButtonStyle}
             size="small"
@@ -588,16 +595,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
               />
             )}
           </IconButton>
-          <Button
+          <IconButton
             size="small"
-            startIcon={<DeleteOutlineIcon />}
-            variant="outlined"
             color="error"
             sx={actionButtonStyle}
             onClick={() => handleDeleteSender(row.id)}
           >
-            Delete
-          </Button>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
         </Box>
       </Box>
     )
@@ -687,6 +692,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
           boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
           marginBottom: '16px',
           backgroundColor: palette.white,
+          borderRadius: '8px',
         }}
       >
         <Box
@@ -728,6 +734,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
+              mt: -3,
             }}
           >
             <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
@@ -793,7 +800,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
         </Box>
       ) : (
         /* Desktop DataGrid */
-        <Box sx={{ mt: -4 }}>
+        <Box sx={{ mt: -5 }}>
           <DataGrid
             sx={dataGridCustom}
             rows={filteredData}
