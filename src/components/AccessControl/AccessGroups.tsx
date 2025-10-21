@@ -85,8 +85,9 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
       <Box
         sx={{
           backgroundColor: palette.white,
-          boxShadow: 2,
+          boxShadow: 1,
           borderRadius: '0px 0px 16px 16px',
+          border: `1px solid ${palette.border}`,
           p: 3,
         }}
       >
@@ -114,11 +115,11 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
               key={group.id}
               sx={{
                 borderRadius: '12px',
-                boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.1)',
+                boxShadow: '0px 0px 5px rgba(0, 0, 0, 0.1)',
                 border: `1px solid ${palette.border}`,
                 position: 'relative',
                 '&:hover': {
-                  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',
+                  boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
                 },
               }}
             >

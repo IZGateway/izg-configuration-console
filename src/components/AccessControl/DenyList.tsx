@@ -365,7 +365,7 @@ const DenyList: React.FC<DenyListProps> = ({ data = [] }) => {
         </Box>
       ) : (
         /* Desktop DataGrid */
-        <Box sx={{ mt: -2 }}>
+        <Box sx={{ mt: -1.8 }}>
           <DataGrid
             sx={dataGridCustom}
             rows={filteredData}
