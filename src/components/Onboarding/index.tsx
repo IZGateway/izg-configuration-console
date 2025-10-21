@@ -109,10 +109,6 @@ const dataGridCustom = {
       alignItems: 'stretch',
     },
   },
-  '& .MuiDataGrid-footerContainer': {
-    justifyContent: 'flex-end',
-    borderTop: 'none',
-  },
   '& .MuiTablePagination-actions': {
     color: palette.primary,
   },
