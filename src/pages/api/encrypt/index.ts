@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { encryptDb } from '../../../lib/security/crypto/DbCrypto'
+import logger from '../../../../logger'
 
 let dbClient: Awaited<ReturnType<typeof DbClientFactory.getDbClient>>
 
@@ -21,7 +22,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       .status(200)
       .json({ success: true, message: 'Passwords encrypted successfully' })
   } catch (err) {
-    console.error('Encryption error:', err)
+    logger.error('Encryption error during password encryption', {
+      error: err.message,
+      stack: err.stack,
+      operation: 'encrypt_passwords',
+    })
     res
       .status(500)
       .json({ success: false, error: 'Failed to encrypt passwords' })

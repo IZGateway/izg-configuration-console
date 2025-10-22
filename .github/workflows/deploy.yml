@@ -5,11 +5,9 @@ on:
   push:
     branches:
       - 'release/**'
-      - 'develop'
   pull_request:
     branches:
-      - 'release/**'
-      - 'develop'
+      - develop
 
 env:
   GITHUB_REGISTRY_PREFIX: ghcr.io
@@ -31,7 +29,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '24.x'
       - name: Get current date
         id: date
         run: echo "RELEASE_DATE=$(date +'%d%b%Y%H%M%S')" >> "$GITHUB_ENV"
@@ -55,7 +53,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x'
+          node-version: '24.x'
       - name: Install Dependencies
         run: npm ci --force
       # - name: Run Jest Unit Tests
@@ -102,7 +100,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -164,7 +162,7 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Configure AWS credentials (APHL)
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.APHL_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.APHL_AWS_SECRET_ACCESS_KEY }}
@@ -204,11 +202,10 @@ jobs:
     needs: [build-and-push-image-aws]
     if: |
       github.ref == 'refs/heads/develop' ||
-      contains(github.ref, 'refs/heads/release/') ||
-      (github.event_name == 'pull_request' && (github.base_ref == 'develop' || contains(github.base_ref, 'release/')))
+      (github.event_name == 'pull_request' && github.base_ref == 'develop')
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

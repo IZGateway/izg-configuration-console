@@ -53,10 +53,31 @@ export const authOptions = {
               Authorization: 'Bearer ' + account.access_token,
             },
           })
-          const data = await response.json()
-          token.jurisdictions = data?.jurisdictions?.map((j) => j.toLowerCase())
-        } catch (err) {
-          logger.error('ERROR FETCHING USER INFO FROM OKTA: ' + err)
+          if (!response.ok) {
+            logger.error('Failed to fetch user info from Okta', {
+              statusCode: response.status,
+              statusText: response.statusText,
+              endpoint: userInfoEndpoint,
+              userId: profile.id,
+              operation: 'jwt_callback',
+            })
+            token.jurisdictions = []
+          } else {
+            const data = await response.json()
+            token.jurisdictions = data?.jurisdictions?.map((j) =>
+              j.toLowerCase()
+            )
+          }
+        } catch (error) {
+          logger.error('Error fetching user info from Okta', {
+            endpoint: userInfoEndpoint,
+            userId: profile.id,
+            operation: 'jwt_callback',
+            errorMessage: error.message,
+            errorType: error.name,
+            stack: error.stack,
+          })
+          token.jurisdictions = []
         }
       }
       return token

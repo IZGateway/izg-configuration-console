@@ -8,10 +8,14 @@ export default class IZGHubStatusHistoryEndpoint {
   constructor(configuredStatusHistoryEndpoints: string) {
     try {
       this.statusHistoryURLs = JSON.parse(configuredStatusHistoryEndpoints)
-    } catch (e) {
-      logger.error(
-        `The configured IZG_STATUS_ENDPOINT_URL value is not valid JSON. Tried to parse ${configuredStatusHistoryEndpoints}. ERROR: ${e}. `
-      )
+    } catch (error) {
+      logger.error('Failed to parse IZG_STATUS_ENDPOINT_URL configuration', {
+        configValue: configuredStatusHistoryEndpoints,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        configKey: 'IZG_STATUS_ENDPOINT_URL',
+      })
     }
   }
 
