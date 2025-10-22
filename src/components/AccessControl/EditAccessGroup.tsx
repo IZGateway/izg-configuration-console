@@ -180,6 +180,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             onChange={(e) => handleInputChange('groupName', e.target.value)}
             fullWidth
             required
+            disabled={isEditing}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
