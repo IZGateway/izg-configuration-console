@@ -8,7 +8,7 @@ import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
 import { mockDenyListData, type DenyListItem } from './mockData'
 import { useSession } from 'next-auth/react'
-import CustomDialogBox from '../CustomDialogBox'
+import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':

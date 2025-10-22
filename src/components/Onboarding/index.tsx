@@ -31,7 +31,7 @@ import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
 import CustomSnackbar from '../SnackBar'
-import CustomDialogBox from '../CustomDialogBox'
+import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':

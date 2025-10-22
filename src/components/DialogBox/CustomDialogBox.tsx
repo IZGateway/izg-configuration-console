@@ -9,7 +9,7 @@ import {
   IconButton,
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
-import palette from '../styles/theme/palette'
+import palette from '../../styles/theme/palette'
 
 interface CustomDialogBoxProps {
   open: boolean

@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { SenderData } from './mockData'
-import CustomDialogBox from '../CustomDialogBox'
+import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 interface StatusPromoteDemoteProps {
   sender: SenderData

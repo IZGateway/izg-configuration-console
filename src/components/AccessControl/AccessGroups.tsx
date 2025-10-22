@@ -14,7 +14,7 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import palette from '../../styles/theme/palette'
 import { mockAccessGroups, type AccessGroup } from './mockData'
-import CustomDialogBox from '../CustomDialogBox'
+import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 interface AccessGroupsProps {
   data?: AccessGroup[]
