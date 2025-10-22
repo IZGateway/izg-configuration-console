@@ -8,18 +8,13 @@ import {
   IconButton,
   Button,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
-import CloseIcon from '@mui/icons-material/Close'
 import palette from '../../styles/theme/palette'
 import { mockAccessGroups, type AccessGroup } from './mockData'
+import CustomDialogBox from '../CustomDialogBox'
 
 interface AccessGroupsProps {
   data?: AccessGroup[]
@@ -266,75 +261,41 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
       </Box>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <CustomDialogBox
         open={deleteDialogOpen}
         onClose={handleCancelDelete}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-        PaperProps={{
-          sx: {
-            boxShadow: 'none',
-            border: `1px solid ${palette.border}`,
-          },
-        }}
-      >
-        <DialogTitle
-          id="delete-dialog-title"
-          sx={{
-            fontWeight: 600,
-            fontSize: '1.25rem',
-            pb: 1,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingBottom: '8px',
-          }}
-        >
-          Delete Access Group
-          <IconButton
-            onClick={handleCancelDelete}
-            sx={{
-              textTransform: 'none',
-              color: palette.primary,
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText
-            id="delete-dialog-description"
-            sx={{
-              color: 'text.primary',
-              fontSize: '1rem',
-              lineHeight: 1.6,
-            }}
-          >
-            Are you sure you want to delete the access group &quot;
-            <Box component="span" sx={{ fontWeight: 600 }}>
-              {groupToDelete?.groupName}
-            </Box>
-            &quot;?
-          </DialogContentText>
-          <DialogContentText
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.875rem',
-              mt: 2,
-              lineHeight: 1.5,
-            }}
-          >
-            This action cannot be undone. All members in this group will lose
-            their assigned roles and permissions. Please confirm that you want
-            to proceed with this deletion.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions
-          sx={{
-            padding: '16px 24px',
-            gap: 1,
-          }}
-        >
+        titleText="Delete Access Group"
+        showCloseIcon={true}
+        content={
+          <>
+            <Typography
+              sx={{
+                color: 'text.primary',
+                fontSize: '1rem',
+                lineHeight: 1.6,
+              }}
+            >
+              Are you sure you want to delete the access group &quot;
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {groupToDelete?.groupName}
+              </Box>
+              &quot;?
+            </Typography>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                mt: 2,
+                lineHeight: 1.5,
+              }}
+            >
+              This action cannot be undone. All members in this group will lose
+              their assigned roles and permissions. Please confirm that you want
+              to proceed with this deletion.
+            </Typography>
+          </>
+        }
+        actions={
           <Button
             onClick={handleConfirmDelete}
             variant="outlined"
@@ -343,8 +304,8 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
           >
             Delete Group
           </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      />
     </Box>
   )
 }

@@ -1,17 +1,6 @@
 import React, { useContext, useState } from 'react'
 import { DataGrid, GridColDef, GridFooter } from '@mui/x-data-grid'
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
-} from '@mui/material'
+import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material'
 import BlockIcon from '@mui/icons-material/Block'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
@@ -19,6 +8,7 @@ import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
 import { mockDenyListData, type DenyListItem } from './mockData'
 import { useSession } from 'next-auth/react'
+import CustomDialogBox from '../CustomDialogBox'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -498,48 +488,35 @@ const DenyList: React.FC<DenyListComponentProps> = ({
       )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <CustomDialogBox
         open={deleteDialogOpen}
         onClose={handleCancelDelete}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-        PaperProps={{
-          sx: {
-            boxShadow: 'none',
-            border: `1px solid ${palette.border}`,
-          },
-        }}
-      >
-        <DialogTitle
-          id="delete-dialog-title"
-          sx={{ fontWeight: 600, fontSize: '1.25rem', pb: 1 }}
-        >
-          Delete Deny List Entry
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText
-            id="delete-dialog-description"
-            sx={{ color: 'text.primary', fontSize: '1rem', lineHeight: 1.6 }}
-          >
-            Are you sure you want to delete the denied item &quot;
-            <Box component="span" sx={{ fontWeight: 600 }}>
-              {rowToDelete?.name}
-            </Box>
-            &quot;?
-          </DialogContentText>
-          <DialogContentText
-            sx={{
-              color: 'text.secondary',
-              fontSize: '0.875rem',
-              mt: 2,
-              lineHeight: 1.5,
-            }}
-          >
-            This action cannot be undone. Please confirm that you want to
-            proceed with this deletion.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px', gap: 1 }}>
+        titleText="Delete Deny List Entry"
+        content={
+          <>
+            <Typography
+              sx={{ color: 'text.primary', fontSize: '1rem', lineHeight: 1.6 }}
+            >
+              Are you sure you want to delete the denied item &quot;
+              <Box component="span" sx={{ fontWeight: 600 }}>
+                {rowToDelete?.name}
+              </Box>
+              &quot;?
+            </Typography>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+                fontSize: '0.875rem',
+                mt: 2,
+                lineHeight: 1.5,
+              }}
+            >
+              This action cannot be undone. Please confirm that you want to
+              proceed with this deletion.
+            </Typography>
+          </>
+        }
+        actions={
           <Button
             onClick={handleConfirmDelete}
             variant="outlined"
@@ -548,8 +525,8 @@ const DenyList: React.FC<DenyListComponentProps> = ({
           >
             Delete
           </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      />
     </>
   )
 }

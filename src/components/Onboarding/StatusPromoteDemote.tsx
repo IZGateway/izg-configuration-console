@@ -4,20 +4,16 @@ import {
   Tooltip,
   Chip,
   Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Button,
   Typography,
 } from '@mui/material'
 import {
   VerticalAlignBottom as VerticalAlignBottomIcon,
   Upgrade as UpgradeIcon,
-  Close as CloseIcon,
 } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { SenderData } from './mockData'
+import CustomDialogBox from '../CustomDialogBox'
 
 interface StatusPromoteDemoteProps {
   sender: SenderData
@@ -174,75 +170,50 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
         </Box>
 
         {/* Confirmation Dialog */}
-        <Dialog
+        <CustomDialogBox
           open={confirmOpen}
           onClose={handleCancel}
           maxWidth="sm"
           fullWidth
-          PaperProps={{
-            sx: {
-              boxShadow: 'none',
-              border: `1px solid ${palette.border}`,
-            },
-          }}
-        >
-          <DialogTitle>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Confirm Status Change
+          titleText="Confirm Status Change"
+          showCloseIcon
+          content={
+            <>
+              <Typography variant="body1" sx={{ marginBottom: 2 }}>
+                Are you sure you want to{' '}
+                {pendingAction?.direction === 'up' ? 'promote' : 'demote'} this
+                sender?
               </Typography>
-              <IconButton
-                onClick={handleCancel}
+              <Box
                 sx={{
-                  textTransform: 'none',
-                  color: palette.primary,
+                  backgroundColor: palette.grey[50],
+                  padding: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${palette.border}`,
                 }}
               >
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" sx={{ marginBottom: 2 }}>
-              Are you sure you want to{' '}
-              {pendingAction?.direction === 'up' ? 'promote' : 'demote'} this
-              sender?
-            </Typography>
-            <Box
-              sx={{
-                backgroundColor: palette.grey[50],
-                padding: 2,
-                borderRadius: 1,
-                border: `1px solid ${palette.border}`,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, marginBottom: 1 }}
-              >
-                Status Change Details:
-              </Typography>
-              <Typography variant="body2">
-                <strong>Sender:</strong> {sender.sender}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Current Status:</strong> {sender.status}
-              </Typography>
-              <Typography variant="body2">
-                <strong>New Status:</strong> {pendingAction?.newStatus}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Connection Type:</strong> {sender.connectionType}
-              </Typography>
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ padding: '16px 24px' }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, marginBottom: 1 }}
+                >
+                  Status Change Details:
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Sender:</strong> {sender.sender}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Current Status:</strong> {sender.status}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>New Status:</strong> {pendingAction?.newStatus}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Connection Type:</strong> {sender.connectionType}
+                </Typography>
+              </Box>
+            </>
+          }
+          actions={
             <Button
               onClick={handleConfirm}
               variant="outlined"
@@ -261,8 +232,8 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
             >
               Confirm {pendingAction?.direction === 'up' ? 'Promote' : 'Demote'}
             </Button>
-          </DialogActions>
-        </Dialog>
+          }
+        />
       </>
     )
   }
@@ -299,41 +270,94 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
         </Box>
 
         {/* Confirmation Dialog */}
-        <Dialog
+        <CustomDialogBox
           open={confirmOpen}
           onClose={handleCancel}
           maxWidth="sm"
           fullWidth
-          PaperProps={{
-            sx: {
-              boxShadow: 'none',
-              border: `1px solid ${palette.border}`,
-            },
-          }}
-        >
-          <DialogTitle>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Confirm Status Change
+          titleText="Confirm Status Change"
+          showCloseIcon={true}
+          content={
+            <>
+              <Typography variant="body1" sx={{ marginBottom: 2 }}>
+                Are you sure you want to{' '}
+                {pendingAction?.direction === 'up' ? 'promote' : 'demote'} this
+                sender?
               </Typography>
-              <IconButton
-                onClick={handleCancel}
+              <Box
                 sx={{
-                  textTransform: 'none',
-                  color: palette.primary,
+                  backgroundColor: palette.grey[50],
+                  padding: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${palette.border}`,
                 }}
               >
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, marginBottom: 1 }}
+                >
+                  Status Change Details:
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Sender:</strong> {sender.sender}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Current Status:</strong> {sender.status}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>New Status:</strong> {pendingAction?.newStatus}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Connection Type:</strong> {sender.connectionType}
+                </Typography>
+              </Box>
+            </>
+          }
+          actions={
+            <Button
+              onClick={handleConfirm}
+              variant="outlined"
+              sx={{
+                borderRadius: '24px',
+                padding: '8px 24px',
+                textTransform: 'none',
+                fontWeight: 500,
+                borderColor: palette.primary,
+                color: palette.primary,
+                '&:hover': {
+                  borderColor: palette.primaryDark,
+                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                },
+              }}
+            >
+              Confirm {pendingAction?.direction === 'up' ? 'Promote' : 'Demote'}
+            </Button>
+          }
+        />
+      </>
+    )
+  }
+
+  // If no action available, just show the status chip
+  return (
+    <>
+      <Chip
+        label={sender.status}
+        size="small"
+        color={getStatusColor()}
+        variant="outlined"
+      />
+
+      {/* Confirmation Dialog */}
+      <CustomDialogBox
+        open={confirmOpen}
+        onClose={handleCancel}
+        maxWidth="sm"
+        fullWidth
+        titleText="Confirm Status Change"
+        showCloseIcon={true}
+        content={
+          <>
             <Typography variant="body1" sx={{ marginBottom: 2 }}>
               Are you sure you want to{' '}
               {pendingAction?.direction === 'up' ? 'promote' : 'demote'} this
@@ -366,112 +390,9 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
                 <strong>Connection Type:</strong> {sender.connectionType}
               </Typography>
             </Box>
-          </DialogContent>
-          <DialogActions sx={{ padding: '16px 24px' }}>
-            <Button
-              onClick={handleConfirm}
-              variant="outlined"
-              sx={{
-                borderRadius: '24px',
-                padding: '8px 24px',
-                textTransform: 'none',
-                fontWeight: 500,
-                borderColor: palette.primary,
-                color: palette.primary,
-                '&:hover': {
-                  borderColor: palette.primaryDark,
-                  backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                },
-              }}
-            >
-              Confirm {pendingAction?.direction === 'up' ? 'Promote' : 'Demote'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
-    )
-  }
-
-  // If no action available, just show the status chip
-  return (
-    <>
-      <Chip
-        label={sender.status}
-        size="small"
-        color={getStatusColor()}
-        variant="outlined"
-      />
-
-      {/* Confirmation Dialog */}
-      <Dialog
-        open={confirmOpen}
-        onClose={handleCancel}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            boxShadow: 'none',
-            border: `1px solid ${palette.border}`,
-          },
-        }}
-      >
-        <DialogTitle>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Confirm Status Change
-            </Typography>
-            <IconButton
-              onClick={handleCancel}
-              sx={{
-                textTransform: 'none',
-                color: palette.primary,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ marginBottom: 2 }}>
-            Are you sure you want to{' '}
-            {pendingAction?.direction === 'up' ? 'promote' : 'demote'} this
-            sender?
-          </Typography>
-          <Box
-            sx={{
-              backgroundColor: palette.grey[50],
-              padding: 2,
-              borderRadius: 1,
-              border: `1px solid ${palette.border}`,
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, marginBottom: 1 }}
-            >
-              Status Change Details:
-            </Typography>
-            <Typography variant="body2">
-              <strong>Sender:</strong> {sender.sender}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Current Status:</strong> {sender.status}
-            </Typography>
-            <Typography variant="body2">
-              <strong>New Status:</strong> {pendingAction?.newStatus}
-            </Typography>
-            <Typography variant="body2">
-              <strong>Connection Type:</strong> {sender.connectionType}
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px' }}>
+          </>
+        }
+        actions={
           <Button
             onClick={handleConfirm}
             variant="outlined"
@@ -490,8 +411,8 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
           >
             Confirm {pendingAction?.direction === 'up' ? 'Promote' : 'Demote'}
           </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      />
     </>
   )
 }

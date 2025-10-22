@@ -16,10 +16,6 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from '@mui/material'
 import {
   Add as AddIcon,
@@ -27,7 +23,6 @@ import {
   DeleteOutline as DeleteOutlineIcon,
   WifiOff as WifiOffIcon,
   Wifi as WifiIcon,
-  Close as CloseIcon,
 } from '@mui/icons-material'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
@@ -36,6 +31,7 @@ import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
 import CustomSnackbar from '../SnackBar'
+import CustomDialogBox from '../CustomDialogBox'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -872,77 +868,52 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <CustomDialogBox
         open={deleteDialogOpen}
         onClose={handleCancelDelete}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            boxShadow: 'none',
-            border: `1px solid ${palette.border}`,
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingBottom: '8px',
-          }}
-        >
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Confirm Delete Sender
-          </Typography>
-          <Box>
-            <IconButton
-              onClick={handleCancelDelete}
-              sx={{
-                textTransform: 'none',
-                color: palette.primary,
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body1" sx={{ marginBottom: 2 }}>
-            Are you sure you want to permanently delete this sender from
-            onboarding? This action cannot be undone.
-          </Typography>
-          {senderToDelete && (
-            <Box
-              sx={{
-                backgroundColor: palette.grey[50],
-                padding: 2,
-                borderRadius: 1,
-                border: `1px solid ${palette.border}`,
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontWeight: 600, marginBottom: 1 }}
+        titleText="Confirm Delete Sender"
+        showCloseIcon={true}
+        content={
+          <>
+            <Typography variant="body1" sx={{ marginBottom: 2 }}>
+              Are you sure you want to permanently delete this sender from
+              onboarding? This action cannot be undone.
+            </Typography>
+            {senderToDelete && (
+              <Box
+                sx={{
+                  backgroundColor: palette.grey[50],
+                  padding: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${palette.border}`,
+                }}
               >
-                Sender Details:
-              </Typography>
-              <Typography variant="body2">
-                <strong>Sender:</strong> {senderToDelete.sender}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Sender Details:</strong> {senderToDelete.senderDetails}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Destination:</strong> {senderToDelete.destination}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Status:</strong> {senderToDelete.status}
-              </Typography>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ padding: '16px 24px' }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 600, marginBottom: 1 }}
+                >
+                  Sender Details:
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Sender:</strong> {senderToDelete.sender}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Sender Details:</strong>{' '}
+                  {senderToDelete.senderDetails}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Destination:</strong> {senderToDelete.destination}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Status:</strong> {senderToDelete.status}
+                </Typography>
+              </Box>
+            )}
+          </>
+        }
+        actions={
           <Button
             onClick={handleConfirmDelete}
             variant="outlined"
@@ -959,8 +930,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
           >
             Delete Permanently
           </Button>
-        </DialogActions>
-      </Dialog>
+        }
+      />
 
       {/* Snackbar for notifications */}
       <CustomSnackbar
