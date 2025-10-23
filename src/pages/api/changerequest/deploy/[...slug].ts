@@ -150,7 +150,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                   ? '********'
                   : undefined,
               },
-              passwordChanged: changeRequest.isPasswordDifferent,
+              passwordChanged: changeRequest.isPasswordDifferent ? 'yes' : 'no',
               createdAt: new Date(),
             }
           )
