@@ -64,7 +64,7 @@ test.describe('Edit connection and deploy', () => {
 
     // if cr is not created
     await editButton.click()
-    if (page.getByTestId('agree-button').isVisible()) {
+    if (await page.getByTestId('agree-button').isVisible()) {
       await page.getByTestId('agree-button').click()
       await page.locator('#accept').click()
     }
