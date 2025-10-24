@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
-
-const destTypeId = process.env.TEST_DEST_TYPE_ID
-const destId = process.env.TEST_DEST_ID
+import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
 
@@ -21,38 +19,17 @@ test.describe('Edit Connection – password visibility', () => {
   })
 
   test('user can show/hide password in IDENTIFY', async ({ page }) => {
-    // Navigate to an Edit page: picks first editable row, but can use env vars if set to pick specific connection
-    let navigated = false
-    if (destTypeId && destId) {
-      try {
-        await page.goto(`/edit/${destTypeId}/${destId}`)
-        await page.waitForURL(
-          new RegExp(`/edit/${destTypeId}/${destId}$`, 'i'),
-          {
-            timeout: 15000,
-          }
-        )
-        navigated = true
-      } catch {}
-    }
-
-    if (!navigated) {
-      // Go through Manage Connections and click the first visible Edit button
-      await page.goto('/manageconnections')
-      await expect(page.getByText('My Connections')).toBeVisible({
-        timeout: 20000,
-      })
-
-      const firstEdit = page.getByRole('button', { name: /^edit$/i }).first()
-      await firstEdit.waitFor({ state: 'visible', timeout: 20000 })
-      await firstEdit.click()
-
-      // Wait for any /edit/<type>/<id> URL
-      await page.waitForURL(/\/edit\/\d+\/[^/]+$/i, { timeout: 20000 })
-      navigated = true
-    }
-
-    expect(navigated).toBeTruthy()
+    // Navigate to Manage Connections and open Edit for destination 404
+    await page.goto('/manageconnections')
+    await expect(page.getByText('My Connections')).toBeVisible({
+      timeout: 20000,
+    })
+    await filterByDestinationId(page, '404')
+    const editBtn = page.getByRole('button', { name: /^edit$/i }).first()
+    await editBtn.waitFor({ state: 'visible', timeout: 20000 })
+    await editBtn.click()
+    // Wait for any /edit/<type>/<id> URL
+    await page.waitForURL(/\/edit\/\d+\/[^/]+$/i, { timeout: 20000 })
 
     // Agree and accept service agreement
     await expect(
@@ -91,8 +68,10 @@ test.describe('Edit Connection – password visibility', () => {
     await expect(newPw).toHaveAttribute('type', 'password')
     await newPwEye.click()
     await expect(newPw).toHaveAttribute('type', 'text')
+    await expect(newPw).toHaveValue(sample)
     await newPwEye.click()
     await expect(newPw).toHaveAttribute('type', 'password')
+    await expect(newPw).toHaveValue(sample)
 
     // Confirm Password field
     const confirmPw = page.getByLabel('Confirm New Password', { exact: true })
@@ -104,7 +83,9 @@ test.describe('Edit Connection – password visibility', () => {
     await expect(confirmPw).toHaveAttribute('type', 'password')
     await confirmPwEye.click()
     await expect(confirmPw).toHaveAttribute('type', 'text')
+    await expect(confirmPw).toHaveValue(sample)
     await confirmPwEye.click()
     await expect(confirmPw).toHaveAttribute('type', 'password')
+    await expect(confirmPw).toHaveValue(sample)
   })
 })
