@@ -48,7 +48,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logger.info(`Change Request with ID ${id} is deleted by user`)
       res.status(200).json('Change Request is deleted')
     } catch (error) {
-      logger.info('Unable to delete change request', {
+      logger.info('Change request deleted by user', {
         changeRequestId: id,
         timestamp: new Date().toISOString(),
         operation: 'delete_change_request',
