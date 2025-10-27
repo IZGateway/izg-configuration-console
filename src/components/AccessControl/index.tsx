@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react'
 import { Box, Typography, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import palette from '../../styles/theme/palette'
 
 import AccessGroups from './AccessGroups'
@@ -11,6 +12,10 @@ import AddDenyList from './AddDenyList'
 
 import EditAccessGroup from './EditAccessGroup'
 import AddAccessGroup from './AddAccessGroup'
+
+import FileTypeList from './FileTypeList'
+import AddFileTypeList from './AddFileTypeList'
+
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 
@@ -19,6 +24,8 @@ import {
   mockAccessGroups,
   mockDenyListData,
   type DenyListItem,
+  mockFileTypeListData,
+  type FileTypeListItem,
 } from './mockData'
 
 interface TabPanelProps {
@@ -79,6 +86,31 @@ const AccessControlComponent = () => {
   }
   const handleCancelDeny = () => setIsAddingDeny(false)
 
+  const [isAddingFileType, setIsAddingFileType] = useState(false)
+  const [fileTypeData, setFileTypeData] = useState<FileTypeListItem[]>(mockFileTypeListData)
+  const handleAddFileType = () =>  setIsAddingFileType(true)
+  const handleSaveFileType = (item) => {
+    setFileTypeData((prev) => [...prev, item])
+    setIsAddingFileType(false)
+    setAlert({
+      level: 'success',
+      jurisdiction: '',
+      dest_type: '',
+      message: `File Type List has been successfully added.`,
+    })
+  }
+
+  const handleDeleteFileType = (id: string) => {
+    setFileTypeData((prev) => prev.filter((item) => item.id !== id))
+    setAlert({
+      level: 'success',
+      jurisdiction: '',
+      dest_type: '',
+      message: `File Type List entry has been successfully deleted.`,
+    })
+  }
+  const handleCancelFileType = () => setIsAddingFileType(false)
+    
   const { data: session } = useSession()
   const currentUserName = session?.user?.name || 'Unknown'
 
@@ -190,6 +222,16 @@ const AccessControlComponent = () => {
     )
   }
 
+  if (isAddingFileType) {
+    return (
+      <AddFileTypeList
+        onSave={handleSaveFileType}
+        onCancel={handleCancelFileType}
+        userName={currentUserName}
+      />
+    )
+  }
+
   return (
     <div>
       <Box>
@@ -278,6 +320,12 @@ const AccessControlComponent = () => {
                   iconPosition="start"
                   sx={{ fontWeight: 'bold' }}
                 />
+                <Tab
+                  icon={<UploadFileIcon />}
+                  label="ADS FILE TYPES"
+                  iconPosition="start"
+                  sx={{ fontWeight: 'bold' }}
+                />
               </Tabs>
             </Box>
 
@@ -297,6 +345,15 @@ const AccessControlComponent = () => {
                 data={denyListData}
                 onAddDeny={handleAddDeny}
                 onDeleteDeny={handleDeleteDeny}
+              />
+            </TabPanel>
+            
+            {/* Tab Panel 2 - ADS File Types */}
+            <TabPanel value={tabValue} index={2}>
+              <FileTypeList
+                data={fileTypeData}
+                onAddFileType={handleAddFileType}
+                onDeleteFileType={handleDeleteFileType}
               />
             </TabPanel>
           </>

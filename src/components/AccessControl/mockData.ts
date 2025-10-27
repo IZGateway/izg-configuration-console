@@ -33,6 +33,12 @@ export interface DenyListItem {
   environment?: 'Production' | 'Onboarding'
 }
 
+export interface FileTypeListItem {
+  id: string
+  name: string
+  description: string
+}
+
 // Mock data for AccessControl components - simplified examples
 export const mockSenderData: SenderData[] = [
   {
@@ -119,6 +125,38 @@ export const mockDenyListData: DenyListItem[] = [
   },
 ]
 
+export const mockFileTypeListData: FileTypeListItem[] = [
+  {
+    id: "covidallMonthlyVaccination",
+    name: "COVID Monthly Vaccination Report",
+    description: "This report provides monthly statistics on COVID-19 vaccinations administered, categorized by age and gender."
+  },
+  {
+    id: "farmerFlu",
+    name: "Monthly Farmer Flu Vaccination Report",
+    description: "This report provides monthly statistics on influenza vaccinations administered to farmers, categorized by age and gender.  It was added to help monitor flu prevention efforts in the agricultural community, to support public health initiatives aimed at reducing flu transmission among farmers who are at higher risk due to their close contact with livestock." 
+  },
+  {
+    id: "influenzaVaccination",
+    name: "Monthly Flu Vaccination Report",
+    description: "This report details the monthly influenza vaccination statistics for people vaccinated for Influenza, aggregated by age and gender."
+  },
+  {
+    id: "measlesVaccination",
+    name: "Monthly Measles Vaccination Report",
+    description: "This report provides monthly statistics on measles vaccinations administered, categorized"
+  },
+  {
+    id: "routineImmunization",
+    name: "Quarterly Routine Immunization Report",
+    description: "This report provides detailed quarterly data on routine immunizations given to patients in the jurisdiction."
+  },
+  {
+    id: "rsvPrevention",
+    name: "Monthly RSV Prevention Report",
+    description: "This report provides monthly statistics on RSV (Respiratory Syncytial Virus) prevention measures, including vaccination rates and prophylactic treatments administered to high-risk populations."
+  }
+]
 /**
  * API Integration Guide for Developers:
  *
