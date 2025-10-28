@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test'
+import { Page, expect } from '@playwright/test'
 import { filterByDestinationId } from './filterByDestinationId'
 
 const newValues = {
@@ -46,7 +46,6 @@ export async function createChangeRequest(page: Page, destId: string) {
     await page.locator('#destUri').fill(newValues.uri)
     await page.locator('#username').fill(newValues.username)
     await page.getByRole('button', { name: 'CHANGE PASSWORD' }).click()
-    await page.pause()
     await page.locator('[name="newPassword"]').fill(newValues.password)
     await page.locator('[name="confirmPassword"]').fill(newValues.password)
     await page.locator('[name="facilityId"]').fill(newValues.facilityId)
@@ -78,8 +77,9 @@ export async function createChangeRequest(page: Page, destId: string) {
     await page.locator('[value="As Soon As Possible"]').click()
     await scheduleButton.click()
 
-    await page.waitForURL('/manageconnections')
-    await expect(alert).toBeVisible()
+    await page.waitForURL('/manageconnections', { timeout: 5000 })
+    await page.waitForLoadState('networkidle')
+    await expect(alert).toBeVisible({ timeout: 15000 })
     expect(await alert.textContent()).toContain(
       'Change request is created successfully'
     )

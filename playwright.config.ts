@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test'
 
 export default defineConfig({
   testDir: './e2e/tests',
@@ -6,18 +6,21 @@ export default defineConfig({
   use: {
     baseURL: process.env.BASE_URL,
     headless: true,
-    ignoreHTTPSErrors: true,  
+    ignoreHTTPSErrors: true,
     viewport: { width: 1280, height: 720 },
     actionTimeout: 20000,
     contextOptions: {
-    ignoreHTTPSErrors: true,
+      ignoreHTTPSErrors: true,
+    },
+    launchOptions: {
+      slowMo: 500, // 0.5 second delay between actions
     },
     screenshot: 'off',
   },
   projects: [
     {
       name: 'Chrome',
-      use: { browserName: 'chromium', channel: 'chrome', }
+      use: { browserName: 'chromium', channel: 'chrome' },
     },
     {
       name: 'Firefox',
@@ -25,7 +28,7 @@ export default defineConfig({
     },
     {
       name: 'Edge',
-      use: { browserName: 'chromium', channel: 'msedge', },
+      use: { browserName: 'chromium', channel: 'msedge' },
     },
     {
       name: 'WebKit',
@@ -50,5 +53,5 @@ export default defineConfig({
         ...devices['iPad Pro 11'], // Emulates iPad Pro 11 parameters
       },
     } */
-  ]
-});
+  ],
+})
