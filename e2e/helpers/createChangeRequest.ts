@@ -2,7 +2,6 @@ import { Page, expect } from '@playwright/test'
 import { filterByDestinationId } from './filterByDestinationId'
 
 const newValues = {
-  uri: 'https://example.com',
   username: 'UsernameNEW',
   password: 'NEWpassword123!!',
   facilityId: 'xyz',
@@ -43,7 +42,6 @@ export async function createChangeRequest(page: Page, destId: string) {
     }
 
     //start editing
-    await page.locator('#destUri').fill(newValues.uri)
     await page.locator('#username').fill(newValues.username)
     await page.getByRole('button', { name: 'CHANGE PASSWORD' }).click()
     await page.locator('[name="newPassword"]').fill(newValues.password)
