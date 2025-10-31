@@ -2,7 +2,6 @@ import { Page, expect } from '@playwright/test'
 import { filterByDestinationId } from './filterByDestinationId'
 
 const newValues = {
-  uri: 'https://example.com',
   username: 'UsernameNEW',
   password: 'NEWpassword123!!',
   facilityId: 'xyz',
