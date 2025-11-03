@@ -26,4 +26,8 @@ export default interface ConfigConsoleFetchRepository {
   fetchDestinationPassword(destId: string, destType: number): Promise<string>
   isPasswordChanged(destId: string, dest_type: number): Promise<boolean>
   isDatabaseConnected(): Promise<boolean>
+  fetchSenderData: () => Promise<any>
+  fetchAccessGroups: () => Promise<any>
+  fetchDenyListData: () => Promise<any>
+  fetchFileTypeList: () => Promise<any>
 }

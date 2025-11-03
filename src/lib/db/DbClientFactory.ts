@@ -1,6 +1,5 @@
 import DbClient from './DbClient'
 import Dynamo from './dynamo'
-import JDBC from './jdbc'
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
@@ -25,17 +24,13 @@ export default class DbClientFactory {
       }
     }
     let db: DbClient | null = null
-    if (type === 'jdbc') {
-      db = new JDBC()
-    } else if (type === 'dynamo') {
-      db = new Dynamo()
-    }
+    db = new Dynamo()
     await initCryptoSupport() // Ensure crypto support is initialized
 
     // Don't bother to wrap with EncryptedRepository if KEY_NAME is not set
     db = db != null && KEY_NAME ? new EncryptedRepository(db) : db
     if (!KEY_NAME) {
-      logger.warn(`No encryption key configured for database ${type}`);
+      logger.warn(`No encryption key configured for database ${type}`)
     }
     if (!dbType) {
       DbClientFactory.defaultClient = db
@@ -173,7 +168,10 @@ class EncryptedRepository implements DbClient {
     return result
   }
 
-  async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
+  async fetchDestinationPassword(
+    destId: string,
+    destType: number
+  ): Promise<string> {
     let result = await this.repository.fetchDestinationPassword(
       destId,
       destType
@@ -205,6 +203,26 @@ class EncryptedRepository implements DbClient {
     if (result && typeof result === 'string') {
       return await decryptWithRetries(result)
     }
+    return result
+  }
+
+  async fetchSenderData(): Promise<any> {
+    const result = await this.repository.fetchSenderData()
+    return result
+  }
+
+  async fetchAccessGroups(): Promise<any> {
+    const result = await this.repository.fetchAccessGroups()
+    return result
+  }
+
+  async fetchDenyListData(): Promise<any> {
+    const result = await this.repository.fetchDenyListData()
+    return result
+  }
+
+  async fetchFileTypeList(): Promise<any> {
+    const result = await this.repository.fetchFileTypeList()
     return result
   }
 }

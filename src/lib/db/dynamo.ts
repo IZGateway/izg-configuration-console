@@ -287,7 +287,9 @@ class Dynamo implements DbClient {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
       return result.Items.map((item) => ({
         ...item,
-        isPasswordDifferent: item.isPasswordDifferent || (item.newValues?.password !== item.oldValues?.password),
+        isPasswordDifferent:
+          item.isPasswordDifferent ||
+          item.newValues?.password !== item.oldValues?.password,
         createdAt: new Date(item.createdAt),
         id: item.sortKey,
       })) as DestinationAudit[]
@@ -639,7 +641,50 @@ class Dynamo implements DbClient {
     const data = await dynamodDbDocClient.send(new UpdateCommand(params))
     return true
   }
+
+  async fetchSenderData(): Promise<any> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Sender', // update this table
+      },
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result // May need to update this
+  }
+
+  async fetchAccessGroups(): Promise<any> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AccessGroup',
+      },
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result // May need to update this
+  }
+
+  async fetchDenyListData(): Promise<any> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DenyListRecord',
+      },
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result // May need to update this
+  }
+
+  async fetchFileTypeList(): Promise<any> {
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'FileType',
+      },
+    }
+    const result = await dynamodDbDocClient.send(new GetCommand(params))
+    return result // May need to update this
+  }
 }
 
 export default Dynamo
-
