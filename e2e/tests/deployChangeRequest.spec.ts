@@ -9,7 +9,7 @@ const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
 
 let context
 let page: Page
-const destId = 'devwup'
+const destId = 'ct'
 
 test.describe('Deploy Change Request Workflow', () => {
   test.beforeAll(async ({ browser }) => {
