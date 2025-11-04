@@ -181,6 +181,11 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   onDeleteDeny,
 }) => {
   const { data: session } = useSession()
+  const {
+    data: denyListData,
+    error: denyListError,
+    isLoading: isDenyListDataLoading,
+  } = useSWR(`/api/denylist`)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
