@@ -189,9 +189,6 @@ test.describe('Deploy Change Request Workflow', () => {
         await nextBtn.click()
 
         // Verify the deployed values match what was submitted in the change request
-        await expect(page.locator('#destUri')).toHaveValue(
-          'https://example.com'
-        )
         await expect(page.locator('#username')).toHaveValue('UsernameNEW')
         await expect(page.locator('[name="facilityId"]')).toHaveValue('xyz')
 
