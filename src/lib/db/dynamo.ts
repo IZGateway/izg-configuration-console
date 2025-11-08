@@ -739,6 +739,7 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {
         ':entityType': 'AllowedUser',
       },
+      Limit: 50,
     }
     try {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
