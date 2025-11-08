@@ -27,6 +27,10 @@ import {
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { mockSenderData, type SenderData } from './mockData'
+import type {
+  AllowedUser,
+  SerializedAllowedUser,
+} from '../../lib/type/AllowedUser'
 import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
@@ -153,9 +157,13 @@ const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
 
 interface OnboardSenderProps {
   data?: SenderData[]
+  allowedUsers?: SerializedAllowedUser[]
 }
 
-const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
+const OnboardSender: React.FC<OnboardSenderProps> = ({
+  data = [],
+  allowedUsers = [],
+}) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
@@ -184,9 +192,61 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   >('success')
 
   // Sender data state management
-  const [senderData, setSenderData] = useState<SenderData[]>(
-    data.length > 0 ? data : mockSenderData
-  )
+  const [senderData, setSenderData] = useState<SenderData[]>(() => {
+    // Use allowedUsers if provided, otherwise use data prop, finally fall back to mockData
+    if (allowedUsers.length > 0) {
+      return mapAllowedUsersToSenderData(allowedUsers)
+    } else if (data.length > 0) {
+      return data
+    } else {
+      return mockSenderData
+    }
+  })
+
+  // Function to map AllowedUser data to SenderData format
+  function mapAllowedUsersToSenderData(
+    users: SerializedAllowedUser[]
+  ): SenderData[] {
+    return users.map((user) => ({
+      id: `${user.environment}-${user.destinationId}-${user.principal}`,
+      sender: user.principal,
+      senderDetails: user.principal,
+      destination: `${user.destinationId} (${getEnvironmentName(
+        user.environment
+      )})`,
+      destinationCode: user.destinationId.toUpperCase(),
+      accessLevel: user.enabled ? 'Full Access' : 'Restricted',
+      status: user.enabled ? 'Production Live' : 'Disabled',
+      lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+      connectionType: getConnectionType(user.environment),
+      isConnected: user.enabled,
+      msh3: '', // Not available in AllowedUser data
+      msh4: '', // Not available in AllowedUser data
+      facilityId: user.destinationId,
+    }))
+  }
+
+  // Helper function to get environment name
+  function getEnvironmentName(envId: number): string {
+    const envMap: { [key: number]: string } = {
+      1: 'Production',
+      2: 'Testing',
+      3: 'Staging',
+      4: 'Development',
+      5: 'Onboarding',
+      6: 'Unknown',
+    }
+    return envMap[envId] || 'Unknown'
+  }
+
+  // Helper function to determine connection type
+  function getConnectionType(envId: number): 'production' | 'onboarding' {
+    return envId === 1 ? 'production' : 'onboarding'
+  }
 
   // Handle responsive design
   React.useEffect(() => {
@@ -202,10 +262,12 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
 
   // Sync sender data when props change
   React.useEffect(() => {
-    if (data.length > 0) {
+    if (allowedUsers.length > 0) {
+      setSenderData(mapAllowedUsersToSenderData(allowedUsers))
+    } else if (data.length > 0) {
       setSenderData(data)
     }
-  }, [data])
+  }, [data, allowedUsers])
 
   const handleAddSenderClick = () => {
     setIsAddMode(true)
