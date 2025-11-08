@@ -23,6 +23,7 @@ import {
   DynamoDBClient,
   DynamoDBClientConfig,
   ListTablesCommand,
+  ScanCommand as RawScanCommand,
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
@@ -61,6 +62,8 @@ const translateConfig = {
   },
   unmarshallOptions: {
     wrapNumbers: false,
+    // Ensure sets are converted to arrays
+    convertEmptyValues: false,
   },
 }
 
@@ -654,14 +657,53 @@ class Dynamo implements DbClient {
   }
 
   async fetchAccessGroups(): Promise<any> {
-    const params: GetCommandInput = {
+    // Use raw scan to properly handle String Sets
+    const params = {
       TableName: TABLE_NAME,
-      Key: {
-        entityType: 'AccessGroup',
+      FilterExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': { S: 'AccessGroup' },
       },
     }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result // May need to update this
+
+    const result = await dynamodDbClient.send(new RawScanCommand(params))
+
+    // Convert raw DynamoDB items to plain objects, manually handling String Sets
+    const items =
+      result.Items?.map((item) => {
+        const processed: any = {}
+
+        for (const [key, value] of Object.entries(item)) {
+          const dynValue = value as any
+          if (dynValue.S) {
+            // String
+            processed[key] = dynValue.S
+          } else if (dynValue.N) {
+            // Number
+            processed[key] = parseFloat(dynValue.N)
+          } else if (dynValue.SS) {
+            // String Set - convert to array
+            processed[key] = dynValue.SS
+          } else if (dynValue.NS) {
+            // Number Set - convert to array of numbers
+            processed[key] = dynValue.NS.map((n: string) => parseFloat(n))
+          } else if (dynValue.BOOL !== undefined) {
+            // Boolean
+            processed[key] = dynValue.BOOL
+          } else if (dynValue.NULL) {
+            // Null
+            processed[key] = null
+          }
+        }
+
+        return processed
+      }) || []
+
+    logger.info('Fetched access groups from DynamoDB', {
+      itemCount: items.length,
+    })
+
+    return items
   }
 
   async fetchDenyListData(): Promise<any> {
