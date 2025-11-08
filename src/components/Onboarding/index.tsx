@@ -137,7 +137,17 @@ interface CustomToolbarProps {
 const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
-      <GridToolbarQuickFilter />
+      <GridToolbarQuickFilter
+        quickFilterParser={(searchInput: string) =>
+          searchInput.split(',').map((value) => value.trim())
+        }
+        debounceMs={500}
+        sx={{
+          '& .MuiInputBase-input': {
+            id: 'sender-quick-filter',
+          },
+        }}
+      />
       <Box
         sx={{
           marginLeft: 'auto',
@@ -165,6 +175,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   allowedUsers = [],
 }) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const [currentPage, setCurrentPage] = useState(0)
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -267,6 +278,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     } else if (data.length > 0) {
       setSenderData(data)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, allowedUsers])
 
   const handleAddSenderClick = () => {
@@ -804,6 +816,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
               }}
             >
               <input
+                id="mobile-sender-search"
+                name="senderSearch"
                 type="text"
                 placeholder="Search senders..."
                 value={searchTerm}
@@ -865,13 +879,16 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
               sorting: {
                 sortModel: [{ field: 'sender', sort: 'asc' }],
               },
-              pagination: { paginationModel: { pageSize: pageSize } },
             }}
+            paginationModel={{ page: currentPage, pageSize: pageSize }}
             disableRowSelectionOnClick
             disableColumnMenu
             disableColumnSelector
             disableDensitySelector
-            onPaginationModelChange={(model) => setPageSize(model.pageSize)}
+            onPaginationModelChange={(model) => {
+              setCurrentPage(model.page)
+              setPageSize(model.pageSize)
+            }}
             getRowId={(row) => row.id}
             density={'comfortable'}
             pagination
@@ -882,8 +899,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
             slotProps={{
               toolbar: {
                 setFilterButtonEl,
-                showQuickFilter: true,
-                quickFilterProps: { debounceMs: 500 },
               },
               panel: {
                 anchorEl: filterButtonEl,

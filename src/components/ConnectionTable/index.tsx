@@ -138,7 +138,17 @@ const CustomToolbar = ({
 }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
-      <GridToolbarQuickFilter />
+      <GridToolbarQuickFilter
+        quickFilterParser={(searchInput: string) =>
+          searchInput.split(',').map((value) => value.trim())
+        }
+        debounceMs={500}
+        sx={{
+          '& .MuiInputBase-input': {
+            id: 'connection-quick-filter',
+          },
+        }}
+      />
       <Box
         sx={{
           marginLeft: 'auto',

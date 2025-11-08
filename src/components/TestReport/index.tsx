@@ -113,7 +113,17 @@ const renderStatus = (value, tooltipText) => {
 function CustomToolbar() {
   return (
     <GridToolbarContainer>
-      <GridToolbarQuickFilter />
+      <GridToolbarQuickFilter
+        quickFilterParser={(searchInput: string) =>
+          searchInput.split(',').map((value) => value.trim())
+        }
+        debounceMs={500}
+        sx={{
+          '& .MuiInputBase-input': {
+            id: 'test-report-quick-filter',
+          },
+        }}
+      />
       <div style={{ marginLeft: 'auto' }}>
         <GridToolbarExport
           printOptions={{ disableToolbarButton: true }}
