@@ -2,6 +2,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { AllowedUser } from '../type/AllowedUser'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -30,4 +31,14 @@ export default interface ConfigConsoleFetchRepository {
   fetchAccessGroups: () => Promise<any>
   fetchDenyListData: () => Promise<any>
   fetchFileTypeList: () => Promise<any>
+  fetchAllowedUser(
+    environment: number,
+    destinationId: string,
+    principal: string
+  ): Promise<AllowedUser | null>
+  fetchAllowedUsers(): Promise<AllowedUser[]>
+  fetchAllowedUsersByDestination(
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUser[]>
 }

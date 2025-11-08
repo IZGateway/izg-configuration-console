@@ -79,6 +79,16 @@ class EncryptedRepository implements DbClient {
     destId: string,
     destTypeId: number
   ) => Promise<DestinationChangeRequest>
+  fetchAllowedUser!: (
+    environment: number,
+    destinationId: string,
+    principal: string
+  ) => Promise<any>
+  fetchAllowedUsers!: () => Promise<any[]>
+  fetchAllowedUsersByDestination!: (
+    environment: number,
+    destinationId: string
+  ) => Promise<any[]>
 
   private repository: DbClient
 
@@ -97,6 +107,10 @@ class EncryptedRepository implements DbClient {
         repository
       )
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
+    this.fetchAllowedUser = repository.fetchAllowedUser.bind(repository)
+    this.fetchAllowedUsers = repository.fetchAllowedUsers.bind(repository)
+    this.fetchAllowedUsersByDestination =
+      repository.fetchAllowedUsersByDestination.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {

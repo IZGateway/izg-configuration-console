@@ -4,6 +4,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { AllowedUser } from '../type/AllowedUser'
 
 import {
   DeleteCommand,
@@ -676,6 +677,7 @@ class Dynamo implements DbClient {
   }
 
   async fetchFileTypeList(): Promise<any> {
+    logger.debug('Fetching file type list')
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -684,6 +686,131 @@ class Dynamo implements DbClient {
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
     return result // May need to update this
+  }
+
+  async fetchAllowedUser(
+    environment: number,
+    destinationId: string,
+    principal: string
+  ): Promise<AllowedUser | null> {
+    logger.debug(
+      `Fetching allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+    )
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AllowedUser',
+        sortKey: `${environment}#${destinationId}#${principal}`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      if (!result.Item) {
+        logger.debug(
+          `No allowed user found for environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+        )
+        return null
+      }
+      logger.debug(
+        `Successfully fetched allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+      )
+      return this.convertResponseToAllowedUser(result.Item)
+    } catch (error) {
+      logger.error('Error fetching allowed user from DynamoDB', {
+        environment,
+        destinationId,
+        principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchAllowedUser',
+      })
+      throw error
+    }
+  }
+
+  async fetchAllowedUsers(): Promise<AllowedUser[]> {
+    logger.debug('Fetching all allowed users')
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'AllowedUser',
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      logger.debug(`Fetched ${result.Items?.length || 0} allowed users`)
+      return result.Items.map((item) => this.convertResponseToAllowedUser(item))
+    } catch (error) {
+      logger.error('Error fetching all allowed users from DynamoDB', {
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchAllowedUsers',
+      })
+      throw error
+    }
+  }
+
+  async fetchAllowedUsersByDestination(
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUser[]> {
+    logger.debug(
+      `Fetching allowed users by destination: environment=${environment}, destinationId=${destinationId}`
+    )
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression:
+        'entityType = :entityType and begins_with(sortKey, :sortKey)',
+      ExpressionAttributeValues: {
+        ':entityType': 'AllowedUser',
+        ':sortKey': `${environment}#${destinationId}#`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      logger.debug(
+        `Fetched ${
+          result.Items?.length || 0
+        } allowed users for environment=${environment}, destinationId=${destinationId}`
+      )
+      return result.Items.map((item) => this.convertResponseToAllowedUser(item))
+    } catch (error) {
+      logger.error(
+        'Error fetching allowed users by destination from DynamoDB',
+        {
+          environment,
+          destinationId,
+          tableName: TABLE_NAME,
+          entityType: 'AllowedUser',
+          errorMessage: error.message,
+          errorType: error.name,
+          stack: error.stack,
+          operation: 'fetchAllowedUsersByDestination',
+        }
+      )
+      throw error
+    }
+  }
+
+  private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {
+    return {
+      principal: item.principal,
+      environment: item.environment,
+      destinationId: item.destinationId,
+      enabled: item.enabled ?? true,
+      createdBy: item.createdBy,
+      createdOn: item.createdOn ? new Date(item.createdOn) : null,
+      updatedBy: item.updatedBy,
+      updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+      validatedOn: item.validatedOn ? new Date(item.validatedOn) : null,
+    }
   }
 }
 
