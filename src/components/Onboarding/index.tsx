@@ -137,17 +137,7 @@ interface CustomToolbarProps {
 const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
-      <GridToolbarQuickFilter
-        quickFilterParser={(searchInput: string) =>
-          searchInput.split(',').map((value) => value.trim())
-        }
-        debounceMs={500}
-        sx={{
-          '& .MuiInputBase-input': {
-            id: 'sender-quick-filter',
-          },
-        }}
-      />
+      <GridToolbarQuickFilter />
       <Box
         sx={{
           marginLeft: 'auto',
@@ -175,7 +165,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   allowedUsers = [],
 }) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
-  const [currentPage, setCurrentPage] = useState(0)
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -203,6 +192,11 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   >('success')
 
   // Sender data state management
+  // Paul: this is working with Mock Data
+  // const [senderData, setSenderData] = useState<SenderData[]>(
+  //   data.length > 0 ? data : mockSenderData
+  // )
+
   const [senderData, setSenderData] = useState<SenderData[]>(() => {
     // Use allowedUsers if provided, otherwise use data prop, finally fall back to mockData
     if (allowedUsers.length > 0) {
@@ -273,13 +267,10 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
   // Sync sender data when props change
   React.useEffect(() => {
-    if (allowedUsers.length > 0) {
-      setSenderData(mapAllowedUsersToSenderData(allowedUsers))
-    } else if (data.length > 0) {
+    if (data.length > 0) {
       setSenderData(data)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, allowedUsers])
+  }, [data])
 
   const handleAddSenderClick = () => {
     setIsAddMode(true)
@@ -816,8 +807,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
               }}
             >
               <input
-                id="mobile-sender-search"
-                name="senderSearch"
                 type="text"
                 placeholder="Search senders..."
                 value={searchTerm}
@@ -879,16 +868,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
               sorting: {
                 sortModel: [{ field: 'sender', sort: 'asc' }],
               },
+              pagination: { paginationModel: { pageSize: pageSize } },
             }}
-            paginationModel={{ page: currentPage, pageSize: pageSize }}
             disableRowSelectionOnClick
             disableColumnMenu
             disableColumnSelector
             disableDensitySelector
-            onPaginationModelChange={(model) => {
-              setCurrentPage(model.page)
-              setPageSize(model.pageSize)
-            }}
+            onPaginationModelChange={(model) => setPageSize(model.pageSize)}
             getRowId={(row) => row.id}
             density={'comfortable'}
             pagination
@@ -899,6 +885,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
             slotProps={{
               toolbar: {
                 setFilterButtonEl,
+                showQuickFilter: true,
+                quickFilterProps: { debounceMs: 500 },
               },
               panel: {
                 anchorEl: filterButtonEl,
