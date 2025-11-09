@@ -739,7 +739,6 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {
         ':entityType': 'AllowedUser',
       },
-      Limit: 50,
     }
     try {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
@@ -796,6 +795,57 @@ class Dynamo implements DbClient {
           operation: 'fetchAllowedUsersByDestination',
         }
       )
+      throw error
+    }
+  }
+
+  async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
+    logger.debug(
+      `Upserting allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
+    )
+
+    const now = new Date().toISOString()
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: {
+        entityType: 'AllowedUser',
+        sortKey: `${allowedUser.environment}#${allowedUser.destinationId}#${allowedUser.principal}`,
+        principal: allowedUser.principal,
+        environment: allowedUser.environment,
+        destinationId: allowedUser.destinationId,
+        enabled: allowedUser.enabled ?? true,
+        createdBy: allowedUser.createdBy,
+        createdOn: allowedUser.createdOn
+          ? allowedUser.createdOn.toISOString()
+          : now,
+        updatedBy: allowedUser.updatedBy,
+        updatedOn: now,
+        validatedOn: now,
+      },
+    }
+
+    try {
+      await dynamodDbDocClient.send(new PutCommand(params))
+      logger.info(
+        `Successfully upserted allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
+      )
+      return {
+        ...allowedUser,
+        updatedOn: new Date(now),
+        createdOn: allowedUser.createdOn || new Date(now),
+      }
+    } catch (error) {
+      logger.error('Error upserting allowed user to DynamoDB', {
+        environment: allowedUser.environment,
+        destinationId: allowedUser.destinationId,
+        principal: allowedUser.principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'upsertAllowedUser',
+      })
       throw error
     }
   }

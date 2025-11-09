@@ -239,4 +239,8 @@ class EncryptedRepository implements DbClient {
     const result = await this.repository.fetchFileTypeList()
     return result
   }
+
+  async upsertAllowedUser(allowedUser: any): Promise<any> {
+    return await this.repository.upsertAllowedUser(allowedUser)
+  }
 }

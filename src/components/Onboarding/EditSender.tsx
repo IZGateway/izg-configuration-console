@@ -109,7 +109,6 @@ const EditSender: React.FC<EditSenderProps> = ({
   // Form validation for required fields
   const isFormValid = () => {
     const requiredFields = [
-      'id',
       'sender',
       'senderDetails',
       'destination',
@@ -119,6 +118,11 @@ const EditSender: React.FC<EditSenderProps> = ({
       'facilityId',
       'status',
     ]
+
+    // In edit mode, also require the ID
+    if (!isAddMode) {
+      requiredFields.unshift('id')
+    }
 
     return requiredFields.every((field) => {
       const value = formData[field as keyof SenderData]
@@ -178,8 +182,36 @@ const EditSender: React.FC<EditSenderProps> = ({
       year: 'numeric',
     })
 
+    // Auto-generate ID if it's empty (in add mode)
+    let generatedId = formData.id
+    if (isAddMode && !formData.id) {
+      // Parse environment and destinationId from destination field
+      const destinationMatch = formData.destination.match(/^(.+?)\s*\((.+?)\)$/)
+      const destinationId = destinationMatch
+        ? destinationMatch[1].trim()
+        : 'unknown'
+      const environmentName = destinationMatch
+        ? destinationMatch[2].trim()
+        : 'ONBOARD'
+
+      // Map environment name to ID
+      const environmentMap: { [key: string]: number } = {
+        PRODUCTION: 1,
+        TEST: 2,
+        ONBOARD: 3,
+        STAGE: 4,
+        DEV: 5,
+        UNKNOWN: 6,
+      }
+      const environment = environmentMap[environmentName] || 3
+
+      // Generate ID in format: environment-destinationId-principal
+      generatedId = `${environment}-${destinationId}-${formData.sender}`
+    }
+
     const updatedFormData = {
       ...formData,
+      id: generatedId,
       lastUpdated: currentDate,
     }
 
@@ -299,12 +331,17 @@ const EditSender: React.FC<EditSenderProps> = ({
             }}
           >
             <TextField
-              label={createLabelWithRedAsterisk('Sender Identifier *')}
+              label={
+                isAddMode
+                  ? 'Sender Identifier (optional - will be auto-generated)'
+                  : createLabelWithRedAsterisk('Sender Identifier *')
+              }
               value={formData.id}
               onChange={(e) => handleInputChange('id', e.target.value)}
               variant="outlined"
               fullWidth
               size="medium"
+              placeholder={isAddMode ? 'Leave blank to auto-generate' : ''}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: '8px',

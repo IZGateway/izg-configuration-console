@@ -24,6 +24,7 @@ import {
   WifiOff as WifiOffIcon,
   Wifi as WifiIcon,
 } from '@mui/icons-material'
+import { useSession } from 'next-auth/react'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { mockSenderData, type SenderData } from './mockData'
@@ -165,6 +166,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   allowedUsers = [],
 }) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const { data: session } = useSession()
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -238,12 +240,12 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   // Helper function to get environment name
   function getEnvironmentName(envId: number): string {
     const envMap: { [key: number]: string } = {
-      1: 'Production',
-      2: 'Testing',
-      3: 'Staging',
-      4: 'Development',
-      5: 'Onboarding',
-      6: 'Unknown',
+      1: 'PRODUCTION',
+      2: 'TEST',
+      3: 'ONBOARD',
+      4: 'STAGE',
+      5: 'DEV',
+      6: 'UNKNOWN',
     }
     return envMap[envId] || 'Unknown'
   }
@@ -326,19 +328,62 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     setEditingSender(null)
   }
 
-  const handleSaveAdd = (newSender: SenderData) => {
-    // Add the new sender to the sender data state
-    setSenderData((prevData) => [...prevData, newSender])
+  const handleSaveAdd = async (newSender: SenderData) => {
+    console.log('handleSaveAdd called with:', newSender)
+    try {
+      const environment = 5 // Paul: need to figure this out
 
-    // Show snackbar notification
-    setSnackbarMessage(
-      `Sender "${newSender.sender}" has been successfully added to onboarding.`
-    )
-    setSnackbarSeverity('success')
-    setSnackbarOpen(true)
+      // Create AllowedUser object from SenderData
+      const allowedUser = {
+        principal: newSender.senderDetails,
+        environment: environment,
+        destinationId: newSender.destinationCode,
+        enabled: newSender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+      }
+      console.log('Creating AllowedUser:', allowedUser)
 
-    setIsAddMode(false)
-    setEditingSender(null)
+      // Call the API to add the allowed user
+      console.log('Calling /api/allowedusers POST...')
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      console.log('API response status:', response.status)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to add allowed user')
+      }
+
+      const result = await response.json()
+      console.log('API response data:', result)
+
+      // Add the new sender to the sender data state
+      setSenderData((prevData) => [...prevData, newSender])
+
+      // Show snackbar notification
+      setSnackbarMessage(
+        `Sender "${newSender.sender}" has been successfully added to onboarding.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+
+      setIsAddMode(false)
+      setEditingSender(null)
+    } catch (error) {
+      console.error('Error adding sender:', error)
+      setSnackbarMessage(
+        `Failed to add sender "${newSender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+    }
   }
 
   const handleCancelEdit = () => {

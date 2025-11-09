@@ -1,5 +1,6 @@
 import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
+import { AllowedUser } from '../type/AllowedUser'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -11,4 +12,5 @@ export default interface ConfigConsoleMutateRepository {
     user: string
   ): Promise<boolean>
   updateDestination(destination: Destination): Promise<boolean>
+  upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser>
 }
