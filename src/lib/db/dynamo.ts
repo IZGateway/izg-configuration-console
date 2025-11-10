@@ -23,11 +23,13 @@ import {
   DynamoDBClient,
   DynamoDBClientConfig,
   ListTablesCommand,
+  ScanCommand,
+  ScanCommandInput,
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
 import { setImmediate } from 'timers'
-import { DestinationConnectionSettings } from '../type/DestinationConnectionSettings'
+import { DenyListItem } from '../type/DenyList'
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
@@ -664,15 +666,42 @@ class Dynamo implements DbClient {
     return result // May need to update this
   }
 
-  async fetchDenyListData(): Promise<any> {
-    const params: GetCommandInput = {
-      TableName: TABLE_NAME,
-      Key: {
-        entityType: 'DenyListRecord',
-      },
+  async fetchDenyListData(): Promise<DenyListItem[]> {
+    try {
+      const params: QueryCommandInput = {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'entityType = :entityType',
+        ExpressionAttributeValues: {
+          ':entityType': 'DenyListRecord',
+        },
+      }
+
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+      if (!result.Items || result.Items.length === 0) {
+        return []
+      }
+
+      return Promise.all(
+        result.Items.map(async (item) => {
+          const destinationType = await this.fetchDestinationType(
+            item.environment?.toString()
+          )
+          return {
+            id: item.sortKey || item.principal,
+            name: item.principal,
+            reason: item.reason || 'Not specified',
+            dateDenied: item.createdOn || 'Unknown',
+            deniedBy: item.createdBy || 'System',
+            certificationName: item.certificationName || 'N/A',
+            environment: destinationType.type,
+          }
+        })
+      )
+    } catch (error) {
+      console.error('Error querying DynamoDB:', error)
+      throw error
     }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result // May need to update this
   }
 
   async fetchFileTypeList(): Promise<any> {

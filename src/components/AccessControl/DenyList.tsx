@@ -6,9 +6,10 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
-import { mockDenyListData, type DenyListItem } from './mockData'
 import { useSession } from 'next-auth/react'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import useSWR from 'swr'
+import { DenyListItem } from '../../lib/type/DenyList'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -176,16 +177,10 @@ interface DenyListComponentProps extends DenyListProps {
 }
 
 const DenyList: React.FC<DenyListComponentProps> = ({
-  data = [],
   onAddDeny,
   onDeleteDeny,
 }) => {
   const { data: session } = useSession()
-  const {
-    data: denyListData,
-    error: denyListError,
-    isLoading: isDenyListDataLoading,
-  } = useSWR(`/api/denylist`)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
@@ -195,15 +190,33 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     (() => {
       // setPageSize not available
     })
+  const {
+    data: denyListData,
+    error: denyListError,
+    isLoading: isDenyListLoading,
+  } = useSWR<DenyListItem[]>(`/api/denylist`)
   const [searchTerm, setSearchTerm] = useState('')
   const [renderMode, setRenderMode] = useState<
     'mobile' | 'desktop' | 'transitioning'
   >('desktop')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [rowToDelete, setRowToDelete] = useState<DenyListItem | null>(null)
-  // Derive displayed data from parent prop so updates (add/delete) are reflected
-  const denyListData: DenyListItem[] =
-    data && data.length > 0 ? data : mockDenyListData
+
+  // Filter data based on search term
+  const filteredData = React.useMemo(() => {
+    const dataToFilter = denyListData || []
+
+    if (!searchTerm) return dataToFilter
+
+    return dataToFilter.filter((row) => {
+      const searchLower = searchTerm.toLowerCase()
+      return (
+        row.name?.toLowerCase().includes(searchLower) ||
+        row.reason?.toLowerCase().includes(searchLower) ||
+        row.deniedBy?.toLowerCase().includes(searchLower)
+      )
+    })
+  }, [denyListData, searchTerm])
 
   // Handle responsive design
   React.useEffect(() => {
@@ -217,21 +230,28 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Filter data based on search term
-  const filteredData = React.useMemo(() => {
-    const dataToFilter = denyListData
-
-    if (!searchTerm) return dataToFilter
-
-    return dataToFilter.filter((row) => {
-      const searchLower = searchTerm.toLowerCase()
-      return (
-        row.name?.toLowerCase().includes(searchLower) ||
-        row.reason?.toLowerCase().includes(searchLower) ||
-        row.deniedBy?.toLowerCase().includes(searchLower)
-      )
-    })
-  }, [denyListData, searchTerm])
+  if (denyListError) throw new Error()
+  if (isDenyListLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          backgroundColor: palette.white,
+          borderRadius: '8px',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+          border: `1px solid ${palette.border}`,
+          margin: '16px 0',
+        }}
+      >
+        <Typography variant="body1" color="text.secondary">
+          Loading deny list data...
+        </Typography>
+      </Box>
+    )
+  }
 
   // Call parent handler for add
   const handleAdd = () => {
@@ -292,10 +312,10 @@ const DenyList: React.FC<DenyListComponentProps> = ({
           sx={{
             fontWeight: 500,
             color:
-              params.value === 'Production' ? 'success.main' : 'warning.main',
+              params.value === 'PRODUCTION' ? 'success.main' : 'warning.main',
           }}
         >
-          {params.value || 'Onboarding'}
+          {params.value || 'Undefined'}
         </Typography>
       ),
     },
@@ -313,7 +333,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {params.value}
+          {params.value || 'Not specified'}
         </Typography>
       ),
     },
@@ -440,7 +460,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
             disableColumnSelector
             disableDensitySelector
             onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-            getRowId={(row) => row.id}
+            getRowId={(row) => row.id || row.principal || row.sortKey}
             density={'comfortable'}
             pagination
             slots={{

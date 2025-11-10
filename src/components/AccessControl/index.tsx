@@ -60,9 +60,6 @@ const AccessControlComponent = () => {
   const [showSnackbar, setShowSnackbar] = useState(false)
   // Deny List add mode state
   const [isAddingDeny, setIsAddingDeny] = useState(false)
-  // Deny List data state (seeded with mock data so table shows demo rows and new entries append)
-  const [denyListData, setDenyListData] =
-    useState<DenyListItem[]>(mockDenyListData)
   // Deny List add logic
   const handleAddDeny = () => setIsAddingDeny(true)
   const handleSaveDeny = (item) => {
@@ -87,8 +84,9 @@ const AccessControlComponent = () => {
   const handleCancelDeny = () => setIsAddingDeny(false)
 
   const [isAddingFileType, setIsAddingFileType] = useState(false)
-  const [fileTypeData, setFileTypeData] = useState<FileTypeListItem[]>(mockFileTypeListData)
-  const handleAddFileType = () =>  setIsAddingFileType(true)
+  const [fileTypeData, setFileTypeData] =
+    useState<FileTypeListItem[]>(mockFileTypeListData)
+  const handleAddFileType = () => setIsAddingFileType(true)
   const handleSaveFileType = (item) => {
     setFileTypeData((prev) => [...prev, item])
     setIsAddingFileType(false)
@@ -110,7 +108,7 @@ const AccessControlComponent = () => {
     })
   }
   const handleCancelFileType = () => setIsAddingFileType(false)
-    
+
   const { data: session } = useSession()
   const currentUserName = session?.user?.name || 'Unknown'
 
@@ -342,12 +340,11 @@ const AccessControlComponent = () => {
             {/* Tab Panel 1 - Deny List */}
             <TabPanel value={tabValue} index={1}>
               <DenyList
-                data={denyListData}
                 onAddDeny={handleAddDeny}
                 onDeleteDeny={handleDeleteDeny}
               />
             </TabPanel>
-            
+
             {/* Tab Panel 2 - ADS File Types */}
             <TabPanel value={tabValue} index={2}>
               <FileTypeList
