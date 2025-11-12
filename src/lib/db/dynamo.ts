@@ -23,7 +23,6 @@ import {
   DynamoDBClient,
   DynamoDBClientConfig,
   ListTablesCommand,
-  ScanCommand as RawScanCommand,
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
@@ -657,53 +656,38 @@ class Dynamo implements DbClient {
   }
 
   async fetchAccessGroups(): Promise<any> {
-    // Use raw scan to properly handle String Sets
-    const params = {
+    const params: QueryCommandInput = {
       TableName: TABLE_NAME,
-      FilterExpression: 'entityType = :entityType',
+      KeyConditionExpression: 'entityType = :entityType',
       ExpressionAttributeValues: {
-        ':entityType': { S: 'AccessGroup' },
+        ':entityType': 'AccessGroup',
       },
     }
 
-    const result = await dynamodDbClient.send(new RawScanCommand(params))
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
 
-    // Convert raw DynamoDB items to plain objects, manually handling String Sets
-    const items =
-      result.Items?.map((item) => {
-        const processed: any = {}
+    if (!result.Items || result.Items.length === 0) {
+      return []
+    }
 
-        for (const [key, value] of Object.entries(item)) {
-          const dynValue = value as any
-          if (dynValue.S) {
-            // String
-            processed[key] = dynValue.S
-          } else if (dynValue.N) {
-            // Number
-            processed[key] = parseFloat(dynValue.N)
-          } else if (dynValue.SS) {
-            // String Set - convert to array
-            processed[key] = dynValue.SS
-          } else if (dynValue.NS) {
-            // Number Set - convert to array of numbers
-            processed[key] = dynValue.NS.map((n: string) => parseFloat(n))
-          } else if (dynValue.BOOL !== undefined) {
-            // Boolean
-            processed[key] = dynValue.BOOL
-          } else if (dynValue.NULL) {
-            // Null
-            processed[key] = null
-          }
-        }
-
-        return processed
-      }) || []
-
-    logger.info('Fetched access groups from DynamoDB', {
-      itemCount: items.length,
-    })
-
-    return items
+    return result.Items.map((item) => ({
+      ...item,
+      roles: Array.isArray(item.roles)
+        ? item.roles
+        : item.roles
+        ? Array.from(item.roles)
+        : [],
+      users: Array.isArray(item.users)
+        ? item.users
+        : item.users
+        ? Array.from(item.users)
+        : [],
+      groups: Array.isArray(item.groups)
+        ? item.groups
+        : item.groups
+        ? Array.from(item.groups)
+        : [],
+    }))
   }
 
   async fetchDenyListData(): Promise<any> {
