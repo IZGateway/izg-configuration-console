@@ -18,15 +18,30 @@ import AddFileTypeList from './AddFileTypeList'
 
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
+import fetcher from '../../lib/fetch'
 
 import {
   type AccessGroup,
-  mockAccessGroups,
   mockDenyListData,
   type DenyListItem,
   mockFileTypeListData,
   type FileTypeListItem,
 } from './mockData'
+
+interface DynamoDBAccessGroup {
+  environment: string
+  groupName: string
+  sortKey: string
+  updatedBy: string
+  createdBy: string
+  entityType: string
+  roles?: string[] | Record<string, never>
+  groups?: string[] | Record<string, never>
+  updatedOn: string
+  createdOn: string
+  users?: string[] | Record<string, never>
+  description?: string
+}
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -87,8 +102,9 @@ const AccessControlComponent = () => {
   const handleCancelDeny = () => setIsAddingDeny(false)
 
   const [isAddingFileType, setIsAddingFileType] = useState(false)
-  const [fileTypeData, setFileTypeData] = useState<FileTypeListItem[]>(mockFileTypeListData)
-  const handleAddFileType = () =>  setIsAddingFileType(true)
+  const [fileTypeData, setFileTypeData] =
+    useState<FileTypeListItem[]>(mockFileTypeListData)
+  const handleAddFileType = () => setIsAddingFileType(true)
   const handleSaveFileType = (item) => {
     setFileTypeData((prev) => [...prev, item])
     setIsAddingFileType(false)
@@ -110,13 +126,68 @@ const AccessControlComponent = () => {
     })
   }
   const handleCancelFileType = () => setIsAddingFileType(false)
-    
+
   const { data: session } = useSession()
   const currentUserName = session?.user?.name || 'Unknown'
 
   // Manage actual data state
-  const [accessGroupsData, setAccessGroupsData] =
-    useState<AccessGroup[]>(mockAccessGroups)
+  const [accessGroupsData, setAccessGroupsData] = useState<AccessGroup[]>([])
+
+  // Fetch access groups from API
+  useEffect(() => {
+    const fetchAccessGroups = async () => {
+      try {
+        const response = await fetcher<DynamoDBAccessGroup[]>(
+          '/api/accessgroups'
+        )
+
+        // Transform DynamoDB data to UI format
+        const transformedData: AccessGroup[] = response.map((item) => {
+          // Extract members
+          let members: string[] = []
+
+          // Add users if they exist
+          if (Array.isArray(item.users)) {
+            members = [...item.users]
+          }
+
+          // Also add groups if they exist
+          if (Array.isArray(item.groups)) {
+            members = [...members, ...item.groups]
+          }
+
+          // Extract roles
+          let roles: string[] = []
+          if (Array.isArray(item.roles)) {
+            roles = item.roles
+          }
+
+          return {
+            id: item.sortKey || `${item.environment}-${item.groupName}`,
+            groupName: item.groupName || '',
+            description:
+              item.description ||
+              `Access group for environment ${item.environment}`,
+            memberCount: members.length,
+            roles: roles,
+            members: members,
+          }
+        })
+
+        setAccessGroupsData(transformedData)
+      } catch (error) {
+        console.error('Failed to fetch access groups:', error)
+        setAlert({
+          level: 'error',
+          jurisdiction: '',
+          dest_type: '',
+          message: 'Failed to load access groups. Please try again.',
+        })
+      }
+    }
+
+    fetchAccessGroups()
+  }, [setAlert])
 
   // Handle snackbar visibility
   useEffect(() => {
@@ -347,7 +418,7 @@ const AccessControlComponent = () => {
                 onDeleteDeny={handleDeleteDeny}
               />
             </TabPanel>
-            
+
             {/* Tab Panel 2 - ADS File Types */}
             <TabPanel value={tabValue} index={2}>
               <FileTypeList

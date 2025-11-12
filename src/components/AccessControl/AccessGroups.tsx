@@ -13,7 +13,6 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import palette from '../../styles/theme/palette'
-import { mockAccessGroups, type AccessGroup } from './mockData'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 interface AccessGroupsProps {
@@ -23,13 +22,22 @@ interface AccessGroupsProps {
   onDeleteGroup?: (groupId: string) => void
 }
 
+interface AccessGroup {
+  id: string
+  groupName: string
+  description: string
+  memberCount: number
+  roles: string[]
+  members: string[]
+}
+
 const AccessGroups: React.FC<AccessGroupsProps> = ({
   data = [],
   onEditGroup,
   onAddGroup,
   onDeleteGroup,
 }) => {
-  const groups = data.length > 0 ? data : mockAccessGroups
+  const groups = data
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<AccessGroup | null>(null)
 
@@ -181,23 +189,25 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                     color: 'text.primary',
                   }}
                 >
-                  Members ({group.members.length})
+                  Members (
+                  {Array.isArray(group.members) ? group.members.length : 0})
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {group.members.map((member, index) => (
-                    <Chip
-                      key={index}
-                      label={member}
-                      size="small"
-                      sx={{
-                        backgroundColor: '#e3f2fd',
-                        color: palette.primary,
-                        fontSize: '0.75rem',
-                        height: '24px',
-                        border: `1px solid ${palette.primary}`,
-                      }}
-                    />
-                  ))}
+                  {Array.isArray(group.members) &&
+                    group.members.map((member, index) => (
+                      <Chip
+                        key={index}
+                        label={member}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#e3f2fd',
+                          color: palette.primary,
+                          fontSize: '0.75rem',
+                          height: '24px',
+                          border: `1px solid ${palette.primary}`,
+                        }}
+                      />
+                    ))}
                 </Box>
 
                 {/* Roles Section */}
@@ -212,20 +222,21 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                   Roles
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {group.roles.map((role, index) => (
-                    <Chip
-                      key={index}
-                      label={role}
-                      size="small"
-                      sx={{
-                        backgroundColor: '#f5f5f5',
-                        color: 'text.primary',
-                        fontSize: '0.75rem',
-                        height: '24px',
-                        border: '1px solid #d0d0d0',
-                      }}
-                    />
-                  ))}
+                  {Array.isArray(group.roles) &&
+                    group.roles.map((role, index) => (
+                      <Chip
+                        key={index}
+                        label={role}
+                        size="small"
+                        sx={{
+                          backgroundColor: '#f5f5f5',
+                          color: 'text.primary',
+                          fontSize: '0.75rem',
+                          height: '24px',
+                          border: '1px solid #d0d0d0',
+                        }}
+                      />
+                    ))}
                 </Box>
               </CardContent>
             </Card>

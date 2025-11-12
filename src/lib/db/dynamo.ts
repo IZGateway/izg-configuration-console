@@ -61,6 +61,8 @@ const translateConfig = {
   },
   unmarshallOptions: {
     wrapNumbers: false,
+    // Ensure sets are converted to arrays
+    convertEmptyValues: false,
   },
 }
 
@@ -654,14 +656,38 @@ class Dynamo implements DbClient {
   }
 
   async fetchAccessGroups(): Promise<any> {
-    const params: GetCommandInput = {
+    const params: QueryCommandInput = {
       TableName: TABLE_NAME,
-      Key: {
-        entityType: 'AccessGroup',
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'AccessGroup',
       },
     }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result // May need to update this
+
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+    if (!result.Items || result.Items.length === 0) {
+      return []
+    }
+
+    return result.Items.map((item) => ({
+      ...item,
+      roles: Array.isArray(item.roles)
+        ? item.roles
+        : item.roles
+        ? Array.from(item.roles)
+        : [],
+      users: Array.isArray(item.users)
+        ? item.users
+        : item.users
+        ? Array.from(item.users)
+        : [],
+      groups: Array.isArray(item.groups)
+        ? item.groups
+        : item.groups
+        ? Array.from(item.groups)
+        : [],
+    }))
   }
 
   async fetchDenyListData(): Promise<any> {
