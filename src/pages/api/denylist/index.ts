@@ -30,7 +30,44 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
-  res.setHeader('Allow', ['GET'])
+  if (req.method === 'POST') {
+    try {
+      const { certificationName, environment, reason, deniedBy } = req.body
+      if (!certificationName || !environment) {
+        return res.status(400).json({
+          error: 'Certification name and environment are required fields',
+        })
+      }
+
+      const dbClient = await DbClientFactory.getDbClient()
+      const newRecord = await dbClient.addDenyListRecord({
+        principal: certificationName,
+        environment,
+        reason,
+        deniedBy,
+      })
+
+      return res.status(201).json(newRecord)
+    } catch (error) {
+      logger.error('Error adding deny list record', {
+        operation: 'addDenyListRecord',
+        httpMethod: req.method,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+
+      if (error.name === 'ConditionalCheckFailedException') {
+        return res.status(409).json({
+          error: 'Record already exists',
+        })
+      }
+
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  res.setHeader('Allow', ['GET', 'POST'])
+
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 

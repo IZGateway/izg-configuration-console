@@ -30,4 +30,5 @@ export default interface ConfigConsoleFetchRepository {
   fetchAccessGroups: () => Promise<any>
   fetchDenyListData: () => Promise<any>
   fetchFileTypeList: () => Promise<any>
+  fetchOrganizations: () => Promise<any>
 }

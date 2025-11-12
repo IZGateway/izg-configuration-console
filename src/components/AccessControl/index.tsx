@@ -62,15 +62,30 @@ const AccessControlComponent = () => {
   const [isAddingDeny, setIsAddingDeny] = useState(false)
   // Deny List add logic
   const handleAddDeny = () => setIsAddingDeny(true)
-  const handleSaveDeny = (item) => {
-    setDenyListData((prev) => [...prev, item])
-    setIsAddingDeny(false)
-    setAlert({
-      level: 'success',
-      jurisdiction: '',
-      dest_type: '',
-      message: `Deny list entry has been successfully added.`,
-    })
+  const handleSaveDeny = async (item) => {
+    try {
+      const response = await fetch('/api/denylist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      })
+      if (!response.ok) throw new Error('Failed to add deny list entry')
+      const savedItem = await response.json()
+      setIsAddingDeny(false)
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Deny list entry has been successfully added.`,
+      })
+    } catch (error) {
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Failed to add deny list entry.`,
+      })
+    }
   }
   const handleDeleteDeny = (id: string) => {
     setDenyListData((prev) => prev.filter((item) => item.id !== id))

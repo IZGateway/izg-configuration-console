@@ -23,8 +23,6 @@ import {
   DynamoDBClient,
   DynamoDBClientConfig,
   ListTablesCommand,
-  ScanCommand,
-  ScanCommandInput,
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
@@ -666,6 +664,65 @@ class Dynamo implements DbClient {
     return result // May need to update this
   }
 
+  async fetchOrganizationName(principal: string): Promise<string> {
+    try {
+      const params: QueryCommandInput = {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'entityType = :entityType',
+        ExpressionAttributeValues: {
+          ':entityType': 'OrganizationRecord',
+        },
+      }
+
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      if (!result.Items || result.Items.length === 0) {
+        return 'Unknown Organization'
+      }
+
+      const matchingOrg = result.Items.find((org) => {
+        if (org.principalNames) {
+          return org.principalNames.has(principal)
+        }
+        return false
+      })
+
+      return matchingOrg?.organizationName || 'Unknown Organization'
+    } catch (error) {
+      console.error('Error fetching organization name:', error)
+      return 'Unknown Organization'
+    }
+  }
+
+  async fetchOrganizations(): Promise<any[]> {
+    try {
+      const params: QueryCommandInput = {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'entityType = :entityType',
+        ExpressionAttributeValues: {
+          ':entityType': 'OrganizationRecord',
+        },
+      }
+
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+      if (!result.Items || result.Items.length === 0) {
+        return []
+      }
+
+      return result.Items.map((item) => ({
+        organizationName: item.organizationName,
+        principalNames: Array.isArray(item.principalNames)
+          ? item.principalNames
+          : item.principalNames
+          ? Array.from(item.principalNames)
+          : [],
+      }))
+    } catch (error) {
+      console.error('Error querying organizations:', error)
+      throw error
+    }
+  }
+
   async fetchDenyListData(): Promise<DenyListItem[]> {
     try {
       const params: QueryCommandInput = {
@@ -684,22 +741,75 @@ class Dynamo implements DbClient {
 
       return Promise.all(
         result.Items.map(async (item) => {
-          const destinationType = await this.fetchDestinationType(
-            item.environment?.toString()
-          )
+          const [destinationType, organizationName] = await Promise.all([
+            this.fetchDestinationType(item.environment?.toString()),
+            this.fetchOrganizationName(item.principal),
+          ])
+
           return {
             id: item.sortKey || item.principal,
-            name: item.principal,
+            name: organizationName,
             reason: item.reason || 'Not specified',
             dateDenied: item.createdOn || 'Unknown',
             deniedBy: item.createdBy || 'System',
-            certificationName: item.certificationName || 'N/A',
+            certificationName: item.principal,
             environment: destinationType.type,
           }
         })
       )
     } catch (error) {
       console.error('Error querying DynamoDB:', error)
+      throw error
+    }
+  }
+
+  async addDenyListRecord(denyListItem: {
+    principal: string
+    environment: number
+    reason?: string
+    deniedBy?: string
+  }): Promise<DenyListItem> {
+    try {
+      const timestamp = new Date().toISOString()
+      const sortKey = `${denyListItem.environment}#${denyListItem.principal}`
+
+      const itemToInsert = {
+        entityType: 'DenyListRecord',
+        id: sortKey,
+        principal: denyListItem.principal,
+        environment: denyListItem.environment,
+        sortKey: sortKey,
+        reason: denyListItem.reason || '',
+        createdOn: timestamp,
+        updatedOn: timestamp,
+        createdBy: denyListItem.deniedBy || 'System',
+        updatedBy: denyListItem.deniedBy || 'System',
+      }
+
+      const params: PutCommandInput = {
+        TableName: TABLE_NAME,
+        Item: itemToInsert,
+      }
+
+      await dynamodDbDocClient.send(new PutCommand(params))
+      console.log(
+        'Successfully added deny list record:',
+        JSON.stringify(itemToInsert, null, 2)
+      )
+      const destinationType = await this.fetchDestinationType(
+        denyListItem.environment.toString()
+      )
+      return {
+        id: sortKey,
+        name: denyListItem.certificationName || 'N/A',
+        reason: denyListItem.reason || 'Not specified',
+        dateDenied: timestamp,
+        deniedBy: 'System',
+        certificationName: denyListItem.principal || 'N/A',
+        environment: destinationType.type,
+      }
+    } catch (error) {
+      console.error('Error adding deny list record:', error)
       throw error
     }
   }
