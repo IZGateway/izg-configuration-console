@@ -30,8 +30,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
+    const { certificationName, environment, reason, deniedBy } = req.body
+
     try {
-      const { certificationName, environment, reason, deniedBy } = req.body
       if (!certificationName || !environment) {
         return res.status(400).json({
           error: 'Certificate name and environment are required fields',
@@ -55,12 +56,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         stack: error instanceof Error ? error.stack : undefined,
       })
 
-      if (error.name === 'ConditionalCheckFailedException') {
+      if (
+        error instanceof Error &&
+        error.name === 'ConditionalCheckFailedException'
+      ) {
+        res.setHeader('Content-Type', 'application/json')
         return res.status(409).json({
-          error: 'Record already exists',
+          error:
+            error.message ||
+            `A deny list entry already exists for certificate "${certificationName}" in environment "${environment}". Please use a different certificate name or environment.`,
         })
       }
 
+      res.setHeader('Content-Type', 'application/json')
       return res.status(500).json({ error: 'Internal server error' })
     }
   }

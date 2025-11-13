@@ -11,6 +11,7 @@ import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import useSWR, { mutate } from 'swr'
 import { DenyListItem } from '../../lib/type/DenyList'
 import CombinedContext from '../../contexts/app'
+import Loader from '../Loader'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -249,7 +250,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
         }}
       >
         <Typography variant="body1" color="text.secondary">
-          Loading deny list data...
+          <Loader open={true} />
         </Typography>
       </Box>
     )
@@ -282,10 +283,8 @@ const DenyList: React.FC<DenyListComponentProps> = ({
         'UNKNOWN',
       ]
       let envNum = rowToDelete.environment
-      console.log('envNum')
-      console.log(envNum)
       if (typeof envNum === 'string') {
-        envNum = DEST_TYPES.indexOf(rowToDelete.environment)
+        envNum = DEST_TYPES.indexOf(envNum)
       }
       const sortKey = `${envNum}#${rowToDelete.certificationName}`
 
@@ -349,7 +348,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
       ),
     },
     {
-      field: 'certificateName',
+      field: 'certificationName',
       headerName: 'CERTIFICATE NAME',
       flex: 1,
       minWidth: 180,

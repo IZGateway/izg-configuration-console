@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { mockDenyListData, type DenyListItem } from './mockData'
+import { DenyListItem } from '../../lib/type/DenyList'
 
 interface AddDenyListProps {
   onSave: (item: DenyListItem) => void
@@ -109,10 +109,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
     )
   }
 
-  const handleChange = (
-    field: keyof DenyListItem,
-    value: string | ('Production' | 'Onboarding')
-  ) => {
+  const handleChange = (field: keyof DenyListItem, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -134,9 +131,11 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
 
     onSave({
       certificationName: formData.certificationName || '',
-      environment: getEnvironmentIndex(formData.environment),
+      environment: getEnvironmentIndex(formData.environment as string),
       reason: formData.reason || '',
       deniedBy: userName,
+      id: '',
+      name: '',
     })
   }
 
@@ -284,7 +283,9 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
             <Select
               value={formData.environment}
               label="Environment"
-              onChange={(e) => handleChange('environment', e.target.value)}
+              onChange={(e) =>
+                handleChange('environment', e.target.value as string)
+              }
               sx={{ borderRadius: '8px' }}
             >
               {['PRODUCTION', 'TEST', 'ONBOARD', 'STAGE', 'DEV'].map((env) => (

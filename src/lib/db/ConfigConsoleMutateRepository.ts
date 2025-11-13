@@ -1,5 +1,6 @@
 import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
+import { DenyListItem } from '../type/DenyList'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -11,4 +12,11 @@ export default interface ConfigConsoleMutateRepository {
     user: string
   ): Promise<boolean>
   updateDestination(destination: Destination): Promise<boolean>
+  addDenyListRecord(denyListItem: {
+    principal: string
+    environment: number
+    reason?: string
+    deniedBy?: string
+  }): Promise<DenyListItem>
+  deleteDenyListRecord(id: string): Promise<boolean>
 }

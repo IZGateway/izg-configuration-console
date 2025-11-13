@@ -67,7 +67,12 @@ const AccessControlComponent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
       })
-      if (!response.ok) throw new Error('Failed to add deny list entry')
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add deny list entry')
+      }
+
       setIsAddingDeny(false)
       setAlert({
         level: 'success',
@@ -76,11 +81,12 @@ const AccessControlComponent = () => {
         message: `Deny list entry has been successfully added.`,
       })
     } catch (error) {
+      setIsAddingDeny(false)
       setAlert({
         level: 'error',
         jurisdiction: '',
         dest_type: '',
-        message: `Failed to add deny list entry.`,
+        message: error.message || 'Failed to add deny list entry.',
       })
     }
   }

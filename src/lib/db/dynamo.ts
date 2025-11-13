@@ -763,6 +763,31 @@ class Dynamo implements DbClient {
     }
   }
 
+  async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
+    try {
+      const params: GetCommandInput = {
+        TableName: TABLE_NAME,
+        Key: {
+          entityType: 'DenyListRecord',
+          sortKey: sortKey,
+        },
+      }
+
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      return !!result.Item
+    } catch (error) {
+      logger.error('Error checking deny list record existence', {
+        operation: 'checkDenyListRecordExists',
+        tableName: TABLE_NAME,
+        sortKey: sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
   async addDenyListRecord(denyListItem: {
     principal: string
     environment: number
@@ -772,6 +797,16 @@ class Dynamo implements DbClient {
     try {
       const timestamp = new Date().toISOString()
       const sortKey = `${denyListItem.environment}#${denyListItem.principal}`
+
+      // Check if record already exists
+      const recordExists = await this.checkDenyListRecordExists(sortKey)
+      if (recordExists) {
+        const error = new Error(
+          `A deny list entry already exists for certificate ${denyListItem.principal} for this environment.`
+        )
+        error.name = 'ConditionalCheckFailedException'
+        throw error
+      }
 
       const itemToInsert = {
         entityType: 'DenyListRecord',
@@ -799,6 +834,8 @@ class Dynamo implements DbClient {
         denyListItem.environment.toString()
       )
       return {
+        id: sortKey,
+        name: await this.fetchOrganizationName(denyListItem.principal),
         reason: denyListItem.reason || 'Not specified',
         dateDenied: timestamp,
         deniedBy: 'System',
