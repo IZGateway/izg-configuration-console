@@ -34,7 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const { certificationName, environment, reason, deniedBy } = req.body
       if (!certificationName || !environment) {
         return res.status(400).json({
-          error: 'Certification name and environment are required fields',
+          error: 'Certificate name and environment are required fields',
         })
       }
 

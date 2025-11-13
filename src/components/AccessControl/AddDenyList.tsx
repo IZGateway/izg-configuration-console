@@ -235,17 +235,17 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
               ))}
             </Select>
           </FormControl>
-          {/* Certification Name */}
+          {/* Certificate Name */}
           <FormControl
             fullWidth
             required
             disabled={!selectedOrganization}
             sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
           >
-            <InputLabel>Certification Name</InputLabel>
+            <InputLabel>Certificate Name</InputLabel>
             <Select
               value={formData.certificationName}
-              label="Certification Name *"
+              label="Certificate Name *"
               onChange={(e) =>
                 handleChange('certificationName', e.target.value)
               }

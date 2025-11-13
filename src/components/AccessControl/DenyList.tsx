@@ -148,7 +148,7 @@ const MobileCard = ({ row }) => {
           {row.name}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Certification Name: {row.certificationName || 'N/A'}
+          Certificate Name: {row.certificationName || 'N/A'}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Environment: {row.environment || 'Onboarding'}
@@ -349,8 +349,8 @@ const DenyList: React.FC<DenyListComponentProps> = ({
       ),
     },
     {
-      field: 'certificationName',
-      headerName: 'CERTIFICATION NAME',
+      field: 'certificateName',
+      headerName: 'CERTIFICATE NAME',
       flex: 1,
       minWidth: 180,
       renderCell: (params) => (
