@@ -37,7 +37,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   const [formData, setFormData] = useState<Partial<DenyListItem>>({
     name: '',
     certificationName: '',
-    environment: 'Production' as 'Production' | 'Onboarding', // default
+    environment: 'ONBOARD', // default
     reason: '',
   })
 
@@ -133,7 +133,6 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
     if (!isFormValid()) return
 
     onSave({
-      id: `${Date.now()}`,
       certificationName: formData.certificationName || '',
       environment: getEnvironmentIndex(formData.environment),
       reason: formData.reason || '',

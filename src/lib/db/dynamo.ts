@@ -747,7 +747,7 @@ class Dynamo implements DbClient {
           ])
 
           return {
-            id: item.sortKey || item.principal,
+            id: item.sortKey,
             name: organizationName,
             reason: item.reason || 'Not specified',
             dateDenied: item.createdOn || 'Unknown',
@@ -775,7 +775,6 @@ class Dynamo implements DbClient {
 
       const itemToInsert = {
         entityType: 'DenyListRecord',
-        id: sortKey,
         principal: denyListItem.principal,
         environment: denyListItem.environment,
         sortKey: sortKey,
@@ -800,8 +799,6 @@ class Dynamo implements DbClient {
         denyListItem.environment.toString()
       )
       return {
-        id: sortKey,
-        name: denyListItem.certificationName || 'N/A',
         reason: denyListItem.reason || 'Not specified',
         dateDenied: timestamp,
         deniedBy: 'System',
@@ -810,6 +807,53 @@ class Dynamo implements DbClient {
       }
     } catch (error) {
       console.error('Error adding deny list record:', error)
+      throw error
+    }
+  }
+
+  async deleteDenyListRecord(id: string): Promise<boolean> {
+    try {
+      const params: DeleteCommandInput = {
+        TableName: TABLE_NAME,
+        Key: {
+          entityType: 'DenyListRecord',
+          sortKey: id,
+        },
+        ConditionExpression: 'attribute_exists(entityType)',
+      }
+
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+
+      logger.info('Deny list record deleted successfully', {
+        operation: 'deleteDenyListRecord',
+        tableName: TABLE_NAME,
+        entityType: 'DenyListRecord',
+        sortKey: id,
+      })
+
+      return true
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.warn('Attempted to delete non-existent deny list record', {
+          operation: 'deleteDenyListRecord',
+          tableName: TABLE_NAME,
+          entityType: 'DenyListRecord',
+          sortKey: id,
+          errorType: 'RecordNotFound',
+        })
+        return false
+      }
+
+      logger.error('Error deleting deny list record from DynamoDB', {
+        operation: 'deleteDenyListRecord',
+        tableName: TABLE_NAME,
+        entityType: 'DenyListRecord',
+        sortKey: id,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+
       throw error
     }
   }

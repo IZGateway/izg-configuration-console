@@ -8,9 +8,9 @@ import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
 import { useSession } from 'next-auth/react'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 import { DenyListItem } from '../../lib/type/DenyList'
-
+import CombinedContext from '../../contexts/app'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -181,6 +181,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   onDeleteDeny,
 }) => {
   const { data: session } = useSession()
+  const { alert, setAlert } = useContext(CombinedContext)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
@@ -201,6 +202,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   >('desktop')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [rowToDelete, setRowToDelete] = useState<DenyListItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Filter data based on search term
   const filteredData = React.useMemo(() => {
@@ -262,13 +264,69 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     setRowToDelete(row)
     setDeleteDialogOpen(true)
   }
-  const handleConfirmDelete = () => {
-    // Delegate actual delete to parent so data source stays in sync
-    if (rowToDelete && typeof onDeleteDeny === 'function') {
-      onDeleteDeny(rowToDelete.id)
+  const handleConfirmDelete = async () => {
+    if (!rowToDelete) {
+      setDeleteDialogOpen(false)
+      return
     }
-    setDeleteDialogOpen(false)
-    setRowToDelete(null)
+
+    try {
+      setIsDeleting(true)
+      const DEST_TYPES = [
+        null,
+        'PRODUCTION',
+        'TEST',
+        'ONBOARD',
+        'STAGE',
+        'DEV',
+        'UNKNOWN',
+      ]
+      let envNum = rowToDelete.environment
+      console.log('envNum')
+      console.log(envNum)
+      if (typeof envNum === 'string') {
+        envNum = DEST_TYPES.indexOf(rowToDelete.environment)
+      }
+      const sortKey = `${envNum}#${rowToDelete.certificationName}`
+
+      const response = await fetch(
+        `/api/denylist/${encodeURIComponent(sortKey)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete deny list entry')
+      }
+
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Deny list entry has been successfully deleted.`,
+      })
+
+      onDeleteDeny(rowToDelete.id)
+
+      mutate('/api/denylist')
+    } catch (error) {
+      console.error('Error deleting deny list entry:', error)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Failed to delete entry. Please try again.`,
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setRowToDelete(null)
+    }
   }
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false)

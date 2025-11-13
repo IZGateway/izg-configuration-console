@@ -22,8 +22,6 @@ import CombinedContext from '../../contexts/app'
 import {
   type AccessGroup,
   mockAccessGroups,
-  mockDenyListData,
-  type DenyListItem,
   mockFileTypeListData,
   type FileTypeListItem,
 } from './mockData'
@@ -70,7 +68,6 @@ const AccessControlComponent = () => {
         body: JSON.stringify(item),
       })
       if (!response.ok) throw new Error('Failed to add deny list entry')
-      const savedItem = await response.json()
       setIsAddingDeny(false)
       setAlert({
         level: 'success',
@@ -87,8 +84,7 @@ const AccessControlComponent = () => {
       })
     }
   }
-  const handleDeleteDeny = (id: string) => {
-    setDenyListData((prev) => prev.filter((item) => item.id !== id))
+  const handleDeleteDeny = () => {
     setAlert({
       level: 'success',
       jurisdiction: '',
