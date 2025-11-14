@@ -758,35 +758,53 @@ class Dynamo implements DbClient {
   }
 
   async fetchAllowedUsersByDestination(
-    environment: number,
-    destinationId: string
+    isAdmin: boolean,
+    destinations: Array<string>
   ): Promise<AllowedUser[]> {
     logger.debug(
-      `Fetching allowed users by destination: environment=${environment}, destinationId=${destinationId}`
+      `Fetching allowed users by destination: isAdmin=${isAdmin}, destinations=${destinations.join(
+        ', '
+      )}`
     )
     const params: QueryCommandInput = {
       TableName: TABLE_NAME,
-      KeyConditionExpression:
-        'entityType = :entityType and begins_with(sortKey, :sortKey)',
+      KeyConditionExpression: 'entityType = :entityType',
       ExpressionAttributeValues: {
         ':entityType': 'AllowedUser',
-        ':sortKey': `${environment}#${destinationId}#`,
       },
     }
+
+    if (!isAdmin && destinations.length > 0) {
+      // Build filter expression for multiple destinations
+      let filter = '('
+      for (let i = 0; i < destinations.length; i++) {
+        filter += 'begins_with(sortKey, :dest' + i + ')'
+        if (i < destinations.length - 1) {
+          filter += ' OR '
+        }
+        // Filter by destinationId (second part of sortKey: environment#destinationId#principal)
+        params.ExpressionAttributeValues[':dest' + i] = destinations[i]
+      }
+      filter += ')'
+      params.FilterExpression = filter
+    }
+
     try {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
       logger.debug(
         `Fetched ${
           result.Items?.length || 0
-        } allowed users for environment=${environment}, destinationId=${destinationId}`
+        } allowed users for isAdmin=${isAdmin}, destinations=${destinations.join(
+          ', '
+        )}`
       )
       return result.Items.map((item) => this.convertResponseToAllowedUser(item))
     } catch (error) {
       logger.error(
         'Error fetching allowed users by destination from DynamoDB',
         {
-          environment,
-          destinationId,
+          isAdmin,
+          destinations,
           tableName: TABLE_NAME,
           entityType: 'AllowedUser',
           errorMessage: error.message,

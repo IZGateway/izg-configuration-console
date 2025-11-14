@@ -86,8 +86,8 @@ class EncryptedRepository implements DbClient {
   ) => Promise<any>
   fetchAllowedUsers!: () => Promise<any[]>
   fetchAllowedUsersByDestination!: (
-    environment: number,
-    destinationId: string
+    isAdmin: boolean,
+    destinations: Array<string>
   ) => Promise<any[]>
 
   private repository: DbClient
