@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Typography,
@@ -13,6 +13,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { DenyListItem } from '../../lib/type/DenyList'
+import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 
 interface AddDenyListProps {
   onSave: (item: DenyListItem) => void
@@ -20,69 +21,17 @@ interface AddDenyListProps {
   userName: string
 }
 
-interface Organization {
-  organizationName: string
-  principalNames: string[]
-}
-
 const AddDenyList: React.FC<AddDenyListProps> = ({
   onSave,
   onCancel,
   userName,
 }) => {
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true)
-  const [selectedOrganization, setSelectedOrganization] =
-    useState<Organization | null>(null)
   const [formData, setFormData] = useState<Partial<DenyListItem>>({
     name: '',
     certificationName: '',
     environment: 'ONBOARD', // default
     reason: '',
   })
-
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        setIsLoadingOrganizations(true)
-
-        const response = await fetch('/api/organizations')
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch organizations')
-        }
-
-        const orgData = await response.json()
-        const processedOrgs: Organization[] = orgData.map((org: any) => {
-          let principalNames: string[] = []
-
-          principalNames = Array.from(org.principalNames)
-
-          return {
-            organizationName: org.organizationName || 'Unknown Organization',
-            principalNames: principalNames,
-          }
-        })
-
-        setOrganizations(processedOrgs)
-
-        console.log(
-          'Loaded organizations:',
-          processedOrgs.map((org) => ({
-            name: org.organizationName,
-            principals: org.principalNames,
-          }))
-        )
-      } catch (error) {
-        console.error('Error fetching organizations:', error)
-        setOrganizations([])
-      } finally {
-        setIsLoadingOrganizations(false)
-      }
-    }
-
-    fetchOrganizations()
-  }, [])
 
   const DEST_TYPES = [
     null,
@@ -114,15 +63,17 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   }
 
   const handleOrganizationChange = (organizationName: string) => {
-    const org = organizations.find(
-      (o) => o.organizationName === organizationName
-    )
-    setSelectedOrganization(org || null)
-
     setFormData((prev) => ({
       ...prev,
       name: organizationName,
       certificationName: '',
+    }))
+  }
+
+  const handleCertificateChange = (certificateName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      certificationName: certificateName,
     }))
   }
 
@@ -211,66 +162,18 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Name Dropdown */}
-          <FormControl
-            fullWidth
-            required
-            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-          >
-            <InputLabel>Name</InputLabel>
-            <Select
-              value={formData.name}
-              label="Name *"
-              onChange={(e) => handleOrganizationChange(e.target.value)}
-              sx={{ borderRadius: '8px' }}
-            >
-              {organizations.map((org) => (
-                <MenuItem
-                  key={org.organizationName}
-                  value={org.organizationName}
-                >
-                  {org.organizationName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {/* Certificate Name */}
-          <FormControl
-            fullWidth
-            required
-            disabled={!selectedOrganization}
-            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-          >
-            <InputLabel>Certificate Name</InputLabel>
-            <Select
-              value={formData.certificationName}
-              label="Certificate Name *"
-              onChange={(e) =>
-                handleChange('certificationName', e.target.value)
-              }
-              sx={{ borderRadius: '8px' }}
-            >
-              {!selectedOrganization ? (
-                <MenuItem disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    Select an organization first
-                  </Typography>
-                </MenuItem>
-              ) : selectedOrganization.principalNames.length === 0 ? (
-                <MenuItem disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    No principals available for this organization
-                  </Typography>
-                </MenuItem>
-              ) : (
-                selectedOrganization.principalNames.map((principal) => (
-                  <MenuItem key={principal} value={principal}>
-                    {principal}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+          {/* Name and Certificate Dropdowns */}
+          <OrganizationCertificateSelector
+            organizationValue={formData.name || ''}
+            certificateValue={formData.certificationName || ''}
+            onOrganizationChange={handleOrganizationChange}
+            onCertificateChange={handleCertificateChange}
+            organizationLabel="Name"
+            certificateLabel="Certificate Name"
+            required={true}
+            size="medium"
+            fullWidth={true}
+          />
           {/* Environment */}
           <FormControl
             fullWidth
