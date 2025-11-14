@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -30,6 +30,11 @@ import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 
+interface Organization {
+  organizationName: string
+  principalNames: string[]
+}
+
 interface EditSenderProps {
   senderData: SenderData
   onSave: (data: SenderData) => void
@@ -45,6 +50,54 @@ const EditSender: React.FC<EditSenderProps> = ({
 }) => {
   const [formData, setFormData] = useState<SenderData>(senderData)
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true)
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<Organization | null>(null)
+
+  // Fetch organizations on component mount
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setIsLoadingOrganizations(true)
+
+        const response = await fetch('/api/organizations')
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+
+        const orgData = await response.json()
+        const processedOrgs: Organization[] = orgData.map((org: any) => {
+          let principalNames: string[] = []
+
+          principalNames = Array.from(org.principalNames)
+
+          return {
+            organizationName: org.organizationName || 'Unknown Organization',
+            principalNames: principalNames,
+          }
+        })
+
+        setOrganizations(processedOrgs)
+
+        console.log(
+          'Loaded organizations:',
+          processedOrgs.map((org) => ({
+            name: org.organizationName,
+            principals: org.principalNames,
+          }))
+        )
+      } catch (error) {
+        console.error('Error fetching organizations:', error)
+        setOrganizations([])
+      } finally {
+        setIsLoadingOrganizations(false)
+      }
+    }
+
+    fetchOrganizations()
+  }, [])
 
   // Helper function to create labels with red asterisks
   const createLabelWithRedAsterisk = (text: string) => (
@@ -56,35 +109,6 @@ const EditSender: React.FC<EditSenderProps> = ({
     </>
   )
 
-  // Available sender options for dropdown in add mode
-  const availableSenders = [
-    { name: 'CDC Atlanta IIS', certificate: 'cdc-atlanta.immunizations.gov' },
-    {
-      name: 'State Health Department IIS',
-      certificate: 'state-health-dept.gov',
-    },
-    { name: 'Regional Medical Center', certificate: 'regional-med-center.com' },
-    { name: 'County Public Health', certificate: 'county-public-health.org' },
-    {
-      name: 'University Hospital System',
-      certificate: 'university-hospital.edu',
-    },
-    {
-      name: 'Private Practice Network',
-      certificate: 'private-practice-net.com',
-    },
-    { name: 'Pharmacy Chain IIS', certificate: 'pharmacy-chain.com' },
-    {
-      name: 'Laboratory Information System',
-      certificate: 'lab-info-system.net',
-    },
-    { name: 'Electronic Health Record System', certificate: 'ehr-system.com' },
-    {
-      name: 'Other Healthcare Provider',
-      certificate: 'healthcare-provider.org',
-    },
-  ]
-
   const handleInputChange = (
     field: keyof SenderData,
     value: string | boolean
@@ -95,14 +119,24 @@ const EditSender: React.FC<EditSenderProps> = ({
     }))
   }
 
-  const handleSenderChange = (senderName: string) => {
-    const selectedSender = availableSenders.find(
-      (sender) => sender.name === senderName
+  const handleOrganizationChange = (organizationName: string) => {
+    const org = organizations.find(
+      (o) => o.organizationName === organizationName
     )
+    setSelectedOrganization(org || null)
+
+    // Update sender name and clear certificate when organization changes
     setFormData((prev) => ({
       ...prev,
-      sender: senderName,
-      senderDetails: selectedSender?.certificate || '',
+      sender: organizationName,
+      senderDetails: '',
+    }))
+  }
+
+  const handleCertificateChange = (certificateName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      senderDetails: certificateName,
     }))
   }
 
@@ -358,61 +392,108 @@ const EditSender: React.FC<EditSenderProps> = ({
             }}
           >
             {isAddMode ? (
-              <FormControl fullWidth size="medium">
-                <InputLabel>
-                  {createLabelWithRedAsterisk('Sender Name *')}
-                </InputLabel>
-                <Select
-                  value={formData.sender}
-                  label="Sender Name *"
-                  onChange={(e) => handleSenderChange(e.target.value)}
-                  sx={{
-                    borderRadius: '8px',
-                  }}
+              <>
+                <FormControl
+                  fullWidth
+                  size="medium"
+                  required
+                  sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
                 >
-                  {availableSenders.map((sender) => (
-                    <MenuItem key={sender.name} value={sender.name}>
-                      {sender.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                  <InputLabel>Sender Name</InputLabel>
+                  <Select
+                    value={formData.sender}
+                    label="Sender Name *"
+                    onChange={(e) => handleOrganizationChange(e.target.value)}
+                    sx={{
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {organizations.map((org) => (
+                      <MenuItem
+                        key={org.organizationName}
+                        value={org.organizationName}
+                      >
+                        {org.organizationName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl
+                  fullWidth
+                  size="medium"
+                  required
+                  disabled={!selectedOrganization}
+                  sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
+                >
+                  <InputLabel>Certificate Name</InputLabel>
+                  <Select
+                    value={formData.senderDetails}
+                    label="Certificate Name *"
+                    onChange={(e) => handleCertificateChange(e.target.value)}
+                    sx={{
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {!selectedOrganization ? (
+                      <MenuItem disabled>
+                        <Typography variant="body2" color="text.secondary">
+                          Select an organization first
+                        </Typography>
+                      </MenuItem>
+                    ) : selectedOrganization.principalNames.length === 0 ? (
+                      <MenuItem disabled>
+                        <Typography variant="body2" color="text.secondary">
+                          No principals available for this organization
+                        </Typography>
+                      </MenuItem>
+                    ) : (
+                      selectedOrganization.principalNames.map((principal) => (
+                        <MenuItem key={principal} value={principal}>
+                          {principal}
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
+              </>
             ) : (
-              <TextField
-                label={createLabelWithRedAsterisk('Sender Name *')}
-                value={formData.sender}
-                onChange={(e) => handleInputChange('sender', e.target.value)}
-                variant="outlined"
-                fullWidth
-                size="medium"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                  },
-                }}
-              />
+              <>
+                <TextField
+                  label={createLabelWithRedAsterisk('Sender Name *')}
+                  value={formData.sender}
+                  onChange={(e) => handleInputChange('sender', e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  size="medium"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                    },
+                  }}
+                />
+                <TextField
+                  label={createLabelWithRedAsterisk(
+                    'Sender Certificate Name *'
+                  )}
+                  value={formData.senderDetails}
+                  onChange={(e) =>
+                    handleInputChange('senderDetails', e.target.value)
+                  }
+                  variant="outlined"
+                  fullWidth
+                  size="medium"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: '8px',
+                      fontFamily: 'monospace',
+                    },
+                    '& .MuiInputBase-input': {
+                      fontFamily: 'monospace',
+                    },
+                  }}
+                />
+              </>
             )}
-            <TextField
-              label={createLabelWithRedAsterisk('Sender Certificate Name *')}
-              value={formData.senderDetails}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                  backgroundColor: '#f5f5f5',
-                },
-                '& .MuiInputBase-input': {
-                  fontFamily: 'monospace',
-                  cursor: 'default',
-                },
-              }}
-            />
           </Box>
         </Box>
 
