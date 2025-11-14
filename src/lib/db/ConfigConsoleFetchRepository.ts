@@ -30,6 +30,7 @@ export default interface ConfigConsoleFetchRepository {
   fetchSenderData: () => Promise<any>
   fetchAccessGroups: () => Promise<any>
   fetchDenyListData: () => Promise<any>
+  checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
   fetchFileTypeList: () => Promise<any>
   fetchAllowedUser(
     environment: number,
@@ -41,4 +42,5 @@ export default interface ConfigConsoleFetchRepository {
     isAdmin: boolean,
     destinations: Array<string>
   ): Promise<AllowedUser[]>
+  fetchOrganizations: () => Promise<any>
 }

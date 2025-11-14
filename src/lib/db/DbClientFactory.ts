@@ -243,4 +243,9 @@ class EncryptedRepository implements DbClient {
   async upsertAllowedUser(allowedUser: any): Promise<any> {
     return await this.repository.upsertAllowedUser(allowedUser)
   }
+
+  async fetchOrganizations(): Promise<any> {
+    const result = await this.repository.fetchOrganizations()
+    return result
+  }
 }
