@@ -21,9 +21,6 @@ import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 
 import {
-  type AccessGroup,
-  mockDenyListData,
-  type DenyListItem,
   mockFileTypeListData,
   type FileTypeListItem,
 } from './mockData'
@@ -75,23 +72,39 @@ const AccessControlComponent = () => {
   const [showSnackbar, setShowSnackbar] = useState(false)
   // Deny List add mode state
   const [isAddingDeny, setIsAddingDeny] = useState(false)
-  // Deny List data state (seeded with mock data so table shows demo rows and new entries append)
-  const [denyListData, setDenyListData] =
-    useState<DenyListItem[]>(mockDenyListData)
   // Deny List add logic
   const handleAddDeny = () => setIsAddingDeny(true)
-  const handleSaveDeny = (item) => {
-    setDenyListData((prev) => [...prev, item])
-    setIsAddingDeny(false)
-    setAlert({
-      level: 'success',
-      jurisdiction: '',
-      dest_type: '',
-      message: `Deny list entry has been successfully added.`,
-    })
+  const handleSaveDeny = async (item) => {
+    try {
+      const response = await fetch('/api/denylist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add deny list entry')
+      }
+
+      setIsAddingDeny(false)
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Deny list entry has been successfully added.`,
+      })
+    } catch (error) {
+      setIsAddingDeny(false)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: error.message || 'Failed to add deny list entry.',
+      })
+    }
   }
-  const handleDeleteDeny = (id: string) => {
-    setDenyListData((prev) => prev.filter((item) => item.id !== id))
+  const handleDeleteDeny = () => {
     setAlert({
       level: 'success',
       jurisdiction: '',
@@ -413,7 +426,6 @@ const AccessControlComponent = () => {
             {/* Tab Panel 1 - Deny List */}
             <TabPanel value={tabValue} index={1}>
               <DenyList
-                data={denyListData}
                 onAddDeny={handleAddDeny}
                 onDeleteDeny={handleDeleteDeny}
               />

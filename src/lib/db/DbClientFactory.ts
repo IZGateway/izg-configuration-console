@@ -225,4 +225,8 @@ class EncryptedRepository implements DbClient {
     const result = await this.repository.fetchFileTypeList()
     return result
   }
+  async fetchOrganizations(): Promise<any> {
+    const result = await this.repository.fetchOrganizations()
+    return result
+  }
 }

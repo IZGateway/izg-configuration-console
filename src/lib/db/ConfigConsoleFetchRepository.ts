@@ -29,5 +29,7 @@ export default interface ConfigConsoleFetchRepository {
   fetchSenderData: () => Promise<any>
   fetchAccessGroups: () => Promise<any>
   fetchDenyListData: () => Promise<any>
+  checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
   fetchFileTypeList: () => Promise<any>
+  fetchOrganizations: () => Promise<any>
 }
