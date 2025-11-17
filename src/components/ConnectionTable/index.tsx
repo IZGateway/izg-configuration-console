@@ -435,6 +435,7 @@ const ConnectionsTable = (props) => {
       headerName: 'ENVIRONMENT',
       ...(columnWidths?.destType ? { width: columnWidths.destType } : { flex: 0.5 }),
       minWidth: 50,
+      renderCell: renderCellWithTooltip,
     },
     {
       field: 'jurisdictionName',
