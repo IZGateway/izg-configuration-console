@@ -32,7 +32,7 @@ export const getServerSideProps = async (context) => {
     // Fetch allowed users directly from database
     const dbClient = await DbClientFactory.getDbClient()
     const allowedUsers = await dbClient.fetchAllowedUsersByDestination(
-      false,
+      session.user.isAdmin,
       session.user.jurisdictions
     )
 

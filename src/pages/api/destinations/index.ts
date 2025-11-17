@@ -24,7 +24,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const isAdmin = session.user.isAdmin || false
-      const jurisdictions = session.user.destinations || []
+      const jurisdictions = session.user.jurisdictions || []
 
       const dbClient = await DbClientFactory.getDbClient()
       const result = await dbClient.fetchLoggedInUsersDestinations(

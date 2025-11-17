@@ -1024,11 +1024,6 @@ class Dynamo implements DbClient {
     isAdmin: boolean,
     destinations: Array<string>
   ): Promise<AllowedUser[]> {
-    logger.debug(
-      `Fetching allowed users by destination: isAdmin=${isAdmin}, destinations=${destinations.join(
-        ', '
-      )}`
-    )
     // NOTE: Query cannot filter on sortKey fragments using FilterExpression referencing primary key.
     // For non-admin with destination restrictions we fall back to Scan + FilterExpression on destinationId attribute.
     // Optimization: add a GSI on destinationId to allow efficient queries later.
@@ -1041,13 +1036,6 @@ class Dynamo implements DbClient {
         },
       }
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
-      logger.debug(
-        `Fetched ${
-          result.Items?.length || 0
-        } allowed users for isAdmin=${isAdmin}, destinations=${destinations.join(
-          ', '
-        )}`
-      )
       return result.Items.map((item) => this.convertResponseToAllowedUser(item))
     } else {
       // Restricted destinations: perform Scan with FilterExpression destinationId IN (...)
