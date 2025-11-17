@@ -6,6 +6,8 @@ import AppHeaderBar from '../../components/AppHeader'
 import { InferGetServerSidePropsType } from 'next'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { SerializedAllowedUser } from '../../lib/type/AllowedUser'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../api/auth/[...nextauth]'
 
 const OnboardingPage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -20,11 +22,19 @@ const OnboardingPage = (
   )
 }
 
-export const getServerSideProps = async () => {
+export const getServerSideProps = async (context) => {
   try {
+    const session = await getServerSession(
+      context.req,
+      context.res,
+      authOptions
+    )
     // Fetch allowed users directly from database
     const dbClient = await DbClientFactory.getDbClient()
-    const allowedUsers = await dbClient.fetchAllowedUsers()
+    const allowedUsers = await dbClient.fetchAllowedUsersByDestination(
+      false,
+      session.user.jurisdictions
+    )
 
     // Convert Date objects to ISO strings for serialization
     const serializedUsers: SerializedAllowedUser[] = allowedUsers.map(
@@ -37,7 +47,7 @@ export const getServerSideProps = async () => {
         createdOn: user.createdOn?.toISOString(),
         updatedBy: user.updatedBy,
         updatedOn: user.updatedOn?.toISOString(),
-        validatedOn: user.validatedOn?.toISOString(),
+        validatedOn: user.validatedOn ? user.validatedOn.toISOString() : null,
       })
     )
 

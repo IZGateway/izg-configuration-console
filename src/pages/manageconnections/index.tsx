@@ -95,9 +95,7 @@ export const getServerSideProps = async (context) => {
   return { props: { data: endpoints } }
 }
 
-
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,
   maint_end: destination?.maintEnd?.toISOString() || null,
 })
-

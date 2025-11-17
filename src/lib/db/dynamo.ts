@@ -18,6 +18,8 @@ import {
   PutCommandInput,
   UpdateCommand,
   UpdateCommandInput,
+  ScanCommand,
+  ScanCommandInput,
 } from '@aws-sdk/lib-dynamodb'
 
 import {
@@ -260,16 +262,31 @@ class Dynamo implements DbClient {
       },
     }
     if (!isAdmin) {
-      let filter = '('
-      for (let i = 0; i < destinations.length; i++) {
-        filter += ':d' + i + ','
-        params.ExpressionAttributeValues[':d' + i] = destinations[i]
+      // If user has no destination jurisdiction permissions, return empty list early
+      if (!destinations || destinations.length === 0) {
+        logger.debug(
+          'Non-admin user has no destination permissions; returning empty list'
+        )
+        return []
       }
-      filter = filter.slice(0, -1) + ')'
-      params.FilterExpression = 'destId IN ' + filter
+      // Build IN list with placeholders
+      const placeholders = destinations.map((_, i) => `:d${i}`).join(', ')
+      destinations.forEach((dest, i) => {
+        params.ExpressionAttributeValues[`:d${i}`] = dest
+      })
+      params.FilterExpression = `destId IN (${placeholders})`
     }
-    const result = await dynamodDbDocClient.send(new QueryCommand(params))
-    return await this.convertResponseToDestinations(result.Items)
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return await this.convertResponseToDestinations(result.Items)
+    } catch (error) {
+      logger.error('Error fetching destinations', {
+        error: error.message,
+        stack: error.stack,
+        operation: 'fetchDestinations',
+      })
+      throw error
+    }
   }
 
   async fetchDestinationAuditHistory(
@@ -1012,30 +1029,17 @@ class Dynamo implements DbClient {
         ', '
       )}`
     )
-    const params: QueryCommandInput = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'entityType = :entityType',
-      ExpressionAttributeValues: {
-        ':entityType': 'AllowedUser',
-      },
-    }
-
-    if (!isAdmin && destinations.length > 0) {
-      // Build filter expression for multiple destinations
-      let filter = '('
-      for (let i = 0; i < destinations.length; i++) {
-        filter += 'begins_with(sortKey, :dest' + i + ')'
-        if (i < destinations.length - 1) {
-          filter += ' OR '
-        }
-        // Filter by destinationId (second part of sortKey: environment#destinationId#principal)
-        params.ExpressionAttributeValues[':dest' + i] = destinations[i]
+    // NOTE: Query cannot filter on sortKey fragments using FilterExpression referencing primary key.
+    // For non-admin with destination restrictions we fall back to Scan + FilterExpression on destinationId attribute.
+    // Optimization: add a GSI on destinationId to allow efficient queries later.
+    if (isAdmin || destinations.length === 0) {
+      const params: QueryCommandInput = {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'entityType = :entityType',
+        ExpressionAttributeValues: {
+          ':entityType': 'AllowedUser',
+        },
       }
-      filter += ')'
-      params.FilterExpression = filter
-    }
-
-    try {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
       logger.debug(
         `Fetched ${
@@ -1045,21 +1049,55 @@ class Dynamo implements DbClient {
         )}`
       )
       return result.Items.map((item) => this.convertResponseToAllowedUser(item))
-    } catch (error) {
-      logger.error(
-        'Error fetching allowed users by destination from DynamoDB',
-        {
-          isAdmin,
-          destinations,
-          tableName: TABLE_NAME,
-          entityType: 'AllowedUser',
-          errorMessage: error.message,
-          errorType: error.name,
-          stack: error.stack,
-          operation: 'fetchAllowedUsersByDestination',
-        }
-      )
-      throw error
+    } else {
+      // Restricted destinations: perform Scan with FilterExpression destinationId IN (...)
+      // DynamoDB does not support IN for attribute names in legacy doc client with Scan; emulate via OR chain.
+      let filterExpr = ''
+      const exprAttrValues: Record<string, any> = {
+        ':entityType': 'AllowedUser',
+      }
+      for (let i = 0; i < destinations.length; i++) {
+        const placeholder = `:d${i}`
+        filterExpr +=
+          (i === 0 ? '(' : ' OR ') + `destinationId = ${placeholder}`
+        exprAttrValues[placeholder] = destinations[i]
+      }
+      filterExpr += ')'
+      const scanParams: ScanCommandInput = {
+        TableName: TABLE_NAME,
+        FilterExpression: `entityType = :entityType AND ${filterExpr}`,
+        ExpressionAttributeValues: exprAttrValues,
+      }
+      try {
+        const result = (await dynamodDbDocClient.send(
+          new ScanCommand(scanParams)
+        )) as { Items?: Array<Record<string, any>> }
+        logger.debug(
+          `Scanned ${
+            result.Items?.length || 0
+          } allowed users (restricted) for destinations=${destinations.join(
+            ', '
+          )}`
+        )
+        return result.Items.map((item) =>
+          this.convertResponseToAllowedUser(item)
+        )
+      } catch (error) {
+        logger.error(
+          'Error scanning allowed users by destination from DynamoDB',
+          {
+            isAdmin,
+            destinations,
+            tableName: TABLE_NAME,
+            entityType: 'AllowedUser',
+            errorMessage: error.message,
+            errorType: error.name,
+            stack: error.stack,
+            operation: 'fetchAllowedUsersByDestination',
+          }
+        )
+        throw error
+      }
     }
   }
 
