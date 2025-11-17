@@ -26,6 +26,7 @@ import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
+import DestinationSelector from '../DestinationSelector'
 
 interface EditSenderProps {
   senderData: SenderData
@@ -42,6 +43,7 @@ const EditSender: React.FC<EditSenderProps> = ({
 }) => {
   const [formData, setFormData] = useState<SenderData>(senderData)
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
+  const [destinationType, setDestinationType] = useState<number | string>('')
 
   // Helper function to create labels with red asterisks
   const createLabelWithRedAsterisk = (text: string) => (
@@ -78,12 +80,26 @@ const EditSender: React.FC<EditSenderProps> = ({
     }))
   }
 
+  const handleDestinationTypeChange = (destTypeId: number) => {
+    setDestinationType(destTypeId)
+    setFormData((prev) => ({
+      ...prev,
+      destinationCode: '',
+    }))
+  }
+
+  const handleDestinationChange = (destId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      destinationCode: destId,
+    }))
+  }
+
   // Form validation for required fields
   const isFormValid = () => {
     const requiredFields = [
       'sender',
       'senderDetails',
-      'destination',
       'destinationCode',
       'msh3',
       'msh4',
@@ -297,34 +313,6 @@ const EditSender: React.FC<EditSenderProps> = ({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: '16px',
-              marginBottom: '16px',
-            }}
-          >
-            <TextField
-              label={
-                isAddMode
-                  ? 'Sender Identifier (optional - will be auto-generated)'
-                  : createLabelWithRedAsterisk('Sender Identifier *')
-              }
-              value={formData.id}
-              onChange={(e) => handleInputChange('id', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              placeholder={isAddMode ? 'Leave blank to auto-generate' : ''}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: 'grid',
               gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
               gap: '16px',
             }}
@@ -402,95 +390,16 @@ const EditSender: React.FC<EditSenderProps> = ({
               gap: '16px',
             }}
           >
-            <TextField
-              label={createLabelWithRedAsterisk('Destination *')}
-              value={formData.destination}
-              onChange={(e) => handleInputChange('destination', e.target.value)}
-              variant="outlined"
-              fullWidth
+            <DestinationSelector
+              destinationTypeValue={destinationType}
+              destinationValue={formData.destinationCode}
+              onDestinationTypeChange={handleDestinationTypeChange}
+              onDestinationChange={handleDestinationChange}
+              destinationTypeLabel="Destination Type"
+              destinationLabel="Destination"
+              required={true}
               size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label={createLabelWithRedAsterisk('Destination Code *')}
-              value={formData.destinationCode}
-              onChange={(e) =>
-                handleInputChange('destinationCode', e.target.value)
-              }
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-          </Box>
-        </Box>
-
-        {/* MSH and Facility Info Section */}
-        <Box sx={{ marginBottom: '32px' }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              marginBottom: '16px',
-              color: palette.black,
-            }}
-          >
-            MSH and Facility Info
-          </Typography>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
-              gap: '16px',
-            }}
-          >
-            <TextField
-              label={createLabelWithRedAsterisk('MSH-3 *')}
-              value={formData.msh3}
-              onChange={(e) => handleInputChange('msh3', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label={createLabelWithRedAsterisk('MSH-4 *')}
-              value={formData.msh4}
-              onChange={(e) => handleInputChange('msh4', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label={createLabelWithRedAsterisk('Facility ID *')}
-              value={formData.facilityId}
-              onChange={(e) => handleInputChange('facilityId', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
+              fullWidth={true}
             />
           </Box>
         </Box>
