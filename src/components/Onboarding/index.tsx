@@ -341,6 +341,9 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: newSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
+        // validatedOn logic: null while validating, timestamp when ready
+        validatedOn:
+          newSender.status === 'ready' ? new Date().toISOString() : null,
       }
       console.log('Creating AllowedUser:', allowedUser)
 

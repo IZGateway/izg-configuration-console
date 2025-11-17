@@ -41,7 +41,19 @@ const EditSender: React.FC<EditSenderProps> = ({
   onCancel,
   isAddMode = false,
 }) => {
-  const [formData, setFormData] = useState<SenderData>(senderData)
+  // Normalize incoming senderData.status to canonical codes ('validate' | 'ready')
+  const normalizeStatus = (status: string): 'validate' | 'ready' => {
+    const s = (status || '').toLowerCase()
+    if (s.includes('validate')) return 'validate'
+    if (s.includes('ready') || s.includes('live')) return 'ready'
+    // Fallback: default to 'validate'
+    return 'validate'
+  }
+
+  const [formData, setFormData] = useState<SenderData>(() => ({
+    ...senderData,
+    status: normalizeStatus(senderData.status),
+  }))
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
   const [destinationType, setDestinationType] = useState<number | string>('')
 
@@ -101,9 +113,6 @@ const EditSender: React.FC<EditSenderProps> = ({
       'sender',
       'senderDetails',
       'destinationCode',
-      'msh3',
-      'msh4',
-      'facilityId',
       'status',
     ]
 
@@ -121,15 +130,21 @@ const EditSender: React.FC<EditSenderProps> = ({
   const getStatusOptions = () => {
     if (formData.connectionType === 'production') {
       return [
-        { value: 'Production Validate', label: 'Production Validate' },
-        { value: 'Production Live', label: 'Production Live' },
+        { value: 'validate', label: 'Production Validate' },
+        { value: 'ready', label: 'Production Live' },
       ]
     } else {
       return [
-        { value: 'Test Validate', label: 'Test Validate' },
-        { value: 'Testing Ready', label: 'Testing Ready' },
+        { value: 'validate', label: 'Test Validate' },
+        { value: 'ready', label: 'Testing Ready' },
       ]
     }
+  }
+
+  const getDisplayStatus = () => {
+    const opts = getStatusOptions()
+    const match = opts.find((o) => o.value === formData.status)
+    return match ? match.label : formData.status
   }
 
   const getStatusInfoData = () => {
@@ -265,7 +280,7 @@ const EditSender: React.FC<EditSenderProps> = ({
             ) : (
               <>
                 Reference - Destination: {formData.destination} • Status:{' '}
-                {formData.status} • Certificate: {formData.senderDetails}
+                {getDisplayStatus()} • Certificate: {formData.senderDetails}
               </>
             )}
           </Typography>

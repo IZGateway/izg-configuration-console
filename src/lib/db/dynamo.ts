@@ -1084,7 +1084,10 @@ class Dynamo implements DbClient {
           : now,
         updatedBy: allowedUser.updatedBy,
         updatedOn: now,
-        validatedOn: now,
+        // Honor provided validatedOn (can be null) instead of always now
+        validatedOn: allowedUser.validatedOn
+          ? allowedUser.validatedOn.toISOString()
+          : null,
       },
     }
 
