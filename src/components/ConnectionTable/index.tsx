@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect, useMemo } from 'react'
 import {
   DataGrid,
   GridColDef,
@@ -8,6 +8,7 @@ import {
   GridToolbarContainer,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
+  GridRenderCellParams,
 } from '@mui/x-data-grid'
 import {
   Box,
@@ -28,11 +29,70 @@ import PopOverActionButtons from './popOverActionButtons'
 import Cookies from 'js-cookie'
 import moment from 'moment'
 import _ from 'lodash'
+import { debounce } from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 import { useRouter } from 'next/router'
 import Slide from '@mui/material/Slide'
+
+// ConnectionTable column width persistence
+// Storage: localStorage key 'izg-cc-connectiontable-columns'
+// Format: { destId: 150, destType: 100, ... }
+// Scope: Per-device/browser (no cross-device sync)
+// Versioning: Future schema changes should migrate or clear old data
+
+const STORAGE_KEY = 'izg-cc-connectiontable-columns'
+
+interface ColumnWidthState {
+  destId?: number
+  destType?: number
+  jurisdictionName?: number
+  destUri?: number
+  status?: number
+  action?: number
+}
+
+/**
+ * Save column widths to localStorage
+ * Gracefully handles localStorage errors (quota exceeded, disabled, etc.)
+ */
+const saveColumnWidths = (widths: ColumnWidthState) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(widths))
+  } catch (error) {
+    console.warn('Failed to save column widths to localStorage:', error)
+    // Non-critical error - continue without persistence
+  }
+}
+
+/**
+ * Load column widths from localStorage
+ * Returns null if localStorage unavailable or data corrupted
+ * Self-healing: automatically clears corrupted data
+ */
+const loadColumnWidths = (): ColumnWidthState | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+
+    const parsed = JSON.parse(stored)
+
+    // Validate structure
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Invalid column width data structure')
+    }
+
+    return parsed as ColumnWidthState
+  } catch (error) {
+    console.warn('Failed to load column widths from localStorage:', error)
+    // Clear corrupted data
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {}
+    return null
+  }
+}
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -185,7 +245,27 @@ const ConnectionsTable = (props) => {
   const [renderMode, setRenderMode] = useState('desktop') // 'mobile', 'desktop', 'transitioning'
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [columnWidths, setColumnWidths] = useState<ColumnWidthState | null>(null)
   const router = useRouter()
+
+  // Load column widths from localStorage on mount (desktop view only)
+  useEffect(() => {
+    if (isMobile) return // Skip on mobile view (card layout, not DataGrid)
+
+    const savedWidths = loadColumnWidths()
+    if (savedWidths) {
+      setColumnWidths(savedWidths)
+    }
+  }, [isMobile])
+
+  // Debounced function to save column widths to localStorage
+  const debouncedSaveWidths = useMemo(
+    () =>
+      debounce((widths: ColumnWidthState) => {
+        saveColumnWidths(widths)
+      }, 500), // 500ms debounce to avoid excessive writes
+    []
+  )
 
   // Handle responsive design with debounced resize and async rendering
   React.useEffect(() => {
@@ -325,41 +405,56 @@ const ConnectionsTable = (props) => {
     )
   }
 
+  // Reusable cell renderer with tooltip for truncated text
+  const renderCellWithTooltip = (params: GridRenderCellParams) => (
+    <Tooltip title={params.value || ''} arrow placement="top">
+      <span
+        style={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'block',
+          width: '100%',
+        }}
+      >
+        {params.value}
+      </span>
+    </Tooltip>
+  )
+
   const columns: GridColDef[] = [
     {
       field: 'destId',
       headerName: 'DESTINATION ID',
-      flex: 0.5,
+      ...(columnWidths?.destId ? { width: columnWidths.destId } : { flex: 0.5 }),
       minWidth: 50,
-      maxWidth: 130,
+      renderCell: renderCellWithTooltip,
     },
     {
       field: 'destType',
       headerName: 'ENVIRONMENT',
-      flex: 0.5,
+      ...(columnWidths?.destType ? { width: columnWidths.destType } : { flex: 0.5 }),
       minWidth: 50,
-      maxWidth: 157,
     },
     {
       field: 'jurisdictionName',
       headerName: 'ORGANIZATION',
-      flex: 0.5,
+      ...(columnWidths?.jurisdictionName ? { width: columnWidths.jurisdictionName } : { flex: 0.5 }),
       minWidth: 25,
-      maxWidth: 162,
+      renderCell: renderCellWithTooltip,
     },
     {
       field: 'destUri',
       headerName: 'ENDPOINT URL',
-      flex: 0.5,
+      ...(columnWidths?.destUri ? { width: columnWidths.destUri } : { flex: 0.5 }),
       minWidth: 50,
-      maxWidth: 390,
+      renderCell: renderCellWithTooltip,
     },
     {
       field: 'status',
       headerName: 'STATUS',
-      flex: 0.75,
+      ...(columnWidths?.status ? { width: columnWidths.status } : { flex: 0.75 }),
       minWidth: 50,
-      maxWidth: 160,
       filterable: false,
       valueFormatter: ({ value }: { value: string | undefined }) =>
         value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
@@ -941,6 +1036,16 @@ const ConnectionsTable = (props) => {
           disableColumnSelector
           disableDensitySelector
           onPaginationModelChange={(model) => setPageSize(model.pageSize)}
+          onColumnWidthChange={(params) => {
+            if (isMobile) return // Skip on mobile view (card layout)
+
+            const newWidths = {
+              ...columnWidths,
+              [params.colDef.field]: params.width,
+            }
+            setColumnWidths(newWidths)
+            debouncedSaveWidths(newWidths)
+          }}
           getRowId={(row) => row.destId + row.destTypeId}
           getRowClassName={(params) => {
             return params.row.hasActiveMaintenance === true ? 'highlight' : ''
