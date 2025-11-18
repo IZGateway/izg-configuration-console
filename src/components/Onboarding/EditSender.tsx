@@ -50,12 +50,45 @@ const EditSender: React.FC<EditSenderProps> = ({
     return 'validate'
   }
 
-  const [formData, setFormData] = useState<SenderData>(() => ({
-    ...senderData,
-    status: normalizeStatus(senderData.status),
-  }))
+  const [formData, setFormData] = useState<SenderData>(() => {
+    const initialData = {
+      ...senderData,
+      status: normalizeStatus(senderData.status),
+    }
+    console.log('[EditSender] Initial formData:', {
+      sender: initialData.sender,
+      senderDetails: initialData.senderDetails,
+      isAddMode,
+    })
+    return initialData
+  })
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
-  const [destinationType, setDestinationType] = useState<number | string>('')
+
+  // Initialize destinationType from the destination field if available
+  const getInitialDestinationType = (): number | string => {
+    if (senderData.destination) {
+      // Parse environment from destination field format: "destId (environment)"
+      const match = senderData.destination.match(/\(([^)]+)\)/)
+      if (match) {
+        const environmentName = match[1].trim().toUpperCase()
+        const environmentMap: { [key: string]: number } = {
+          PRODUCTION: 1,
+          TEST: 2,
+          ONBOARD: 3,
+          ONBOARDING: 3,
+          STAGE: 4,
+          DEV: 5,
+          UNKNOWN: 6,
+        }
+        return environmentMap[environmentName] || ''
+      }
+    }
+    return ''
+  }
+
+  const [destinationType, setDestinationType] = useState<number | string>(
+    getInitialDestinationType()
+  )
 
   // Helper function to create labels with red asterisks
   const createLabelWithRedAsterisk = (text: string) => (
@@ -332,56 +365,17 @@ const EditSender: React.FC<EditSenderProps> = ({
               gap: '16px',
             }}
           >
-            {isAddMode ? (
-              <OrganizationCertificateSelector
-                organizationValue={formData.sender}
-                certificateValue={formData.senderDetails}
-                onOrganizationChange={handleOrganizationChange}
-                onCertificateChange={handleCertificateChange}
-                organizationLabel="Sender Name"
-                certificateLabel="Certificate Name"
-                required={true}
-                size="medium"
-                fullWidth={true}
-              />
-            ) : (
-              <>
-                <TextField
-                  label={createLabelWithRedAsterisk('Sender Name *')}
-                  value={formData.sender}
-                  onChange={(e) => handleInputChange('sender', e.target.value)}
-                  variant="outlined"
-                  fullWidth
-                  size="medium"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                    },
-                  }}
-                />
-                <TextField
-                  label={createLabelWithRedAsterisk(
-                    'Sender Certificate Name *'
-                  )}
-                  value={formData.senderDetails}
-                  onChange={(e) =>
-                    handleInputChange('senderDetails', e.target.value)
-                  }
-                  variant="outlined"
-                  fullWidth
-                  size="medium"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '8px',
-                      fontFamily: 'monospace',
-                    },
-                    '& .MuiInputBase-input': {
-                      fontFamily: 'monospace',
-                    },
-                  }}
-                />
-              </>
-            )}
+            <OrganizationCertificateSelector
+              organizationValue={formData.sender}
+              certificateValue={formData.senderDetails}
+              onOrganizationChange={handleOrganizationChange}
+              onCertificateChange={handleCertificateChange}
+              organizationLabel="Sender Name"
+              certificateLabel="Certificate Name"
+              required={true}
+              size="medium"
+              fullWidth={true}
+            />
           </Box>
         </Box>
 

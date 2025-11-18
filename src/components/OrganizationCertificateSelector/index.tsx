@@ -46,6 +46,15 @@ const OrganizationCertificateSelector: React.FC<
   const [selectedOrganization, setSelectedOrganization] =
     useState<Organization | null>(null)
 
+  // Log incoming props
+  console.log('[OrgCertSelector] Props:', {
+    organizationValue,
+    certificateValue,
+    organizationsCount: organizations.length,
+    isLoading: isLoadingOrganizations,
+    selectedOrg: selectedOrganization?.organizationName,
+  })
+
   // Fetch organizations on component mount
   useEffect(() => {
     const fetchOrganizations = async () => {
@@ -70,6 +79,10 @@ const OrganizationCertificateSelector: React.FC<
           }
         })
 
+        console.log(
+          '[OrgCertSelector] Fetched organizations:',
+          processedOrgs.map((o) => o.organizationName)
+        )
         setOrganizations(processedOrgs)
       } catch (error) {
         console.error('Error fetching organizations:', error)
@@ -84,10 +97,21 @@ const OrganizationCertificateSelector: React.FC<
 
   // Update selected organization when organizationValue changes
   useEffect(() => {
+    console.log('[OrgCertSelector] organizationValue changed:', {
+      organizationValue,
+      organizationsCount: organizations.length,
+      organizationNames: organizations.map((o) => o.organizationName),
+    })
+
     if (organizationValue) {
       const org = organizations.find(
         (o) => o.organizationName === organizationValue
       )
+      console.log('[OrgCertSelector] Found organization:', {
+        searched: organizationValue,
+        found: org?.organizationName,
+        principals: org?.principalNames,
+      })
       setSelectedOrganization(org || null)
     } else {
       setSelectedOrganization(null)
