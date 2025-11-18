@@ -71,14 +71,6 @@ const OrganizationCertificateSelector: React.FC<
         })
 
         setOrganizations(processedOrgs)
-
-        console.log(
-          'Loaded organizations:',
-          processedOrgs.map((org) => ({
-            name: org.organizationName,
-            principals: org.principalNames,
-          }))
-        )
       } catch (error) {
         console.error('Error fetching organizations:', error)
         setOrganizations([])

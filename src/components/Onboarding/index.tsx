@@ -159,11 +159,13 @@ const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
 interface OnboardSenderProps {
   data?: SenderData[]
   allowedUsers?: SerializedAllowedUser[]
+  error?: string
 }
 
 const OnboardSender: React.FC<OnboardSenderProps> = ({
   data = [],
   allowedUsers = [],
+  error,
 }) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const { data: session } = useSession()
@@ -194,11 +196,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   >('success')
 
   // Sender data state management
-  // Paul: this is working with Mock Data
-  // const [senderData, setSenderData] = useState<SenderData[]>(
-  //   data.length > 0 ? data : mockSenderData
-  // )
-
   const [senderData, setSenderData] = useState<SenderData[]>(() => {
     // Use allowedUsers if provided, otherwise use data prop, finally fall back to mockData
     if (allowedUsers.length > 0) {
@@ -329,9 +326,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   }
 
   const handleSaveAdd = async (newSender: SenderData) => {
-    console.log('handleSaveAdd called with:', newSender)
     try {
-      const environment = 5 // Paul: need to figure this out
+      const environment = 5 // TODO: Determine environment dynamically based on destination type
 
       // Create AllowedUser object from SenderData
       const allowedUser = {
@@ -345,10 +341,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         validatedOn:
           newSender.status === 'ready' ? new Date().toISOString() : null,
       }
-      console.log('Creating AllowedUser:', allowedUser)
 
       // Call the API to add the allowed user
-      console.log('Calling /api/allowedusers POST...')
       const response = await fetch('/api/allowedusers', {
         method: 'POST',
         body: JSON.stringify(allowedUser),
@@ -357,7 +351,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         },
       })
 
-      console.log('API response status:', response.status)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         console.error('API error response:', errorData)
@@ -365,7 +358,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       }
 
       const result = await response.json()
-      console.log('API response data:', result)
 
       // Add the new sender to the sender data state
       setSenderData((prevData) => [...prevData, newSender])
@@ -825,6 +817,23 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
           </Typography>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Box
+          sx={{
+            marginBottom: '16px',
+            padding: '16px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+          }}
+        >
+          <Typography variant="body1" sx={{ color: '#856404' }}>
+            ⚠️ {error}
+          </Typography>
+        </Box>
+      )}
 
       {renderMode === 'mobile' ? (
         <Box>

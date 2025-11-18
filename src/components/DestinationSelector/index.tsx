@@ -94,8 +94,6 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
 
         setDestinations(processedDests)
         setDestinationTypes(DESTINATION_TYPES)
-
-        console.log('Loaded destinations:', processedDests)
       } catch (error) {
         console.error('Error fetching destinations:', error)
         setDestinations([])
