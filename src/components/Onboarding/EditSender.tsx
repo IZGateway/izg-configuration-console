@@ -345,40 +345,6 @@ const EditSender: React.FC<EditSenderProps> = ({
             : 'Use this form to edit an existing sender entry. Update the details for the sender, their intended destination, MSH information, and current status. The last updated date will be automatically set when you save your changes.'}
         </Typography>
 
-        {/* Sender Info Section */}
-        <Box sx={{ marginBottom: '32px' }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              marginBottom: '16px',
-              color: palette.black,
-            }}
-          >
-            Sender Info
-          </Typography>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: '16px',
-            }}
-          >
-            <OrganizationCertificateSelector
-              organizationValue={formData.sender}
-              certificateValue={formData.senderDetails}
-              onOrganizationChange={handleOrganizationChange}
-              onCertificateChange={handleCertificateChange}
-              organizationLabel="Sender Name"
-              certificateLabel="Certificate Name"
-              required={true}
-              size="medium"
-              fullWidth={true}
-            />
-          </Box>
-        </Box>
-
         {/* Destination Info Section */}
         <Box sx={{ marginBottom: '32px' }}>
           <Typography
@@ -406,6 +372,40 @@ const EditSender: React.FC<EditSenderProps> = ({
               onDestinationChange={handleDestinationChange}
               destinationTypeLabel="Destination Type"
               destinationLabel="Destination"
+              required={true}
+              size="medium"
+              fullWidth={true}
+            />
+          </Box>
+        </Box>
+
+        {/* Sender Info Section */}
+        <Box sx={{ marginBottom: '32px' }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              marginBottom: '16px',
+              color: palette.black,
+            }}
+          >
+            Sender Info
+          </Typography>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: '16px',
+            }}
+          >
+            <OrganizationCertificateSelector
+              organizationValue={formData.sender}
+              certificateValue={formData.senderDetails}
+              onOrganizationChange={handleOrganizationChange}
+              onCertificateChange={handleCertificateChange}
+              organizationLabel="Sender Name"
+              certificateLabel="Certificate Name"
               required={true}
               size="medium"
               fullWidth={true}
