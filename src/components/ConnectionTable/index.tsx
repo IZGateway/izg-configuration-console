@@ -430,7 +430,7 @@ const ConnectionsTable = (props) => {
     []
   )
 
-  const columns: GridColDef[] = [
+  const columns: GridColDef[] = useMemo(() => [
     {
       field: 'destId',
       headerName: 'DESTINATION ID',
@@ -660,7 +660,7 @@ const ConnectionsTable = (props) => {
         )
       },
     },
-  ]
+  ], [columnWidths, renderCellWithTooltip])
 
   const updateRow = (row) => {
     const updatedEndpointStatus = endpointStatuses.map((x) => {
@@ -1049,7 +1049,7 @@ const ConnectionsTable = (props) => {
             if (isMobile) return // Skip on mobile view (card layout)
 
             const newWidths = {
-              ...columnWidths,
+              ...(columnWidths || {}),
               [params.colDef.field]: params.width,
             }
             setColumnWidths(newWidths)
