@@ -267,6 +267,12 @@ const ConnectionsTable = (props) => {
     []
   )
 
+  // Cleanup debouncedSaveWidths on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      debouncedSaveWidths.cancel();
+    };
+  }, [debouncedSaveWidths]);
   // Handle responsive design with debounced resize and async rendering
   React.useEffect(() => {
     let resizeTimer
