@@ -266,6 +266,12 @@ const ConnectionsTable = (props) => {
     []
   )
 
+  // Cleanup debouncedSaveWidths on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      debouncedSaveWidths.cancel();
+    };
+  }, [debouncedSaveWidths]);
   // Handle responsive design with debounced resize and async rendering
   React.useEffect(() => {
     let resizeTimer
@@ -405,20 +411,23 @@ const ConnectionsTable = (props) => {
   }
 
   // Reusable cell renderer with tooltip for truncated text
-  const renderCellWithTooltip = (params: GridRenderCellParams) => (
-    <Tooltip title={params.value || ''} arrow placement="top">
-      <span
-        style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          display: 'block',
-          width: '100%',
-        }}
-      >
-        {params.value}
-      </span>
-    </Tooltip>
+  const renderCellWithTooltip = React.useCallback(
+    (params: GridRenderCellParams) => (
+      <Tooltip title={params.value || ''} arrow placement="top">
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            display: 'block',
+            width: '100%',
+          }}
+        >
+          {params.value}
+        </span>
+      </Tooltip>
+    ),
+    []
   )
 
   const columns: GridColDef[] = [
