@@ -29,7 +29,6 @@ import PopOverActionButtons from './popOverActionButtons'
 import Cookies from 'js-cookie'
 import moment from 'moment'
 import _ from 'lodash'
-import { debounce } from 'lodash'
 import TestConnectionButton from './TestConnectionButton'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
@@ -261,7 +260,7 @@ const ConnectionsTable = (props) => {
   // Debounced function to save column widths to localStorage
   const debouncedSaveWidths = useMemo(
     () =>
-      debounce((widths: ColumnWidthState) => {
+      _.debounce((widths: ColumnWidthState) => {
         saveColumnWidths(widths)
       }, 500), // 500ms debounce to avoid excessive writes
     []
