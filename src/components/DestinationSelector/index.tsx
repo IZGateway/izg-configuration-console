@@ -8,6 +8,10 @@ import {
   Box,
 } from '@mui/material'
 import palette from '../../styles/theme/palette'
+import {
+  ENVIRONMENT_IDS,
+  ENVIRONMENT_NAMES,
+} from '../../lib/constants/environments'
 
 export interface DestinationType {
   typeId: number
@@ -58,15 +62,10 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     DestinationItem[]
   >([])
 
-  // Predefined destination types
-  const DESTINATION_TYPES: DestinationType[] = [
-    { typeId: 1, type: 'PRODUCTION' },
-    { typeId: 2, type: 'TEST' },
-    { typeId: 3, type: 'ONBOARD' },
-    { typeId: 4, type: 'STAGE' },
-    { typeId: 5, type: 'DEV' },
-    { typeId: 6, type: 'UNKNOWN' },
-  ]
+  // Predefined destination types - using centralized constants
+  const DESTINATION_TYPES: DestinationType[] = Object.entries(
+    ENVIRONMENT_IDS
+  ).map(([type, typeId]) => ({ typeId: typeId as number, type }))
 
   // Fetch all destinations on component mount
   useEffect(() => {

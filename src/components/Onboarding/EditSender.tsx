@@ -27,6 +27,7 @@ import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import DestinationSelector from '../DestinationSelector'
+import { getEnvironmentId } from '../../lib/constants/environments'
 
 interface EditSenderProps {
   senderData: SenderData
@@ -57,16 +58,10 @@ const EditSender: React.FC<EditSenderProps> = ({
       const match = senderData.destination.match(/\(([^)]+)\)/)
       if (match) {
         const environmentName = match[1].trim().toUpperCase()
-        const environmentMap: { [key: string]: number } = {
-          PRODUCTION: 1,
-          TEST: 2,
-          ONBOARD: 3,
-          ONBOARDING: 3,
-          STAGE: 4,
-          DEV: 5,
-          UNKNOWN: 6,
-        }
-        return environmentMap[environmentName] || ''
+        // Handle ONBOARDING as alias for ONBOARD
+        const normalizedName =
+          environmentName === 'ONBOARDING' ? 'ONBOARD' : environmentName
+        return getEnvironmentId(normalizedName) || ''
       }
     }
     return ''
@@ -249,15 +244,7 @@ const EditSender: React.FC<EditSenderProps> = ({
         : 'ONBOARD'
 
       // Map environment name to ID
-      const environmentMap: { [key: string]: number } = {
-        PRODUCTION: 1,
-        TEST: 2,
-        ONBOARD: 3,
-        STAGE: 4,
-        DEV: 5,
-        UNKNOWN: 6,
-      }
-      const environment = environmentMap[environmentName] || 3
+      const environment = getEnvironmentId(environmentName) || 3
 
       // Generate ID in format: environment-destinationId-principal
       generatedId = `${environment}-${destinationId}-${formData.sender}`

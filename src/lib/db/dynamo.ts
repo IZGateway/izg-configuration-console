@@ -29,6 +29,7 @@ import {
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
 import DbClient from './DbClient'
+import { DEST_TYPES } from '../constants/environments'
 import { setImmediate } from 'timers'
 import { DenyListItem } from '../type/DenyList'
 global.setImmediate = global.setImmediate || setImmediate
@@ -76,16 +77,6 @@ export const dynamodDbDocClient = DynamoDBDocumentClient.from(
 )
 
 const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
-
-const DEST_TYPES = [
-  null,
-  'PRODUCTION',
-  'TEST',
-  'ONBOARD',
-  'STAGE',
-  'DEV',
-  'UNKNOWN',
-]
 
 async function getConnectionInfo() {
   let connected = false

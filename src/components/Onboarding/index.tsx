@@ -37,6 +37,11 @@ import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
 import CustomSnackbar from '../SnackBar'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import {
+  getEnvironmentName,
+  getEnvironmentId,
+  getConnectionType,
+} from '../../lib/constants/environments'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -234,24 +239,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     }))
   }
 
-  // Helper function to get environment name
-  function getEnvironmentName(envId: number): string {
-    const envMap: { [key: number]: string } = {
-      1: 'PRODUCTION',
-      2: 'TEST',
-      3: 'ONBOARD',
-      4: 'STAGE',
-      5: 'DEV',
-      6: 'UNKNOWN',
-    }
-    return envMap[envId] || 'Unknown'
-  }
-
-  // Helper function to determine connection type
-  function getConnectionType(envId: number): 'production' | 'onboarding' {
-    return envId === 1 ? 'production' : 'onboarding'
-  }
-
   // Handle responsive design
   React.useEffect(() => {
     const handleResize = () => {
@@ -288,15 +275,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       const principal = principalParts.join('-') // In case principal contains dashes
 
       // Map environment name to environment ID
-      const envMap: { [key: string]: number } = {
-        PRODUCTION: 1,
-        TEST: 2,
-        ONBOARD: 3,
-        STAGE: 4,
-        DEV: 5,
-        UNKNOWN: 6,
-      }
-      const environment = envMap[envName] || 5
+      const environment = getEnvironmentId(envName) || 5
 
       // Update database via API
       const allowedUser = {
