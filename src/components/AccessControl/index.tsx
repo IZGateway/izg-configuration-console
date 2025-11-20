@@ -23,6 +23,7 @@ import fetcher from '../../lib/fetch'
 import {
   mockFileTypeListData,
   type FileTypeListItem,
+  type AccessGroup,
 } from './mockData'
 
 interface DynamoDBAccessGroup {

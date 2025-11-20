@@ -250,10 +250,21 @@ const EditSender: React.FC<EditSenderProps> = ({
       generatedId = `${environment}-${destinationId}-${formData.sender}`
     }
 
+    // Build destination display string consistently (DestinationCode + environment)
+    const envLabel =
+      formData.connectionType === 'production' ? 'Production' : 'Onboarding'
+    const destinationDisplay = formData.destination
+      ? formData.destination
+      : formData.destinationCode
+      ? `${formData.destinationCode} (${envLabel})`
+      : ''
+
     const updatedFormData = {
       ...formData,
       id: generatedId,
       lastUpdated: currentDate,
+      destination: destinationDisplay,
+      destinationCode: formData.destinationCode,
     }
 
     onSave(updatedFormData)
