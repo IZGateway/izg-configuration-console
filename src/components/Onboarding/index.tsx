@@ -213,7 +213,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   ): SenderData[] {
     return users.map((user) => ({
       id: `${user.environment}-${user.destinationId}-${user.principal}`,
-      sender: user.principal,
+      sender: user.organization || user.principal,
       senderDetails: user.principal,
       destination: `${user.destinationId} (${getEnvironmentName(
         user.environment
@@ -334,6 +334,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         principal: newSender.senderDetails,
         environment: environment,
         destinationId: newSender.destinationCode,
+        organization: newSender.sender,
         enabled: newSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',

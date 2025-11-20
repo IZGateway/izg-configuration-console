@@ -104,6 +104,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         principal: user.principal,
         environment: user.environment,
         destinationId: user.destinationId,
+        organization: user.organization,
         enabled: user.enabled,
         createdBy: user.createdBy,
         createdOn: user.createdOn?.toISOString() || null,

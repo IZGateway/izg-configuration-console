@@ -2,6 +2,7 @@ export interface AllowedUser {
   principal: string
   environment: number
   destinationId: string
+  organization: string
   enabled: boolean
   createdBy: string
   createdOn: Date
@@ -15,6 +16,7 @@ export interface SerializedAllowedUser {
   principal: string
   environment: number
   destinationId: string
+  organization: string
   enabled: boolean
   createdBy: string
   createdOn: string

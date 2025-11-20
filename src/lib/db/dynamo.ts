@@ -1103,6 +1103,7 @@ class Dynamo implements DbClient {
         principal: allowedUser.principal,
         environment: allowedUser.environment,
         destinationId: allowedUser.destinationId,
+        organization: allowedUser.organization,
         enabled: allowedUser.enabled ?? true,
         createdBy: allowedUser.createdBy,
         createdOn: allowedUser.createdOn
@@ -1148,6 +1149,7 @@ class Dynamo implements DbClient {
       principal: item.principal,
       environment: item.environment,
       destinationId: item.destinationId,
+      organization: item.organization || '',
       enabled: item.enabled ?? true,
       createdBy: item.createdBy,
       createdOn: item.createdOn ? new Date(item.createdOn) : null,
