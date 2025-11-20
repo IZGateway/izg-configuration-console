@@ -141,10 +141,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
   }
 
   const getDestinationLabel = (dest: DestinationItem): string => {
-    // Format: destId (jurisdictionId)
-    if (dest.jurisdictionId) {
-      return `${dest.destId} (${dest.jurisdictionId})`
-    }
+    // Just show the destId for now
     return dest.destId
   }
 
