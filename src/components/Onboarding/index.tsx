@@ -275,25 +275,79 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     setIsAddMode(true)
   }
 
-  const handleWifiToggle = (senderId: string) => {
+  const handleWifiToggle = async (senderId: string) => {
     const sender = senderData.find((s) => s.id === senderId)
-    setSenderData((prevData) =>
-      prevData.map((sender) => {
-        if (sender.id === senderId) {
-          const newConnectionState = !sender.isConnected
-          return { ...sender, isConnected: newConnectionState }
-        }
-        return sender
-      })
-    )
+    if (!sender) return
 
-    // Show snackbar notification
-    if (sender) {
+    const newConnectionState = !sender.isConnected
+
+    try {
+      // Parse sender ID to get environment and destinationId
+      // ID format: ${environment}-${destinationId}-${principal}
+      const [envName, destinationCode, ...principalParts] = senderId.split('-')
+      const principal = principalParts.join('-') // In case principal contains dashes
+
+      // Map environment name to environment ID
+      const envMap: { [key: string]: number } = {
+        PRODUCTION: 1,
+        TEST: 2,
+        ONBOARD: 3,
+        STAGE: 4,
+        DEV: 5,
+        UNKNOWN: 6,
+      }
+      const environment = envMap[envName] || 5
+
+      // Update database via API
+      const allowedUser = {
+        principal: sender.senderDetails,
+        environment: environment,
+        destinationId: sender.destinationCode,
+        organization: sender.sender,
+        enabled: newConnectionState,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn:
+          sender.status === 'ready' ? new Date().toISOString() : null,
+      }
+
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update connection status')
+      }
+
+      // Update UI state only after successful API call
+      setSenderData((prevData) =>
+        prevData.map((s) => {
+          if (s.id === senderId) {
+            return { ...s, isConnected: newConnectionState }
+          }
+          return s
+        })
+      )
+
+      // Show success snackbar notification
       const action = sender.isConnected ? 'disconnected from' : 'connected to'
       setSnackbarMessage(
         `Sender "${sender.sender}" has been ${action} the system.`
       )
       setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    } catch (error) {
+      console.error('Error toggling wifi status:', error)
+      setSnackbarMessage(
+        `Failed to update connection status for "${sender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
       setSnackbarOpen(true)
     }
   }
