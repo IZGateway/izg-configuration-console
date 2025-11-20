@@ -339,23 +339,64 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     }
   }
 
-  const handleSaveEdit = (updatedSender: SenderData) => {
-    // Update the sender data state with the edited information
-    setSenderData((prevData) =>
-      prevData.map((sender) =>
-        sender.id === updatedSender.id ? updatedSender : sender
+  const handleSaveEdit = async (updatedSender: SenderData) => {
+    try {
+      // Parse environment from sender ID (format: environment-destinationId-principal)
+      const [envId] = updatedSender.id.split('-')
+      const environment = parseInt(envId, 10) || 5
+
+      // Create AllowedUser object from SenderData
+      const allowedUser = {
+        principal: updatedSender.senderDetails,
+        environment: environment,
+        destinationId: updatedSender.destinationCode,
+        organization: updatedSender.sender,
+        enabled: updatedSender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn:
+          updatedSender.status === 'ready' ? new Date().toISOString() : null,
+      }
+
+      // Call the API to update the allowed user
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update allowed user')
+      }
+
+      // Update the sender data state with the edited information after successful API call
+      setSenderData((prevData) =>
+        prevData.map((sender) =>
+          sender.id === updatedSender.id ? updatedSender : sender
+        )
       )
-    )
 
-    // Show snackbar notification
-    setSnackbarMessage(
-      `Sender "${updatedSender.sender}" has been successfully updated.`
-    )
-    setSnackbarSeverity('success')
-    setSnackbarOpen(true)
+      // Show snackbar notification
+      setSnackbarMessage(
+        `Sender "${updatedSender.sender}" has been successfully updated.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
 
-    setIsEditMode(false)
-    setEditingSender(null)
+      setIsEditMode(false)
+      setEditingSender(null)
+    } catch (error) {
+      console.error('Error updating sender:', error)
+      setSnackbarMessage(
+        `Failed to update sender "${updatedSender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+    }
   }
 
   const handleSaveAdd = async (newSender: SenderData) => {
