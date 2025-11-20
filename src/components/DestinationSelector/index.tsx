@@ -116,11 +116,18 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           : destinationTypeValue
 
       const filtered = destinations.filter((dest) => dest.destTypeId === typeId)
+      console.log('[DestinationSelector] Filtering destinations:', {
+        destinationTypeValue,
+        typeId,
+        totalDestinations: destinations.length,
+        filteredCount: filtered.length,
+        currentDestinationValue: destinationValue,
+      })
       setAvailableDestinations(filtered)
     } else {
       setAvailableDestinations([])
     }
-  }, [destinationTypeValue, destinations])
+  }, [destinationTypeValue, destinations, destinationValue])
 
   const handleDestinationTypeChange = (value: string) => {
     const typeId = parseInt(value, 10)
@@ -214,11 +221,18 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
               </Typography>
             </MenuItem>
           ) : (
-            availableDestinations.map((dest) => (
-              <MenuItem key={dest.destId} value={dest.destId}>
-                {getDestinationLabel(dest)}
-              </MenuItem>
-            ))
+            availableDestinations.map((dest) => {
+              console.log('[DestinationSelector] Rendering MenuItem:', {
+                destId: dest.destId,
+                currentValue: destinationValue,
+                matches: dest.destId === destinationValue,
+              })
+              return (
+                <MenuItem key={dest.destId} value={dest.destId}>
+                  {getDestinationLabel(dest)}
+                </MenuItem>
+              )
+            })
           )}
         </Select>
       </FormControl>

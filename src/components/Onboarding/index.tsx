@@ -218,7 +218,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       destination: `${user.destinationId} (${getEnvironmentName(
         user.environment
       )})`,
-      destinationCode: user.destinationId.toUpperCase(),
+      destinationCode: user.destinationId,
       accessLevel: user.enabled ? 'Full Access' : 'Restricted',
       status: user.enabled ? 'Production Live' : 'Disabled',
       lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {

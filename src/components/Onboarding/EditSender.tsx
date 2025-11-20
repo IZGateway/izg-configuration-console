@@ -50,20 +50,6 @@ const EditSender: React.FC<EditSenderProps> = ({
     return 'validate'
   }
 
-  const [formData, setFormData] = useState<SenderData>(() => {
-    const initialData = {
-      ...senderData,
-      status: normalizeStatus(senderData.status),
-    }
-    console.log('[EditSender] Initial formData:', {
-      sender: initialData.sender,
-      senderDetails: initialData.senderDetails,
-      isAddMode,
-    })
-    return initialData
-  })
-  const [statusInfoOpen, setStatusInfoOpen] = useState(false)
-
   // Initialize destinationType from the destination field if available
   const getInitialDestinationType = (): number | string => {
     if (senderData.destination) {
@@ -85,6 +71,38 @@ const EditSender: React.FC<EditSenderProps> = ({
     }
     return ''
   }
+
+  // Parse destination code from destination field if destinationCode is not available
+  const getInitialDestinationCode = (): string => {
+    // First try to use the destinationCode if it exists
+    if (senderData.destinationCode) {
+      return senderData.destinationCode
+    }
+    // Fallback: parse from destination field format: "destId (environment)"
+    if (senderData.destination) {
+      const match = senderData.destination.match(/^(.+?)\s*\(/)
+      if (match) {
+        return match[1].trim()
+      }
+    }
+    return ''
+  }
+
+  const [formData, setFormData] = useState<SenderData>(() => {
+    const initialData = {
+      ...senderData,
+      status: normalizeStatus(senderData.status),
+      destinationCode: getInitialDestinationCode(),
+    }
+    console.log('[EditSender] Initial formData:', {
+      sender: initialData.sender,
+      senderDetails: initialData.senderDetails,
+      destinationCode: initialData.destinationCode,
+      isAddMode,
+    })
+    return initialData
+  })
+  const [statusInfoOpen, setStatusInfoOpen] = useState(false)
 
   const [destinationType, setDestinationType] = useState<number | string>(
     getInitialDestinationType()
