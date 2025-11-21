@@ -4,6 +4,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { OrganizationRecord } from '../type/OrganizationRecord'
 import {
   encrypt,
   decrypt,
@@ -225,7 +226,7 @@ class EncryptedRepository implements DbClient {
     const result = await this.repository.fetchFileTypeList()
     return result
   }
-  async fetchOrganizations(): Promise<any> {
+  async fetchOrganizations(): Promise<OrganizationRecord[]> {
     const result = await this.repository.fetchOrganizations()
     return result
   }

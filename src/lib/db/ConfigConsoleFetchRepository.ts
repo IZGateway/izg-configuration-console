@@ -2,6 +2,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { OrganizationRecord } from '../type/OrganizationRecord'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -31,5 +32,5 @@ export default interface ConfigConsoleFetchRepository {
   fetchDenyListData: () => Promise<any>
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
   fetchFileTypeList: () => Promise<any>
-  fetchOrganizations: () => Promise<any>
+  fetchOrganizations: () => Promise<OrganizationRecord[]>
 }

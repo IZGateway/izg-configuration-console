@@ -4,6 +4,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { OrganizationRecord } from '../type/OrganizationRecord'
 
 import {
   DeleteCommand,
@@ -719,7 +720,7 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchOrganizations(): Promise<any[]> {
+  async fetchOrganizations(): Promise<OrganizationRecord[]> {
     try {
       const params: QueryCommandInput = {
         TableName: TABLE_NAME,
