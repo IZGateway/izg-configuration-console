@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Box,
   Typography,
@@ -35,19 +35,70 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
     members: group?.members || [],
   })
 
-  // Available roles for selection
-  const availableRoles = ['Admin', 'OPS', 'ADS', 'SOAP', 'User']
+  // Static roles list as requested
+  const availableRoles = ['admin', 'internal', 'operations', 'soap', 'users']
 
-  // Available members for selection (in real app, this would come from API)
-  const availableMembers = [
-    'eHealthSign',
-    'APHL OPS',
-    'IZG OPS',
-    'Administrations',
-    'Security Team',
-    'Data Analytics',
-    'Support Staff',
-  ]
+  // Fetch available members from organization principals
+  const [availableMembers, setAvailableMembers] = useState<string[]>([])
+  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
+
+  useEffect(() => {
+    const fetchMembersData = async () => {
+      try {
+        setIsLoadingMembers(true)
+
+        // Fetch organization principals
+        const orgsResponse = await fetch('/api/organizations')
+        if (!orgsResponse.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+        const orgData = await orgsResponse.json()
+
+        // Extract all unique principals from all organizations
+        const allPrincipals = new Set<string>()
+        orgData.forEach((org: { principalNames?: string[] }) => {
+          if (org.principalNames && Array.isArray(org.principalNames)) {
+            org.principalNames.forEach((principal: string) =>
+              allPrincipals.add(principal)
+            )
+          }
+        })
+
+        // Fetch access groups
+        const groupsResponse = await fetch('/api/accessgroups')
+        if (!groupsResponse.ok) {
+          throw new Error('Failed to fetch access groups')
+        }
+        const groupsData = await groupsResponse.json()
+
+        // Extract group names (sortKey format is "environment#groupName", we want just the groupName)
+        // Exclude the current group being edited to prevent self-reference
+        const allGroups = new Set<string>()
+        groupsData.forEach(
+          (group: { groupName?: string; sortKey?: string }) => {
+            if (group.groupName && group.groupName !== formData.groupName) {
+              allGroups.add(group.groupName)
+            }
+          }
+        )
+
+        // Combine principals and groups, then sort
+        const combinedMembers = [
+          ...Array.from(allPrincipals),
+          ...Array.from(allGroups),
+        ].sort()
+
+        setAvailableMembers(combinedMembers)
+      } catch (error) {
+        console.error('Error fetching members data:', error)
+        setAvailableMembers([])
+      } finally {
+        setIsLoadingMembers(false)
+      }
+    }
+
+    fetchMembersData()
+  }, [formData.groupName])
 
   const handleInputChange = (
     field: keyof AccessGroup,
@@ -180,7 +231,6 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             onChange={(e) => handleInputChange('groupName', e.target.value)}
             fullWidth
             required
-            disabled={isEditing}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
@@ -212,6 +262,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             <FormControl fullWidth>
               <InputLabel shrink>
                 Members ({formData.members.length})
+                {isLoadingMembers && ' (Loading...)'}
               </InputLabel>
               <Select
                 multiple
@@ -219,6 +270,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
                 onChange={(e) =>
                   handleInputChange('members', e.target.value as string[])
                 }
+                disabled={isLoadingMembers}
                 input={
                   <OutlinedInput
                     label={`Members (${formData.members.length})`}

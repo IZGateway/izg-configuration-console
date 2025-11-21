@@ -229,4 +229,9 @@ class EncryptedRepository implements DbClient {
     const result = await this.repository.fetchOrganizations()
     return result
   }
+
+  async updateAccessGroup(sortKey: string, updateData: any): Promise<any> {
+    const result = await this.repository.updateAccessGroup(sortKey, updateData)
+    return result
+  }
 }

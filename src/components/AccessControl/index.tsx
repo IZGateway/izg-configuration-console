@@ -21,6 +21,7 @@ import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 
 import {
+  type AccessGroup,
   mockFileTypeListData,
   type FileTypeListItem,
 } from './mockData'
@@ -155,7 +156,13 @@ const AccessControlComponent = () => {
         )
 
         // Transform DynamoDB data to UI format
+        console.log('Raw DynamoDB response:', response)
         const transformedData: AccessGroup[] = response.map((item) => {
+          console.log('Processing item:', {
+            sortKey: item.sortKey,
+            environment: item.environment,
+            groupName: item.groupName,
+          })
           // Extract members
           let members: string[] = []
 
@@ -212,6 +219,7 @@ const AccessControlComponent = () => {
   }
 
   const handleEditGroup = (groupData: AccessGroup) => {
+    console.log('Editing group data:', groupData)
     setSelectedGroup(groupData)
     setEditGroupMode(true)
   }
@@ -238,7 +246,7 @@ const AccessControlComponent = () => {
     // TODO: Implement API call to delete group
   }
 
-  const handleSaveGroup = (updatedData: AccessGroup) => {
+  const handleSaveGroup = async (updatedData: AccessGroup) => {
     if (isAddingGroup) {
       // Adding new group - generate new ID and add to state
       const newGroup: AccessGroup = {
@@ -255,29 +263,75 @@ const AccessControlComponent = () => {
         message: `Access group "${updatedData.groupName}" has been successfully created.`,
       })
     } else {
-      // Editing existing group - update in state
-      setAccessGroupsData((prevGroups) =>
-        prevGroups.map((group) =>
-          group.id === updatedData.id
-            ? { ...updatedData, memberCount: updatedData.members.length }
-            : group
-        )
-      )
+      // Editing existing group - call API to update in database
+      try {
+        console.log('Updating access group:', {
+          id: updatedData.id,
+          groupName: updatedData.groupName,
+          description: updatedData.description,
+          roles: updatedData.roles,
+          members: updatedData.members,
+        })
 
-      setAlert({
-        level: 'success',
-        jurisdiction: '',
-        dest_type: '',
-        message: `Access group "${updatedData.groupName}" has been successfully updated.`,
-      })
+        const response = await fetch(`/api/accessgroups/${encodeURIComponent(updatedData.id)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            groupName: updatedData.groupName,
+            description: updatedData.description,
+            roles: updatedData.roles,
+            users: updatedData.members.filter(
+              (m) => m.includes('.') || m.includes('@')
+            ), // Users typically have . or @
+            groups: updatedData.members.filter(
+              (m) => !m.includes('.') && !m.includes('@')
+            ), // Groups don't
+            updatedBy: currentUserName,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Update failed with status:', response.status, errorData)
+          throw new Error(errorData.error || 'Failed to update access group')
+        }
+
+        await response.json()
+
+        // Update the local state with the updated data
+        setAccessGroupsData((prevGroups) =>
+          prevGroups.map((group) =>
+            group.id === updatedData.id
+              ? { ...updatedData, memberCount: updatedData.members.length }
+              : group
+          )
+        )
+
+        setAlert({
+          level: 'success',
+          jurisdiction: '',
+          dest_type: '',
+          message: `Access group "${updatedData.groupName}" has been successfully updated.`,
+        })
+      } catch (error) {
+        console.error('Failed to update access group:', error)
+        setAlert({
+          level: 'error',
+          jurisdiction: '',
+          dest_type: '',
+          message: 'Failed to update access group. Please try again.',
+        })
+        // Don't reset edit mode on error so user can try again
+        return
+      }
     }
 
     // Reset edit mode
     setEditGroupMode(false)
     setSelectedGroup(null)
     setIsAddingGroup(false)
-
-    // TODO: Implement API call to save/update group
   }
 
   const handleCancelGroupEdit = () => {

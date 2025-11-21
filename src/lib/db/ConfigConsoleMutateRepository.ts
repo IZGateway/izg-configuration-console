@@ -19,4 +19,5 @@ export default interface ConfigConsoleMutateRepository {
     deniedBy?: string
   }): Promise<DenyListItem>
   deleteDenyListRecord(id: string): Promise<boolean>
+  updateAccessGroup(sortKey: string, updateData: any): Promise<any>
 }
