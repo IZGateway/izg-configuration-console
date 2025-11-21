@@ -5,6 +5,7 @@ import {
   TextField,
   Button,
   Select,
+  Menu,
   MenuItem,
   FormControl,
   InputLabel,
@@ -213,16 +214,23 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Name Dropdown */}
           <FormControl
-            fullWidth
             required
             sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
           >
-            <InputLabel>Name</InputLabel>
+            <InputLabel id="denylist-name-label">Name</InputLabel>
+
             <Select
+              labelId="denylist-name-label"
+              id="denylist-name"
               value={formData.name}
               label="Name *"
               onChange={(e) => handleOrganizationChange(e.target.value)}
               sx={{ borderRadius: '8px' }}
+              MenuProps={{
+                PaperProps: {
+                  style: { maxHeight: 200 }, // menu height + scroll inside paper
+                },
+              }}
             >
               {organizations.map((org) => (
                 <MenuItem
