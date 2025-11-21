@@ -68,14 +68,27 @@ const getFetchedDestination = async (
       destId,
       destTypeId
     )
+
+    let passwordForDeploymentTest: string
+    if (data?.isPasswordDifferent) {
+      passwordForDeploymentTest = await dbClient.fetchChangeRequestPassword(
+        data.id
+      )
+    } else {
+      passwordForDeploymentTest = await dbClient.fetchDestinationPassword(
+        destId,
+        destTypeId
+      )
+    }
+
     fetchedDestination = {
       destId: data.destId,
       destinationType: data.destType,
       jurisdiction: data.jurisdiction,
       destUri: data.requested.destUri,
       destVersion: data.requested.destVersion,
-      password: await getPasswordForTesting(null, destId, destTypeId),
       ...data.requested,
+      password: passwordForDeploymentTest,
       configuration: 'deploy',
     }
     destTypeValue = data.destType.type
