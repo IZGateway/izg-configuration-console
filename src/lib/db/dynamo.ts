@@ -5,6 +5,9 @@ import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
+import { AccessGroupRecord } from '../type/AccessGroupRecord'
+import { FileTypeRecord } from '../type/FileTypeRecord'
+import { SenderRecord } from '../type/SenderRecord'
 
 import {
   DeleteCommand,
@@ -645,7 +648,7 @@ class Dynamo implements DbClient {
     return true
   }
 
-  async fetchSenderData(): Promise<any> {
+  async fetchSenderData(): Promise<SenderRecord> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -653,10 +656,10 @@ class Dynamo implements DbClient {
       },
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result // May need to update this
+    return result.Item as SenderRecord
   }
 
-  async fetchAccessGroups(): Promise<any> {
+  async fetchAccessGroups(): Promise<AccessGroupRecord[]> {
     const params: QueryCommandInput = {
       TableName: TABLE_NAME,
       KeyConditionExpression: 'entityType = :entityType',
@@ -672,7 +675,15 @@ class Dynamo implements DbClient {
     }
 
     return result.Items.map((item) => ({
-      ...item,
+      environment: item.environment as string,
+      groupName: item.groupName as string,
+      sortKey: item.sortKey as string,
+      updatedBy: item.updatedBy as string,
+      createdBy: item.createdBy as string,
+      entityType: item.entityType as string,
+      updatedOn: item.updatedOn as string,
+      createdOn: item.createdOn as string,
+      description: item.description as string | undefined,
       roles: Array.isArray(item.roles)
         ? item.roles
         : item.roles
@@ -922,7 +933,7 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchFileTypeList(): Promise<any> {
+  async fetchFileTypeList(): Promise<FileTypeRecord[]> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -930,7 +941,7 @@ class Dynamo implements DbClient {
       },
     }
     const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result // May need to update this
+    return (result.Item?.fileTypes as FileTypeRecord[]) || []
   }
 }
 

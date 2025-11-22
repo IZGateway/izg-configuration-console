@@ -21,6 +21,7 @@ import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 
 import {
+  type AccessGroup,
   mockFileTypeListData,
   type FileTypeListItem,
 } from './mockData'

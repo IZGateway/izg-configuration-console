@@ -5,7 +5,6 @@ import {
   TextField,
   Button,
   Select,
-  Menu,
   MenuItem,
   FormControl,
   InputLabel,
@@ -32,7 +31,6 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   userName,
 }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true)
   const [selectedOrganization, setSelectedOrganization] =
     useState<Organization | null>(null)
   const [formData, setFormData] = useState<Partial<DenyListItem>>({
@@ -45,8 +43,6 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   useEffect(() => {
     const fetchOrganizations = async () => {
       try {
-        setIsLoadingOrganizations(true)
-
         const response = await fetch('/api/organizations')
 
         if (!response.ok) {
@@ -54,16 +50,18 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
         }
 
         const orgData = await response.json()
-        const processedOrgs: Organization[] = orgData.map((org: any) => {
-          let principalNames: string[] = []
+        const processedOrgs: Organization[] = orgData.map(
+          (org: Organization) => {
+            let principalNames: string[] = []
 
-          principalNames = Array.from(org.principalNames)
+            principalNames = Array.from(org.principalNames)
 
-          return {
-            organizationName: org.organizationName || 'Unknown Organization',
-            principalNames: principalNames,
+            return {
+              organizationName: org.organizationName || 'Unknown Organization',
+              principalNames: principalNames,
+            }
           }
-        })
+        )
 
         setOrganizations(processedOrgs)
 
@@ -77,8 +75,6 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
       } catch (error) {
         console.error('Error fetching organizations:', error)
         setOrganizations([])
-      } finally {
-        setIsLoadingOrganizations(false)
       }
     }
 
