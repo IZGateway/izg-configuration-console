@@ -434,8 +434,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
       const result = await response.json()
 
-      // Add the new sender to the sender data state
-      setSenderData((prevData) => [...prevData, newSender])
+      // Generate proper ID from the API response (format: environment-destinationId-principal)
+      const properlyIdentifiedSender = {
+        ...newSender,
+        id: `${result.environment}-${result.destinationId}-${result.principal}`,
+      }
+
+      // Add the new sender to the sender data state with proper ID
+      setSenderData((prevData) => [...prevData, properlyIdentifiedSender])
 
       // Show snackbar notification
       setSnackbarMessage(
@@ -523,6 +529,21 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       // Parse environment from sender ID (format: environment-destinationId-principal)
       const [envId] = senderToDelete.id.split('-')
       const environment = parseInt(envId, 10)
+
+      // Validate environment ID
+      if (
+        isNaN(environment) ||
+        !senderToDelete.destinationCode ||
+        !senderToDelete.senderDetails
+      ) {
+        console.error('Invalid sender data for deletion:', {
+          id: senderToDelete.id,
+          environment,
+          destinationCode: senderToDelete.destinationCode,
+          senderDetails: senderToDelete.senderDetails,
+        })
+        throw new Error('Invalid sender data - cannot delete')
+      }
 
       // Call the API to delete the allowed user
       const response = await fetch('/api/allowedusers', {
