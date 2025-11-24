@@ -14,6 +14,11 @@ export default interface ConfigConsoleMutateRepository {
   ): Promise<boolean>
   updateDestination(destination: Destination): Promise<boolean>
   upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser>
+  deleteAllowedUser(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<boolean>
   addDenyListRecord(denyListItem: {
     principal: string
     environment: number

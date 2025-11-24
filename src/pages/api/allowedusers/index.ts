@@ -91,6 +91,35 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *         description: Bad request - missing required fields
  *       500:
  *         description: Internal server error
+ *   delete:
+ *     summary: Delete an allowed user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - principal
+ *               - environment
+ *               - destinationId
+ *             properties:
+ *               principal:
+ *                 type: string
+ *                 description: The principal/user identifier
+ *               environment:
+ *                 type: number
+ *                 description: The environment ID
+ *               destinationId:
+ *                 type: string
+ *                 description: The destination ID
+ *     responses:
+ *       200:
+ *         description: OK. User successfully deleted.
+ *       400:
+ *         description: Bad request - missing required fields
+ *       500:
+ *         description: Internal server error
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -232,6 +261,70 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       return res.status(500).json({
         error: 'Failed to upsert allowed user',
+        message: error?.message || 'Unknown error',
+      })
+    }
+  } else if (req.method === 'DELETE') {
+    logger.info('Received DELETE request to delete allowed user')
+
+    try {
+      // Next.js automatically parses JSON body, so req.body is already an object
+      const body =
+        typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+
+      // Validate required fields
+      const requiredFields = ['principal', 'environment', 'destinationId']
+      const missingFields = requiredFields.filter(
+        (field) => !body.hasOwnProperty(field)
+      )
+
+      if (missingFields.length > 0) {
+        logger.warn('Missing required fields in DELETE request', {
+          missingFields,
+          operation: 'deleteAllowedUser',
+          httpMethod: req.method,
+          endpoint: req.url,
+        })
+        return res.status(400).json({
+          error: 'Missing required fields',
+          missingFields,
+        })
+      }
+
+      const dbClient = await DbClientFactory.getDbClient()
+
+      const result = await dbClient.deleteAllowedUser(
+        body.principal,
+        body.environment,
+        body.destinationId
+      )
+
+      logger.info('Successfully deleted allowed user', {
+        principal: body.principal,
+        environment: body.environment,
+        destinationId: body.destinationId,
+        operation: 'deleteAllowedUser',
+        httpMethod: req.method,
+        endpoint: req.url,
+      })
+
+      return res.status(200).json({
+        success: result,
+        message: 'Allowed user successfully deleted',
+      })
+    } catch (error) {
+      logger.error('Failed to delete allowed user', {
+        errorMessage: error?.message || 'Unknown error',
+        errorType: error?.name || 'Unknown',
+        stack: error?.stack || 'No stack trace',
+        operation: 'deleteAllowedUser',
+        httpMethod: req.method,
+        endpoint: req.url,
+        errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      })
+
+      return res.status(500).json({
+        error: 'Failed to delete allowed user',
         message: error?.message || 'Unknown error',
       })
     }

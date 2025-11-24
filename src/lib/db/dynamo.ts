@@ -1135,6 +1135,45 @@ class Dynamo implements DbClient {
     }
   }
 
+  async deleteAllowedUser(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<boolean> {
+    logger.debug(
+      `Deleting allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+    )
+
+    const params: DeleteCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AllowedUser',
+        sortKey: `${environment}#${destinationId}#${principal}`,
+      },
+    }
+
+    try {
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+      logger.info(
+        `Successfully deleted allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+      )
+      return true
+    } catch (error) {
+      logger.error('Error deleting allowed user from DynamoDB', {
+        environment,
+        destinationId,
+        principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'deleteAllowedUser',
+      })
+      throw error
+    }
+  }
+
   private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {
     return {
       principal: item.principal,

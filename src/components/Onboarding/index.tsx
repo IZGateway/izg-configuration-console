@@ -516,11 +516,38 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     }
   }
 
-  const handleConfirmDelete = () => {
-    if (senderToDelete) {
+  const handleConfirmDelete = async () => {
+    if (!senderToDelete) return
+
+    try {
+      // Parse environment from sender ID (format: environment-destinationId-principal)
+      const [envId] = senderToDelete.id.split('-')
+      const environment = parseInt(envId, 10)
+
+      // Call the API to delete the allowed user
+      const response = await fetch('/api/allowedusers', {
+        method: 'DELETE',
+        body: JSON.stringify({
+          principal: senderToDelete.senderDetails,
+          environment: environment,
+          destinationId: senderToDelete.destinationCode,
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to delete allowed user')
+      }
+
+      // Remove from UI state only after successful API call
       setSenderData((prevData) =>
         prevData.filter((sender) => sender.id !== senderToDelete.id)
       )
+
       setSnackbarMessage(
         `Sender "${senderToDelete.sender}" has been permanently deleted from onboarding.`
       )
@@ -528,6 +555,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       setSnackbarOpen(true)
       setDeleteDialogOpen(false)
       setSenderToDelete(null)
+    } catch (error) {
+      console.error('Error deleting sender:', error)
+      setSnackbarMessage(
+        `Failed to delete sender "${senderToDelete.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+      // Don't close dialog on error so user can try again
     }
   }
 
