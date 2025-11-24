@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { AllowedUser } from '../type/AllowedUser'
@@ -314,6 +315,43 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'fetchDestinationAuditHistory',
+      })
+      throw error
+    }
+  }
+
+  async fetchAllowedUserAuditHistory(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUserAudit[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression:
+        'entityType = :entityType and begins_with(sortKey, :sortKey)',
+      ExpressionAttributeValues: {
+        ':entityType': 'AllowedUserAudit',
+        ':sortKey': `${environment}#${destinationId}#${principal}#`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return result.Items.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        id: item.sortKey,
+      })) as AllowedUserAudit[]
+    } catch (error) {
+      logger.error('Error fetching allowed user audit history from DynamoDB', {
+        principal,
+        environment,
+        destinationId,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUserAudit',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchAllowedUserAuditHistory',
       })
       throw error
     }
@@ -1169,6 +1207,97 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'deleteAllowedUser',
+      })
+      throw error
+    }
+  }
+
+  async createAllowedUserAudit(
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
+  ): Promise<boolean> {
+    logger.info(
+      `Creating allowed user audit: changeType=${changeType}, environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+    )
+
+    // Helper function to serialize AllowedUser for DynamoDB (convert Date objects to strings)
+    const serializeAllowedUser = (user: AllowedUser | null) => {
+      if (!user) return null
+      return {
+        ...user,
+        createdOn: user.createdOn?.toISOString() || null,
+        updatedOn: user.updatedOn?.toISOString() || null,
+        validatedOn: user.validatedOn?.toISOString() || null,
+      }
+    }
+
+    const auditData = {
+      tableName: 'allowed_users',
+      principal,
+      environment,
+      destinationId,
+      userName,
+      changeType,
+      oldValues: serializeAllowedUser(oldValues),
+      newValues: serializeAllowedUser(newValues),
+      createdAt: new Date().toISOString(),
+    }
+
+    const sortKey = `${environment}#${destinationId}#${principal}#${auditData.createdAt}`
+
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: {
+        ...auditData,
+        entityType: 'AllowedUserAudit',
+        sortKey: sortKey,
+      },
+    }
+
+    logger.info('Prepared DynamoDB PutCommand for audit', {
+      tableName: TABLE_NAME,
+      entityType: 'AllowedUserAudit',
+      sortKey: sortKey,
+      changeType,
+      principal,
+      environment,
+      destinationId,
+      userName,
+      hasOldValues: !!oldValues,
+      hasNewValues: !!newValues,
+    })
+
+    try {
+      const result = await dynamodDbDocClient.send(new PutCommand(params))
+      logger.info(`Successfully created allowed user audit in DynamoDB`, {
+        changeType,
+        environment,
+        destinationId,
+        principal,
+        sortKey,
+        entityType: 'AllowedUserAudit',
+        tableName: TABLE_NAME,
+        httpStatusCode: result.$metadata.httpStatusCode,
+        requestId: result.$metadata.requestId,
+      })
+      return true
+    } catch (error) {
+      logger.error('Error creating allowed user audit in DynamoDB', {
+        changeType,
+        environment,
+        destinationId,
+        principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUserAudit',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'createAllowedUserAudit',
       })
       throw error
     }

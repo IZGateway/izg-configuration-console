@@ -208,6 +208,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       const dbClient = await DbClientFactory.getDbClient()
 
+      // Check if user already exists to determine change type
+      const existingUsers = await dbClient.fetchAllowedUsers()
+      const existingUser = existingUsers.find(
+        (u) =>
+          u.principal === body.principal &&
+          u.environment === body.environment &&
+          u.destinationId === body.destinationId
+      )
+
+      const changeType = existingUser ? 'Update' : 'Create'
+
       // Create AllowedUser object
       const allowedUser = {
         principal: body.principal,
@@ -224,10 +235,52 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       const result = await dbClient.upsertAllowedUser(allowedUser)
 
+      // Create audit record
+      logger.info('About to create allowed user audit record', {
+        changeType,
+        principal: result.principal,
+        environment: result.environment,
+        destinationId: result.destinationId,
+        userName: body.updatedBy,
+        hasExistingUser: !!existingUser,
+        operation: 'POST /api/allowedusers',
+      })
+
+      try {
+        const auditCreated = await dbClient.createAllowedUserAudit(
+          changeType,
+          result.principal,
+          result.environment,
+          result.destinationId,
+          body.updatedBy,
+          existingUser || null,
+          result
+        )
+        logger.info('Successfully created allowed user audit record', {
+          changeType,
+          principal: result.principal,
+          environment: result.environment,
+          destinationId: result.destinationId,
+          auditCreated,
+          operation: 'POST /api/allowedusers',
+        })
+      } catch (auditError) {
+        logger.error('Failed to create allowed user audit record', {
+          changeType,
+          principal: result.principal,
+          environment: result.environment,
+          destinationId: result.destinationId,
+          errorMessage: auditError?.message || 'Unknown error',
+          operation: 'createAllowedUserAudit',
+        })
+        // Continue even if audit fails - don't block the main operation
+      }
+
       logger.info('Successfully upserted allowed user', {
         principal: result.principal,
         environment: result.environment,
         destinationId: result.destinationId,
+        changeType,
         operation: 'upsertAllowedUser',
         httpMethod: req.method,
         endpoint: req.url,
@@ -293,11 +346,65 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       const dbClient = await DbClientFactory.getDbClient()
 
+      // Fetch existing user for audit trail before deletion
+      const existingUsers = await dbClient.fetchAllowedUsers()
+      const existingUser = existingUsers.find(
+        (u) =>
+          u.principal === body.principal &&
+          u.environment === body.environment &&
+          u.destinationId === body.destinationId
+      )
+
       const result = await dbClient.deleteAllowedUser(
         body.principal,
         body.environment,
         body.destinationId
       )
+
+      // Create audit record
+      if (existingUser) {
+        logger.info('About to create allowed user audit record for deletion', {
+          changeType: 'Delete',
+          principal: body.principal,
+          environment: body.environment,
+          destinationId: body.destinationId,
+          userName: body.deletedBy || 'unknown',
+          operation: 'DELETE /api/allowedusers',
+        })
+
+        try {
+          const auditCreated = await dbClient.createAllowedUserAudit(
+            'Delete',
+            body.principal,
+            body.environment,
+            body.destinationId,
+            body.deletedBy || 'unknown',
+            existingUser,
+            null
+          )
+          logger.info(
+            'Successfully created allowed user audit record for deletion',
+            {
+              changeType: 'Delete',
+              principal: body.principal,
+              environment: body.environment,
+              destinationId: body.destinationId,
+              auditCreated,
+              operation: 'DELETE /api/allowedusers',
+            }
+          )
+        } catch (auditError) {
+          logger.error('Failed to create allowed user audit record', {
+            changeType: 'Delete',
+            principal: body.principal,
+            environment: body.environment,
+            destinationId: body.destinationId,
+            errorMessage: auditError?.message || 'Unknown error',
+            operation: 'createAllowedUserAudit',
+          })
+          // Continue even if audit fails
+        }
+      }
 
       logger.info('Successfully deleted allowed user', {
         principal: body.principal,

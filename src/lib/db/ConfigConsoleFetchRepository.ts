@@ -1,5 +1,6 @@
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { AllowedUser } from '../type/AllowedUser'
@@ -15,6 +16,11 @@ export default interface ConfigConsoleFetchRepository {
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]>
+  fetchAllowedUserAuditHistory(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUserAudit[]>
   fetchDestinationChangeRequestById(
     id: number
   ): Promise<DestinationChangeRequest>

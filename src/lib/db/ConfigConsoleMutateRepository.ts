@@ -1,6 +1,7 @@
 import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import { DenyListItem } from '../type/DenyList'
 
 export default interface ConfigConsoleMutateRepository {
@@ -18,6 +19,15 @@ export default interface ConfigConsoleMutateRepository {
     principal: string,
     environment: number,
     destinationId: string
+  ): Promise<boolean>
+  createAllowedUserAudit(
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
   ): Promise<boolean>
   addDenyListRecord(denyListItem: {
     principal: string

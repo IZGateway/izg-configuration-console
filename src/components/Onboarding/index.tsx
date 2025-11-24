@@ -531,6 +531,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
           principal: senderToDelete.senderDetails,
           environment: environment,
           destinationId: senderToDelete.destinationCode,
+          deletedBy: session?.user?.email || session?.user?.name || 'unknown',
         }),
         headers: {
           'Content-Type': 'application/json',
