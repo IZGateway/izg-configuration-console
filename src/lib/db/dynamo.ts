@@ -29,6 +29,11 @@ import {
   ListTablesCommand,
 } from '@aws-sdk/client-dynamodb'
 import logger from '../../../logger'
+import {
+  createAuditRecord,
+  fetchAuditHistory,
+  serializeDateFields,
+} from './auditHelper'
 import DbClient from './DbClient'
 import { DEST_TYPES } from '../constants/environments'
 import { setImmediate } from 'timers'
@@ -285,39 +290,17 @@ class Dynamo implements DbClient {
     destId: string,
     destTypeId: number
   ): Promise<DestinationAudit[]> {
-    // DONE
-    const params: QueryCommandInput = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression:
-        'entityType = :entityType and begins_with(sortKey, :sortKey)',
-      ExpressionAttributeValues: {
-        ':entityType': 'DestinationAudit',
-        ':sortKey': `${destTypeId}#${destId}#`,
-      },
-    }
-    try {
-      const result = await dynamodDbDocClient.send(new QueryCommand(params))
-      return result.Items.map((item) => ({
+    return fetchAuditHistory<DestinationAudit>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'DestinationAudit',
+      sortKeyPrefix: `${destTypeId}#${destId}#`,
+      identifyingFields: { destId, destTypeId },
+      transformResult: (item) => ({
         ...item,
         isPasswordDifferent:
           item.isPasswordDifferent ||
           item.newValues?.password !== item.oldValues?.password,
-        createdAt: new Date(item.createdAt),
-        id: item.sortKey,
-      })) as DestinationAudit[]
-    } catch (error) {
-      logger.error('Error fetching destination audit history from DynamoDB', {
-        destId,
-        destTypeId,
-        tableName: TABLE_NAME,
-        entityType: 'DestinationAudit',
-        errorMessage: error.message,
-        errorType: error.name,
-        stack: error.stack,
-        operation: 'fetchDestinationAuditHistory',
-      })
-      throw error
-    }
+      }),
+    })
   }
 
   async fetchAllowedUserAuditHistory(
@@ -325,36 +308,11 @@ class Dynamo implements DbClient {
     environment: number,
     destinationId: string
   ): Promise<AllowedUserAudit[]> {
-    const params: QueryCommandInput = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression:
-        'entityType = :entityType and begins_with(sortKey, :sortKey)',
-      ExpressionAttributeValues: {
-        ':entityType': 'AllowedUserAudit',
-        ':sortKey': `${environment}#${destinationId}#${principal}#`,
-      },
-    }
-    try {
-      const result = await dynamodDbDocClient.send(new QueryCommand(params))
-      return result.Items.map((item) => ({
-        ...item,
-        createdAt: new Date(item.createdAt),
-        id: item.sortKey,
-      })) as AllowedUserAudit[]
-    } catch (error) {
-      logger.error('Error fetching allowed user audit history from DynamoDB', {
-        principal,
-        environment,
-        destinationId,
-        tableName: TABLE_NAME,
-        entityType: 'AllowedUserAudit',
-        errorMessage: error.message,
-        errorType: error.name,
-        stack: error.stack,
-        operation: 'fetchAllowedUserAuditHistory',
-      })
-      throw error
-    }
+    return fetchAuditHistory<AllowedUserAudit>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AllowedUserAudit',
+      sortKeyPrefix: `${environment}#${destinationId}#${principal}#`,
+      identifyingFields: { principal, environment, destinationId },
+    })
   }
 
   async fetchDestinationChangeRequestById(
@@ -609,27 +567,22 @@ class Dynamo implements DbClient {
         changeRequest.destType.typeId
       )
     }
-    const auditData = {
+
+    return createAuditRecord<any>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'DestinationAudit',
       tableName: 'destinations',
-      destId: changeRequest.destId,
-      destType: changeRequest.destType.typeId,
+      sortKeyParts: [changeRequest.destType.typeId, changeRequest.destId],
       userName: user,
       changeType: 'Update',
-      isPasswordDifferent: changeRequest.isPasswordDifferent,
-      oldValues: maskPassword(changeRequest.current),
-      newValues: maskPassword(changeRequest.requested),
-      createdAt: new Date().toISOString(),
-    }
-    const params: PutCommandInput = {
-      TableName: TABLE_NAME,
-      Item: {
-        ...auditData,
-        entityType: 'DestinationAudit',
-        sortKey: `${changeRequest.destType.typeId}#${changeRequest.destId}#${auditData.createdAt}`,
+      oldValues: changeRequest.current,
+      newValues: changeRequest.requested,
+      additionalData: {
+        destId: changeRequest.destId,
+        destType: changeRequest.destType.typeId,
+        isPasswordDifferent: changeRequest.isPasswordDifferent,
       },
-    }
-    await dynamodDbDocClient.send(new PutCommand(params))
-    return true
+      serializeValues: (dest) => maskPassword(dest),
+    })
   }
 
   async updateDestination(destination: Destination): Promise<boolean> {
@@ -1221,86 +1174,18 @@ class Dynamo implements DbClient {
     oldValues: AllowedUser | null,
     newValues: AllowedUser | null
   ): Promise<boolean> {
-    logger.info(
-      `Creating allowed user audit: changeType=${changeType}, environment=${environment}, destinationId=${destinationId}, principal=${principal}`
-    )
-
-    // Helper function to serialize AllowedUser for DynamoDB (convert Date objects to strings)
-    const serializeAllowedUser = (user: AllowedUser | null) => {
-      if (!user) return null
-      return {
-        ...user,
-        createdOn: user.createdOn?.toISOString() || null,
-        updatedOn: user.updatedOn?.toISOString() || null,
-        validatedOn: user.validatedOn?.toISOString() || null,
-      }
-    }
-
-    const auditData = {
-      tableName: 'allowed_users',
-      principal,
-      environment,
-      destinationId,
-      userName,
-      changeType,
-      oldValues: serializeAllowedUser(oldValues),
-      newValues: serializeAllowedUser(newValues),
-      createdAt: new Date().toISOString(),
-    }
-
-    const sortKey = `${environment}#${destinationId}#${principal}#${auditData.createdAt}`
-
-    const params: PutCommandInput = {
-      TableName: TABLE_NAME,
-      Item: {
-        ...auditData,
-        entityType: 'AllowedUserAudit',
-        sortKey: sortKey,
-      },
-    }
-
-    logger.info('Prepared DynamoDB PutCommand for audit', {
-      tableName: TABLE_NAME,
+    return createAuditRecord<AllowedUser>(dynamodDbDocClient, TABLE_NAME, {
       entityType: 'AllowedUserAudit',
-      sortKey: sortKey,
-      changeType,
-      principal,
-      environment,
-      destinationId,
+      tableName: 'allowed_users',
+      sortKeyParts: [environment, destinationId, principal],
       userName,
-      hasOldValues: !!oldValues,
-      hasNewValues: !!newValues,
+      changeType,
+      oldValues,
+      newValues,
+      additionalData: { principal, environment, destinationId },
+      serializeValues: (user) =>
+        serializeDateFields(user, ['createdOn', 'updatedOn', 'validatedOn']),
     })
-
-    try {
-      const result = await dynamodDbDocClient.send(new PutCommand(params))
-      logger.info(`Successfully created allowed user audit in DynamoDB`, {
-        changeType,
-        environment,
-        destinationId,
-        principal,
-        sortKey,
-        entityType: 'AllowedUserAudit',
-        tableName: TABLE_NAME,
-        httpStatusCode: result.$metadata.httpStatusCode,
-        requestId: result.$metadata.requestId,
-      })
-      return true
-    } catch (error) {
-      logger.error('Error creating allowed user audit in DynamoDB', {
-        changeType,
-        environment,
-        destinationId,
-        principal,
-        tableName: TABLE_NAME,
-        entityType: 'AllowedUserAudit',
-        errorMessage: error.message,
-        errorType: error.name,
-        stack: error.stack,
-        operation: 'createAllowedUserAudit',
-      })
-      throw error
-    }
   }
 
   private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {
