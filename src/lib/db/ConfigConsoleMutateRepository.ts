@@ -1,6 +1,7 @@
 import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DenyListItem } from '../type/DenyList'
+import { AccessGroupRecord } from '../type/AccessGroupRecord'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -20,4 +21,14 @@ export default interface ConfigConsoleMutateRepository {
   }): Promise<DenyListItem>
   deleteDenyListRecord(id: string): Promise<boolean>
   updateAccessGroup(sortKey: string, updateData: any): Promise<any>
+  addAccessGroup(accessGroup: {
+    environment: string
+    groupName: string
+    description?: string
+    roles?: string[]
+    users?: string[]
+    groups?: string[]
+    createdBy: string
+  }): Promise<AccessGroupRecord>
+  deleteAccessGroup(sortKey: string): Promise<boolean>
 }

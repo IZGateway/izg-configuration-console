@@ -50,7 +50,47 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         errorType: error.name,
         stack: error.stack,
       })
-      res.status(500).json({ error: 'Internal server error' })
+
+      if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message })
+      } else {
+        res.status(500).json({ error: 'Internal server error' })
+      }
+    }
+  } else if (req.method === 'DELETE') {
+    try {
+      logger.info('Deleting access group', {
+        sortKey,
+      })
+
+      const dbClient = await DbClientFactory.getDbClient()
+      const result = await dbClient.deleteAccessGroup(sortKey)
+
+      if (result) {
+        res.status(200).json({ message: 'Access group deleted successfully' })
+      } else {
+        logger.error('Database delete failed for access group', {
+          operation: 'deleteAccessGroup',
+          httpMethod: req.method,
+          sortKey,
+        })
+        res.status(500).json({ error: 'Failed to delete access group' })
+      }
+    } catch (error) {
+      logger.error('Error deleting access group', {
+        operation: 'deleteAccessGroup',
+        httpMethod: req.method,
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+
+      if (error.message.includes('not found')) {
+        res.status(404).json({ error: error.message })
+      } else {
+        res.status(500).json({ error: 'Internal server error' })
+      }
     }
   } else {
     throw new Error(

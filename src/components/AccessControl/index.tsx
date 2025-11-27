@@ -19,27 +19,9 @@ import AddFileTypeList from './AddFileTypeList'
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
-
-import {
-  type AccessGroup,
-  mockFileTypeListData,
-  type FileTypeListItem,
-} from './mockData'
-
-interface DynamoDBAccessGroup {
-  environment: string
-  groupName: string
-  sortKey: string
-  updatedBy: string
-  createdBy: string
-  entityType: string
-  roles?: string[] | Record<string, never>
-  groups?: string[] | Record<string, never>
-  updatedOn: string
-  createdOn: string
-  users?: string[] | Record<string, never>
-  description?: string
-}
+import { type AccessGroup } from './AccessGroups'
+import { type AccessGroupRecord } from '../../lib/type/AccessGroupRecord'
+import { mockFileTypeListData, type FileTypeListItem } from './mockData'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -71,6 +53,11 @@ const AccessControlComponent = () => {
   const [selectedGroup, setSelectedGroup] = useState<AccessGroup | null>(null)
   const [isAddingGroup, setIsAddingGroup] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
+
+  // Available members for dropdown (principals + groups)
+  const [availableMembers, setAvailableMembers] = useState<string[]>([])
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+
   // Deny List add mode state
   const [isAddingDeny, setIsAddingDeny] = useState(false)
   // Deny List add logic
@@ -151,9 +138,7 @@ const AccessControlComponent = () => {
   useEffect(() => {
     const fetchAccessGroups = async () => {
       try {
-        const response = await fetcher<DynamoDBAccessGroup[]>(
-          '/api/accessgroups'
-        )
+        const response = await fetcher<AccessGroupRecord[]>('/api/accessgroups')
 
         // Transform DynamoDB data to UI format
         console.log('Raw DynamoDB response:', response)
@@ -185,12 +170,11 @@ const AccessControlComponent = () => {
           return {
             id: item.sortKey || `${item.environment}-${item.groupName}`,
             groupName: item.groupName || '',
-            description:
-              item.description ||
-              `Access group for environment ${item.environment}`,
+            description: item.description || '',
             memberCount: members.length,
             roles: roles,
             members: members,
+            environment: item.environment || '3',
           }
         })
 
@@ -208,6 +192,66 @@ const AccessControlComponent = () => {
 
     fetchAccessGroups()
   }, [setAlert])
+
+  // Fetch available members (principals + groups) for dropdown
+  useEffect(() => {
+    const fetchAvailableMembers = async () => {
+      try {
+        setIsLoadingMembers(true)
+
+        // Fetch both organizations and access groups in parallel
+        const [orgsResponse, groupsResponse] = await Promise.all([
+          fetch('/api/organizations'),
+          fetch('/api/accessgroups'),
+        ])
+
+        if (!orgsResponse.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+        if (!groupsResponse.ok) {
+          throw new Error('Failed to fetch access groups')
+        }
+
+        const [orgData, groupsData] = await Promise.all([
+          orgsResponse.json(),
+          groupsResponse.json(),
+        ])
+
+        // Extract all unique principals from all organizations
+        const allPrincipals = new Set<string>()
+        orgData.forEach((org: { principalNames?: string[] }) => {
+          if (org.principalNames && Array.isArray(org.principalNames)) {
+            org.principalNames.forEach((principal: string) =>
+              allPrincipals.add(principal)
+            )
+          }
+        })
+
+        // Extract group names
+        const allGroups = new Set<string>()
+        groupsData.forEach((group: { groupName?: string }) => {
+          if (group.groupName) {
+            allGroups.add(group.groupName)
+          }
+        })
+
+        // Combine principals and groups, then sort
+        const combinedMembers = [
+          ...Array.from(allPrincipals),
+          ...Array.from(allGroups),
+        ].sort()
+
+        setAvailableMembers(combinedMembers)
+      } catch (error) {
+        console.error('Error fetching available members:', error)
+        setAvailableMembers([])
+      } finally {
+        setIsLoadingMembers(false)
+      }
+    }
+
+    fetchAvailableMembers()
+  }, [accessGroupsData]) // Re-fetch when access groups change
 
   // Handle snackbar visibility
   useEffect(() => {
@@ -229,39 +273,127 @@ const AccessControlComponent = () => {
     setEditGroupMode(true)
   }
 
-  const handleDeleteGroup = (groupId: string) => {
-    // Remove the group from state
-    setAccessGroupsData((prevGroups) =>
-      prevGroups.filter((group) => group.id !== groupId)
-    )
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      // Find the group name before deleting
+      const groupToDelete = accessGroupsData.find(
+        (group) => group.id === groupId
+      )
+      const groupName = groupToDelete?.groupName || 'Unknown'
 
-    // Show success message
-    setAlert({
-      level: 'success',
-      jurisdiction: '',
-      dest_type: '',
-      message: `Access group has been successfully deleted.`,
-    })
+      const response = await fetch(
+        `/api/accessgroups/${encodeURIComponent(groupId)}`,
+        {
+          method: 'DELETE',
+        }
+      )
 
-    // TODO: Implement API call to delete group
-  }
-
-  const handleSaveGroup = async (updatedData: AccessGroup) => {
-    if (isAddingGroup) {
-      // Adding new group - generate new ID and add to state
-      const newGroup: AccessGroup = {
-        ...updatedData,
-        id: `group-${Date.now()}`, // Generate unique ID
-        memberCount: updatedData.members.length, // Ensure member count is correct
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete access group')
       }
-      setAccessGroupsData((prevGroups) => [...prevGroups, newGroup])
 
+      // Remove the group from state
+      setAccessGroupsData((prevGroups) =>
+        prevGroups.filter((group) => group.id !== groupId)
+      )
+
+      // Show success message
       setAlert({
         level: 'success',
         jurisdiction: '',
         dest_type: '',
-        message: `Access group "${updatedData.groupName}" has been successfully created.`,
+        message: `Access group "${groupName}" has been successfully deleted.`,
       })
+    } catch (error) {
+      console.error('Failed to delete access group:', error)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message:
+          error.message || 'Failed to delete access group. Please try again.',
+      })
+    }
+  }
+
+  const handleSaveGroup = async (updatedData: AccessGroup) => {
+    if (isAddingGroup) {
+      // Adding new group - call API to create
+      try {
+        console.log('Creating new access group:', {
+          groupName: updatedData.groupName,
+          description: updatedData.description,
+          roles: updatedData.roles,
+          members: updatedData.members,
+        })
+
+        // Use environment from the form data
+        const environment = updatedData.environment
+
+        const response = await fetch('/api/accessgroups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            environment: environment,
+            groupName: updatedData.groupName,
+            description: updatedData.description,
+            roles: updatedData.roles,
+            users: updatedData.members.filter(
+              (m) => m.includes('.') || m.includes('@')
+            ), // Users typically have . or @
+            groups: updatedData.members.filter(
+              (m) => !m.includes('.') && !m.includes('@')
+            ), // Groups don't
+            createdBy: currentUserName,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error(
+            'Create failed with status:',
+            response.status,
+            errorData
+          )
+          throw new Error(errorData.error || 'Failed to create access group')
+        }
+
+        const createdGroup = await response.json()
+
+        // Transform the response to match UI format
+        const newGroup: AccessGroup = {
+          id: createdGroup.sortKey,
+          groupName: createdGroup.groupName,
+          description: createdGroup.description,
+          memberCount: updatedData.members.length,
+          roles: Array.isArray(createdGroup.roles) ? createdGroup.roles : [],
+          members: updatedData.members,
+          environment: createdGroup.environment,
+        }
+
+        setAccessGroupsData((prevGroups) => [...prevGroups, newGroup])
+
+        setAlert({
+          level: 'success',
+          jurisdiction: '',
+          dest_type: '',
+          message: `Access group "${updatedData.groupName}" has been successfully created.`,
+        })
+      } catch (error) {
+        console.error('Failed to create access group:', error)
+        setAlert({
+          level: 'error',
+          jurisdiction: '',
+          dest_type: '',
+          message:
+            error.message || 'Failed to create access group. Please try again.',
+        })
+
+        return
+      }
     } else {
       // Editing existing group - call API to update in database
       try {
@@ -273,28 +405,35 @@ const AccessControlComponent = () => {
           members: updatedData.members,
         })
 
-        const response = await fetch(`/api/accessgroups/${encodeURIComponent(updatedData.id)}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            groupName: updatedData.groupName,
-            description: updatedData.description,
-            roles: updatedData.roles,
-            users: updatedData.members.filter(
-              (m) => m.includes('.') || m.includes('@')
-            ), // Users typically have . or @
-            groups: updatedData.members.filter(
-              (m) => !m.includes('.') && !m.includes('@')
-            ), // Groups don't
-            updatedBy: currentUserName,
-          }),
-        })
+        const response = await fetch(
+          `/api/accessgroups/${encodeURIComponent(updatedData.id)}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              groupName: updatedData.groupName,
+              description: updatedData.description,
+              roles: updatedData.roles,
+              users: updatedData.members.filter(
+                (m) => m.includes('.') || m.includes('@')
+              ), // Users typically have . or @
+              groups: updatedData.members.filter(
+                (m) => !m.includes('.') && !m.includes('@')
+              ), // Groups don't
+              updatedBy: currentUserName,
+            }),
+          }
+        )
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          console.error('Update failed with status:', response.status, errorData)
+          console.error(
+            'Update failed with status:',
+            response.status,
+            errorData
+          )
           throw new Error(errorData.error || 'Failed to update access group')
         }
 
@@ -421,12 +560,16 @@ const AccessControlComponent = () => {
             <AddAccessGroup
               onSave={handleSaveGroup}
               onCancel={handleCancelGroupEdit}
+              availableMembers={availableMembers}
+              isLoadingMembers={isLoadingMembers}
             />
           ) : (
             <EditAccessGroup
               group={selectedGroup || undefined}
               onSave={handleSaveGroup}
               onCancel={handleCancelGroupEdit}
+              availableMembers={availableMembers}
+              isLoadingMembers={isLoadingMembers}
             />
           )
         ) : (

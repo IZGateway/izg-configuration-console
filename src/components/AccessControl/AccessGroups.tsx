@@ -15,20 +15,21 @@ import AddIcon from '@mui/icons-material/Add'
 import palette from '../../styles/theme/palette'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
-interface AccessGroupsProps {
-  data?: AccessGroup[]
-  onEditGroup?: (group: AccessGroup) => void
-  onAddGroup?: () => void
-  onDeleteGroup?: (groupId: string) => void
-}
-
-interface AccessGroup {
+export interface AccessGroup {
   id: string
   groupName: string
   description: string
   memberCount: number
   roles: string[]
   members: string[]
+  environment: string
+}
+
+interface AccessGroupsProps {
+  data?: AccessGroup[]
+  onEditGroup?: (group: AccessGroup) => void
+  onAddGroup?: () => void
+  onDeleteGroup?: (groupId: string) => void
 }
 
 const AccessGroups: React.FC<AccessGroupsProps> = ({
@@ -137,15 +138,38 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                   }}
                 >
                   {/* Group Name */}
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      fontSize: '1.1rem',
-                    }}
-                  >
-                    {group.groupName}
-                  </Typography>
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                      }}
+                    >
+                      {group.groupName}
+                    </Typography>
+                    <Chip
+                      label={
+                        {
+                          '1': 'Production',
+                          '2': 'Test',
+                          '3': 'Onboard',
+                          '4': 'Stage',
+                          '5': 'Dev',
+                        }[group.environment] || 'Unknown'
+                      }
+                      size="small"
+                      sx={{
+                        mt: 0.5,
+                        height: '20px',
+                        fontSize: '0.7rem',
+                        backgroundColor:
+                          group.environment === '1' ? '#4caf50' : '#ff9800',
+                        color: 'white',
+                        fontWeight: 500,
+                      }}
+                    />
+                  </Box>
 
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <Tooltip arrow title="Edit">

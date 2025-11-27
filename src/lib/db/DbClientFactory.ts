@@ -240,6 +240,24 @@ class EncryptedRepository implements DbClient {
     return result
   }
 
+  async addAccessGroup(accessGroup: {
+    environment: string
+    groupName: string
+    description?: string
+    roles?: string[]
+    users?: string[]
+    groups?: string[]
+    createdBy: string
+  }): Promise<AccessGroupRecord> {
+    const result = await this.repository.addAccessGroup(accessGroup)
+    return result
+  }
+
+  async deleteAccessGroup(sortKey: string): Promise<boolean> {
+    const result = await this.repository.deleteAccessGroup(sortKey)
+    return result
+  }
+
   async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
     const result = await this.repository.checkDenyListRecordExists(sortKey)
     return result

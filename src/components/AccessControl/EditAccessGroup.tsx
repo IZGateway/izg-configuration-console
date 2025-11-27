@@ -1,30 +1,25 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  OutlinedInput,
-} from '@mui/material'
+import { Box, Typography, TextField, Button } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { type AccessGroup } from './mockData'
+import { type AccessGroup } from './AccessGroups'
+import SearchableMultiSelect from '../common/SearchableMultiSelect'
+import StandardSelect from '../common/StandardSelect'
 
 interface EditAccessGroupProps {
   group?: AccessGroup
   onSave: (group: AccessGroup) => void
   onCancel: () => void
+  availableMembers?: string[]
+  isLoadingMembers?: boolean
 }
 
 const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
   group,
   onSave,
   onCancel,
+  availableMembers = [],
+  isLoadingMembers = false,
 }) => {
   const [formData, setFormData] = useState<AccessGroup>({
     id: group?.id || '',
@@ -33,72 +28,32 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
     memberCount: group?.memberCount || 0,
     roles: group?.roles || [],
     members: group?.members || [],
+    environment: group?.environment || '3', // Default to ONBOARD
   })
+
+  // Update formData when group prop changes
+  useEffect(() => {
+    if (group) {
+      setFormData({
+        id: group.id || '',
+        groupName: group.groupName || '',
+        description: group.description || '',
+        memberCount: group.memberCount || 0,
+        roles: group.roles || [],
+        members: group.members || [],
+        environment: group.environment || '3',
+      })
+    }
+  }, [group])
 
   // Static roles list as requested
   const availableRoles = ['admin', 'internal', 'operations', 'soap', 'users']
 
-  // Fetch available members from organization principals
-  const [availableMembers, setAvailableMembers] = useState<string[]>([])
-  const [isLoadingMembers, setIsLoadingMembers] = useState(true)
-
-  useEffect(() => {
-    const fetchMembersData = async () => {
-      try {
-        setIsLoadingMembers(true)
-
-        // Fetch organization principals
-        const orgsResponse = await fetch('/api/organizations')
-        if (!orgsResponse.ok) {
-          throw new Error('Failed to fetch organizations')
-        }
-        const orgData = await orgsResponse.json()
-
-        // Extract all unique principals from all organizations
-        const allPrincipals = new Set<string>()
-        orgData.forEach((org: { principalNames?: string[] }) => {
-          if (org.principalNames && Array.isArray(org.principalNames)) {
-            org.principalNames.forEach((principal: string) =>
-              allPrincipals.add(principal)
-            )
-          }
-        })
-
-        // Fetch access groups
-        const groupsResponse = await fetch('/api/accessgroups')
-        if (!groupsResponse.ok) {
-          throw new Error('Failed to fetch access groups')
-        }
-        const groupsData = await groupsResponse.json()
-
-        // Extract group names (sortKey format is "environment#groupName", we want just the groupName)
-        // Exclude the current group being edited to prevent self-reference
-        const allGroups = new Set<string>()
-        groupsData.forEach(
-          (group: { groupName?: string; sortKey?: string }) => {
-            if (group.groupName && group.groupName !== formData.groupName) {
-              allGroups.add(group.groupName)
-            }
-          }
-        )
-
-        // Combine principals and groups, then sort
-        const combinedMembers = [
-          ...Array.from(allPrincipals),
-          ...Array.from(allGroups),
-        ].sort()
-
-        setAvailableMembers(combinedMembers)
-      } catch (error) {
-        console.error('Error fetching members data:', error)
-        setAvailableMembers([])
-      } finally {
-        setIsLoadingMembers(false)
-      }
-    }
-
-    fetchMembersData()
-  }, [formData.groupName])
+  // Filter out the current group from available members to prevent self-reference
+  const filteredMembers = React.useMemo(() => {
+    if (!group?.groupName) return availableMembers
+    return availableMembers.filter((member) => member !== group.groupName)
+  }, [availableMembers, group?.groupName])
 
   const handleInputChange = (
     field: keyof AccessGroup,
@@ -113,26 +68,11 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
     }))
   }
 
-  const handleRemoveRole = (roleToRemove: string) => {
-    handleInputChange(
-      'roles',
-      formData.roles.filter((role) => role !== roleToRemove)
-    )
-  }
-
-  const handleRemoveMember = (memberToRemove: string) => {
-    handleInputChange(
-      'members',
-      formData.members.filter((member) => member !== memberToRemove)
-    )
-  }
-
   const handleSave = () => {
     onSave(formData)
   }
 
   const isEditing = Boolean(group?.id)
-  const isAddMode = !isEditing
 
   return (
     <Box
@@ -170,7 +110,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
               id="title-table"
               sx={{ fontSize: '1.75rem', fontWeight: 700 }}
             >
-              {isAddMode
+              {!isEditing
                 ? 'Add New Access Group'
                 : `Edit Access Group: ${formData.groupName}`}
             </Typography>
@@ -189,7 +129,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             </Button>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            {isAddMode
+            {!isEditing
               ? 'Create a new access group to organize users with similar permissions'
               : `Modify the access group settings, roles, and member assignments`}
           </Typography>
@@ -241,6 +181,25 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             }}
           />
 
+          {/* Environment */}
+          <StandardSelect
+            label="Environment"
+            value={formData.environment}
+            options={[
+              { value: '1', label: 'Production' },
+              { value: '2', label: 'Test' },
+              { value: '3', label: 'Onboard' },
+              { value: '4', label: 'Stage' },
+              { value: '5', label: 'Dev' },
+            ]}
+            onChange={(value) => handleInputChange('environment', value)}
+            required
+            disabled={isEditing}
+            helperText={
+              isEditing ? 'Environment cannot be changed after creation' : ''
+            }
+          />
+
           {/* Description */}
           <TextField
             label="Description"
@@ -258,145 +217,26 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
           />
 
           {/* Members Section */}
-          <Box>
-            <FormControl fullWidth>
-              <InputLabel shrink>
-                Members ({formData.members.length})
-                {isLoadingMembers && ' (Loading...)'}
-              </InputLabel>
-              <Select
-                multiple
-                value={formData.members}
-                onChange={(e) =>
-                  handleInputChange('members', e.target.value as string[])
-                }
-                disabled={isLoadingMembers}
-                input={
-                  <OutlinedInput
-                    label={`Members (${formData.members.length})`}
-                  />
-                }
-                displayEmpty
-                renderValue={() => (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color:
-                        formData.members.length > 0
-                          ? 'transparent'
-                          : 'text.disabled',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    {formData.members.length > 0
-                      ? ''
-                      : 'Select members for this group'}
-                  </Typography>
-                )}
-                sx={{
-                  borderRadius: '8px',
-                }}
-              >
-                {availableMembers.map((member) => (
-                  <MenuItem key={member} value={member}>
-                    {member}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Selected Members Chips */}
-            {formData.members.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                {formData.members.map((member) => (
-                  <Chip
-                    key={member}
-                    label={member}
-                    onDelete={() => handleRemoveMember(member)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{
-                      backgroundColor: '#e3f2fd',
-                      color: palette.primary,
-                      fontSize: '0.875rem',
-                      height: '32px',
-                      border: `1px solid ${palette.primary}`,
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <SearchableMultiSelect
+            label={`Members (${formData.members.length})`}
+            value={formData.members}
+            options={filteredMembers}
+            onChange={(newValue) => handleInputChange('members', newValue)}
+            placeholder="Search and select members for this group"
+            disabled={isLoadingMembers}
+            chipColor="primary"
+          />
 
           {/* Roles Section */}
-          <Box>
-            <FormControl fullWidth required>
-              <InputLabel
-                shrink
-                sx={{
-                  '& .MuiInputLabel-asterisk': {
-                    color: palette.error,
-                  },
-                }}
-              >
-                Roles
-              </InputLabel>
-              <Select
-                multiple
-                value={formData.roles}
-                onChange={(e) =>
-                  handleInputChange('roles', e.target.value as string[])
-                }
-                input={<OutlinedInput label="Roles" />}
-                displayEmpty
-                renderValue={() => (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color:
-                        formData.roles.length > 0
-                          ? 'transparent'
-                          : 'text.disabled',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    {formData.roles.length > 0
-                      ? ''
-                      : 'Select roles for this group'}
-                  </Typography>
-                )}
-                sx={{
-                  borderRadius: '8px',
-                }}
-              >
-                {availableRoles.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Selected Roles Chips */}
-            {formData.roles.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                {formData.roles.map((role) => (
-                  <Chip
-                    key={role}
-                    label={role}
-                    onDelete={() => handleRemoveRole(role)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{
-                      backgroundColor: '#f5f5f5',
-                      color: 'text.primary',
-                      fontSize: '0.875rem',
-                      height: '32px',
-                      border: '1px solid #d0d0d0',
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <SearchableMultiSelect
+            label="Roles"
+            value={formData.roles}
+            options={availableRoles}
+            onChange={(newValue) => handleInputChange('roles', newValue)}
+            placeholder="Search and select roles for this group"
+            required
+            chipColor="default"
+          />
         </Box>
 
         {/* Help Text */}

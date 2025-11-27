@@ -805,6 +805,131 @@ class Dynamo implements DbClient {
     }
   }
 
+  async addAccessGroup(accessGroup: {
+    environment: string
+    groupName: string
+    description?: string
+    roles?: string[]
+    users?: string[]
+    groups?: string[]
+    createdBy: string
+  }): Promise<AccessGroupRecord> {
+    const sortKey = `${accessGroup.environment}#${accessGroup.groupName}`
+    const now = new Date().toISOString()
+
+    const item = {
+      entityType: 'AccessGroup',
+      sortKey: sortKey,
+      environment: accessGroup.environment,
+      groupName: accessGroup.groupName,
+      description: accessGroup.description || '',
+      roles:
+        accessGroup.roles && accessGroup.roles.length > 0
+          ? new Set(accessGroup.roles)
+          : undefined,
+      users:
+        accessGroup.users && accessGroup.users.length > 0
+          ? new Set(accessGroup.users)
+          : undefined,
+      groups:
+        accessGroup.groups && accessGroup.groups.length > 0
+          ? new Set(accessGroup.groups)
+          : undefined,
+      createdBy: accessGroup.createdBy,
+      updatedBy: accessGroup.createdBy,
+      createdOn: now,
+      updatedOn: now,
+    }
+
+    // Remove undefined fields
+    Object.keys(item).forEach(
+      (key) => item[key] === undefined && delete item[key]
+    )
+
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: item,
+      ConditionExpression: 'attribute_not_exists(sortKey)',
+    }
+
+    try {
+      await dynamodDbDocClient.send(new PutCommand(params))
+
+      logger.info('Added access group to DynamoDB', {
+        sortKey,
+        groupName: accessGroup.groupName,
+        environment: accessGroup.environment,
+      })
+
+      // Return the created item in the expected format
+      return {
+        ...item,
+        roles: item.roles ? Array.from(item.roles) : [],
+        users: item.users ? Array.from(item.users) : [],
+        groups: item.groups ? Array.from(item.groups) : [],
+      } as AccessGroupRecord
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.error('Access group already exists', {
+          sortKey,
+          groupName: accessGroup.groupName,
+          operation: 'addAccessGroup',
+        })
+        throw new Error(
+          `Access group with name "${accessGroup.groupName}" already exists in environment ${accessGroup.environment}`
+        )
+      }
+
+      logger.error('Error adding access group to DynamoDB', {
+        sortKey,
+        accessGroup,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
+  async deleteAccessGroup(sortKey: string): Promise<boolean> {
+    const params: DeleteCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AccessGroup',
+        sortKey: sortKey,
+      },
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    }
+
+    try {
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+
+      logger.info('Deleted access group from DynamoDB', {
+        sortKey,
+        operation: 'deleteAccessGroup',
+      })
+
+      return true
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.error('Access group not found for deletion', {
+          sortKey,
+          operation: 'deleteAccessGroup',
+        })
+        throw new Error(`Access group with sortKey ${sortKey} not found`)
+      }
+
+      logger.error('Error deleting access group from DynamoDB', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
   async fetchSenderData(): Promise<SenderRecord> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
