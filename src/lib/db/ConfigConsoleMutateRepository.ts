@@ -19,4 +19,11 @@ export default interface ConfigConsoleMutateRepository {
     deniedBy?: string
   }): Promise<DenyListItem>
   deleteDenyListRecord(id: string): Promise<boolean>
+  addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean>
+  deleteAdsFileTypeRecord(sortKey: string): Promise<boolean>
 }

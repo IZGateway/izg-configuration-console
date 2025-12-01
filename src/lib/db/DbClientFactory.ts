@@ -4,6 +4,7 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { DenyListItem } from '../type/DenyList'
 import {
   encrypt,
   decrypt,
@@ -228,5 +229,39 @@ class EncryptedRepository implements DbClient {
   async fetchOrganizations(): Promise<any> {
     const result = await this.repository.fetchOrganizations()
     return result
+  }
+
+  async addDenyListRecord(denyListItem: {
+    principal: string
+    environment: number
+    reason?: string
+    deniedBy?: string
+  }): Promise<DenyListItem> {
+    return await this.repository.addDenyListRecord(denyListItem)
+  }
+
+  async deleteDenyListRecord(id: string): Promise<boolean> {
+    return await this.repository.deleteDenyListRecord(id)
+  }
+
+  async addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean> {
+    return await this.repository.addAdsFileTypeRecord(fileTypeItem)
+  }
+
+  async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
+    return await this.repository.deleteAdsFileTypeRecord(sortKey)
+  }
+
+  async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkDenyListRecordExists(sortKey)
+  }
+
+  async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkAdsFileTypeRecordExists(sortKey)
   }
 }

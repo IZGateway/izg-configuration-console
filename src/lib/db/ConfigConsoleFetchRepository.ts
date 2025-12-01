@@ -31,5 +31,6 @@ export default interface ConfigConsoleFetchRepository {
   fetchDenyListData: () => Promise<any>
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
   fetchFileTypeList: () => Promise<any>
+  checkAdsFileTypeRecordExists: (sortKey: string) => Promise<boolean>
   fetchOrganizations: () => Promise<any>
 }
