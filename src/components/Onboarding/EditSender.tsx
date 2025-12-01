@@ -27,13 +27,18 @@ import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import DestinationSelector from '../DestinationSelector'
-import { getEnvironmentId } from '../../lib/constants/environments'
+import {
+  getEnvironmentId,
+  getEnvironmentName,
+} from '../../lib/constants/environments'
+import CustomSnackbar from '../SnackBar'
 
 interface EditSenderProps {
   senderData: SenderData
   onSave: (data: SenderData) => void
   onCancel: () => void
   isAddMode?: boolean
+  validateDuplicate?: (candidate: SenderData) => boolean
 }
 
 const EditSender: React.FC<EditSenderProps> = ({
@@ -41,6 +46,7 @@ const EditSender: React.FC<EditSenderProps> = ({
   onSave,
   onCancel,
   isAddMode = false,
+  validateDuplicate,
 }) => {
   // Normalize incoming senderData.status to canonical codes ('validate' | 'ready')
   const normalizeStatus = (status: string): 'validate' | 'ready' => {
@@ -98,10 +104,26 @@ const EditSender: React.FC<EditSenderProps> = ({
     return initialData
   })
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
+  // Local duplicate snackbar state so Add page can display message immediately
+  const [dupSnackbarOpen, setDupSnackbarOpen] = useState(false)
+  const [dupSnackbarMessage, setDupSnackbarMessage] = useState('')
 
   const [destinationType, setDestinationType] = useState<number | string>(
     getInitialDestinationType()
   )
+
+  const getSelectedDestinationTypeLabel = (): string => {
+    const num =
+      typeof destinationType === 'number'
+        ? destinationType
+        : Number(destinationType)
+    if (!Number.isNaN(num) && num > 0) {
+      return getEnvironmentName(num)
+    }
+    return formData.connectionType === 'production'
+      ? 'Production'
+      : 'Onboarding'
+  }
 
   // Helper function to create labels with red asterisks
   const createLabelWithRedAsterisk = (text: string) => (
@@ -224,6 +246,19 @@ const EditSender: React.FC<EditSenderProps> = ({
   }
 
   const handleSave = () => {
+    // In add mode, check for duplicates first and block save
+    if (isAddMode && validateDuplicate) {
+      const willBlock = validateDuplicate({ ...formData })
+      if (willBlock) {
+        const destTypeLabel = getSelectedDestinationTypeLabel()
+        setDupSnackbarMessage(
+          `Duplicate sender not allowed. Sender: ${formData.sender} • Destination Code: ${formData.destinationCode} • Destination Type: ${destTypeLabel}`
+        )
+        setDupSnackbarOpen(true)
+        return
+      }
+    }
+
     // Auto-generate the lastUpdated field with current date
     const currentDate = new Date().toLocaleDateString('en-US', {
       month: '2-digit',
@@ -274,6 +309,9 @@ const EditSender: React.FC<EditSenderProps> = ({
     <Box
       sx={{
         width: '100%',
+        minHeight: '100vh',
+        overflowY: 'auto',
+        pb: 6,
       }}
     >
       {/* Title Header */}
@@ -628,6 +666,9 @@ const EditSender: React.FC<EditSenderProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 5,
         }}
       >
         <Button
@@ -778,6 +819,13 @@ const EditSender: React.FC<EditSenderProps> = ({
           </TableContainer>
         </DialogContent>
       </Dialog>
+
+      <CustomSnackbar
+        open={dupSnackbarOpen}
+        severity="error"
+        message={dupSnackbarMessage}
+        onClose={() => setDupSnackbarOpen(false)}
+      />
     </Box>
   )
 }

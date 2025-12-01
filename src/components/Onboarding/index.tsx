@@ -462,6 +462,17 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     }
   }
 
+  // Provide a duplicate validation function to AddSender so the dialog can show immediately in the Add view
+  const validateDuplicate = (candidate: SenderData) => {
+    const normalize = (s: string) => (s || '').trim().toLowerCase()
+    return senderData.some(
+      (s) =>
+        normalize(s.sender) === normalize(candidate.sender) &&
+        normalize(s.destinationCode) === normalize(candidate.destinationCode) &&
+        s.connectionType === candidate.connectionType
+    )
+  }
+
   const handleCancelEdit = () => {
     setIsEditMode(false)
     setIsAddMode(false)
@@ -895,7 +906,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
   // Show AddSender component when in add mode
   if (isAddMode) {
-    return <AddSender onSave={handleSaveAdd} onCancel={handleCancelEdit} />
+    return (
+      <AddSender
+        onSave={handleSaveAdd}
+        onCancel={handleCancelEdit}
+        validateDuplicate={validateDuplicate}
+      />
+    )
   }
 
   // Show EditSender component when in edit mode
