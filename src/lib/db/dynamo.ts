@@ -792,6 +792,10 @@ class Dynamo implements DbClient {
             deniedBy: item.createdBy || 'System',
             certificationName: item.principal,
             environment: destinationType.type,
+            createdBy: item.createdBy || 'System',
+            createdOn: item.createdOn ? new Date(item.createdOn) : new Date(),
+            updatedBy: item.updatedBy,
+            updatedOn: item.updatedOn ? new Date(item.updatedOn) : undefined,
           }
         })
       )
@@ -831,6 +835,7 @@ class Dynamo implements DbClient {
     environment: number
     reason?: string
     deniedBy?: string
+    createdBy: string
   }): Promise<DenyListItem> {
     try {
       const timestamp = new Date().toISOString()
@@ -854,8 +859,8 @@ class Dynamo implements DbClient {
         reason: denyListItem.reason || '',
         createdOn: timestamp,
         updatedOn: timestamp,
-        createdBy: denyListItem.deniedBy || 'System',
-        updatedBy: denyListItem.deniedBy || 'System',
+        createdBy: denyListItem.createdBy,
+        updatedBy: denyListItem.createdBy,
       }
 
       const params: PutCommandInput = {
@@ -879,6 +884,10 @@ class Dynamo implements DbClient {
         deniedBy: 'System',
         certificationName: denyListItem.principal || 'N/A',
         environment: destinationType.type,
+        createdBy: denyListItem.createdBy,
+        createdOn: new Date(),
+        updatedBy: undefined,
+        updatedOn: undefined,
       }
     } catch (error) {
       console.error('Error adding deny list record:', error)

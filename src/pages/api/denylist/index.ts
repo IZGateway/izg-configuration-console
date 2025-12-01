@@ -30,7 +30,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
-    const { certificationName, environment, reason, deniedBy } = req.body
+    const { certificationName, environment, reason, deniedBy, createdBy } =
+      req.body
 
     try {
       if (!certificationName || !environment) {
@@ -45,6 +46,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         environment,
         reason,
         deniedBy,
+        createdBy: createdBy || deniedBy || 'System',
       })
 
       return res.status(201).json(newRecord)
