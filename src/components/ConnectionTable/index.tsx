@@ -1,4 +1,10 @@
-import React, { useContext, useState, useEffect, useMemo } from 'react'
+import React, {
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react'
 import {
   DataGrid,
   GridColDef,
@@ -432,18 +438,21 @@ const ConnectionsTable = (props) => {
     []
   )
 
-  const updateRow = (row) => {
-    const updatedEndpointStatus = endpointStatuses.map((x) => {
-      if (x.destId === row.destId) {
-        return {
-          ...row,
+  const updateRow = useCallback(
+    (row) => {
+      const updatedEndpointStatus = endpointStatuses.map((x) => {
+        if (x.destId === row.destId) {
+          return {
+            ...row,
+          }
+        } else {
+          return x
         }
-      } else {
-        return x
-      }
-    })
-    setEndpointStatuses(updatedEndpointStatus)
-  }
+      })
+      setEndpointStatuses(updatedEndpointStatus)
+    },
+    [endpointStatuses, setEndpointStatuses]
+  )
 
   const columns: GridColDef[] = useMemo(
     () => [
@@ -1097,7 +1106,7 @@ const ConnectionsTable = (props) => {
               quickFilterProps: { debounceMs: 500 },
               columns: { field: 'action', filterable: false },
               onTestReportsClick: handleTestReportsClick,
-            },
+            } as CustomToolbarProps,
             panel: {
               anchorEl: filterButtonEl,
               sx: {

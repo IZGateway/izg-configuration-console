@@ -823,7 +823,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-              },
+              } as CustomToolbarProps,
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {
