@@ -4,7 +4,11 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
+import { AccessGroupRecord } from '../type/AccessGroupRecord'
+import { FileTypeRecord } from '../type/FileTypeRecord'
+import { SenderRecord } from '../type/SenderRecord'
 import {
   encrypt,
   decrypt,
@@ -207,27 +211,32 @@ class EncryptedRepository implements DbClient {
     return result
   }
 
-  async fetchSenderData(): Promise<any> {
+  async fetchSenderData(): Promise<SenderRecord> {
     const result = await this.repository.fetchSenderData()
     return result
   }
 
-  async fetchAccessGroups(): Promise<any> {
+  async fetchAccessGroups(): Promise<AccessGroupRecord[]> {
     const result = await this.repository.fetchAccessGroups()
     return result
   }
 
-  async fetchDenyListData(): Promise<any> {
+  async fetchDenyListData(): Promise<DenyListItem[]> {
     const result = await this.repository.fetchDenyListData()
     return result
   }
 
-  async fetchFileTypeList(): Promise<any> {
+  async fetchFileTypeList(): Promise<FileTypeRecord[]> {
     const result = await this.repository.fetchFileTypeList()
     return result
   }
-  async fetchOrganizations(): Promise<any> {
+  async fetchOrganizations(): Promise<OrganizationRecord[]> {
     const result = await this.repository.fetchOrganizations()
+    return result
+  }
+
+  async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
+    const result = await this.repository.checkDenyListRecordExists(sortKey)
     return result
   }
 

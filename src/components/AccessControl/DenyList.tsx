@@ -182,7 +182,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   onDeleteDeny,
 }) => {
   const { data: session } = useSession()
-  const { alert, setAlert } = useContext(CombinedContext)
+  const { setAlert } = useContext(CombinedContext)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
@@ -203,7 +203,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   >('desktop')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [rowToDelete, setRowToDelete] = useState<DenyListItem | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [, setIsDeleting] = useState(false)
 
   // Filter data based on search term
   const filteredData = React.useMemo(() => {
