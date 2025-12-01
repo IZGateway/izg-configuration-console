@@ -7,6 +7,7 @@ import {
   GridToolbarContainer,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
+  GridToolbarProps,
 } from '@mui/x-data-grid'
 import {
   Box,
@@ -124,13 +125,13 @@ const dataGridCustom = {
   },
 }
 
-interface CustomToolbarProps {
+interface CustomToolbarProps extends GridToolbarProps {
   setFilterButtonEl: React.Dispatch<
     React.SetStateAction<HTMLButtonElement | null>
   >
 }
 
-const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
+const CustomToolbar = ({ setFilterButtonEl, ...props }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
@@ -814,7 +815,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             density={'comfortable'}
             pagination
             slots={{
-              toolbar: CustomToolbar as GridSlots['toolbar'],
+              toolbar: CustomToolbar,
               footer: CustomFooterWithButton as GridSlots['footer'],
             }}
             slotProps={{
@@ -822,7 +823,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-              },
+              } as any,
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {

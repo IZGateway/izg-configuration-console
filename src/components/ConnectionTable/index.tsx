@@ -9,6 +9,7 @@ import {
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
   GridRenderCellParams,
+  GridToolbarProps,
 } from '@mui/x-data-grid'
 import {
   Box,
@@ -184,7 +185,7 @@ const dataGridCustom = {
     marginLeft: '-8px',
   },
 }
-interface CustomToolbarProps {
+interface CustomToolbarProps extends GridToolbarProps {
   setFilterButtonEl: React.Dispatch<
     React.SetStateAction<HTMLButtonElement | null>
   >
@@ -194,6 +195,7 @@ interface CustomToolbarProps {
 const CustomToolbar = ({
   setFilterButtonEl,
   onTestReportsClick,
+  ...props
 }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
@@ -244,7 +246,9 @@ const ConnectionsTable = (props) => {
   const [renderMode, setRenderMode] = useState('desktop') // 'mobile', 'desktop', 'transitioning'
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
-  const [columnWidths, setColumnWidths] = useState<ColumnWidthState | null>(null)
+  const [columnWidths, setColumnWidths] = useState<ColumnWidthState | null>(
+    null
+  )
   const router = useRouter()
 
   // Load column widths from localStorage on mount (desktop view only)
@@ -269,9 +273,9 @@ const ConnectionsTable = (props) => {
   // Cleanup debouncedSaveWidths on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      debouncedSaveWidths.cancel();
-    };
-  }, [debouncedSaveWidths]);
+      debouncedSaveWidths.cancel()
+    }
+  }, [debouncedSaveWidths])
   // Handle responsive design with debounced resize and async rendering
   React.useEffect(() => {
     let resizeTimer
@@ -430,237 +434,254 @@ const ConnectionsTable = (props) => {
     []
   )
 
-  const columns: GridColDef[] = useMemo(() => [
-    {
-      field: 'destId',
-      headerName: 'DESTINATION ID',
-      ...(columnWidths?.destId ? { width: columnWidths.destId } : { flex: 0.5 }),
-      minWidth: 50,
-      renderCell: renderCellWithTooltip,
-    },
-    {
-      field: 'destType',
-      headerName: 'ENVIRONMENT',
-      ...(columnWidths?.destType ? { width: columnWidths.destType } : { flex: 0.5 }),
-      minWidth: 50,
-      renderCell: renderCellWithTooltip,
-    },
-    {
-      field: 'jurisdictionName',
-      headerName: 'ORGANIZATION',
-      ...(columnWidths?.jurisdictionName ? { width: columnWidths.jurisdictionName } : { flex: 0.5 }),
-      minWidth: 25,
-      renderCell: renderCellWithTooltip,
-    },
-    {
-      field: 'destUri',
-      headerName: 'ENDPOINT URL',
-      ...(columnWidths?.destUri ? { width: columnWidths.destUri } : { flex: 0.5 }),
-      minWidth: 50,
-      renderCell: renderCellWithTooltip,
-    },
-    {
-      field: 'status',
-      headerName: 'STATUS',
-      ...(columnWidths?.status ? { width: columnWidths.status } : { flex: 0.75 }),
-      minWidth: 50,
-      filterable: false,
-      valueFormatter: ({ value }: { value: string | undefined }) =>
-        value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
-      renderCell: (params) => {
-        const isConnected =
-          params.row.status?.toLowerCase() === 'connected' ? true : false
-        const asOfDate = params.row.statusAt
-          ? new Date(params.row.statusAt).toLocaleString()
-          : 'Unknown'
-        return (
-          <Tooltip
-            arrow
-            placement="top"
-            componentsProps={{
-              tooltip: {
-                sx: {
-                  backgroundColor: palette.white,
-                  boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                  border: `1px solid ${palette.border}`,
-                  '& .MuiTooltip-arrow': {
-                    color: palette.border,
+  const columns: GridColDef[] = useMemo(
+    () => [
+      {
+        field: 'destId',
+        headerName: 'DESTINATION ID',
+        ...(columnWidths?.destId
+          ? { width: columnWidths.destId }
+          : { flex: 0.5 }),
+        minWidth: 50,
+        renderCell: renderCellWithTooltip,
+      },
+      {
+        field: 'destType',
+        headerName: 'ENVIRONMENT',
+        ...(columnWidths?.destType
+          ? { width: columnWidths.destType }
+          : { flex: 0.5 }),
+        minWidth: 50,
+        renderCell: renderCellWithTooltip,
+      },
+      {
+        field: 'jurisdictionName',
+        headerName: 'ORGANIZATION',
+        ...(columnWidths?.jurisdictionName
+          ? { width: columnWidths.jurisdictionName }
+          : { flex: 0.5 }),
+        minWidth: 25,
+        renderCell: renderCellWithTooltip,
+      },
+      {
+        field: 'destUri',
+        headerName: 'ENDPOINT URL',
+        ...(columnWidths?.destUri
+          ? { width: columnWidths.destUri }
+          : { flex: 0.5 }),
+        minWidth: 50,
+        renderCell: renderCellWithTooltip,
+      },
+      {
+        field: 'status',
+        headerName: 'STATUS',
+        ...(columnWidths?.status
+          ? { width: columnWidths.status }
+          : { flex: 0.75 }),
+        minWidth: 50,
+        filterable: false,
+        valueFormatter: ({ value }: { value: string | undefined }) =>
+          value?.toLowerCase() === 'connected' ? 'Connected' : 'Not Connected',
+        renderCell: (params) => {
+          const isConnected =
+            params.row.status?.toLowerCase() === 'connected' ? true : false
+          const asOfDate = params.row.statusAt
+            ? new Date(params.row.statusAt).toLocaleString()
+            : 'Unknown'
+          return (
+            <Tooltip
+              arrow
+              placement="top"
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    backgroundColor: palette.white,
+                    boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+                    border: `1px solid ${palette.border}`,
+                    '& .MuiTooltip-arrow': {
+                      color: palette.border,
+                    },
                   },
                 },
-              },
-            }}
-            title={
-              <React.Fragment>
-                <Card elevation={0}>
-                  <CardHeader
-                    title={
-                      <Typography
-                        sx={{
-                          fontWeight: 'bold',
-                          color: palette.greyDarkTypography,
-                        }}
-                      >
-                        {params.row.status?.toUpperCase()}
+              }}
+              title={
+                <React.Fragment>
+                  <Card elevation={0}>
+                    <CardHeader
+                      title={
+                        <Typography
+                          sx={{
+                            fontWeight: 'bold',
+                            color: palette.greyDarkTypography,
+                          }}
+                        >
+                          {params.row.status?.toUpperCase()}
+                        </Typography>
+                      }
+                      subheader={
+                        <Typography
+                          sx={{
+                            fontWeight: 'regular',
+                            color: palette.greyDarkTypography,
+                          }}
+                          variant="body2"
+                        >
+                          {asOfDate}
+                        </Typography>
+                      }
+                    />
+                    {!isConnected && (
+                      <CardContent>
+                        <Box sx={{ fontWeight: 'bold', marginTop: '-16px' }}>
+                          Details:
+                        </Box>
+                        <Box
+                          sx={{ fontWeight: 'regular', marginBottom: '8px' }}
+                        >
+                          {params.row.detail}
+                        </Box>
+                        <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
+                        <Box
+                          sx={{ fontWeight: 'regular', marginBottom: '8px' }}
+                        >
+                          {params.row.diagnostics}
+                        </Box>
+                        <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
+                        <Box sx={{ fontWeight: 'regular' }}>
+                          {params.row.retryStrategy}
+                        </Box>
+                      </CardContent>
+                    )}
+                  </Card>
+                </React.Fragment>
+              }
+            >
+              <Typography gutterBottom variant="body1" component="div">
+                {params.row.hasFutureMaintenance &&
+                  !params.row.hasActiveMaintenance && (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography sx={{ color: palette.warningDark }}>
+                        This connection will be under maintenance from{' '}
+                        {moment(
+                          new Date(params.row.maintenanceValues.maint_start)
+                        ).format('MMM DD, YYYY [at] h:mm A')}{' '}
+                        {_.isNull(params.row.maintenanceValues) ? (
+                          'ended by user'
+                        ) : (
+                          <>
+                            <br />
+                            until{' '}
+                            {moment(
+                              new Date(params.row.maintenanceValues.maint_end)
+                            ).format('MMM DD, YYYY [at] h:mm A')}
+                          </>
+                        )}
                       </Typography>
-                    }
-                    subheader={
-                      <Typography
-                        sx={{
-                          fontWeight: 'regular',
-                          color: palette.greyDarkTypography,
-                        }}
-                        variant="body2"
-                      >
-                        {asOfDate}
-                      </Typography>
-                    }
-                  />
-                  {!isConnected && (
-                    <CardContent>
-                      <Box sx={{ fontWeight: 'bold', marginTop: '-16px' }}>
-                        Details:
-                      </Box>
-                      <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {params.row.detail}
-                      </Box>
-                      <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
-                      <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
-                        {params.row.diagnostics}
-                      </Box>
-                      <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
-                      <Box sx={{ fontWeight: 'regular' }}>
-                        {params.row.retryStrategy}
-                      </Box>
-                    </CardContent>
+                      <ErrorOutlineIcon
+                        fontSize="small"
+                        sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                      />
+                    </Box>
                   )}
-                </Card>
-              </React.Fragment>
-            }
-          >
-            <Typography gutterBottom variant="body1" component="div">
-              {params.row.hasFutureMaintenance &&
-                !params.row.hasActiveMaintenance && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ color: palette.warningDark }}>
-                      This connection will be under maintenance from{' '}
-                      {moment(
-                        new Date(params.row.maintenanceValues.maint_start)
-                      ).format('MMM DD, YYYY [at] h:mm A')}{' '}
-                      {_.isNull(params.row.maintenanceValues) ? (
-                        'ended by user'
-                      ) : (
-                        <>
-                          <br />
-                          until{' '}
-                          {moment(
-                            new Date(params.row.maintenanceValues.maint_end)
-                          ).format('MMM DD, YYYY [at] h:mm A')}
-                        </>
-                      )}
-                    </Typography>
-                    <ErrorOutlineIcon
-                      fontSize="small"
-                      sx={{ marginLeft: 0.5, color: palette.errorDark }}
-                    />
-                  </Box>
-                )}
-              {params.row.hasActiveMaintenance &&
-                !params.row.hasFutureMaintenance && (
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ color: palette.errorDark }}>
-                      This connection is under maintenance until{' '}
-                      {_.isNull(params.row.maintenanceValues)
-                        ? 'ended by user'
-                        : moment(
-                            new Date(params.row.maintenanceValues.maint_end)
-                          ).format('MMM DD, YYYY [at] h:mm A')}
-                    </Typography>
-                    <ErrorOutlineIcon
-                      fontSize="small"
-                      sx={{ marginLeft: 0.5, color: palette.errorDark }}
-                    />
-                  </Box>
-                )}
-              {!isConnected &&
-                !params.row.hasActiveMaintenance &&
-                !params.row.hasFutureMaintenance && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      mt: isMobile ? 0 : '1.5rem',
-                    }}
-                  >
-                    <Typography variant="body2">Not Connected</Typography>
-                    <ErrorOutlineIcon
-                      fontSize="small"
-                      sx={{ marginLeft: 0.5 }}
-                    />
-                  </Box>
-                )}
-              {isConnected &&
-                !params.row.hasActiveMaintenance &&
-                !params.row.hasFutureMaintenance && (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      mt: isMobile ? 0 : '1.5rem',
-                    }}
-                  >
-                    <Typography variant="body2">Connected</Typography>
-                    <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
-                  </Box>
-                )}
-            </Typography>
-          </Tooltip>
-        )
+                {params.row.hasActiveMaintenance &&
+                  !params.row.hasFutureMaintenance && (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography sx={{ color: palette.errorDark }}>
+                        This connection is under maintenance until{' '}
+                        {_.isNull(params.row.maintenanceValues)
+                          ? 'ended by user'
+                          : moment(
+                              new Date(params.row.maintenanceValues.maint_end)
+                            ).format('MMM DD, YYYY [at] h:mm A')}
+                      </Typography>
+                      <ErrorOutlineIcon
+                        fontSize="small"
+                        sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                      />
+                    </Box>
+                  )}
+                {!isConnected &&
+                  !params.row.hasActiveMaintenance &&
+                  !params.row.hasFutureMaintenance && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: isMobile ? 0 : '1.5rem',
+                      }}
+                    >
+                      <Typography variant="body2">Not Connected</Typography>
+                      <ErrorOutlineIcon
+                        fontSize="small"
+                        sx={{ marginLeft: 0.5 }}
+                      />
+                    </Box>
+                  )}
+                {isConnected &&
+                  !params.row.hasActiveMaintenance &&
+                  !params.row.hasFutureMaintenance && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: isMobile ? 0 : '1.5rem',
+                      }}
+                    >
+                      <Typography variant="body2">Connected</Typography>
+                      <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
+                    </Box>
+                  )}
+              </Typography>
+            </Tooltip>
+          )
+        },
       },
-    },
-    {
-      field: 'action',
-      headerName: 'ACTION',
-      sortable: false,
-      filterable: false,
-      flex: 0.5,
-      minWidth: 175,
-      maxWidth: 175, // Adjusted maxWidth so all icons show
-      renderCell: (params) => {
-        return (
-          <>
-            <ChangeRequestActionButtons
-              tabIndex={params.tabIndex}
-              destId={params.row.destId}
-              destTypeId={params.row.destTypeId}
-              hasChangeRequest={params.row.hasChangeRequest}
-              hasActiveDraft={params.row.hasActiveDraft}
-            />
-            {accessLevels.canRunConnectionTest && (
-              <TestConnectionButton
+      {
+        field: 'action',
+        headerName: 'ACTION',
+        sortable: false,
+        filterable: false,
+        flex: 0.5,
+        minWidth: 175,
+        maxWidth: 175, // Adjusted maxWidth so all icons show
+        renderCell: (params) => {
+          return (
+            <>
+              <ChangeRequestActionButtons
                 tabIndex={params.tabIndex}
                 destId={params.row.destId}
                 destTypeId={params.row.destTypeId}
+                hasChangeRequest={params.row.hasChangeRequest}
+                hasActiveDraft={params.row.hasActiveDraft}
               />
-            )}
+              {accessLevels.canRunConnectionTest && (
+                <TestConnectionButton
+                  tabIndex={params.tabIndex}
+                  destId={params.row.destId}
+                  destTypeId={params.row.destTypeId}
+                />
+              )}
 
-            <PopOverActionButtons
-              destId={params.row.destId}
-              destTypeId={params.row.destTypeId}
-              status={params.row.status}
-              hasActiveMaintenance={
-                params.row.hasActiveMaintenance ||
-                params.row.hasFutureMaintenance
-              }
-              jurisdictionName={params.row.jurisdictionName}
-              destType={params.row.destType}
-              row={params.row}
-              updateRow={updateRow}
-            />
-          </>
-        )
+              <PopOverActionButtons
+                destId={params.row.destId}
+                destTypeId={params.row.destTypeId}
+                status={params.row.status}
+                hasActiveMaintenance={
+                  params.row.hasActiveMaintenance ||
+                  params.row.hasFutureMaintenance
+                }
+                jurisdictionName={params.row.jurisdictionName}
+                destType={params.row.destType}
+                row={params.row}
+                updateRow={updateRow}
+              />
+            </>
+          )
+        },
       },
-    },
-  ], [columnWidths, renderCellWithTooltip])
+    ],
+    [columnWidths, renderCellWithTooltip]
+  )
 
   const updateRow = (row) => {
     const updatedEndpointStatus = endpointStatuses.map((x) => {
@@ -1062,7 +1083,7 @@ const ConnectionsTable = (props) => {
           density={isMobile ? 'standard' : 'comfortable'}
           pagination
           slots={{
-            toolbar: CustomToolbar as GridSlots['toolbar'],
+            toolbar: CustomToolbar,
             footer: () => <CustomFooter selectedRow={selectedRows} />,
           }}
           slotProps={{
@@ -1072,7 +1093,7 @@ const ConnectionsTable = (props) => {
               quickFilterProps: { debounceMs: 500 },
               columns: { field: 'action', filterable: false },
               onTestReportsClick: handleTestReportsClick,
-            },
+            } as any,
             panel: {
               anchorEl: filterButtonEl,
               sx: {
