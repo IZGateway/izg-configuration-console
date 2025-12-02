@@ -245,8 +245,16 @@ class EncryptedRepository implements DbClient {
     environment: number
     reason?: string
     deniedBy?: string
+    createdBy?: string
   }): Promise<DenyListItem> {
-    return await this.repository.addDenyListRecord(denyListItem)
+
+    const createdBy =
+      denyListItem.createdBy || denyListItem.deniedBy || 'System'
+    const result = await this.repository.addDenyListRecord({
+      ...denyListItem,
+      createdBy,
+    })
+    return result
   }
 
   async deleteDenyListRecord(id: string): Promise<boolean> {
