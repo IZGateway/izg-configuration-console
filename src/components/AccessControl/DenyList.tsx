@@ -6,10 +6,12 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
-import { mockDenyListData, type DenyListItem } from './mockData'
 import { useSession } from 'next-auth/react'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
-
+import useSWR, { mutate } from 'swr'
+import { DenyListItem } from '../../lib/type/DenyList'
+import CombinedContext from '../../contexts/app'
+import Loader from '../Loader'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -147,7 +149,7 @@ const MobileCard = ({ row }) => {
           {row.name}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Certification Name: {row.certificationName || 'N/A'}
+          Certificate Name: {row.certificationName || 'N/A'}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Environment: {row.environment || 'Onboarding'}
@@ -176,11 +178,11 @@ interface DenyListComponentProps extends DenyListProps {
 }
 
 const DenyList: React.FC<DenyListComponentProps> = ({
-  data = [],
   onAddDeny,
   onDeleteDeny,
 }) => {
   const { data: session } = useSession()
+  const { setAlert } = useContext(CombinedContext)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
@@ -190,31 +192,22 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     (() => {
       // setPageSize not available
     })
+  const {
+    data: denyListData,
+    error: denyListError,
+    isLoading: isDenyListLoading,
+  } = useSWR<DenyListItem[]>(`/api/denylist`)
   const [searchTerm, setSearchTerm] = useState('')
   const [renderMode, setRenderMode] = useState<
     'mobile' | 'desktop' | 'transitioning'
   >('desktop')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [rowToDelete, setRowToDelete] = useState<DenyListItem | null>(null)
-  // Derive displayed data from parent prop so updates (add/delete) are reflected
-  const denyListData: DenyListItem[] =
-    data && data.length > 0 ? data : mockDenyListData
-
-  // Handle responsive design
-  React.useEffect(() => {
-    const handleResize = () => {
-      const newIsMobile = window.innerWidth < 992
-      setRenderMode(newIsMobile ? 'mobile' : 'desktop')
-    }
-
-    handleResize() // Set initial value
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const [, setIsDeleting] = useState(false)
 
   // Filter data based on search term
   const filteredData = React.useMemo(() => {
-    const dataToFilter = denyListData
+    const dataToFilter = denyListData || []
 
     if (!searchTerm) return dataToFilter
 
@@ -228,6 +221,41 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     })
   }, [denyListData, searchTerm])
 
+  // Handle responsive design
+  React.useEffect(() => {
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth < 992
+      setRenderMode(newIsMobile ? 'mobile' : 'desktop')
+    }
+
+    handleResize() // Set initial value
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  if (denyListError) throw new Error()
+  if (isDenyListLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          backgroundColor: palette.white,
+          borderRadius: '8px',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+          border: `1px solid ${palette.border}`,
+          margin: '16px 0',
+        }}
+      >
+        <Typography variant="body1" color="text.secondary">
+          <Loader open={true} />
+        </Typography>
+      </Box>
+    )
+  }
+
   // Call parent handler for add
   const handleAdd = () => {
     if (onAddDeny) onAddDeny()
@@ -237,13 +265,67 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     setRowToDelete(row)
     setDeleteDialogOpen(true)
   }
-  const handleConfirmDelete = () => {
-    // Delegate actual delete to parent so data source stays in sync
-    if (rowToDelete && typeof onDeleteDeny === 'function') {
-      onDeleteDeny(rowToDelete.id)
+  const handleConfirmDelete = async () => {
+    if (!rowToDelete) {
+      setDeleteDialogOpen(false)
+      return
     }
-    setDeleteDialogOpen(false)
-    setRowToDelete(null)
+
+    try {
+      setIsDeleting(true)
+      const DEST_TYPES = [
+        null,
+        'PRODUCTION',
+        'TEST',
+        'ONBOARD',
+        'STAGE',
+        'DEV',
+        'UNKNOWN',
+      ]
+      let envNum = rowToDelete.environment
+      if (typeof envNum === 'string') {
+        envNum = DEST_TYPES.indexOf(envNum)
+      }
+      const sortKey = `${envNum}#${rowToDelete.certificationName}`
+
+      const response = await fetch(
+        `/api/denylist/${encodeURIComponent(sortKey)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete deny list entry')
+      }
+
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Deny list entry has been successfully deleted.`,
+      })
+
+      onDeleteDeny(rowToDelete.id)
+
+      mutate('/api/denylist')
+    } catch (error) {
+      console.error('Error deleting deny list entry:', error)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Failed to delete entry. Please try again.`,
+      })
+    } finally {
+      setIsDeleting(false)
+      setDeleteDialogOpen(false)
+      setRowToDelete(null)
+    }
   }
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false)
@@ -267,7 +349,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
     },
     {
       field: 'certificationName',
-      headerName: 'CERTIFICATION NAME',
+      headerName: 'CERTIFICATE NAME',
       flex: 1,
       minWidth: 180,
       renderCell: (params) => (
@@ -287,10 +369,10 @@ const DenyList: React.FC<DenyListComponentProps> = ({
           sx={{
             fontWeight: 500,
             color:
-              params.value === 'Production' ? 'success.main' : 'warning.main',
+              params.value === 'PRODUCTION' ? 'success.main' : 'warning.main',
           }}
         >
-          {params.value || 'Onboarding'}
+          {params.value || 'Undefined'}
         </Typography>
       ),
     },
@@ -308,7 +390,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {params.value}
+          {params.value || 'Not specified'}
         </Typography>
       ),
     },
@@ -435,7 +517,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
             disableColumnSelector
             disableDensitySelector
             onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-            getRowId={(row) => row.id}
+            getRowId={(row) => row.id || row.principal || row.sortKey}
             density={'comfortable'}
             pagination
             slots={{

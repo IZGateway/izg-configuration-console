@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { mockDenyListData, type DenyListItem } from './mockData'
+import { DenyListItem } from '../../lib/type/DenyList'
 
 interface AddDenyListProps {
   onSave: (item: DenyListItem) => void
@@ -20,20 +20,80 @@ interface AddDenyListProps {
   userName: string
 }
 
+interface Organization {
+  organizationName: string
+  principalNames: string[]
+}
+
 const AddDenyList: React.FC<AddDenyListProps> = ({
   onSave,
   onCancel,
   userName,
 }) => {
-  const nameOptions = Array.from(
-    new Set(mockDenyListData.map((item) => item.name))
-  )
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [selectedOrganization, setSelectedOrganization] =
+    useState<Organization | null>(null)
   const [formData, setFormData] = useState<Partial<DenyListItem>>({
     name: '',
     certificationName: '',
-    environment: 'Production' as 'Production' | 'Onboarding', // default
+    environment: 'ONBOARD', // default
     reason: '',
   })
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        const response = await fetch('/api/organizations')
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+
+        const orgData = await response.json()
+        const processedOrgs: Organization[] = orgData.map(
+          (org: Organization) => {
+            let principalNames: string[] = []
+
+            principalNames = Array.from(org.principalNames)
+
+            return {
+              organizationName: org.organizationName || 'Unknown Organization',
+              principalNames: principalNames,
+            }
+          }
+        )
+
+        setOrganizations(processedOrgs)
+
+        console.log(
+          'Loaded organizations:',
+          processedOrgs.map((org) => ({
+            name: org.organizationName,
+            principals: org.principalNames,
+          }))
+        )
+      } catch (error) {
+        console.error('Error fetching organizations:', error)
+        setOrganizations([])
+      }
+    }
+
+    fetchOrganizations()
+  }, [])
+
+  const DEST_TYPES = [
+    null,
+    'PRODUCTION',
+    'TEST',
+    'ONBOARD',
+    'STAGE',
+    'DEV',
+    'UNKNOWN',
+  ]
+
+  const getEnvironmentIndex = (env: string) => {
+    return DEST_TYPES.indexOf(env)
+  }
 
   // We'll use MUI's built-in required asterisk and style it red via sx
 
@@ -46,32 +106,35 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
     )
   }
 
-  const handleChange = (
-    field: keyof DenyListItem,
-    value: string | ('Production' | 'Onboarding')
-  ) => {
+  const handleChange = (field: keyof DenyListItem, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleOrganizationChange = (organizationName: string) => {
+    const org = organizations.find(
+      (o) => o.organizationName === organizationName
+    )
+    setSelectedOrganization(org || null)
+
+    setFormData((prev) => ({
+      ...prev,
+      name: organizationName,
+      certificationName: '',
+    }))
   }
 
   const handleSave = () => {
     if (!isFormValid()) return
-    const now = new Date()
-    const dateDenied = now.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric',
-    })
-    const environmentValue =
-      (formData.environment as 'Production' | 'Onboarding') || 'Production'
 
     onSave({
-      id: `${Date.now()}`,
-      name: formData.name || '',
       certificationName: formData.certificationName || '',
-      environment: environmentValue,
+      environment: getEnvironmentIndex(formData.environment as string),
       reason: formData.reason || '',
       deniedBy: userName,
-      dateDenied,
+      id: '',
+      name: formData.name || '',
+      createdBy: userName,
+      createdOn: new Date(),
     })
   }
 
@@ -149,37 +212,71 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Name Dropdown */}
           <FormControl
-            fullWidth
             required
             sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
           >
-            <InputLabel>Name</InputLabel>
+            <InputLabel id="denylist-name-label">Name</InputLabel>
+
             <Select
+              labelId="denylist-name-label"
+              id="denylist-name"
               value={formData.name}
               label="Name *"
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={(e) => handleOrganizationChange(e.target.value)}
               sx={{ borderRadius: '8px' }}
+              MenuProps={{
+                PaperProps: {
+                  style: { maxHeight: 200 }, // menu height + scroll inside paper
+                },
+              }}
             >
-              {nameOptions.map((name) => (
-                <MenuItem key={name} value={name}>
-                  {name}
+              {organizations.map((org) => (
+                <MenuItem
+                  key={org.organizationName}
+                  value={org.organizationName}
+                >
+                  {org.organizationName}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          {/* Certification Name */}
-          <TextField
-            label="Certification Name"
-            value={formData.certificationName}
-            onChange={(e) => handleChange('certificationName', e.target.value)}
-            variant="outlined"
+          {/* Certificate Name */}
+          <FormControl
             fullWidth
             required
-            sx={{
-              '& .MuiOutlinedInput-root': { borderRadius: '8px' },
-              '& .MuiFormLabel-asterisk': { color: palette.error },
-            }}
-          />
+            disabled={!selectedOrganization}
+            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
+          >
+            <InputLabel>Certificate Name</InputLabel>
+            <Select
+              value={formData.certificationName}
+              label="Certificate Name *"
+              onChange={(e) =>
+                handleChange('certificationName', e.target.value)
+              }
+              sx={{ borderRadius: '8px' }}
+            >
+              {!selectedOrganization ? (
+                <MenuItem disabled>
+                  <Typography variant="body2" color="text.secondary">
+                    Select an organization first
+                  </Typography>
+                </MenuItem>
+              ) : selectedOrganization.principalNames.length === 0 ? (
+                <MenuItem disabled>
+                  <Typography variant="body2" color="text.secondary">
+                    No principals available for this organization
+                  </Typography>
+                </MenuItem>
+              ) : (
+                selectedOrganization.principalNames.map((principal) => (
+                  <MenuItem key={principal} value={principal}>
+                    {principal}
+                  </MenuItem>
+                ))
+              )}
+            </Select>
+          </FormControl>
           {/* Environment */}
           <FormControl
             fullWidth
@@ -192,11 +289,16 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
             <Select
               value={formData.environment}
               label="Environment"
-              onChange={(e) => handleChange('environment', e.target.value)}
+              onChange={(e) =>
+                handleChange('environment', e.target.value as string)
+              }
               sx={{ borderRadius: '8px' }}
             >
-              <MenuItem value="Onboarding">Onboarding</MenuItem>
-              <MenuItem value="Production">Production</MenuItem>
+              {['PRODUCTION', 'TEST', 'ONBOARD', 'STAGE', 'DEV'].map((env) => (
+                <MenuItem key={env} value={env}>
+                  {env.charAt(0) + env.slice(1).toLowerCase()}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           {/* Reason */}

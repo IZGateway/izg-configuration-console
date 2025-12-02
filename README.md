@@ -87,8 +87,6 @@ For example:
  ]
 ```
 
-the .env file is needed for Prisma to connect and inspect the database schema in order to generate a prisma.schema and prisma client. The .env file only needs to contain the database url connection string.
-
 ```
 DATABASE_URL="mysql:<database connection URL>"
 ```
@@ -100,17 +98,6 @@ Install dependencies by running
 ```
 npm install
 ```
-
-### **Step 3: Connect Prisma**
-
-Create a Prisma client by running the following
-
-```
-npx prisma generate
-```
-
-YES - npX and not npM  
-This will create the Prisma client using the connection info in the .env file.
 
 **PLEASE NOTE:** If you add any sensitive database connectivity information to an .env file that NEEDS TO BE REMOVED and not posted to Git.
 
@@ -148,12 +135,12 @@ Make sure you have your .env.local file setup properly. Please note that your .e
 
 Navigate to https://localhost in a browser, and you should see the application prompt you for a keycloak login
 
-
 ### **End to End testing: Playwright set up**
 
 Run npm install
+
 ```
-Add .env.test file in project root folder which will include below values 
+Add .env.test file in project root folder which will include below values
 OKTA_USERNAME=Username of the user
 OKTA_PASSWORD=Password for the user
 BASE_URL=URL of where you want to run these tests against
@@ -164,4 +151,6 @@ OKTA_NONADMIN_EXPECTED_DEST_IDS=A comma separate list of Destination Id's that w
 
 
 ```
+
 Run npm run test:dev which will run tests in all 4 headed browsers. To run for specific browser use this command npm run test:dev --project=Chrome
+

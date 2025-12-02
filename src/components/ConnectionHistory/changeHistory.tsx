@@ -47,7 +47,7 @@ const findDifferentKeysAndValues = (newObj, oldObj, isPasswordDifferent:boolean)
           newValue: newObj[key],
           oldValue: oldObj[key],
         }
-      }
+    }
     }
   })
 

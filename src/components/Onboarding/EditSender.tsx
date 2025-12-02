@@ -332,6 +332,11 @@ const EditSender: React.FC<EditSenderProps> = ({
                   sx={{
                     borderRadius: '8px',
                   }}
+                  MenuProps={{
+                    PaperProps: {
+                      style: { maxHeight: 200 }, // menu height + scroll inside paper
+                    },
+                  }}
                 >
                   {availableSenders.map((sender) => (
                     <MenuItem key={sender.name} value={sender.name}>
