@@ -1,10 +1,13 @@
 import DbClient from './DbClient'
 import Dynamo from './dynamo'
-import JDBC from './jdbc'
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
+import { OrganizationRecord } from '../type/OrganizationRecord'
+import { DenyListItem } from '../type/DenyList'
+import { AccessGroupRecord } from '../type/AccessGroupRecord'
+import { SenderRecord } from '../type/SenderRecord'
 import {
   encrypt,
   decrypt,
@@ -12,6 +15,7 @@ import {
   KEY_NAME,
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
+import { AdsFileTypeItem } from '../type/AdsFileType'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -25,17 +29,13 @@ export default class DbClientFactory {
       }
     }
     let db: DbClient | null = null
-    if (type === 'jdbc') {
-      db = new JDBC()
-    } else if (type === 'dynamo') {
-      db = new Dynamo()
-    }
+    db = new Dynamo()
     await initCryptoSupport() // Ensure crypto support is initialized
 
     // Don't bother to wrap with EncryptedRepository if KEY_NAME is not set
     db = db != null && KEY_NAME ? new EncryptedRepository(db) : db
     if (!KEY_NAME) {
-      logger.warn(`No encryption key configured for database ${type}`);
+      logger.warn(`No encryption key configured for database ${type}`)
     }
     if (!dbType) {
       DbClientFactory.defaultClient = db
@@ -173,7 +173,10 @@ class EncryptedRepository implements DbClient {
     return result
   }
 
-  async fetchDestinationPassword(destId: string, destType: number): Promise<string> {
+  async fetchDestinationPassword(
+    destId: string,
+    destType: number
+  ): Promise<string> {
     let result = await this.repository.fetchDestinationPassword(
       destId,
       destType
@@ -206,5 +209,71 @@ class EncryptedRepository implements DbClient {
       return await decryptWithRetries(result)
     }
     return result
+  }
+
+  async fetchSenderData(): Promise<SenderRecord> {
+    const result = await this.repository.fetchSenderData()
+    return result
+  }
+
+  async fetchAccessGroups(): Promise<AccessGroupRecord[]> {
+    const result = await this.repository.fetchAccessGroups()
+    return result
+  }
+
+  async fetchDenyListData(): Promise<DenyListItem[]> {
+    const result = await this.repository.fetchDenyListData()
+    return result
+  }
+
+  async fetchFileTypeList(): Promise<AdsFileTypeItem[]> {
+    const result = await this.repository.fetchFileTypeList()
+    return Array.isArray(result) ? result : []
+  }
+  async fetchOrganizations(): Promise<OrganizationRecord[]> {
+    const result = await this.repository.fetchOrganizations()
+    return Array.isArray(result) ? result : []
+  }
+
+  async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
+    const result = await this.repository.checkDenyListRecordExists(sortKey)
+    return result
+  }
+
+  async addDenyListRecord(denyListItem: {
+    principal: string
+    environment: number
+    reason?: string
+    deniedBy?: string
+    createdBy?: string
+  }): Promise<DenyListItem> {
+    const createdBy =
+      denyListItem.createdBy || denyListItem.deniedBy || 'System'
+    const result = await this.repository.addDenyListRecord({
+      ...denyListItem,
+      createdBy,
+    })
+    return result
+  }
+
+  async deleteDenyListRecord(id: string): Promise<boolean> {
+    return await this.repository.deleteDenyListRecord(id)
+  }
+
+  async addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean> {
+    return await this.repository.addAdsFileTypeRecord(fileTypeItem)
+  }
+
+  async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
+    return await this.repository.deleteAdsFileTypeRecord(sortKey)
+  }
+
+  async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkAdsFileTypeRecordExists(sortKey)
   }
 }

@@ -15,7 +15,6 @@ ARG BUILD_ID=0.0.0
 ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
 ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
 ARG NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
-RUN npx prisma generate
 RUN npm run build
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
@@ -31,10 +30,8 @@ RUN apk add bash
 # Install Nginx, gettext (for envsubst), and tini
 RUN apk add --no-cache nginx gettext tini
 
-COPY prisma ./prisma/
 COPY package.json package-lock.json ./
 RUN  npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
-RUN npx prisma generate
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
