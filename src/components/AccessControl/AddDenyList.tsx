@@ -1,18 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Tooltip,
-} from '@mui/material'
+import { Box, Typography, TextField, Button, Tooltip } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { DenyListItem } from '../../lib/type/DenyList'
+import StandardSelect from '../Dropdown/StandardSelect'
+import EnvironmentSelect, {
+  getFirstAvailableEnvironment,
+} from '../Dropdown/EnvironmentSelect'
 
 interface AddDenyListProps {
   onSave: (item: DenyListItem) => void
@@ -36,7 +30,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   const [formData, setFormData] = useState<Partial<DenyListItem>>({
     name: '',
     certificationName: '',
-    environment: 'ONBOARD', // default
+    environment: getFirstAvailableEnvironment(), // default to first available environment
     reason: '',
   })
 
@@ -81,18 +75,14 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
     fetchOrganizations()
   }, [])
 
-  const DEST_TYPES = [
-    null,
-    'PRODUCTION',
-    'TEST',
-    'ONBOARD',
-    'STAGE',
-    'DEV',
-    'UNKNOWN',
-  ]
+  // Simple conversion between environment string ('1'-'5') and numeric index
+  const envStringToIndex = (envString: string): number => {
+    const num = parseInt(envString, 10)
+    return num >= 1 && num <= 5 ? num : 3
+  }
 
-  const getEnvironmentIndex = (env: string) => {
-    return DEST_TYPES.indexOf(env)
+  const envIndexToString = (envIndex: number): string => {
+    return envIndex >= 1 && envIndex <= 5 ? String(envIndex) : '3'
   }
 
   // We'll use MUI's built-in required asterisk and style it red via sx
@@ -128,7 +118,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
 
     onSave({
       certificationName: formData.certificationName || '',
-      environment: getEnvironmentIndex(formData.environment as string),
+      environment: formData.environment as number,
       reason: formData.reason || '',
       deniedBy: userName,
       id: '',
@@ -211,96 +201,49 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Name Dropdown */}
-          <FormControl
+          <StandardSelect
+            label="Name"
+            value={formData.name || ''}
+            options={organizations.map((org) => ({
+              value: org.organizationName,
+              label: org.organizationName,
+            }))}
+            onChange={handleOrganizationChange}
             required
-            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-          >
-            <InputLabel id="denylist-name-label">Name</InputLabel>
-
-            <Select
-              labelId="denylist-name-label"
-              id="denylist-name"
-              value={formData.name}
-              label="Name *"
-              onChange={(e) => handleOrganizationChange(e.target.value)}
-              sx={{ borderRadius: '8px' }}
-              MenuProps={{
-                PaperProps: {
-                  style: { maxHeight: 200 }, // menu height + scroll inside paper
-                },
-              }}
-            >
-              {organizations.map((org) => (
-                <MenuItem
-                  key={org.organizationName}
-                  value={org.organizationName}
-                >
-                  {org.organizationName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            placeholder="Select an organization"
+          />
           {/* Certificate Name */}
-          <FormControl
-            fullWidth
+          <StandardSelect
+            label="Certificate Name"
+            value={formData.certificationName || ''}
+            options={
+              !selectedOrganization ||
+              selectedOrganization.principalNames.length === 0
+                ? []
+                : selectedOrganization.principalNames.map((principal) => ({
+                    value: principal,
+                    label: principal,
+                  }))
+            }
+            onChange={(value) => handleChange('certificationName', value)}
             required
             disabled={!selectedOrganization}
-            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-          >
-            <InputLabel>Certificate Name</InputLabel>
-            <Select
-              value={formData.certificationName}
-              label="Certificate Name *"
-              onChange={(e) =>
-                handleChange('certificationName', e.target.value)
-              }
-              sx={{ borderRadius: '8px' }}
-            >
-              {!selectedOrganization ? (
-                <MenuItem disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    Select an organization first
-                  </Typography>
-                </MenuItem>
-              ) : selectedOrganization.principalNames.length === 0 ? (
-                <MenuItem disabled>
-                  <Typography variant="body2" color="text.secondary">
-                    No principals available for this organization
-                  </Typography>
-                </MenuItem>
-              ) : (
-                selectedOrganization.principalNames.map((principal) => (
-                  <MenuItem key={principal} value={principal}>
-                    {principal}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
+            placeholder={
+              !selectedOrganization
+                ? 'Select an organization first'
+                : selectedOrganization.principalNames.length === 0
+                ? 'No principals available'
+                : 'Select a certificate'
+            }
+          />
           {/* Environment */}
-          <FormControl
-            fullWidth
+          <EnvironmentSelect
+            value={envIndexToString(formData.environment as number)}
+            onChange={(value) =>
+              handleChange('environment', envStringToIndex(value))
+            }
             required
-            sx={{
-              '& .MuiFormLabel-asterisk': { color: palette.error },
-            }}
-          >
-            <InputLabel>Environment</InputLabel>
-            <Select
-              value={formData.environment}
-              label="Environment"
-              onChange={(e) =>
-                handleChange('environment', e.target.value as string)
-              }
-              sx={{ borderRadius: '8px' }}
-            >
-              {['PRODUCTION', 'TEST', 'ONBOARD', 'STAGE', 'DEV'].map((env) => (
-                <MenuItem key={env} value={env}>
-                  {env.charAt(0) + env.slice(1).toLowerCase()}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          />
           {/* Reason */}
           <TextField
             label="Reason"

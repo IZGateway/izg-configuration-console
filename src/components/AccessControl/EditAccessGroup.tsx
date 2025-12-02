@@ -3,8 +3,8 @@ import { Box, Typography, TextField, Button } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type AccessGroup } from './AccessGroups'
-import SearchableMultiSelect from '../common/SearchableMultiSelect'
-import EnvironmentSelect from '../common/EnvironmentSelect'
+import SearchableMultiSelect from '../Dropdown/SearchableMultiSelect'
+import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
 
 interface EditAccessGroupProps {
   group?: AccessGroup

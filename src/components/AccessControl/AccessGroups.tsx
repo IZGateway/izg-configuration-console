@@ -14,6 +14,8 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import palette from '../../styles/theme/palette'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import { ENVIRONMENT_LABELS } from '../Dropdown/EnvironmentSelect'
+import Loader from '../Loader'
 
 export interface AccessGroup {
   id: string
@@ -30,6 +32,7 @@ interface AccessGroupsProps {
   onEditGroup?: (group: AccessGroup) => void
   onAddGroup?: () => void
   onDeleteGroup?: (groupId: string) => void
+  isLoading?: boolean
 }
 
 const AccessGroups: React.FC<AccessGroupsProps> = ({
@@ -37,6 +40,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
   onEditGroup,
   onAddGroup,
   onDeleteGroup,
+  isLoading = false,
 }) => {
   const groups = data
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -81,6 +85,31 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
     width: 35,
     height: 35,
     marginRight: 1,
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Box>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '200px',
+            backgroundColor: palette.white,
+            borderRadius: '0px 0px 16px 16px',
+            boxShadow: 1,
+            border: `1px solid ${palette.border}`,
+            p: 3,
+          }}
+        >
+          <Typography variant="body1" color="text.secondary">
+            <Loader open={true} />
+          </Typography>
+        </Box>
+      </Box>
+    )
   }
 
   return (
@@ -149,15 +178,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                       {group.groupName}
                     </Typography>
                     <Chip
-                      label={
-                        {
-                          '1': 'Production',
-                          '2': 'Test',
-                          '3': 'Onboarding',
-                          '4': 'PreProd',
-                          '5': 'Development',
-                        }[group.environment] || 'Unknown'
-                      }
+                      label={ENVIRONMENT_LABELS[group.environment] || 'Unknown'}
                       size="small"
                       sx={{
                         mt: 0.5,

@@ -57,6 +57,7 @@ const AccessControlComponent = () => {
   // Available members for dropdown (principals + groups)
   const [availableMembers, setAvailableMembers] = useState<string[]>([])
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [isLoadingAccessGroups, setIsLoadingAccessGroups] = useState(false)
 
   // Deny List add mode state
   const [isAddingDeny, setIsAddingDeny] = useState(false)
@@ -159,16 +160,10 @@ const AccessControlComponent = () => {
   useEffect(() => {
     const fetchAccessGroups = async () => {
       try {
+        setIsLoadingAccessGroups(true)
         const response = await fetcher<AccessGroupRecord[]>('/api/accessgroups')
 
-        // Transform DynamoDB data to UI format
-        console.log('Raw DynamoDB response:', response)
         const transformedData: AccessGroup[] = response.map((item) => {
-          console.log('Processing item:', {
-            sortKey: item.sortKey,
-            environment: item.environment,
-            groupName: item.groupName,
-          })
           // Extract members
           let members: string[] = []
 
@@ -208,11 +203,14 @@ const AccessControlComponent = () => {
           dest_type: '',
           message: 'Failed to load access groups. Please try again.',
         })
+      } finally {
+        setIsLoadingAccessGroups(false)
       }
     }
 
     fetchAccessGroups()
-  }, [setAlert])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
   // Fetch available members (principals + groups) for dropdown
   useEffect(() => {
@@ -284,7 +282,6 @@ const AccessControlComponent = () => {
   }
 
   const handleEditGroup = (groupData: AccessGroup) => {
-    console.log('Editing group data:', groupData)
     setSelectedGroup(groupData)
     setEditGroupMode(true)
   }
@@ -638,6 +635,7 @@ const AccessControlComponent = () => {
                 onEditGroup={handleEditGroup}
                 onAddGroup={handleAddGroup}
                 onDeleteGroup={handleDeleteGroup}
+                isLoading={isLoadingAccessGroups}
               />
             </TabPanel>
 
