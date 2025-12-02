@@ -1,11 +1,5 @@
 import React from 'react'
-import {
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormHelperText,
-} from '@mui/material'
+import { Autocomplete, TextField, FormHelperText, Box } from '@mui/material'
 import palette from '../../styles/theme/palette'
 
 interface StandardSelectProps {
@@ -22,7 +16,7 @@ interface StandardSelectProps {
 }
 
 /**
- * Reusable standard dropdown select component
+ * Reusable standard dropdown select component with search capability
  */
 const StandardSelect: React.FC<StandardSelectProps> = ({
   label,
@@ -36,50 +30,75 @@ const StandardSelect: React.FC<StandardSelectProps> = ({
   placeholder,
   fullWidth = true,
 }) => {
-  const labelId = `${label.toLowerCase().replace(/\s+/g, '-')}-label`
+  // Ensure value is converted to string for proper comparison
+  const stringValue = String(value || '')
+  // Find the selected option object
+  const selectedOption =
+    options.find((opt) => opt.value === stringValue) || null
 
   return (
-    <FormControl
-      fullWidth={fullWidth}
-      required={required}
-      disabled={disabled}
-      error={error}
-      sx={{
-        '& .MuiFormLabel-asterisk': {
-          color: palette.error,
-        },
-      }}
-    >
-      <InputLabel id={labelId}>{label}</InputLabel>
-      <Select
-        labelId={labelId}
-        value={value}
-        label={label + (required ? ' *' : '')}
-        onChange={(e) => onChange(e.target.value)}
-        sx={{
-          borderRadius: '8px',
+    <Box sx={{ width: fullWidth ? '100%' : 'auto' }}>
+      <Autocomplete
+        value={selectedOption}
+        onChange={(event, newValue) => {
+          onChange(newValue?.value || '')
         }}
-        MenuProps={{
-          PaperProps: {
-            style: { maxHeight: 200 },
-          },
-          autoFocus: false,
-          disableAutoFocusItem: true,
-        }}
-      >
-        {placeholder && value === '' && (
-          <MenuItem value="" disabled>
-            {placeholder}
-          </MenuItem>
+        options={options}
+        getOptionLabel={(option) => option.label}
+        isOptionEqualToValue={(option, value) => option.value === value.value}
+        disabled={disabled}
+        disableListWrap
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label={label}
+            placeholder={placeholder}
+            required={required}
+            error={error}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+              },
+              '& .MuiInputLabel-asterisk': {
+                color: palette.error,
+              },
+            }}
+          />
         )}
-        {options.map((option) => (
-          <MenuItem key={option.value} value={option.value}>
-            {option.label}
-          </MenuItem>
-        ))}
-      </Select>
-      {helperText && <FormHelperText>{helperText}</FormHelperText>}
-    </FormControl>
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+          },
+        }}
+        ListboxProps={{
+          style: { maxHeight: 200 },
+        }}
+        componentsProps={{
+          popper: {
+            modifiers: [
+              {
+                name: 'flip',
+                enabled: false,
+              },
+            ],
+          },
+        }}
+        onOpen={() => {
+          // Reset scroll to top when dropdown opens
+          setTimeout(() => {
+            const listbox = document.querySelector('[role="listbox"]')
+            if (listbox) {
+              listbox.scrollTop = 0
+            }
+          }, 0)
+        }}
+      />
+      {helperText && (
+        <FormHelperText error={error} sx={{ mx: 1.75 }}>
+          {helperText}
+        </FormHelperText>
+      )}
+    </Box>
   )
 }
 

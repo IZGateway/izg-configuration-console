@@ -40,8 +40,8 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
     const allEnvironments = [
       { value: '1', label: 'Production' },
       { value: '2', label: 'Test' },
-      { value: '3', label: 'Onboard' },
-      { value: '4', label: 'PreProd' },
+      { value: '3', label: 'Onboarding' },
+      { value: '4', label: 'PreProduction' },
       { value: '5', label: 'Development' },
     ]
 
@@ -51,15 +51,10 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
 
     // Map APP_ENV to corresponding environment values
     const envMapping: Record<string, string[]> = {
-      production: ['1'],
-      prod: ['1'],
+      production: ['1', '3'], // Production shows both Production and Onboarding
       test: ['2'],
-      onboard: ['3'],
       onboarding: ['3'],
-      stage: ['4'],
-      staging: ['4'],
       preprod: ['4'],
-      dev: ['5', '2'], // Dev shows both Development and Test
       development: ['5', '2'], // Development shows both Development and Test
     }
 
