@@ -17,7 +17,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const dbClient = await DbClientFactory.getDbClient()
 
       // First, check if the record exists
-      const existingRecords = await dbClient.fetchFileTypeList()
+      const existingRecords = (await dbClient.fetchFileTypeList()) as Array<{
+        sortKey: string
+      }>
       const recordToDelete = existingRecords.find(
         (record) => record.sortKey === id
       )

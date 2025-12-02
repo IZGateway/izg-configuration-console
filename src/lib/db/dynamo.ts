@@ -6,7 +6,6 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
-import { FileTypeRecord } from '../type/FileTypeRecord'
 import { SenderRecord } from '../type/SenderRecord'
 
 import {
@@ -968,11 +967,12 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchFileTypeList(): Promise<FileTypeRecord[]> {
-    const params: GetCommandInput = {
+  async fetchFileTypeList(): Promise<AdsFileTypeItem[]> {
+    const params: QueryCommandInput = {
       TableName: TABLE_NAME,
-      Key: {
-        entityType: 'FileType',
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'FileType',
       },
     }
 
@@ -980,13 +980,15 @@ class Dynamo implements DbClient {
 
     return (result.Items || []).map((item) => ({
       id: item.sortKey,
+      sortKey: item.sortKey,
       name: item.fileTypeName,
+      fileTypeName: item.fileTypeName,
       description: item.description,
       createdOn: item.createdOn ? new Date(item.createdOn) : undefined,
       updatedOn: item.updatedOn ? new Date(item.updatedOn) : undefined,
       createdBy: item.createdBy,
       updatedBy: item.updatedBy,
-    })) as FileTypeRecord[]
+    })) as AdsFileTypeItem[]
   }
 
   async addAdsFileTypeRecord(fileTypeItem: {
