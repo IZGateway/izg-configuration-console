@@ -1,0 +1,109 @@
+import React from 'react'
+import StandardSelect from './StandardSelect'
+
+interface EnvironmentSelectProps {
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+  required?: boolean
+  helperText?: string
+  label?: string
+}
+
+/**
+ * Environment selector component that filters available environments based on APP_ENV
+ *
+ * Environment values:
+ * - '1': Production
+ * - '2': Test
+ * - '3': Onboard
+ * - '4': PreProd/Stage
+ * - '5': Development
+ *
+ * APP_ENV behavior:
+ * - production/prod: Only shows Production
+ * - test: Only shows Test
+ * - onboard/onboarding: Only shows Onboard
+ * - stage/staging/preprod: Only shows PreProd
+ * - dev/development: Shows Development and Test
+ * - not set or unrecognized: Shows all options
+ */
+const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
+  value,
+  onChange,
+  disabled = false,
+  required = false,
+  helperText = '',
+  label = 'Environment',
+}) => {
+  const getAvailableEnvironments = () => {
+    const allEnvironments = [
+      { value: '1', label: 'Production' },
+      { value: '2', label: 'Test' },
+      { value: '3', label: 'Onboard' },
+      { value: '4', label: 'PreProd' },
+      { value: '5', label: 'Development' },
+    ]
+
+    const appEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() || 'dev'
+    // Ensure value is a string for comparison
+    const stringValue = String(value)
+
+    // Map APP_ENV to corresponding environment values
+    const envMapping: Record<string, string[]> = {
+      production: ['1'],
+      prod: ['1'],
+      test: ['2'],
+      onboard: ['3'],
+      onboarding: ['3'],
+      stage: ['4'],
+      staging: ['4'],
+      preprod: ['4'],
+      dev: ['5', '2'], // Dev shows both Development and Test
+      development: ['5', '2'], // Development shows both Development and Test
+    }
+
+    const allowedEnvValues = envMapping[appEnv]
+
+    // Get filtered environments based on APP_ENV
+    let filteredEnvironments = allEnvironments
+    if (allowedEnvValues) {
+      filteredEnvironments = allEnvironments.filter((env) =>
+        allowedEnvValues.includes(env.value)
+      )
+    }
+
+    // If disabled (edit mode)
+    if (disabled && stringValue) {
+      const currentEnv = allEnvironments.find(
+        (env) => env.value === stringValue
+      )
+      const valueInFilteredList = filteredEnvironments.some(
+        (env) => env.value === stringValue
+      )
+
+      // If current value not in filtered list, only show the current value
+      if (currentEnv && !valueInFilteredList) {
+        return [currentEnv]
+      }
+    }
+
+    return filteredEnvironments
+  }
+
+  const availableEnvironments = getAvailableEnvironments()
+
+  return (
+    <StandardSelect
+      label={label}
+      value={value}
+      options={availableEnvironments}
+      onChange={onChange}
+      required={required}
+      disabled={disabled}
+      helperText={helperText}
+    />
+  )
+}
+
+export default EnvironmentSelect

@@ -4,7 +4,7 @@ import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { type AccessGroup } from './AccessGroups'
 import SearchableMultiSelect from '../common/SearchableMultiSelect'
-import StandardSelect from '../common/StandardSelect'
+import EnvironmentSelect from '../common/EnvironmentSelect'
 
 interface EditAccessGroupProps {
   group?: AccessGroup
@@ -182,16 +182,8 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
           />
 
           {/* Environment */}
-          <StandardSelect
-            label="Environment"
+          <EnvironmentSelect
             value={formData.environment}
-            options={[
-              { value: '1', label: 'Production' },
-              { value: '2', label: 'Test' },
-              { value: '3', label: 'Onboard' },
-              { value: '4', label: 'Stage' },
-              { value: '5', label: 'Dev' },
-            ]}
             onChange={(value) => handleInputChange('environment', value)}
             required
             disabled={isEditing}

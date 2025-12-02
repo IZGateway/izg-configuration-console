@@ -153,9 +153,9 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                         {
                           '1': 'Production',
                           '2': 'Test',
-                          '3': 'Onboard',
-                          '4': 'Stage',
-                          '5': 'Dev',
+                          '3': 'Onboarding',
+                          '4': 'PreProd',
+                          '5': 'Development',
                         }[group.environment] || 'Unknown'
                       }
                       size="small"
@@ -163,8 +163,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                         mt: 0.5,
                         height: '20px',
                         fontSize: '0.7rem',
-                        backgroundColor:
-                          group.environment === '1' ? '#4caf50' : '#ff9800',
+                        backgroundColor: '#ff9800',
                         color: 'white',
                         fontWeight: 500,
                       }}
