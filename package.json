@@ -1,7 +1,7 @@
 {
   "name": "izg-configuration-console",
   "private": true,
-  "version": "1.8.1",
+  "version": "1.9.0",
   "scripts": {
     "dev": "next",
     "build": "next build",
@@ -71,7 +71,7 @@
     "@commitlint/cli": "^17.6.5",
     "@commitlint/config-conventional": "^17.6.5",
     "@next/eslint-plugin-next": "^14.0.1",
-    "@playwright/test": "^1.53.1",
+    "@playwright/test": "^1.55.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^14.0.0",
     "@types/gtag.js": "^0.0.12",
