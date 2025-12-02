@@ -235,7 +235,10 @@ class EncryptedRepository implements DbClient {
     return Array.isArray(result) ? result : []
   }
 
-  async updateAccessGroup(sortKey: string, updateData: any): Promise<any> {
+  async updateAccessGroup(
+    sortKey: string,
+    updateData: Partial<AccessGroupRecord>
+  ): Promise<AccessGroupRecord> {
     const result = await this.repository.updateAccessGroup(sortKey, updateData)
     return result
   }
