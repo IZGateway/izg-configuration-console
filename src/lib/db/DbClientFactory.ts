@@ -228,11 +228,11 @@ class EncryptedRepository implements DbClient {
 
   async fetchFileTypeList(): Promise<FileTypeRecord[]> {
     const result = await this.repository.fetchFileTypeList()
-    return result
+    return Array.isArray(result) ? result : []
   }
   async fetchOrganizations(): Promise<OrganizationRecord[]> {
     const result = await this.repository.fetchOrganizations()
-    return result
+    return Array.isArray(result) ? result : []
   }
 
   async checkDenyListRecordExists(sortKey: string): Promise<boolean> {

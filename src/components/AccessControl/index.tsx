@@ -20,9 +20,7 @@ import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 
-
 import { AccessGroup } from './mockData'
-import { AdsFileTypeItem } from '../../lib/type/AdsFileType'
 import { mutate } from 'swr'
 
 interface DynamoDBAccessGroup {
@@ -117,7 +115,6 @@ const AccessControlComponent = () => {
   const handleCancelDeny = () => setIsAddingDeny(false)
 
   const [isAddingFileType, setIsAddingFileType] = useState(false)
-  const [fileTypeData, setFileTypeData] = useState<AdsFileTypeItem[]>([])
   const handleAddFileType = () => setIsAddingFileType(true)
   const handleSaveFileType = async (item) => {
     try {
@@ -456,7 +453,6 @@ const AccessControlComponent = () => {
             {/* Tab Panel 2 - ADS File Types */}
             <TabPanel value={tabValue} index={2}>
               <FileTypeList
-                data={fileTypeData}
                 onAddFileType={handleAddFileType}
                 onDeleteFileType={handleDeleteFileType}
               />
