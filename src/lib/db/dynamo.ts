@@ -32,6 +32,7 @@ import logger from '../../../logger'
 import DbClient from './DbClient'
 import { setImmediate } from 'timers'
 import { DenyListItem } from '../type/DenyList'
+import { AdsFileTypeItem } from '../type/AdsFileType'
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
@@ -830,6 +831,31 @@ class Dynamo implements DbClient {
     }
   }
 
+  async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
+    try {
+      const params: GetCommandInput = {
+        TableName: TABLE_NAME,
+        Key: {
+          entityType: 'FileType',
+          sortKey: sortKey,
+        },
+      }
+
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      return !!result.Item
+    } catch (error) {
+      logger.error('Error checking ads file type record existence', {
+        operation: 'checkAdsFileTypeRecordExists',
+        tableName: TABLE_NAME,
+        sortKey: sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
   async addDenyListRecord(denyListItem: {
     principal: string
     environment: number
@@ -949,8 +975,116 @@ class Dynamo implements DbClient {
         entityType: 'FileType',
       },
     }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return (result.Item?.fileTypes as FileTypeRecord[]) || []
+
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+    return (result.Items || []).map((item) => ({
+      id: item.sortKey,
+      name: item.fileTypeName,
+      description: item.description,
+      createdOn: item.createdOn ? new Date(item.createdOn) : undefined,
+      updatedOn: item.updatedOn ? new Date(item.updatedOn) : undefined,
+      createdBy: item.createdBy,
+      updatedBy: item.updatedBy,
+    })) as FileTypeRecord[]
+  }
+
+  async addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean> {
+    try {
+      const timestamp = new Date().toISOString()
+
+      // Check if record already exists
+      const recordExists = await this.checkAdsFileTypeRecordExists(
+        fileTypeItem.sortKey
+      )
+      if (recordExists) {
+        const error = new Error(
+          `A file type entry already exists with ID "${fileTypeItem.sortKey}". Please use a different ID.`
+        )
+        error.name = 'ConditionalCheckFailedException'
+        throw error
+      }
+
+      const itemToInsert = {
+        entityType: 'FileType',
+        description: fileTypeItem.description,
+        fileTypeName: fileTypeItem.fileTypeName,
+        sortKey: fileTypeItem.sortKey,
+        createdOn: timestamp,
+        updatedOn: timestamp,
+        createdBy: fileTypeItem.createdBy || 'System',
+        updatedBy: fileTypeItem.createdBy || 'System',
+      }
+
+      const params: PutCommandInput = {
+        TableName: TABLE_NAME,
+        Item: itemToInsert,
+        ConditionExpression: 'attribute_not_exists(sortKey)',
+      }
+
+      await dynamodDbDocClient.send(new PutCommand(params))
+      console.log(
+        'Successfully added ads file type record:',
+        JSON.stringify(itemToInsert, null, 2)
+      )
+
+      return true
+    } catch (error) {
+      console.error('Error adding a file type record:', error)
+      throw error
+    }
+  }
+
+  async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
+    try {
+      const params: DeleteCommandInput = {
+        TableName: TABLE_NAME,
+        Key: {
+          entityType: 'FileType',
+          sortKey: sortKey,
+        },
+        ConditionExpression: 'attribute_exists(entityType)',
+      }
+
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+
+      logger.info('ADS file type record deleted successfully', {
+        operation: 'deleteAdsFileTypeRecord',
+        tableName: TABLE_NAME,
+        entityType: 'FileType',
+        sortKey: sortKey,
+      })
+
+      return true
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.warn('Attempted to delete non-existent ADS file type record', {
+          operation: 'deleteAdsFileTypeRecord',
+          tableName: TABLE_NAME,
+          entityType: 'FileType',
+          sortKey: sortKey,
+          errorType: 'RecordNotFound',
+        })
+        return false
+      }
+
+      logger.error('Error deleting ADS file type record from DynamoDB', {
+        operation: 'deleteAdsFileTypeRecord',
+        tableName: TABLE_NAME,
+        entityType: 'FileType',
+        sortKey: sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+
+      throw error
+    }
   }
 }
 

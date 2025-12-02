@@ -5,19 +5,33 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
-import { mockFileTypeListData, type FileTypeListItem } from './mockData'
 import { useSession } from 'next-auth/react'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import { AdsFileTypeItem } from '../../lib/type/AdsFileType'
+import useSWR, { mutate } from 'swr'
+import Loader from '../Loader'
+import CombinedContext from '../../contexts/app'
 
 // Component to handle tooltips for truncated text
-const TruncatedTextWithTooltip = ({ 
-  value, 
-  sx = {}, 
-  variant = 'body2' 
-}: { 
+const TruncatedTextWithTooltip = ({
+  value,
+  sx = {},
+  variant = 'body2',
+}: {
   value: string | null | undefined
   sx?: React.CSSProperties | object
-  variant?: 'body1' | 'body2' | 'caption' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'subtitle1' | 'subtitle2'
+  variant?:
+    | 'body1'
+    | 'body2'
+    | 'caption'
+    | 'h1'
+    | 'h2'
+    | 'h3'
+    | 'h4'
+    | 'h5'
+    | 'h6'
+    | 'subtitle1'
+    | 'subtitle2'
 }) => {
   const textRef = useRef<HTMLElement>(null)
   const [isOverflowing, setIsOverflowing] = useState(false)
@@ -25,8 +39,9 @@ const TruncatedTextWithTooltip = ({
   useEffect(() => {
     const checkOverflow = () => {
       if (textRef.current) {
-        const isOverflow = textRef.current.scrollWidth > textRef.current.clientWidth ||
-                          textRef.current.scrollHeight > textRef.current.clientHeight
+        const isOverflow =
+          textRef.current.scrollWidth > textRef.current.clientWidth ||
+          textRef.current.scrollHeight > textRef.current.clientHeight
         setIsOverflowing(isOverflow)
       }
     }
@@ -43,7 +58,7 @@ const TruncatedTextWithTooltip = ({
       sx={{
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        ...sx
+        ...sx,
       }}
     >
       {value || 'N/A'}
@@ -202,7 +217,7 @@ const MobileCard = ({ row }) => {
           {row.name} ({row.id})
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Description: {row.description }
+          Description: {row.description}
         </Typography>
       </Box>
     </Box>
@@ -210,7 +225,7 @@ const MobileCard = ({ row }) => {
 }
 
 interface FileTypeListProps {
-  data?: FileTypeListItem[]
+  data?: AdsFileTypeItem[]
 }
 
 interface FileTypeListComponentProps extends FileTypeListProps {
@@ -224,6 +239,7 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
   onDeleteFileType,
 }) => {
   const { data: session } = useSession()
+  const { alert, setAlert } = useContext(CombinedContext)
   const isAdminOrIZGOp =
     session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
   const sessionContext = useContext(SessionContext)
@@ -238,12 +254,16 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
     'mobile' | 'desktop' | 'transitioning'
   >('desktop')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [rowToDelete, setRowToDelete] = useState<FileTypeListItem | null>(null)
-  // Derive displayed data from parent prop so updates (add/delete) are reflected
-  const fileTypeListData: FileTypeListItem[] =
-    data && data.length > 0 ? data : mockFileTypeListData
+  const [rowToDelete, setRowToDelete] = useState<AdsFileTypeItem | null>(null)
 
-  // Handle responsive design
+  // Derive displayed data from parent prop so updates (add/delete) are reflected
+  const {
+    data: adsFileTypesData,
+    error: adsFileTypesError,
+    isLoading: adsFileTypesLoading,
+  } = useSWR<AdsFileTypeItem[]>(`/api/adsfiletypes`)
+
+  // Handle responsive design - MUST be called before any conditional returns
   React.useEffect(() => {
     const handleResize = () => {
       const newIsMobile = window.innerWidth < 992
@@ -255,7 +275,18 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Filter data based on search term
+  // Prepare file type list data - also before conditional returns
+  const fileTypeListData: AdsFileTypeItem[] = React.useMemo(() => {
+    if (adsFileTypesLoading || adsFileTypesError) return []
+    return data && data.length > 0
+      ? data
+      : (adsFileTypesData || []).map((item) => ({
+          ...item,
+          description: item.description ?? '',
+        }))
+  }, [data, adsFileTypesData, adsFileTypesLoading, adsFileTypesError])
+
+  // Filter data based on search term - also before conditional returns
   const filteredData = React.useMemo(() => {
     const dataToFilter = fileTypeListData
 
@@ -264,12 +295,37 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
     return dataToFilter.filter((row) => {
       const searchLower = searchTerm.toLowerCase()
       return (
-        row.name?.toLowerCase().includes(searchLower) ||
+        row.fileTypeName?.toLowerCase().includes(searchLower) ||
         row.description?.toLowerCase().includes(searchLower) ||
-        row.id?.toLowerCase().includes(searchLower)
+        row.sortKey?.toLowerCase().includes(searchLower)
       )
     })
   }, [fileTypeListData, searchTerm])
+
+  // All other hooks should be called here before any conditional returns
+
+  if (adsFileTypesError) throw new Error()
+  if (adsFileTypesLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '200px',
+          backgroundColor: palette.white,
+          borderRadius: '8px',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+          border: `1px solid ${palette.border}`,
+          margin: '16px 0',
+        }}
+      >
+        <Typography variant="body1" color="text.secondary">
+          <Loader open={true} />
+        </Typography>
+      </Box>
+    )
+  }
 
   // Call parent handler for add
   const handleAdd = () => {
@@ -280,13 +336,59 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
     setRowToDelete(row)
     setDeleteDialogOpen(true)
   }
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     // Delegate actual delete to parent so data source stays in sync
     if (rowToDelete && typeof onDeleteFileType === 'function') {
-      onDeleteFileType(rowToDelete.id)
+      onDeleteFileType(rowToDelete.sortKey)
     }
     setDeleteDialogOpen(false)
     setRowToDelete(null)
+
+    if (!rowToDelete) {
+      setDeleteDialogOpen(false)
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `/api/adsfiletypes/${encodeURIComponent(rowToDelete.sortKey)}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(
+          errorData.error || 'Failed to delete ads file type entry'
+        )
+      }
+
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Ads file type entry has been successfully deleted.`,
+      })
+
+      onDeleteFileType(rowToDelete.sortKey)
+
+      mutate('/api/adsfiletypes')
+    } catch (error) {
+      console.error('Error deleting ads file type entry:', error)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: `Failed to delete entry. Please try again.`,
+      })
+    } finally {
+      setDeleteDialogOpen(false)
+      setRowToDelete(null)
+    }
   }
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false)
@@ -295,14 +397,22 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
 
   const columns: GridColDef[] = [
     {
-      field: 'name',
+      field: 'fileTypeName',
       headerName: 'FILE TYPE NAME',
       flex: 1,
       minWidth: 150,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%', height: '100%' }}>
-          <TruncatedTextWithTooltip 
-            value={params.value} 
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 1,
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <TruncatedTextWithTooltip
+            value={params.value}
             sx={{ fontWeight: 500 }}
             variant="body2"
           />
@@ -310,14 +420,21 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
       ),
     },
     {
-      field: 'id',
+      field: 'sortKey',
       headerName: 'FILE TYPE ID',
       flex: 1,
       minWidth: 150,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', height: '100%' }}>
-          <TruncatedTextWithTooltip 
-            value={params.value} 
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <TruncatedTextWithTooltip
+            value={params.value}
             sx={{ fontWeight: 500 }}
             variant="body2"
           />
@@ -330,14 +447,21 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
       flex: 1,
       minWidth: 600,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%', height: '100%' }}>
-          <TruncatedTextWithTooltip 
-            value={params.value} 
-            sx={{ 
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <TruncatedTextWithTooltip
+            value={params.value}
+            sx={{
               whiteSpace: 'normal',
               wordWrap: 'break-word',
               lineHeight: 1.4,
-              padding: '8px 0'
+              padding: '8px 0',
             }}
             variant="body2"
           />
@@ -423,7 +547,7 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
           {/* Mobile Cards */}
           <Box sx={{ padding: '0 8px' }}>
             {filteredData.map((row) => (
-              <MobileCard key={row.id} row={row} />
+              <MobileCard key={row.sortKey} row={row} />
             ))}
           </Box>
         </Box>
@@ -448,7 +572,7 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
             disableColumnSelector
             disableDensitySelector
             onPaginationModelChange={(model) => setPageSize(model.pageSize)}
-            getRowId={(row) => row.id}
+            getRowId={(row) => row.sortKey}
             density={'comfortable'}
             pagination
             slots={{
@@ -512,7 +636,7 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
             >
               Are you sure you want to delete the file type &quot;
               <Box component="span" sx={{ fontWeight: 600 }}>
-                {rowToDelete?.name}
+                {rowToDelete?.fileTypeName}
               </Box>
               &quot;?
             </Typography>

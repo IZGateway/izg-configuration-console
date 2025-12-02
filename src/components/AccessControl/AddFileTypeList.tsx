@@ -1,21 +1,11 @@
 import React, { useState } from 'react'
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Tooltip,
-} from '@mui/material'
+import { Box, Typography, TextField, Button, Tooltip } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { mockFileTypeListData, type FileTypeListItem } from './mockData'
+import { AdsFileTypeItem } from '../../lib/type/AdsFileType'
 
 interface AddFileTypeListProps {
-  onSave: (item: FileTypeListItem) => void
+  onSave: (item: AdsFileTypeItem) => void
   onCancel: () => void
   userName: string
 }
@@ -23,30 +13,21 @@ interface AddFileTypeListProps {
 const AddFileTypeList = ({
   onSave,
   onCancel,
+  userName,
 }: AddFileTypeListProps) => {
-  const fileTypeOptions = Array.from(
-    new Set(mockFileTypeListData.map((item) => item.name))
-  )
-  const [formData, setFormData] = useState<Partial<FileTypeListItem>>({
-    id: '',
-    name: '',
+  const [formData, setFormData] = useState<Partial<AdsFileTypeItem>>({
+    sortKey: '',
+    fileTypeName: '',
     description: '',
   })
 
   // We'll use MUI's built-in required asterisk and style it red via sx
 
   const isFormValid = () => {
-    return (
-      formData.id &&
-      formData.name &&
-      formData.description
-    )
+    return formData.sortKey && formData.fileTypeName && formData.description
   }
 
-  const handleChange = (
-    field: keyof FileTypeListItem,
-    value: string
-  ) => {
+  const handleChange = (field: keyof AdsFileTypeItem, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -54,9 +35,11 @@ const AddFileTypeList = ({
     if (!isFormValid()) return
 
     onSave({
-      id: formData.id || '',
-      name: formData.name || '',
+      sortKey: formData.sortKey || '',
+      fileTypeName: formData.fileTypeName || '',
       description: formData.description || '',
+      createdBy: userName,
+      createdOn: new Date(),
     })
   }
 
@@ -102,8 +85,8 @@ const AddFileTypeList = ({
             </Button>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            Use this form to add a new entry to the File Type List. All fields marked
-            with * are required.
+            Use this form to add a new entry to the File Type List. All fields
+            marked with * are required.
           </Typography>
         </Box>
       </Box>
@@ -127,36 +110,29 @@ const AddFileTypeList = ({
             maxWidth: '800px',
           }}
         >
-          Use this form to create a new file type list entry. Fill in the required
-          details. All fields marked with * are required.
+          Use this form to create a new file type list entry. Fill in the
+          required details. All fields marked with * are required.
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* File Type Dropdown */}
-          <FormControl
+          {/* File Type Text Field */}
+          <TextField
+            label="File Type"
+            value={formData.fileTypeName}
+            onChange={(e) => handleChange('fileTypeName', e.target.value)}
+            variant="outlined"
             fullWidth
             required
-            sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-          >
-            <InputLabel>File Type</InputLabel>
-            <Select
-              value={formData.name}
-              label="File Type"
-              onChange={(e) => handleChange('name', e.target.value)}
-              sx={{ borderRadius: '8px' }}
-            >
-              {fileTypeOptions.map((fileType) => (
-                <MenuItem key={fileType} value={fileType}>
-                  {fileType}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            sx={{
+              '& .MuiOutlinedInput-root': { borderRadius: '8px' },
+              '& .MuiFormLabel-asterisk': { color: palette.error },
+            }}
+          />
           {/* ID */}
           <TextField
             label="ID"
-            value={formData.id}
-            onChange={(e) => handleChange('id', e.target.value)}
+            value={formData.sortKey}
+            onChange={(e) => handleChange('sortKey', e.target.value)}
             variant="outlined"
             fullWidth
             required
