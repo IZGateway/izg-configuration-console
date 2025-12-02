@@ -96,7 +96,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
     )
   }
 
-  const handleChange = (field: keyof DenyListItem, value: string) => {
+  const handleChange = (field: keyof DenyListItem, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
