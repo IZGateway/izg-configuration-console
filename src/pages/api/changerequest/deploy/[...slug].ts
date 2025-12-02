@@ -154,21 +154,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               createdAt: new Date(),
             }
           )
+        } else {
+          results.map((result, index) => {
+            let errorMessage = ''
+            if (result.status === 'rejected') {
+              errorMessage = `Error deploying Jira change request ${changeRequest.jiraId} on ${calls[index]}:  ${result.reason}`
+              logger.info(errorMessage)
+              errorMessages.push(errorMessage)
+            } else {
+              errorMessages.push(`${calls[index]} was successful`)
+            }
+          })
+          res.status(500).json({
+            message: `All or some of the change request deploymen failed for ${changeRequest.jiraId}. Inspect the error messages for more details.`,
+            errorMessages,
+          })
         }
-        results.map((result, index) => {
-          let errorMessage = ''
-          if (result.status === 'rejected') {
-            errorMessage = `Error deploying Jira change request ${changeRequest.jiraId} on ${calls[index]}:  ${result.reason}`
-            logger.info(errorMessage)
-            errorMessages.push(errorMessage)
-          } else {
-            errorMessages.push(`${calls[index]} was successful`)
-          }
-        })
-        res.status(500).json({
-          message: `All or some of the change request deploymen failed for ${changeRequest.jiraId}. Inspect the error messages for more details.`,
-          errorMessages,
-        })
       })
     }
   } else {
