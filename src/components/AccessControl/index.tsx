@@ -20,11 +20,10 @@ import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 
-import {
-  type AccessGroup,
-  mockFileTypeListData,
-  type FileTypeListItem,
-} from './mockData'
+
+import { AccessGroup } from './mockData'
+import { AdsFileTypeItem } from '../../lib/type/AdsFileType'
+import { mutate } from 'swr'
 
 interface DynamoDBAccessGroup {
   environment: string
@@ -89,6 +88,7 @@ const AccessControlComponent = () => {
       }
 
       setIsAddingDeny(false)
+      mutate('/api/denylist')
       setAlert({
         level: 'success',
         jurisdiction: '',
@@ -106,6 +106,7 @@ const AccessControlComponent = () => {
     }
   }
   const handleDeleteDeny = () => {
+    mutate('/api/denylist')
     setAlert({
       level: 'success',
       jurisdiction: '',
@@ -116,22 +117,42 @@ const AccessControlComponent = () => {
   const handleCancelDeny = () => setIsAddingDeny(false)
 
   const [isAddingFileType, setIsAddingFileType] = useState(false)
-  const [fileTypeData, setFileTypeData] =
-    useState<FileTypeListItem[]>(mockFileTypeListData)
+  const [fileTypeData, setFileTypeData] = useState<AdsFileTypeItem[]>([])
   const handleAddFileType = () => setIsAddingFileType(true)
-  const handleSaveFileType = (item) => {
-    setFileTypeData((prev) => [...prev, item])
-    setIsAddingFileType(false)
-    setAlert({
-      level: 'success',
-      jurisdiction: '',
-      dest_type: '',
-      message: `File Type List has been successfully added.`,
-    })
+  const handleSaveFileType = async (item) => {
+    try {
+      const response = await fetch('/api/adsfiletypes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add ads file type entry')
+      }
+
+      setIsAddingFileType(false)
+      mutate('/api/adsfiletypes')
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `File Type List entry has been successfully added.`,
+      })
+    } catch (error) {
+      setIsAddingFileType(false)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: error.message || 'Failed to add file type entry.',
+      })
+    }
   }
 
-  const handleDeleteFileType = (id: string) => {
-    setFileTypeData((prev) => prev.filter((item) => item.id !== id))
+  const handleDeleteFileType = () => {
+    mutate('/api/adsfiletypes')
     setAlert({
       level: 'success',
       jurisdiction: '',

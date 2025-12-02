@@ -247,6 +247,7 @@ class EncryptedRepository implements DbClient {
     deniedBy?: string
     createdBy?: string
   }): Promise<DenyListItem> {
+
     const createdBy =
       denyListItem.createdBy || denyListItem.deniedBy || 'System'
     const result = await this.repository.addDenyListRecord({
@@ -257,7 +258,27 @@ class EncryptedRepository implements DbClient {
   }
 
   async deleteDenyListRecord(id: string): Promise<boolean> {
-    const result = await this.repository.deleteDenyListRecord(id)
-    return result
+    return await this.repository.deleteDenyListRecord(id)
+  }
+
+  async addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean> {
+    return await this.repository.addAdsFileTypeRecord(fileTypeItem)
+  }
+
+  async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
+    return await this.repository.deleteAdsFileTypeRecord(sortKey)
+  }
+
+  async checkDenyListRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkDenyListRecordExists(sortKey)
+  }
+
+  async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkAdsFileTypeRecordExists(sortKey)
   }
 }

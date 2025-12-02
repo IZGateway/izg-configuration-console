@@ -35,6 +35,7 @@ export default interface ConfigConsoleFetchRepository {
   fetchAccessGroups: () => Promise<AccessGroupRecord[]>
   fetchDenyListData: () => Promise<DenyListItem[]>
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
-  fetchFileTypeList: () => Promise<FileTypeRecord[]>
-  fetchOrganizations: () => Promise<OrganizationRecord[]>
+  fetchFileTypeList: () => Promise<any>
+  checkAdsFileTypeRecordExists: (sortKey: string) => Promise<boolean>
+  fetchOrganizations: () => Promise<any>
 }
