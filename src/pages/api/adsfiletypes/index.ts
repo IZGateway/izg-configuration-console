@@ -7,20 +7,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     try {
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.fetchDenyListData()
+      const result = await dbClient.fetchFileTypeList()
 
       if (!result) {
-        logger.error('No deny list data returned from database', {
-          operation: 'fetchDenyListData',
+        logger.error('No ads file types data returned from database', {
+          operation: 'fetchFileTypeList',
           httpMethod: req.method,
         })
-        return res.status(500).json({ error: 'Failed to fetch deny list data' })
+        return res.status(500).json({ error: 'Failed to fetch ads file types' })
       }
 
       return res.status(200).json(result)
     } catch (error) {
-      logger.error('Error fetching deny list data', {
-        operation: 'fetchDenyListData',
+      logger.error('Error fetching ads file types', {
+        operation: 'fetchFileTypeList',
         httpMethod: req.method,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
@@ -30,43 +30,32 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
-    const { certificationName, environment, reason, deniedBy, createdBy } =
-      req.body
+    const { description, fileTypeName, sortKey, createdBy } = req.body
 
     try {
-      if (!certificationName || !environment) {
-        return res.status(400).json({
-          error: 'Certificate name and environment are required fields',
-        })
-      }
-
       const dbClient = await DbClientFactory.getDbClient()
-      const newRecord = await dbClient.addDenyListRecord({
-        principal: certificationName,
-        environment,
-        reason,
-        deniedBy,
-        createdBy: createdBy || deniedBy || 'System',
+      const newRecord = await dbClient.addAdsFileTypeRecord({
+        description,
+        fileTypeName,
+        sortKey,
+        createdBy,
       })
 
       return res.status(201).json(newRecord)
     } catch (error) {
-      logger.error('Error adding deny list record', {
-        operation: 'addDenyListRecord',
+      logger.error('Error adding ads file type record', {
+        operation: 'addAdsFileTypeRecord',
         httpMethod: req.method,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       })
 
-      if (
-        error instanceof Error &&
-        error.name === 'ConditionalCheckFailedException'
-      ) {
+      // Handle duplicate file type error
+      if (error?.name === 'ConditionalCheckFailedException') {
         res.setHeader('Content-Type', 'application/json')
         return res.status(409).json({
-          error:
-            error.message ||
-            `A deny list entry already exists for certificate "${certificationName}" in environment "${environment}". Please use a different certificate name or environment.`,
+          error: 'File type already exists',
+          message: 'A file type with this name already exists in the system.',
         })
       }
 

@@ -131,7 +131,7 @@ interface CustomToolbarProps extends GridToolbarProps {
   >
 }
 
-const CustomToolbar = ({ setFilterButtonEl, ...props }: CustomToolbarProps) => {
+const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
       <GridToolbarQuickFilter />
@@ -823,7 +823,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-              } as any,
+              } as CustomToolbarProps,
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {

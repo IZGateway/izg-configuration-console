@@ -18,9 +18,13 @@ export default interface ConfigConsoleMutateRepository {
     environment: number
     reason?: string
     deniedBy?: string
+    createdBy: string
   }): Promise<DenyListItem>
   deleteDenyListRecord(id: string): Promise<boolean>
-  updateAccessGroup(sortKey: string, updateData: any): Promise<any>
+  updateAccessGroup(
+    sortKey: string,
+    updateData: Partial<AccessGroupRecord>
+  ): Promise<AccessGroupRecord>
   addAccessGroup(accessGroup: {
     environment: string
     groupName: string
@@ -31,4 +35,11 @@ export default interface ConfigConsoleMutateRepository {
     createdBy: string
   }): Promise<AccessGroupRecord>
   deleteAccessGroup(sortKey: string): Promise<boolean>
+  addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean>
+  deleteAdsFileTypeRecord(sortKey: string): Promise<boolean>
 }

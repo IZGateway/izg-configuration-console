@@ -132,7 +132,9 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
       reason: formData.reason || '',
       deniedBy: userName,
       id: '',
-      name: '',
+      name: formData.name || '',
+      createdBy: userName,
+      createdOn: new Date(),
     })
   }
 

@@ -17,46 +17,49 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const dbClient = await DbClientFactory.getDbClient()
 
       // First, check if the record exists
-      const existingRecords = await dbClient.fetchDenyListData()
-      const recordToDelete = existingRecords.find((record) => record.id === id)
+      const existingRecords = (await dbClient.fetchFileTypeList()) as Array<{
+        sortKey: string
+      }>
+      const recordToDelete = existingRecords.find(
+        (record) => record.sortKey === id
+      )
 
       if (!recordToDelete) {
         return res.status(404).json({
-          error: 'Deny list record not found',
+          error: 'File type record not found',
         })
       }
 
       // Delete the record
-      const success = await dbClient.deleteDenyListRecord(id)
+      const success = await dbClient.deleteAdsFileTypeRecord(id)
 
       if (!success) {
-        logger.error('Failed to delete deny list record', {
-          operation: 'deleteDenyListRecord',
+        logger.error('Failed to delete file type record', {
+          operation: 'deleteFileTypeRecord',
           recordId: id,
           httpMethod: req.method,
         })
         return res.status(500).json({
-          error: 'Failed to delete deny list record',
+          error: 'Failed to delete file type record',
         })
       }
 
-      logger.info('Deny list record deleted successfully', {
-        operation: 'deleteDenyListRecord',
+      logger.info('File type record deleted successfully', {
+        operation: 'deleteAdsFileTypeRecord',
         recordId: id,
         deletedRecord: {
-          certificationName: recordToDelete.certificationName,
-          environment: recordToDelete.environment,
+          sortKey: recordToDelete.sortKey,
         },
         httpMethod: req.method,
       })
 
       return res.status(200).json({
-        message: 'Deny list record deleted successfully',
+        message: 'File type record deleted successfully',
         deletedId: id,
       })
     } catch (error) {
-      logger.error('Error deleting deny list record', {
-        operation: 'deleteDenyListRecord',
+      logger.error('Error deleting file type record', {
+        operation: 'deleteAdsFileTypeRecord',
         httpMethod: req.method,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,

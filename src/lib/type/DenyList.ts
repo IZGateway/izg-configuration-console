@@ -1,4 +1,6 @@
-export interface DenyListItem {
+import { DbAudit } from './DbAudit'
+
+export interface DenyListItem extends DbAudit {
   id: string
   name: string
   reason?: string

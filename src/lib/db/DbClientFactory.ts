@@ -7,7 +7,6 @@ import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
-import { FileTypeRecord } from '../type/FileTypeRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import {
   encrypt,
@@ -16,6 +15,7 @@ import {
   KEY_NAME,
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
+import { AdsFileTypeItem } from '../type/AdsFileType'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -226,13 +226,13 @@ class EncryptedRepository implements DbClient {
     return result
   }
 
-  async fetchFileTypeList(): Promise<FileTypeRecord[]> {
+  async fetchFileTypeList(): Promise<AdsFileTypeItem[]> {
     const result = await this.repository.fetchFileTypeList()
-    return result
+    return Array.isArray(result) ? result : []
   }
   async fetchOrganizations(): Promise<OrganizationRecord[]> {
     const result = await this.repository.fetchOrganizations()
-    return result
+    return Array.isArray(result) ? result : []
   }
 
   async updateAccessGroup(sortKey: string, updateData: any): Promise<any> {
@@ -268,13 +268,35 @@ class EncryptedRepository implements DbClient {
     environment: number
     reason?: string
     deniedBy?: string
+    createdBy?: string
   }): Promise<DenyListItem> {
-    const result = await this.repository.addDenyListRecord(denyListItem)
+    const createdBy =
+      denyListItem.createdBy || denyListItem.deniedBy || 'System'
+    const result = await this.repository.addDenyListRecord({
+      ...denyListItem,
+      createdBy,
+    })
     return result
   }
 
   async deleteDenyListRecord(id: string): Promise<boolean> {
-    const result = await this.repository.deleteDenyListRecord(id)
-    return result
+    return await this.repository.deleteDenyListRecord(id)
+  }
+
+  async addAdsFileTypeRecord(fileTypeItem: {
+    fileTypeName: string
+    sortKey: string
+    description: string
+    createdBy: string
+  }): Promise<boolean> {
+    return await this.repository.addAdsFileTypeRecord(fileTypeItem)
+  }
+
+  async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
+    return await this.repository.deleteAdsFileTypeRecord(sortKey)
+  }
+
+  async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
+    return await this.repository.checkAdsFileTypeRecordExists(sortKey)
   }
 }

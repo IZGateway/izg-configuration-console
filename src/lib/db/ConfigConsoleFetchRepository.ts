@@ -2,10 +2,9 @@ import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
-import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
-import { FileTypeRecord } from '../type/FileTypeRecord'
+import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 
 export default interface ConfigConsoleFetchRepository {
@@ -35,6 +34,7 @@ export default interface ConfigConsoleFetchRepository {
   fetchAccessGroups: () => Promise<AccessGroupRecord[]>
   fetchDenyListData: () => Promise<DenyListItem[]>
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
-  fetchFileTypeList: () => Promise<FileTypeRecord[]>
-  fetchOrganizations: () => Promise<OrganizationRecord[]>
+  fetchFileTypeList: () => Promise<AdsFileTypeItem[]>
+  checkAdsFileTypeRecordExists: (sortKey: string) => Promise<boolean>
+  fetchOrganizations: () => Promise<unknown>
 }

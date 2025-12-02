@@ -21,7 +21,7 @@ import CombinedContext from '../../contexts/app'
 import fetcher from '../../lib/fetch'
 import { type AccessGroup } from './AccessGroups'
 import { type AccessGroupRecord } from '../../lib/type/AccessGroupRecord'
-import { mockFileTypeListData, type FileTypeListItem } from './mockData'
+import { mutate } from 'swr'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -76,6 +76,7 @@ const AccessControlComponent = () => {
       }
 
       setIsAddingDeny(false)
+      mutate('/api/denylist')
       setAlert({
         level: 'success',
         jurisdiction: '',
@@ -93,6 +94,7 @@ const AccessControlComponent = () => {
     }
   }
   const handleDeleteDeny = () => {
+    mutate('/api/denylist')
     setAlert({
       level: 'success',
       jurisdiction: '',
@@ -103,22 +105,41 @@ const AccessControlComponent = () => {
   const handleCancelDeny = () => setIsAddingDeny(false)
 
   const [isAddingFileType, setIsAddingFileType] = useState(false)
-  const [fileTypeData, setFileTypeData] =
-    useState<FileTypeListItem[]>(mockFileTypeListData)
   const handleAddFileType = () => setIsAddingFileType(true)
-  const handleSaveFileType = (item) => {
-    setFileTypeData((prev) => [...prev, item])
-    setIsAddingFileType(false)
-    setAlert({
-      level: 'success',
-      jurisdiction: '',
-      dest_type: '',
-      message: `File Type List has been successfully added.`,
-    })
+  const handleSaveFileType = async (item) => {
+    try {
+      const response = await fetch('/api/adsfiletypes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add ads file type entry')
+      }
+
+      setIsAddingFileType(false)
+      mutate('/api/adsfiletypes')
+      setAlert({
+        level: 'success',
+        jurisdiction: '',
+        dest_type: '',
+        message: `File Type List entry has been successfully added.`,
+      })
+    } catch (error) {
+      setIsAddingFileType(false)
+      setAlert({
+        level: 'error',
+        jurisdiction: '',
+        dest_type: '',
+        message: error.message || 'Failed to add file type entry.',
+      })
+    }
   }
 
-  const handleDeleteFileType = (id: string) => {
-    setFileTypeData((prev) => prev.filter((item) => item.id !== id))
+  const handleDeleteFileType = () => {
+    mutate('/api/adsfiletypes')
     setAlert({
       level: 'success',
       jurisdiction: '',
@@ -631,7 +652,6 @@ const AccessControlComponent = () => {
             {/* Tab Panel 2 - ADS File Types */}
             <TabPanel value={tabValue} index={2}>
               <FileTypeList
-                data={fileTypeData}
                 onAddFileType={handleAddFileType}
                 onDeleteFileType={handleDeleteFileType}
               />
