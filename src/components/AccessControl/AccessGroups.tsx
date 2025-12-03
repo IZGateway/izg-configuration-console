@@ -14,21 +14,25 @@ import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import palette from '../../styles/theme/palette'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import { ENVIRONMENT_LABELS } from '../Dropdown/EnvironmentSelect'
+import Loader from '../Loader'
 
-interface AccessGroupsProps {
-  data?: AccessGroup[]
-  onEditGroup?: (group: AccessGroup) => void
-  onAddGroup?: () => void
-  onDeleteGroup?: (groupId: string) => void
-}
-
-interface AccessGroup {
+export interface AccessGroup {
   id: string
   groupName: string
   description: string
   memberCount: number
   roles: string[]
   members: string[]
+  environment: string
+}
+
+interface AccessGroupsProps {
+  data?: AccessGroup[]
+  onEditGroup?: (group: AccessGroup) => void
+  onAddGroup?: () => void
+  onDeleteGroup?: (groupId: string) => void
+  isLoading?: boolean
 }
 
 const AccessGroups: React.FC<AccessGroupsProps> = ({
@@ -36,6 +40,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
   onEditGroup,
   onAddGroup,
   onDeleteGroup,
+  isLoading = false,
 }) => {
   const groups = data
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -80,6 +85,31 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
     width: 35,
     height: 35,
     marginRight: 1,
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Box>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '200px',
+            backgroundColor: palette.white,
+            borderRadius: '0px 0px 16px 16px',
+            boxShadow: 1,
+            border: `1px solid ${palette.border}`,
+            p: 3,
+          }}
+        >
+          <Typography variant="body1" color="text.secondary">
+            <Loader open={true} />
+          </Typography>
+        </Box>
+      </Box>
+    )
   }
 
   return (
@@ -137,15 +167,29 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                   }}
                 >
                   {/* Group Name */}
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      fontWeight: 600,
-                      fontSize: '1.1rem',
-                    }}
-                  >
-                    {group.groupName}
-                  </Typography>
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                      }}
+                    >
+                      {group.groupName}
+                    </Typography>
+                    <Chip
+                      label={ENVIRONMENT_LABELS[group.environment] || 'Unknown'}
+                      size="small"
+                      sx={{
+                        mt: 0.5,
+                        height: '20px',
+                        fontSize: '0.7rem',
+                        backgroundColor: '#ff9800',
+                        color: 'white',
+                        fontWeight: 500,
+                      }}
+                    />
+                  </Box>
 
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
                     <Tooltip arrow title="Edit">

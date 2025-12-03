@@ -2,8 +2,17 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  // Check authentication
+  const session = await getServerSession(req, res, authOptions)
+  if (!session || !session.user) {
+    res.status(401).json({ error: 'Unauthorized - Please login' })
+    return
+  }
+
   if (req.method === 'DELETE') {
     try {
       const { id } = req.query
@@ -34,6 +43,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           operation: 'deleteDenyListRecord',
           recordId: id,
           httpMethod: req.method,
+          user: session.user.email,
         })
         return res.status(500).json({
           error: 'Failed to delete deny list record',
@@ -48,6 +58,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           environment: recordToDelete.environment,
         },
         httpMethod: req.method,
+        user: session.user.email,
       })
 
       return res.status(200).json({
@@ -58,6 +69,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logger.error('Error deleting deny list record', {
         operation: 'deleteDenyListRecord',
         httpMethod: req.method,
+        user: session.user.email,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         recordId: req.query.id,
