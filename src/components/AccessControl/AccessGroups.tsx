@@ -8,10 +8,16 @@ import {
   IconButton,
   Button,
   Tooltip,
+  Avatar,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
+import ScienceIcon from '@mui/icons-material/Science'
+import SchoolIcon from '@mui/icons-material/School'
+import PreviewIcon from '@mui/icons-material/Preview'
+import CodeIcon from '@mui/icons-material/Code'
 import palette from '../../styles/theme/palette'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import { ENVIRONMENT_LABELS } from '../Dropdown/EnvironmentSelect'
@@ -42,9 +48,33 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
   onDeleteGroup,
   isLoading = false,
 }) => {
-  const groups = data
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<AccessGroup | null>(null)
+  const groups = data
+
+  // Function to get environment icon based on environment ID
+  const getEnvironmentIcon = (environment: string) => {
+    const iconStyle = { fontSize: '0.875rem', color: 'white' }
+
+    // Normalize environment value to string
+    const envStr = String(environment)
+
+    switch (envStr) {
+      case '1': // Production
+        return <RocketLaunchIcon sx={iconStyle} />
+      case '2': // Test
+        return <ScienceIcon sx={iconStyle} />
+      case '3': // Onboarding
+        return <SchoolIcon sx={iconStyle} />
+      case '4': // PreProduction
+        return <PreviewIcon sx={iconStyle} />
+      case '5': // Development
+        return <CodeIcon sx={iconStyle} />
+      default:
+        // If environment value doesn't match, don't render an avatar at all
+        return undefined
+    }
+  }
 
   const handleAddGroup = () => {
     onAddGroup?.()
@@ -180,11 +210,18 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                     <Chip
                       label={ENVIRONMENT_LABELS[group.environment] || 'Unknown'}
                       size="small"
+                      avatar={
+                        getEnvironmentIcon(group.environment) ? (
+                          <Avatar sx={{ bgcolor: 'transparent !important' }}>
+                            {getEnvironmentIcon(group.environment)}
+                          </Avatar>
+                        ) : undefined
+                      }
                       sx={{
                         mt: 0.5,
                         height: '20px',
                         fontSize: '0.7rem',
-                        backgroundColor: '#ff9800',
+                        backgroundColor: palette.secondary,
                         color: 'white',
                         fontWeight: 500,
                       }}
