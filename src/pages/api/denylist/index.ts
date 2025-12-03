@@ -2,8 +2,16 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  // Check authentication
+  const session = await getServerSession(req, res, authOptions)
+  if (!session || !session.user) {
+    res.status(401).json({ error: 'Unauthorized - Please login' })
+    return
+  }
   if (req.method === 'GET') {
     try {
       const dbClient = await DbClientFactory.getDbClient()
@@ -13,6 +21,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         logger.error('No deny list data returned from database', {
           operation: 'fetchDenyListData',
           httpMethod: req.method,
+          user: session.user.email,
         })
         return res.status(500).json({ error: 'Failed to fetch deny list data' })
       }
@@ -22,6 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logger.error('Error fetching deny list data', {
         operation: 'fetchDenyListData',
         httpMethod: req.method,
+        user: session.user.email,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       })
@@ -54,6 +64,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logger.error('Error adding deny list record', {
         operation: 'addDenyListRecord',
         httpMethod: req.method,
+        user: session.user.email,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       })

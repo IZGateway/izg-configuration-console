@@ -648,6 +648,288 @@ class Dynamo implements DbClient {
     return true
   }
 
+  async updateAccessGroup(sortKey: string, updateData: any): Promise<any> {
+    logger.info('updateAccessGroup called', {
+      sortKey,
+      updateData: JSON.stringify(updateData),
+    })
+
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AccessGroup',
+        sortKey: sortKey,
+      },
+      UpdateExpression: '',
+      ExpressionAttributeNames: {},
+      ExpressionAttributeValues: {},
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+      ReturnValues: 'ALL_NEW',
+    }
+
+    const updates: string[] = []
+
+    // Update groupName if provided
+    if (updateData.groupName !== undefined) {
+      updates.push('#groupName = :groupName')
+      params.ExpressionAttributeNames['#groupName'] = 'groupName'
+      params.ExpressionAttributeValues[':groupName'] = updateData.groupName
+    }
+
+    // Update description if provided
+    if (updateData.description !== undefined) {
+      updates.push('#description = :description')
+      params.ExpressionAttributeNames['#description'] = 'description'
+      params.ExpressionAttributeValues[':description'] = updateData.description
+    }
+
+    // Update roles (String Set)
+    if (updateData.roles && Array.isArray(updateData.roles)) {
+      if (updateData.roles.length > 0) {
+        updates.push('#roles = :roles')
+        params.ExpressionAttributeNames['#roles'] = 'roles'
+        params.ExpressionAttributeValues[':roles'] = new Set(updateData.roles)
+      } else {
+        updates.push('REMOVE #roles')
+        params.ExpressionAttributeNames['#roles'] = 'roles'
+      }
+    }
+
+    // Update users (String Set)
+    if (updateData.users && Array.isArray(updateData.users)) {
+      if (updateData.users.length > 0) {
+        updates.push('#users = :users')
+        params.ExpressionAttributeNames['#users'] = 'users'
+        params.ExpressionAttributeValues[':users'] = new Set(updateData.users)
+      } else {
+        updates.push('REMOVE #users')
+        params.ExpressionAttributeNames['#users'] = 'users'
+      }
+    }
+
+    // Update groups (String Set)
+    if (updateData.groups && Array.isArray(updateData.groups)) {
+      if (updateData.groups.length > 0) {
+        updates.push('#groups = :groups')
+        params.ExpressionAttributeNames['#groups'] = 'groups'
+        params.ExpressionAttributeValues[':groups'] = new Set(updateData.groups)
+      } else {
+        updates.push('REMOVE #groups')
+        params.ExpressionAttributeNames['#groups'] = 'groups'
+      }
+    }
+
+    // Always update updatedBy and updatedOn
+    updates.push('#updatedBy = :updatedBy')
+    updates.push('#updatedOn = :updatedOn')
+    params.ExpressionAttributeNames['#updatedBy'] = 'updatedBy'
+    params.ExpressionAttributeNames['#updatedOn'] = 'updatedOn'
+    params.ExpressionAttributeValues[':updatedBy'] =
+      updateData.updatedBy || 'system'
+    params.ExpressionAttributeValues[':updatedOn'] = new Date().toISOString()
+
+    // Build the update expression
+    const setExpressions = updates.filter((u) => !u.startsWith('REMOVE'))
+    const removeExpressions = updates.filter((u) => u.startsWith('REMOVE'))
+
+    if (setExpressions.length > 0) {
+      params.UpdateExpression += 'SET ' + setExpressions.join(', ')
+    }
+    if (removeExpressions.length > 0) {
+      if (params.UpdateExpression.length > 0) {
+        params.UpdateExpression += ' '
+      }
+      params.UpdateExpression += removeExpressions.join(', ')
+    }
+
+    logger.info('About to execute UpdateCommand', {
+      sortKey,
+      Key: params.Key,
+      UpdateExpression: params.UpdateExpression,
+      ConditionExpression: params.ConditionExpression,
+    })
+
+    try {
+      const result = await dynamodDbDocClient.send(new UpdateCommand(params))
+
+      logger.info('Updated access group in DynamoDB', {
+        sortKey,
+        updatedFields: Object.keys(updateData),
+      })
+
+      // Convert the result back to the expected format
+      if (result.Attributes) {
+        return {
+          ...result.Attributes,
+          roles: Array.isArray(result.Attributes.roles)
+            ? result.Attributes.roles
+            : result.Attributes.roles
+            ? Array.from(result.Attributes.roles)
+            : [],
+          users: Array.isArray(result.Attributes.users)
+            ? result.Attributes.users
+            : result.Attributes.users
+            ? Array.from(result.Attributes.users)
+            : [],
+          groups: Array.isArray(result.Attributes.groups)
+            ? result.Attributes.groups
+            : result.Attributes.groups
+            ? Array.from(result.Attributes.groups)
+            : [],
+        }
+      }
+
+      return result.Attributes
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.error('Access group not found in DynamoDB', {
+          sortKey,
+          entityType: 'AccessGroup',
+          operation: 'updateAccessGroup',
+          errorMessage: 'Item does not exist - cannot update',
+        })
+        throw new Error(`Access group with sortKey ${sortKey} not found`)
+      }
+
+      logger.error('Error updating access group in DynamoDB', {
+        sortKey,
+        updateData,
+        tableName: TABLE_NAME,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'updateAccessGroup',
+      })
+      throw error
+    }
+  }
+
+  async addAccessGroup(accessGroup: {
+    environment: string
+    groupName: string
+    description?: string
+    roles?: string[]
+    users?: string[]
+    groups?: string[]
+    createdBy: string
+  }): Promise<AccessGroupRecord> {
+    const sortKey = `${accessGroup.environment}#${accessGroup.groupName}`
+    const now = new Date().toISOString()
+
+    const item = {
+      entityType: 'AccessGroup',
+      sortKey: sortKey,
+      environment: accessGroup.environment,
+      groupName: accessGroup.groupName,
+      description: accessGroup.description || '',
+      roles:
+        accessGroup.roles && accessGroup.roles.length > 0
+          ? new Set(accessGroup.roles)
+          : undefined,
+      users:
+        accessGroup.users && accessGroup.users.length > 0
+          ? new Set(accessGroup.users)
+          : undefined,
+      groups:
+        accessGroup.groups && accessGroup.groups.length > 0
+          ? new Set(accessGroup.groups)
+          : undefined,
+      createdBy: accessGroup.createdBy,
+      updatedBy: accessGroup.createdBy,
+      createdOn: now,
+      updatedOn: now,
+    }
+
+    // Remove undefined fields
+    Object.keys(item).forEach(
+      (key) => item[key] === undefined && delete item[key]
+    )
+
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: item,
+      ConditionExpression: 'attribute_not_exists(sortKey)',
+    }
+
+    try {
+      await dynamodDbDocClient.send(new PutCommand(params))
+
+      logger.info('Added access group to DynamoDB', {
+        sortKey,
+        groupName: accessGroup.groupName,
+        environment: accessGroup.environment,
+      })
+
+      // Return the created item in the expected format
+      return {
+        ...item,
+        roles: item.roles ? Array.from(item.roles) : [],
+        users: item.users ? Array.from(item.users) : [],
+        groups: item.groups ? Array.from(item.groups) : [],
+      } as AccessGroupRecord
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.error('Access group already exists', {
+          sortKey,
+          groupName: accessGroup.groupName,
+          operation: 'addAccessGroup',
+        })
+        throw new Error(
+          `Access group with name "${accessGroup.groupName}" already exists in environment ${accessGroup.environment}`
+        )
+      }
+
+      logger.error('Error adding access group to DynamoDB', {
+        sortKey,
+        accessGroup,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
+  async deleteAccessGroup(sortKey: string): Promise<boolean> {
+    const params: DeleteCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AccessGroup',
+        sortKey: sortKey,
+      },
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    }
+
+    try {
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+
+      logger.info('Deleted access group from DynamoDB', {
+        sortKey,
+        operation: 'deleteAccessGroup',
+      })
+
+      return true
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        logger.error('Access group not found for deletion', {
+          sortKey,
+          operation: 'deleteAccessGroup',
+        })
+        throw new Error(`Access group with sortKey ${sortKey} not found`)
+      }
+
+      logger.error('Error deleting access group from DynamoDB', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+      })
+      throw error
+    }
+  }
+
   async fetchSenderData(): Promise<SenderRecord> {
     const params: GetCommandInput = {
       TableName: TABLE_NAME,
