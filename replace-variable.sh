@@ -2,7 +2,7 @@
 # replace-variable.sh
 
 # Define a list of environment variables to check and replace
-VARIABLES=("NEXT_PUBLIC_OKTA_ISSUER" "NEXT_PUBLIC_GA_ID")
+VARIABLES=("NEXT_PUBLIC_OKTA_ISSUER" "NEXT_PUBLIC_GA_ID" "NEXT_PUBLIC_APP_ENV")
 
 # Check if each variable is set
 for VAR in "${VARIABLES[@]}"; do

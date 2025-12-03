@@ -1,30 +1,25 @@
-import React, { useState } from 'react'
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  OutlinedInput,
-} from '@mui/material'
+import React, { useState, useEffect } from 'react'
+import { Box, Typography, TextField, Button } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { type AccessGroup } from './mockData'
+import { type AccessGroup } from './AccessGroups'
+import SearchableMultiSelect from '../Dropdown/SearchableMultiSelect'
+import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
 
 interface EditAccessGroupProps {
   group?: AccessGroup
   onSave: (group: AccessGroup) => void
   onCancel: () => void
+  availableMembers?: string[]
+  isLoadingMembers?: boolean
 }
 
 const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
   group,
   onSave,
   onCancel,
+  availableMembers = [],
+  isLoadingMembers = false,
 }) => {
   const [formData, setFormData] = useState<AccessGroup>({
     id: group?.id || '',
@@ -33,21 +28,32 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
     memberCount: group?.memberCount || 0,
     roles: group?.roles || [],
     members: group?.members || [],
+    environment: group?.environment || '3', // Default to ONBOARD
   })
 
-  // Available roles for selection
-  const availableRoles = ['Admin', 'OPS', 'ADS', 'SOAP', 'User']
+  // Update formData when group prop changes
+  useEffect(() => {
+    if (group) {
+      setFormData({
+        id: group.id || '',
+        groupName: group.groupName || '',
+        description: group.description || '',
+        memberCount: group.memberCount || 0,
+        roles: group.roles || [],
+        members: group.members || [],
+        environment: group.environment || '3',
+      })
+    }
+  }, [group])
 
-  // Available members for selection (in real app, this would come from API)
-  const availableMembers = [
-    'eHealthSign',
-    'APHL OPS',
-    'IZG OPS',
-    'Administrations',
-    'Security Team',
-    'Data Analytics',
-    'Support Staff',
-  ]
+  // Static roles list as requested
+  const availableRoles = ['admin', 'internal', 'operations', 'soap', 'users']
+
+  // Filter out the current group from available members to prevent self-reference
+  const filteredMembers = React.useMemo(() => {
+    if (!group?.groupName) return availableMembers
+    return availableMembers.filter((member) => member !== group.groupName)
+  }, [availableMembers, group?.groupName])
 
   const handleInputChange = (
     field: keyof AccessGroup,
@@ -62,26 +68,11 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
     }))
   }
 
-  const handleRemoveRole = (roleToRemove: string) => {
-    handleInputChange(
-      'roles',
-      formData.roles.filter((role) => role !== roleToRemove)
-    )
-  }
-
-  const handleRemoveMember = (memberToRemove: string) => {
-    handleInputChange(
-      'members',
-      formData.members.filter((member) => member !== memberToRemove)
-    )
-  }
-
   const handleSave = () => {
     onSave(formData)
   }
 
   const isEditing = Boolean(group?.id)
-  const isAddMode = !isEditing
 
   return (
     <Box
@@ -119,7 +110,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
               id="title-table"
               sx={{ fontSize: '1.75rem', fontWeight: 700 }}
             >
-              {isAddMode
+              {!isEditing
                 ? 'Add New Access Group'
                 : `Edit Access Group: ${formData.groupName}`}
             </Typography>
@@ -138,7 +129,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             </Button>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            {isAddMode
+            {!isEditing
               ? 'Create a new access group to organize users with similar permissions'
               : `Modify the access group settings, roles, and member assignments`}
           </Typography>
@@ -180,7 +171,6 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
             onChange={(e) => handleInputChange('groupName', e.target.value)}
             fullWidth
             required
-            disabled={isEditing}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '8px',
@@ -189,6 +179,17 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
                 color: palette.error,
               },
             }}
+          />
+
+          {/* Environment */}
+          <EnvironmentSelect
+            value={formData.environment}
+            onChange={(value) => handleInputChange('environment', value)}
+            required
+            disabled={isEditing}
+            helperText={
+              isEditing ? 'Environment cannot be changed after creation' : ''
+            }
           />
 
           {/* Description */}
@@ -208,143 +209,26 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
           />
 
           {/* Members Section */}
-          <Box>
-            <FormControl fullWidth>
-              <InputLabel shrink>
-                Members ({formData.members.length})
-              </InputLabel>
-              <Select
-                multiple
-                value={formData.members}
-                onChange={(e) =>
-                  handleInputChange('members', e.target.value as string[])
-                }
-                input={
-                  <OutlinedInput
-                    label={`Members (${formData.members.length})`}
-                  />
-                }
-                displayEmpty
-                renderValue={() => (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color:
-                        formData.members.length > 0
-                          ? 'transparent'
-                          : 'text.disabled',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    {formData.members.length > 0
-                      ? ''
-                      : 'Select members for this group'}
-                  </Typography>
-                )}
-                sx={{
-                  borderRadius: '8px',
-                }}
-              >
-                {availableMembers.map((member) => (
-                  <MenuItem key={member} value={member}>
-                    {member}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Selected Members Chips */}
-            {formData.members.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                {formData.members.map((member) => (
-                  <Chip
-                    key={member}
-                    label={member}
-                    onDelete={() => handleRemoveMember(member)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{
-                      backgroundColor: '#e3f2fd',
-                      color: palette.primary,
-                      fontSize: '0.875rem',
-                      height: '32px',
-                      border: `1px solid ${palette.primary}`,
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <SearchableMultiSelect
+            label={`Members (${formData.members.length})`}
+            value={formData.members}
+            options={filteredMembers}
+            onChange={(newValue) => handleInputChange('members', newValue)}
+            placeholder="Search and select members for this group"
+            disabled={isLoadingMembers}
+            chipColor="primary"
+          />
 
           {/* Roles Section */}
-          <Box>
-            <FormControl fullWidth required>
-              <InputLabel
-                shrink
-                sx={{
-                  '& .MuiInputLabel-asterisk': {
-                    color: palette.error,
-                  },
-                }}
-              >
-                Roles
-              </InputLabel>
-              <Select
-                multiple
-                value={formData.roles}
-                onChange={(e) =>
-                  handleInputChange('roles', e.target.value as string[])
-                }
-                input={<OutlinedInput label="Roles" />}
-                displayEmpty
-                renderValue={() => (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color:
-                        formData.roles.length > 0
-                          ? 'transparent'
-                          : 'text.disabled',
-                      fontSize: '1rem',
-                    }}
-                  >
-                    {formData.roles.length > 0
-                      ? ''
-                      : 'Select roles for this group'}
-                  </Typography>
-                )}
-                sx={{
-                  borderRadius: '8px',
-                }}
-              >
-                {availableRoles.map((role) => (
-                  <MenuItem key={role} value={role}>
-                    {role}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Selected Roles Chips */}
-            {formData.roles.length > 0 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                {formData.roles.map((role) => (
-                  <Chip
-                    key={role}
-                    label={role}
-                    onDelete={() => handleRemoveRole(role)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{
-                      backgroundColor: '#f5f5f5',
-                      color: 'text.primary',
-                      fontSize: '0.875rem',
-                      height: '32px',
-                      border: '1px solid #d0d0d0',
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
-          </Box>
+          <SearchableMultiSelect
+            label="Roles"
+            value={formData.roles}
+            options={availableRoles}
+            onChange={(newValue) => handleInputChange('roles', newValue)}
+            placeholder="Search and select roles for this group"
+            required
+            chipColor="default"
+          />
         </Box>
 
         {/* Help Text */}

@@ -1,6 +1,8 @@
 // Mock data for AccessControl components
 // TODO: Replace this with real API calls and data sources
 
+import { type AccessGroup } from './AccessGroups'
+
 export interface SenderData {
   id: string
   sender: string
@@ -12,15 +14,6 @@ export interface SenderData {
   lastActive: string
   connectionType: 'production' | 'onboarding'
   isConnected: boolean
-}
-
-export interface AccessGroup {
-  id: string
-  groupName: string
-  description: string
-  memberCount: number
-  roles: string[]
-  members: string[]
 }
 
 export interface DenyListItem {
@@ -76,6 +69,7 @@ export const mockAccessGroups: AccessGroup[] = [
     memberCount: 23,
     roles: ['Admin', 'OPS', 'ADS'],
     members: ['eHealthSign', 'APHL OPS', 'IZG OPS', 'Administrations'],
+    environment: '3',
   },
   {
     id: '2',
@@ -84,6 +78,7 @@ export const mockAccessGroups: AccessGroup[] = [
     memberCount: 34,
     roles: ['OPS', 'SOAP'],
     members: ['APHL OPS', 'IZG OPS', 'eHealthSign'],
+    environment: '3',
   },
   {
     id: '3',
@@ -92,6 +87,7 @@ export const mockAccessGroups: AccessGroup[] = [
     memberCount: 1,
     roles: ['ADS', 'Admin'],
     members: ['Administrations', 'APHL OPS'],
+    environment: '3',
   },
 ]
 
@@ -127,35 +123,41 @@ export const mockDenyListData: DenyListItem[] = [
 
 export const mockFileTypeListData: FileTypeListItem[] = [
   {
-    id: "covidallMonthlyVaccination",
-    name: "COVID Monthly Vaccination Report",
-    description: "This report provides monthly statistics on COVID-19 vaccinations administered, categorized by age and gender."
+    id: 'covidallMonthlyVaccination',
+    name: 'COVID Monthly Vaccination Report',
+    description:
+      'This report provides monthly statistics on COVID-19 vaccinations administered, categorized by age and gender.',
   },
   {
-    id: "farmerFlu",
-    name: "Monthly Farmer Flu Vaccination Report",
-    description: "This report provides monthly statistics on influenza vaccinations administered to farmers, categorized by age and gender.  It was added to help monitor flu prevention efforts in the agricultural community, to support public health initiatives aimed at reducing flu transmission among farmers who are at higher risk due to their close contact with livestock." 
+    id: 'farmerFlu',
+    name: 'Monthly Farmer Flu Vaccination Report',
+    description:
+      'This report provides monthly statistics on influenza vaccinations administered to farmers, categorized by age and gender.  It was added to help monitor flu prevention efforts in the agricultural community, to support public health initiatives aimed at reducing flu transmission among farmers who are at higher risk due to their close contact with livestock.',
   },
   {
-    id: "influenzaVaccination",
-    name: "Monthly Flu Vaccination Report",
-    description: "This report details the monthly influenza vaccination statistics for people vaccinated for Influenza, aggregated by age and gender."
+    id: 'influenzaVaccination',
+    name: 'Monthly Flu Vaccination Report',
+    description:
+      'This report details the monthly influenza vaccination statistics for people vaccinated for Influenza, aggregated by age and gender.',
   },
   {
-    id: "measlesVaccination",
-    name: "Monthly Measles Vaccination Report",
-    description: "This report provides monthly statistics on measles vaccinations administered, categorized"
+    id: 'measlesVaccination',
+    name: 'Monthly Measles Vaccination Report',
+    description:
+      'This report provides monthly statistics on measles vaccinations administered, categorized',
   },
   {
-    id: "routineImmunization",
-    name: "Quarterly Routine Immunization Report",
-    description: "This report provides detailed quarterly data on routine immunizations given to patients in the jurisdiction."
+    id: 'routineImmunization',
+    name: 'Quarterly Routine Immunization Report',
+    description:
+      'This report provides detailed quarterly data on routine immunizations given to patients in the jurisdiction.',
   },
   {
-    id: "rsvPrevention",
-    name: "Monthly RSV Prevention Report",
-    description: "This report provides monthly statistics on RSV (Respiratory Syncytial Virus) prevention measures, including vaccination rates and prophylactic treatments administered to high-risk populations."
-  }
+    id: 'rsvPrevention',
+    name: 'Monthly RSV Prevention Report',
+    description:
+      'This report provides monthly statistics on RSV (Respiratory Syncytial Virus) prevention measures, including vaccination rates and prophylactic treatments administered to high-risk populations.',
+  },
 ]
 /**
  * API Integration Guide for Developers:
