@@ -1,6 +1,7 @@
 import React from 'react'
 import EditAccessGroup from './EditAccessGroup'
 import { type AccessGroup } from './AccessGroups'
+import { getFirstAvailableEnvironment } from '../Dropdown/EnvironmentSelect'
 
 interface AddAccessGroupProps {
   onSave: (newGroup: AccessGroup) => void
@@ -23,7 +24,7 @@ const AddAccessGroup: React.FC<AddAccessGroupProps> = ({
     memberCount: 0,
     roles: [],
     members: [],
-    environment: '5',
+    environment: String(getFirstAvailableEnvironment()),
   }
 
   return (

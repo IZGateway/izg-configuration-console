@@ -24,24 +24,7 @@ export const ENVIRONMENT_LABELS: Record<string, string> =
     return acc
   }, {} as Record<string, string>)
 
-/**
- * Environment selector component that filters available environments based on APP_ENV
- *
- * Environment values:
- * - '1': Production
- * - '2': Test
- * - '3': Onboard
- * - '4': PreProd/Stage
- * - '5': Development
- *
- * APP_ENV behavior:
- * - production/prod: Only shows Production
- * - test: Only shows Test
- * - onboard/onboarding: Only shows Onboard
- * - stage/staging/preprod: Only shows PreProd
- * - dev/development: Shows Development and Test
- * - not set or unrecognized: Shows all options
- */
+// Environment selector component that filters available environments based on NEXT_PUBLIC_APP_ENV
 const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
   value,
   onChange,
@@ -50,46 +33,7 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
   helperText = '',
   label = 'Environment',
 }) => {
-  const getAvailableEnvironments = () => {
-    const environments = allEnvironments
-
-    const appEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() || 'dev'
-    // Ensure value is a string for comparison
-    const stringValue = String(value)
-
-    // Map APP_ENV to corresponding environment values
-    const envMapping: Record<string, string[]> = {
-      production: ['1', '3'], // Production shows both Production and Onboarding
-      test: ['2'],
-      onboarding: ['3'],
-      preprod: ['4'],
-      development: ['5', '2'], // Development shows both Development and Test
-    }
-
-    const allowedEnvValues = envMapping[appEnv]
-
-    // Get filtered environments based on APP_ENV
-    const filteredEnvironments = allowedEnvValues
-      ? environments.filter((env) => allowedEnvValues.includes(env.value))
-      : environments
-
-    // If disabled (edit mode)
-    if (disabled && stringValue) {
-      const currentEnv = environments.find((env) => env.value === stringValue)
-      const valueInFilteredList = filteredEnvironments.some(
-        (env) => env.value === stringValue
-      )
-
-      // If current value not in filtered list, only show the current value
-      if (currentEnv && !valueInFilteredList) {
-        return [currentEnv]
-      }
-    }
-
-    return filteredEnvironments
-  }
-
-  const availableEnvironments = getAvailableEnvironments()
+  const availableEnvironments = getAvailableEnvironments(disabled, value)
 
   return (
     <StandardSelect
@@ -105,25 +49,53 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
 }
 
 /**
- * Get the first available environment value based on APP_ENV
- * Returns the numeric index (1-5) of the first available environment
+ * Get available environments based on NEXT_PUBLIC_APP_ENV filtering
  */
-export const getFirstAvailableEnvironment = (): number => {
-  const appEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() || 'dev'
+const getAvailableEnvironments = (
+  disabled = false,
+  currentValue = ''
+): Array<{ value: string; label: string }> => {
+  const appEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() || 'development'
+  const stringValue = String(currentValue)
 
+  // Map NEXT_PUBLIC_APP_ENV to corresponding environment values
   const envMapping: Record<string, string[]> = {
-    production: ['1', '3'],
+    production: ['1', '3'], // Production shows both Production and Onboarding
     test: ['2'],
     onboarding: ['3'],
     preprod: ['4'],
-    development: ['5', '2'],
+    development: ['5', '2'], // Development shows both Development and Test
   }
 
   const allowedEnvValues = envMapping[appEnv]
 
+  // Get filtered environments based on NEXT_PUBLIC_APP_ENV
   const filteredEnvironments = allowedEnvValues
     ? allEnvironments.filter((env) => allowedEnvValues.includes(env.value))
     : allEnvironments
+
+  // If disabled (edit mode)
+  if (disabled && stringValue) {
+    const currentEnv = allEnvironments.find((env) => env.value === stringValue)
+    const valueInFilteredList = filteredEnvironments.some(
+      (env) => env.value === stringValue
+    )
+
+    // If current value not in filtered list, only show the current value
+    if (currentEnv && !valueInFilteredList) {
+      return [currentEnv]
+    }
+  }
+
+  return filteredEnvironments
+}
+
+/**
+ * Get the first available environment value based on NEXT_PUBLIC_APP_ENV
+ * Returns the numeric index (1-5) of the first available environment
+ */
+export const getFirstAvailableEnvironment = (): number => {
+  const filteredEnvironments = getAvailableEnvironments()
 
   // Return the first available environment's value as number, default to 3 (Onboarding)
   return filteredEnvironments.length > 0
