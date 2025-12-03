@@ -2,8 +2,28 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
+import type {
+  AccessGroupResponse,
+  DeleteAccessGroupResponse,
+  ErrorResponse,
+} from '../../../lib/type/AccessGroupApi'
+import { isUpdateAccessGroupRequest } from '../../../lib/validators/accessgroupvalidators'
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+const handler = async (
+  req: NextApiRequest,
+  res: NextApiResponse<
+    AccessGroupResponse | DeleteAccessGroupResponse | ErrorResponse
+  >
+) => {
+  // Check authentication
+  const session = await getServerSession(req, res, authOptions)
+  if (!session || !session.user) {
+    res.status(401).json({ error: 'Unauthorized - Please login' })
+    return
+  }
+
   const { sortKey } = req.query
 
   if (typeof sortKey !== 'string') {
@@ -13,23 +33,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'PUT') {
     try {
-      const updateData = req.body
-
-      logger.info('Updating access group', {
-        sortKey,
-        updateData: JSON.stringify(updateData),
-      })
-
-      // Validate required fields
-      if (updateData.roles !== undefined && !Array.isArray(updateData.roles)) {
+      // Type-safe validation using type guard
+      if (!isUpdateAccessGroupRequest(req.body)) {
         res.status(400).json({
-          error: 'roles must be an array',
+          error:
+            'Invalid request: groupName must be non-empty string (max 100 chars). ' +
+            'roles, users, and groups must be arrays of strings if provided.',
         })
         return
       }
 
+      logger.info('Updating access group', {
+        sortKey,
+        updateData: JSON.stringify(req.body),
+        user: session.user.email,
+      })
+
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.updateAccessGroup(sortKey, updateData)
+      const result = await dbClient.updateAccessGroup(sortKey, req.body)
 
       if (result) {
         res.json(result)
@@ -38,6 +59,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           operation: 'updateAccessGroup',
           httpMethod: req.method,
           sortKey,
+          user: session.user.email,
         })
         res.status(500).json({ error: 'Failed to update access group' })
       }
@@ -46,21 +68,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         operation: 'updateAccessGroup',
         httpMethod: req.method,
         sortKey,
+        user: session.user.email,
         errorMessage: error.message,
         errorType: error.name,
         stack: error.stack,
       })
 
-      if (error.message.includes('not found')) {
-        res.status(404).json({ error: error.message })
-      } else {
-        res.status(500).json({ error: 'Internal server error' })
-      }
+      const statusCode = error.message.includes('not found') ? 404 : 500
+      const errorMessage = error.message.includes('not found')
+        ? error.message
+        : 'Internal server error'
+      res.status(statusCode).json({ error: errorMessage })
     }
   } else if (req.method === 'DELETE') {
     try {
       logger.info('Deleting access group', {
         sortKey,
+        user: session.user.email,
       })
 
       const dbClient = await DbClientFactory.getDbClient()
@@ -73,6 +97,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           operation: 'deleteAccessGroup',
           httpMethod: req.method,
           sortKey,
+          user: session.user.email,
         })
         res.status(500).json({ error: 'Failed to delete access group' })
       }
@@ -81,16 +106,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         operation: 'deleteAccessGroup',
         httpMethod: req.method,
         sortKey,
+        user: session.user.email,
         errorMessage: error.message,
         errorType: error.name,
         stack: error.stack,
       })
 
-      if (error.message.includes('not found')) {
-        res.status(404).json({ error: error.message })
-      } else {
-        res.status(500).json({ error: 'Internal server error' })
-      }
+      const statusCode = error.message.includes('not found') ? 404 : 500
+      const errorMessage = error.message.includes('not found')
+        ? error.message
+        : 'Internal server error'
+      res.status(statusCode).json({ error: errorMessage })
     }
   } else {
     throw new Error(
