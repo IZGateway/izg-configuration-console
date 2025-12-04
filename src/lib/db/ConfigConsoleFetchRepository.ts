@@ -6,6 +6,7 @@ import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
+import { AllowedUser } from '../type/AllowedUser'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -37,4 +38,14 @@ export default interface ConfigConsoleFetchRepository {
   fetchFileTypeList: () => Promise<AdsFileTypeItem[]>
   checkAdsFileTypeRecordExists: (sortKey: string) => Promise<boolean>
   fetchOrganizations: () => Promise<unknown>
+  fetchAllowedUser(
+    environment: number,
+    destinationId: string,
+    principal: string
+  ): Promise<AllowedUser | null>
+  fetchAllowedUsers(): Promise<AllowedUser[]>
+  fetchAllowedUsersByDestination(
+    isAdmin: boolean,
+    destinations: Array<string>
+  ): Promise<AllowedUser[]>
 }

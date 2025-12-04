@@ -84,6 +84,16 @@ class EncryptedRepository implements DbClient {
     destId: string,
     destTypeId: number
   ) => Promise<DestinationChangeRequest>
+  fetchAllowedUser!: (
+    environment: number,
+    destinationId: string,
+    principal: string
+  ) => Promise<any>
+  fetchAllowedUsers!: () => Promise<any[]>
+  fetchAllowedUsersByDestination!: (
+    isAdmin: boolean,
+    destinations: Array<string>
+  ) => Promise<any[]>
 
   private repository: DbClient
 
@@ -102,6 +112,10 @@ class EncryptedRepository implements DbClient {
         repository
       )
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
+    this.fetchAllowedUser = repository.fetchAllowedUser.bind(repository)
+    this.fetchAllowedUsers = repository.fetchAllowedUsers.bind(repository)
+    this.fetchAllowedUsersByDestination =
+      repository.fetchAllowedUsersByDestination.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
@@ -301,5 +315,9 @@ class EncryptedRepository implements DbClient {
 
   async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
     return await this.repository.checkAdsFileTypeRecordExists(sortKey)
+  }
+
+  async upsertAllowedUser(allowedUser: any): Promise<any> {
+    return await this.repository.upsertAllowedUser(allowedUser)
   }
 }
