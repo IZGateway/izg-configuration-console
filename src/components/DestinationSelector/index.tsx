@@ -12,6 +12,7 @@ import {
   ENVIRONMENT_IDS,
   ENVIRONMENT_NAMES,
 } from '../../lib/constants/environments'
+import SearchableSingleSelect from '../Dropdown/SearchableSingleSelect'
 
 export interface DestinationType {
   typeId: number
@@ -38,6 +39,8 @@ interface DestinationSelectorProps {
   disabled?: boolean
   size?: 'small' | 'medium'
   fullWidth?: boolean
+  hideDestinationType?: boolean
+  searchable?: boolean
 }
 
 const DestinationSelector: React.FC<DestinationSelectorProps> = ({
@@ -51,6 +54,8 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
   disabled = false,
   size = 'medium',
   fullWidth = true,
+  hideDestinationType = false,
+  searchable = false,
 }) => {
   const [destinationTypes, setDestinationTypes] = useState<DestinationType[]>(
     []
@@ -147,91 +152,105 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
   return (
     <>
       {/* Destination Type Dropdown */}
-      <FormControl
-        fullWidth={fullWidth}
-        size={size}
-        required={required}
-        disabled={disabled}
-        sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-      >
-        <InputLabel>{destinationTypeLabel}</InputLabel>
-        <Select
-          value={destinationTypeValue.toString()}
-          label={`${destinationTypeLabel}${required ? ' *' : ''}`}
-          onChange={(e) => handleDestinationTypeChange(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+      {!hideDestinationType && (
+        <FormControl
+          fullWidth={fullWidth}
+          size={size}
+          required={required}
+          disabled={disabled}
+          sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
         >
-          {isLoadingTypes ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                Loading destination types...
-              </Typography>
-            </MenuItem>
-          ) : destinationTypes.length === 0 ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                No destination types available
-              </Typography>
-            </MenuItem>
-          ) : (
-            destinationTypes.map((type) => (
-              <MenuItem key={type.typeId} value={type.typeId.toString()}>
-                {type.type}
+          <InputLabel>{destinationTypeLabel}</InputLabel>
+          <Select
+            value={destinationTypeValue.toString()}
+            label={`${destinationTypeLabel}${required ? ' *' : ''}`}
+            onChange={(e) => handleDestinationTypeChange(e.target.value)}
+            sx={{ borderRadius: '8px' }}
+          >
+            {isLoadingTypes ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  Loading destination types...
+                </Typography>
               </MenuItem>
-            ))
-          )}
-        </Select>
-      </FormControl>
+            ) : destinationTypes.length === 0 ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  No destination types available
+                </Typography>
+              </MenuItem>
+            ) : (
+              destinationTypes.map((type) => (
+                <MenuItem key={type.typeId} value={type.typeId.toString()}>
+                  {type.type}
+                </MenuItem>
+              ))
+            )}
+          </Select>
+        </FormControl>
+      )}
 
-      {/* Destination Dropdown */}
-      <FormControl
-        fullWidth={fullWidth}
-        size={size}
-        required={required}
-        disabled={disabled || !destinationTypeValue}
-        sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-      >
-        <InputLabel>{destinationLabel}</InputLabel>
-        <Select
-          value={destinationValue}
+      {/* Destination Dropdown (standard or searchable) */}
+      {searchable ? (
+        <SearchableSingleSelect
           label={`${destinationLabel}${required ? ' *' : ''}`}
-          onChange={(e) => handleDestinationChange(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+          value={destinationValue}
+          options={availableDestinations.map((d) => getDestinationLabel(d))}
+          onChange={(val) => handleDestinationChange(val)}
+          disabled={disabled || !destinationTypeValue}
+          required={required}
+          helperText={
+            !destinationTypeValue
+              ? 'Select an environment first'
+              : availableDestinations.length === 0
+              ? 'No destinations available for this environment'
+              : undefined
+          }
+          error={required && !destinationValue}
+        />
+      ) : (
+        <FormControl
+          fullWidth={fullWidth}
+          size={size}
+          required={required}
+          disabled={disabled || !destinationTypeValue}
+          sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
         >
-          {!destinationTypeValue ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                Select a destination type first
-              </Typography>
-            </MenuItem>
-          ) : isLoadingDestinations ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                Loading destinations...
-              </Typography>
-            </MenuItem>
-          ) : availableDestinations.length === 0 ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                No destinations available for this type
-              </Typography>
-            </MenuItem>
-          ) : (
-            availableDestinations.map((dest) => {
-              console.log('[DestinationSelector] Rendering MenuItem:', {
-                destId: dest.destId,
-                currentValue: destinationValue,
-                matches: dest.destId === destinationValue,
-              })
-              return (
+          <InputLabel>{destinationLabel}</InputLabel>
+          <Select
+            value={destinationValue}
+            label={`${destinationLabel}${required ? ' *' : ''}`}
+            onChange={(e) => handleDestinationChange(e.target.value)}
+            sx={{ borderRadius: '8px' }}
+          >
+            {!destinationTypeValue ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  Select an environment first
+                </Typography>
+              </MenuItem>
+            ) : isLoadingDestinations ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  Loading destinations...
+                </Typography>
+              </MenuItem>
+            ) : availableDestinations.length === 0 ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  No destinations available for this environment
+                </Typography>
+              </MenuItem>
+            ) : (
+              availableDestinations.map((dest) => (
                 <MenuItem key={dest.destId} value={dest.destId}>
                   {getDestinationLabel(dest)}
                 </MenuItem>
-              )
-            })
-          )}
-        </Select>
-      </FormControl>
+              ))
+            )}
+          </Select>
+        </FormControl>
+      )}
     </>
   )
 }

@@ -27,6 +27,7 @@ import palette from '../../styles/theme/palette'
 import { type SenderData } from './mockData'
 import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import DestinationSelector from '../DestinationSelector'
+import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
 import {
   getEnvironmentId,
   getEnvironmentName,
@@ -160,7 +161,7 @@ const EditSender: React.FC<EditSenderProps> = ({
     }))
   }
 
-  const handleDestinationTypeChange = (destTypeId: number) => {
+  const handleDestinationTypeChange = (destTypeId: number | string) => {
     setDestinationType(destTypeId)
     setFormData((prev) => ({
       ...prev,
@@ -419,12 +420,22 @@ const EditSender: React.FC<EditSenderProps> = ({
               gap: '16px',
             }}
           >
+            {/* Environment selector */}
+            <EnvironmentSelect
+              label="Environment"
+              value={String(destinationType || '')}
+              onChange={(val) => handleDestinationTypeChange(Number(val))}
+              required
+            />
+            {/* use selected Environment to filter destinations */}
             <DestinationSelector
               destinationTypeValue={destinationType}
               destinationValue={formData.destinationCode}
               onDestinationTypeChange={handleDestinationTypeChange}
               onDestinationChange={handleDestinationChange}
-              destinationTypeLabel="Destination Type"
+              destinationTypeLabel="Environment"
+              hideDestinationType={true}
+              searchable={true}
               destinationLabel="Destination"
               required={true}
               size="medium"
@@ -460,6 +471,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               onCertificateChange={handleCertificateChange}
               organizationLabel="Sender Name"
               certificateLabel="Certificate Name"
+              searchable={true}
               required={true}
               size="medium"
               fullWidth={true}

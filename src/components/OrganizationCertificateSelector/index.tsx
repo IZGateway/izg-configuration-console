@@ -8,6 +8,7 @@ import {
   Box,
 } from '@mui/material'
 import palette from '../../styles/theme/palette'
+import SearchableSingleSelect from '../Dropdown/SearchableSingleSelect'
 
 export interface Organization {
   organizationName: string
@@ -25,6 +26,7 @@ interface OrganizationCertificateSelectorProps {
   disabled?: boolean
   size?: 'small' | 'medium'
   fullWidth?: boolean
+  searchable?: boolean
 }
 
 const OrganizationCertificateSelector: React.FC<
@@ -40,6 +42,7 @@ const OrganizationCertificateSelector: React.FC<
   disabled = false,
   size = 'medium',
   fullWidth = true,
+  searchable = false,
 }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [isLoadingOrganizations, setIsLoadingOrganizations] = useState(true)
@@ -133,78 +136,119 @@ const OrganizationCertificateSelector: React.FC<
   return (
     <>
       {/* Organization Dropdown */}
-      <FormControl
-        fullWidth={fullWidth}
-        size={size}
-        required={required}
-        disabled={disabled}
-        sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-      >
-        <InputLabel>{organizationLabel}</InputLabel>
-        <Select
-          value={organizationValue}
+      {searchable ? (
+        <SearchableSingleSelect
           label={`${organizationLabel}${required ? ' *' : ''}`}
-          onChange={(e) => handleOrganizationChange(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+          value={organizationValue}
+          options={organizations.map((o) => o.organizationName)}
+          onChange={(val) => handleOrganizationChange(val)}
+          disabled={disabled}
+          required={required}
+          helperText={
+            organizations.length === 0
+              ? 'No organizations available'
+              : undefined
+          }
+          error={required && !organizationValue}
+        />
+      ) : (
+        <FormControl
+          fullWidth={fullWidth}
+          size={size}
+          required={required}
+          disabled={disabled}
+          sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
         >
-          {isLoadingOrganizations ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                Loading organizations...
-              </Typography>
-            </MenuItem>
-          ) : organizations.length === 0 ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                No organizations available
-              </Typography>
-            </MenuItem>
-          ) : (
-            organizations.map((org) => (
-              <MenuItem key={org.organizationName} value={org.organizationName}>
-                {org.organizationName}
+          <InputLabel>{organizationLabel}</InputLabel>
+          <Select
+            value={organizationValue}
+            label={`${organizationLabel}${required ? ' *' : ''}`}
+            onChange={(e) => handleOrganizationChange(e.target.value)}
+            sx={{ borderRadius: '8px' }}
+          >
+            {isLoadingOrganizations ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  Loading organizations...
+                </Typography>
               </MenuItem>
-            ))
-          )}
-        </Select>
-      </FormControl>
+            ) : organizations.length === 0 ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  No organizations available
+                </Typography>
+              </MenuItem>
+            ) : (
+              organizations.map((org) => (
+                <MenuItem
+                  key={org.organizationName}
+                  value={org.organizationName}
+                >
+                  {org.organizationName}
+                </MenuItem>
+              ))
+            )}
+          </Select>
+        </FormControl>
+      )}
 
       {/* Certificate Dropdown */}
-      <FormControl
-        fullWidth={fullWidth}
-        size={size}
-        required={required}
-        disabled={disabled || !selectedOrganization}
-        sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
-      >
-        <InputLabel>{certificateLabel}</InputLabel>
-        <Select
-          value={certificateValue}
+      {searchable ? (
+        <SearchableSingleSelect
           label={`${certificateLabel}${required ? ' *' : ''}`}
-          onChange={(e) => handleCertificateChange(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+          value={certificateValue}
+          options={
+            selectedOrganization ? selectedOrganization.principalNames : []
+          }
+          onChange={(val) => handleCertificateChange(val)}
+          disabled={disabled || !selectedOrganization}
+          required={required}
+          helperText={
+            !selectedOrganization
+              ? 'Select an organization first'
+              : selectedOrganization.principalNames.length === 0
+              ? 'No principals available for this organization'
+              : undefined
+          }
+          error={required && !certificateValue}
+        />
+      ) : (
+        <FormControl
+          fullWidth={fullWidth}
+          size={size}
+          required={required}
+          disabled={disabled || !selectedOrganization}
+          sx={{ '& .MuiFormLabel-asterisk': { color: palette.error } }}
         >
-          {!selectedOrganization ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                Select an organization first
-              </Typography>
-            </MenuItem>
-          ) : selectedOrganization.principalNames.length === 0 ? (
-            <MenuItem disabled>
-              <Typography variant="body2" color="text.secondary">
-                No principals available for this organization
-              </Typography>
-            </MenuItem>
-          ) : (
-            selectedOrganization.principalNames.map((principal) => (
-              <MenuItem key={principal} value={principal}>
-                {principal}
+          <InputLabel>{certificateLabel}</InputLabel>
+          <Select
+            value={certificateValue}
+            label={`${certificateLabel}${required ? ' *' : ''}`}
+            onChange={(e) => handleCertificateChange(e.target.value)}
+            sx={{ borderRadius: '8px' }}
+          >
+            {!selectedOrganization ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  Select an organization first
+                </Typography>
               </MenuItem>
-            ))
-          )}
-        </Select>
-      </FormControl>
+            ) : selectedOrganization.principalNames.length === 0 ? (
+              <MenuItem disabled>
+                <Typography variant="body2" color="text.secondary">
+                  No principals available for this organization
+                </Typography>
+              </MenuItem>
+            ) : (
+              selectedOrganization.principalNames.map((principal) => (
+                <MenuItem key={principal} value={principal}>
+                  {principal}
+                </MenuItem>
+              ))
+            )}
+          </Select>
+        </FormControl>
+      )}
     </>
   )
 }
