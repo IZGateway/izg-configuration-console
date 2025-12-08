@@ -426,6 +426,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               value={String(destinationType || '')}
               onChange={(val) => handleDestinationTypeChange(Number(val))}
               required
+              disabled={!isAddMode}
             />
             {/* use selected Environment to filter destinations */}
             <DestinationSelector
@@ -440,6 +441,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               required={true}
               size="medium"
               fullWidth={true}
+              disabled={!isAddMode}
             />
           </Box>
         </Box>
@@ -475,6 +477,7 @@ const EditSender: React.FC<EditSenderProps> = ({
               required={true}
               size="medium"
               fullWidth={true}
+              disabled={!isAddMode}
             />
           </Box>
         </Box>

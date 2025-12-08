@@ -163,7 +163,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           <InputLabel>{destinationTypeLabel}</InputLabel>
           <Select
             value={destinationTypeValue.toString()}
-            label={`${destinationTypeLabel}${required ? ' *' : ''}`}
+            label={destinationTypeLabel}
             onChange={(e) => handleDestinationTypeChange(e.target.value)}
             sx={{ borderRadius: '8px' }}
           >
@@ -193,7 +193,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
       {/* Destination Dropdown (standard or searchable) */}
       {searchable ? (
         <SearchableSingleSelect
-          label={`${destinationLabel}${required ? ' *' : ''}`}
+          label={destinationLabel}
           value={destinationValue}
           options={availableDestinations.map((d) => getDestinationLabel(d))}
           onChange={(val) => handleDestinationChange(val)}
@@ -219,7 +219,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           <InputLabel>{destinationLabel}</InputLabel>
           <Select
             value={destinationValue}
-            label={`${destinationLabel}${required ? ' *' : ''}`}
+            label={destinationLabel}
             onChange={(e) => handleDestinationChange(e.target.value)}
             sx={{ borderRadius: '8px' }}
           >

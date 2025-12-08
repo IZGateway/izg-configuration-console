@@ -138,7 +138,7 @@ const OrganizationCertificateSelector: React.FC<
       {/* Organization Dropdown */}
       {searchable ? (
         <SearchableSingleSelect
-          label={`${organizationLabel}${required ? ' *' : ''}`}
+          label={organizationLabel}
           value={organizationValue}
           options={organizations.map((o) => o.organizationName)}
           onChange={(val) => handleOrganizationChange(val)}
@@ -162,7 +162,7 @@ const OrganizationCertificateSelector: React.FC<
           <InputLabel>{organizationLabel}</InputLabel>
           <Select
             value={organizationValue}
-            label={`${organizationLabel}${required ? ' *' : ''}`}
+            label={organizationLabel}
             onChange={(e) => handleOrganizationChange(e.target.value)}
             sx={{ borderRadius: '8px' }}
           >
@@ -195,7 +195,7 @@ const OrganizationCertificateSelector: React.FC<
       {/* Certificate Dropdown */}
       {searchable ? (
         <SearchableSingleSelect
-          label={`${certificateLabel}${required ? ' *' : ''}`}
+          label={certificateLabel}
           value={certificateValue}
           options={
             selectedOrganization ? selectedOrganization.principalNames : []
@@ -223,7 +223,7 @@ const OrganizationCertificateSelector: React.FC<
           <InputLabel>{certificateLabel}</InputLabel>
           <Select
             value={certificateValue}
-            label={`${certificateLabel}${required ? ' *' : ''}`}
+            label={certificateLabel}
             onChange={(e) => handleCertificateChange(e.target.value)}
             sx={{ borderRadius: '8px' }}
           >

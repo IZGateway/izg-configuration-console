@@ -3,7 +3,6 @@ import { Box, Typography, TextField, Button, Tooltip } from '@mui/material'
 import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { DenyListItem } from '../../lib/type/DenyList'
-import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import StandardSelect from '../Dropdown/StandardSelect'
 import EnvironmentSelect, {
   getFirstAvailableEnvironment,
@@ -13,6 +12,11 @@ interface AddDenyListProps {
   onSave: (item: DenyListItem) => void
   onCancel: () => void
   userName: string
+}
+
+interface Organization {
+  organizationName: string
+  principalNames: string[]
 }
 
 const AddDenyList: React.FC<AddDenyListProps> = ({
@@ -97,17 +101,15 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
   }
 
   const handleOrganizationChange = (organizationName: string) => {
+    const org = organizations.find(
+      (o) => o.organizationName === organizationName
+    )
+    setSelectedOrganization(org || null)
+
     setFormData((prev) => ({
       ...prev,
       name: organizationName,
       certificationName: '',
-    }))
-  }
-
-  const handleCertificateChange = (certificateName: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      certificationName: certificateName,
     }))
   }
 
@@ -198,17 +200,6 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <OrganizationCertificateSelector
-            organizationValue={formData.name || ''}
-            certificateValue={formData.certificationName || ''}
-            onOrganizationChange={handleOrganizationChange}
-            onCertificateChange={handleCertificateChange}
-            organizationLabel="Name"
-            certificateLabel="Certificate Name"
-            required={true}
-            size="medium"
-            fullWidth={true}
-          />
           {/* Name Dropdown */}
           <StandardSelect
             label="Name"
