@@ -5,10 +5,10 @@ export interface AllowedUser {
   organization: string
   enabled: boolean
   createdBy: string
-  createdOn: Date
+  createdOn: Date | null
   updatedBy: string
-  updatedOn: Date
-  validatedOn: Date
+  updatedOn: Date | null
+  validatedOn: Date | null
 }
 
 // Serialized version for Next.js getServerSideProps (Date -> string)

@@ -1,4 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../../api/auth/[...nextauth]'
+import isOperationsRole from '../../../lib/security/accessutils'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
@@ -123,6 +126,17 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
+    const session = await getServerSession(req, res, authOptions)
+    if (!session || !isOperationsRole(session.user?.role)) {
+      logger.warn(
+        'Forbidden GET /api/allowedusers due to missing/invalid role',
+        {
+          hasSession: !!session,
+          role: session?.user?.role || 'unknown',
+        }
+      )
+      return res.status(403).json({ error: 'Forbidden' })
+    }
     logger.info('Received GET request to fetch allowed users')
     try {
       const dbClient = await DbClientFactory.getDbClient()
@@ -172,6 +186,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
   } else if (req.method === 'POST') {
+    const session = await getServerSession(req, res, authOptions)
+    if (!session || !isOperationsRole(session.user?.role)) {
+      logger.warn(
+        'Forbidden POST /api/allowedusers due to missing/invalid role',
+        {
+          hasSession: !!session,
+          role: session?.user?.role || 'unknown',
+        }
+      )
+      return res.status(403).json({ error: 'Forbidden' })
+    }
     logger.info('Received POST request to upsert allowed user')
 
     try {
@@ -209,12 +234,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const dbClient = await DbClientFactory.getDbClient()
 
       // Check if user already exists to determine change type
-      const existingUsers = await dbClient.fetchAllowedUsers()
-      const existingUser = existingUsers.find(
-        (u) =>
-          u.principal === body.principal &&
-          u.environment === body.environment &&
-          u.destinationId === body.destinationId
+      const existingUser = await dbClient.fetchAllowedUser(
+        body.environment,
+        body.destinationId,
+        body.principal
       )
 
       const changeType = existingUser ? 'Update' : 'Create'
@@ -318,6 +341,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
   } else if (req.method === 'DELETE') {
+    const session = await getServerSession(req, res, authOptions)
+    if (!session || !isOperationsRole(session.user?.role)) {
+      logger.warn(
+        'Forbidden DELETE /api/allowedusers due to missing/invalid role',
+        {
+          hasSession: !!session,
+          role: session?.user?.role || 'unknown',
+        }
+      )
+      return res.status(403).json({ error: 'Forbidden' })
+    }
     logger.info('Received DELETE request to delete allowed user')
 
     try {
@@ -347,12 +381,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const dbClient = await DbClientFactory.getDbClient()
 
       // Fetch existing user for audit trail before deletion
-      const existingUsers = await dbClient.fetchAllowedUsers()
-      const existingUser = existingUsers.find(
-        (u) =>
-          u.principal === body.principal &&
-          u.environment === body.environment &&
-          u.destinationId === body.destinationId
+      const existingUser = await dbClient.fetchAllowedUser(
+        body.environment,
+        body.destinationId,
+        body.principal
       )
 
       const result = await dbClient.deleteAllowedUser(
