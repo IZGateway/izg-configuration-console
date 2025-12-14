@@ -7,6 +7,7 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -48,4 +49,9 @@ export default interface ConfigConsoleFetchRepository {
     isAdmin: boolean,
     destinations: Array<string>
   ): Promise<AllowedUser[]>
+  fetchAllowedUserAuditHistory(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUserAudit[]>
 }

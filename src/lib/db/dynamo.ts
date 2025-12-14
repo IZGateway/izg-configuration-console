@@ -8,6 +8,7 @@ import { OrganizationRecord } from '../type/OrganizationRecord'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 
 import {
   DeleteCommand,
@@ -1633,6 +1634,22 @@ class Dynamo implements DbClient {
       serializeValues: (user) =>
         serializeDateFields(user, ['createdOn', 'updatedOn', 'validatedOn']),
     })
+  }
+
+  async fetchAllowedUserAuditHistory(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUserAudit[]> {
+    return fetchAuditHistory<AllowedUserAudit>(
+      dynamodDbDocClient,
+      TABLE_NAME,
+      {
+        entityType: 'AllowedUserAudit',
+        sortKeyPrefix: `${environment}#${destinationId}#${principal}#`,
+        identifyingFields: { principal, environment, destinationId },
+      }
+    )
   }
 
   private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {

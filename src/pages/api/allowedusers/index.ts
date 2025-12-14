@@ -64,6 +64,7 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *               - principal
  *               - environment
  *               - destinationId
+ *               - organization
  *               - enabled
  *               - createdBy
  *               - updatedBy
@@ -77,6 +78,9 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *               destinationId:
  *                 type: string
  *                 description: The destination ID
+ *               organization:
+ *                 type: string
+ *                 description: The organization name
  *               enabled:
  *                 type: boolean
  *                 description: Whether the user is enabled

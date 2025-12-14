@@ -94,6 +94,25 @@ class EncryptedRepository implements DbClient {
     isAdmin: boolean,
     destinations: Array<string>
   ) => Promise<any[]>
+  deleteAllowedUser!: (
+    principal: string,
+    environment: number,
+    destinationId: string
+  ) => Promise<boolean>
+  createAllowedUserAudit!: (
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: any,
+    newValues: any
+  ) => Promise<boolean>
+  fetchAllowedUserAuditHistory!: (
+    principal: string,
+    environment: number,
+    destinationId: string
+  ) => Promise<any[]>
 
   private repository: DbClient
 
@@ -116,6 +135,11 @@ class EncryptedRepository implements DbClient {
     this.fetchAllowedUsers = repository.fetchAllowedUsers.bind(repository)
     this.fetchAllowedUsersByDestination =
       repository.fetchAllowedUsersByDestination.bind(repository)
+    this.deleteAllowedUser = repository.deleteAllowedUser.bind(repository)
+    this.createAllowedUserAudit =
+      repository.createAllowedUserAudit.bind(repository)
+    this.fetchAllowedUserAuditHistory =
+      repository.fetchAllowedUserAuditHistory.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {

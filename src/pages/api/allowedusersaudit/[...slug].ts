@@ -73,17 +73,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       destinationId
     )
 
-    // Note: AllowedUser doesn't have password fields, so no need to mask
-    // But keeping this pattern in case we add sensitive fields in the future
-    for (const record of result) {
-      if (record.oldValues?.['password']) {
-        record.oldValues['password'] = '.........'
-      }
-      if (record.newValues?.['password']) {
-        record.newValues['password'] = '.........'
-      }
-    }
-
     res.json(result)
   } else {
     throw new Error(

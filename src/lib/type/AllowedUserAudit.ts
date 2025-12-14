@@ -6,7 +6,7 @@ export interface AllowedUserAudit {
   tableName: string
   userName: string
   changeType: string // 'Create', 'Update', 'Delete'
-  oldValues: JSON | null
-  newValues: JSON | null
+  oldValues: Record<string, any> | null
+  newValues: Record<string, any> | null
   createdAt: Date
 }

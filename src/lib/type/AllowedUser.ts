@@ -19,8 +19,8 @@ export interface SerializedAllowedUser {
   organization: string
   enabled: boolean
   createdBy: string
-  createdOn: string
+  createdOn: string | null
   updatedBy: string
-  updatedOn: string
-  validatedOn: string
+  updatedOn: string | null
+  validatedOn: string | null
 }
