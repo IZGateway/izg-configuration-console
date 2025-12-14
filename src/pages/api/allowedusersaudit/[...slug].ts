@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
@@ -39,6 +41,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
 
   if (req.method === 'GET') {
+    // Authentication check
+    const session = await getServerSession(req, res, authOptions)
+    if (!session || !session.user) {
+      return res.status(401).json({ error: 'Unauthorized - Please login' })
+    }
+
     // Extract parameters from slug array
     if (!slug || slug.length < 3) {
       return res.status(400).json({
