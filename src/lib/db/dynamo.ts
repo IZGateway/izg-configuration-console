@@ -26,7 +26,7 @@ import {
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb'
 
-import { getEnvironmentName } from '../constants/environments'
+import { getEnvironmentName } from '../desttypehelper'
 
 import {
   DynamoDBClient,

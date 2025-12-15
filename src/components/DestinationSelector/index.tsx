@@ -7,9 +7,7 @@ import {
   Typography,
 } from '@mui/material'
 import palette from '../../styles/theme/palette'
-import {
-  ENVIRONMENT_IDS,
-} from '../../lib/constants/environments'
+import { DEST_TYPE_IDS } from '../../lib/desttypehelper'
 import SearchableSingleSelect from '../Dropdown/SearchableSingleSelect'
 
 export interface DestinationType {
@@ -67,7 +65,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
 
   // Predefined destination types - using centralized constants
   const DESTINATION_TYPES: DestinationType[] = Object.entries(
-    ENVIRONMENT_IDS
+    DEST_TYPE_IDS
   ).map(([type, typeId]) => ({ typeId: typeId as number, type }))
 
   // Fetch all destinations on component mount
@@ -84,24 +82,26 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
         }
 
         const destData = await response.json()
-        const processedDests: DestinationItem[] = destData.map((dest: {
-          destId: string;
-          destTypeId?: number;
-          destinationType?: { typeId: number };
-          destUri: string;
-          jurisdictionId?: string;
-          jurisdiction?: { jurisdictionId: string };
-          facilityId: string;
-          username: string;
-        }) => ({
-          destId: dest.destId,
-          destTypeId: dest.destTypeId || dest.destinationType?.typeId,
-          destUri: dest.destUri,
-          jurisdictionId:
-            dest.jurisdictionId || dest.jurisdiction?.jurisdictionId,
-          facilityId: dest.facilityId,
-          username: dest.username,
-        }))
+        const processedDests: DestinationItem[] = destData.map(
+          (dest: {
+            destId: string
+            destTypeId?: number
+            destinationType?: { typeId: number }
+            destUri: string
+            jurisdictionId?: string
+            jurisdiction?: { jurisdictionId: string }
+            facilityId: string
+            username: string
+          }) => ({
+            destId: dest.destId,
+            destTypeId: dest.destTypeId || dest.destinationType?.typeId,
+            destUri: dest.destUri,
+            jurisdictionId:
+              dest.jurisdictionId || dest.jurisdiction?.jurisdictionId,
+            facilityId: dest.facilityId,
+            username: dest.username,
+          })
+        )
 
         setDestinations(processedDests)
         setDestinationTypes(DESTINATION_TYPES)
@@ -116,7 +116,8 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     }
 
     fetchDestinations()
-  }, [DESTINATION_TYPES])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Filter destinations when destination type changes
   useEffect(() => {

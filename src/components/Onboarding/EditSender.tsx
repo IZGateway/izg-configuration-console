@@ -28,9 +28,9 @@ import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import DestinationSelector from '../DestinationSelector'
 import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
 import {
-  getEnvironmentId,
+  getDestinationTypeId,
   getEnvironmentName,
-} from '../../lib/constants/environments'
+} from '../../lib/desttypehelper'
 import CustomSnackbar from '../SnackBar'
 
 interface EditSenderProps {
@@ -67,7 +67,7 @@ const EditSender: React.FC<EditSenderProps> = ({
         // Handle ONBOARDING as alias for ONBOARD
         const normalizedName =
           environmentName === 'ONBOARDING' ? 'ONBOARD' : environmentName
-        return getEnvironmentId(normalizedName) || ''
+        return getDestinationTypeId(normalizedName) || ''
       }
     }
     return ''
@@ -269,7 +269,7 @@ const EditSender: React.FC<EditSenderProps> = ({
         : 'ONBOARD'
 
       // Map environment name to ID
-      const environment = getEnvironmentId(environmentName) || 3
+      const environment = getDestinationTypeId(environmentName) || 3
 
       // Generate ID in format: environment-destinationId-principal
       generatedId = `${environment}-${destinationId}-${formData.sender}`

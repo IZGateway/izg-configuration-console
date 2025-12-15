@@ -28,9 +28,7 @@ import { useSession } from 'next-auth/react'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { mockSenderData, type SenderData } from './mockData'
-import type {
-  SerializedAllowedUser,
-} from '../../lib/type/AllowedUser'
+import type { SerializedAllowedUser } from '../../lib/type/AllowedUser'
 import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
@@ -38,9 +36,9 @@ import CustomSnackbar from '../SnackBar'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import {
   getEnvironmentName,
-  getEnvironmentId,
-  getConnectionType,
-} from '../../lib/constants/environments'
+  getDestinationTypeId,
+  getDestinationType,
+} from '../../lib/desttypehelper'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -230,7 +228,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         day: '2-digit',
         year: 'numeric',
       }),
-      connectionType: getConnectionType(user.environment),
+      connectionType: getDestinationType(user.environment),
       isConnected: user.enabled,
       msh3: '', // Not available in AllowedUser data
       msh4: '', // Not available in AllowedUser data
@@ -273,7 +271,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       const [envName] = senderId.split('-')
 
       // Map environment name to environment ID
-      const environment = getEnvironmentId(envName) || 5
+      const environment = getDestinationTypeId(envName) || 5
 
       // Update database via API
       const allowedUser = {
