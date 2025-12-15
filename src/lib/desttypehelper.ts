@@ -49,7 +49,7 @@ export const DEST_TYPE_NAMES = DEST_TYPES.reduce((acc, name, index) => {
  * @returns The environment name or 'Unknown' if not found
  */
 export function getEnvironmentName(envId: number): string {
-  return DEST_TYPES[envId] || 'Unknown'
+  return DEST_TYPES[envId] || 'UNKNOWN'
 }
 
 /**
@@ -65,21 +65,11 @@ export function getDestinationTypeId(envName: string): number | undefined {
 /**
  * Determine destination type based on environment ID
  * @param envId - The environment ID
- * @returns 'production' if envId is 1, otherwise 'onboarding'
+ * @returns The environment name or 'Unknown' if not found
  */
-export function getDestinationType(envId: number): 'production' | 'onboarding' {
-  return envId === 1 ? 'production' : 'onboarding'
+export function getDestinationType(envId: number): string {
+  return DEST_TYPES[envId] || 'UNKNOWN'
 }
-
-export type EnvironmentId = 1 | 2 | 3 | 4 | 5 | 6
-export type EnvironmentName =
-  | 'PRODUCTION'
-  | 'TEST'
-  | 'ONBOARD'
-  | 'STAGE'
-  | 'DEV'
-  | 'UNKNOWN'
-export type ConnectionType = 'production' | 'onboarding'
 
 /**
  * Format destination type from display format to database format

@@ -276,8 +276,7 @@ const EditSender: React.FC<EditSenderProps> = ({
     }
 
     // Build destination display string consistently (DestinationCode + environment)
-    const envLabel =
-      formData.connectionType === 'production' ? 'Production' : 'Onboarding'
+    const envLabel = getSelectedDestinationTypeLabel()
     const destinationDisplay = formData.destination
       ? formData.destination
       : formData.destinationCode
