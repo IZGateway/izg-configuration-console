@@ -26,6 +26,8 @@ import {
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb'
 
+import { getEnvironmentName } from '../constants/environments'
+
 import {
   DynamoDBClient,
   DynamoDBClientConfig,
@@ -87,16 +89,6 @@ export const dynamodDbDocClient = DynamoDBDocumentClient.from(
 )
 
 const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
-
-const DEST_TYPES = [
-  null,
-  'PRODUCTION',
-  'TEST',
-  'ONBOARD',
-  'STAGE',
-  'DEV',
-  'UNKNOWN',
-]
 
 async function getConnectionInfo() {
   let connected = false
@@ -410,7 +402,7 @@ class Dynamo implements DbClient {
   async fetchDestinationType(destType: string): Promise<DestinationType> {
     const destTypeId = parseInt(destType, 10)
     return {
-      type: DEST_TYPES[destTypeId] || 'UNKNOWN',
+      type: getEnvironmentName(destTypeId),
       typeId: destTypeId,
     }
   }
@@ -1641,15 +1633,11 @@ class Dynamo implements DbClient {
     environment: number,
     destinationId: string
   ): Promise<AllowedUserAudit[]> {
-    return fetchAuditHistory<AllowedUserAudit>(
-      dynamodDbDocClient,
-      TABLE_NAME,
-      {
-        entityType: 'AllowedUserAudit',
-        sortKeyPrefix: `${environment}#${destinationId}#${principal}#`,
-        identifyingFields: { principal, environment, destinationId },
-      }
-    )
+    return fetchAuditHistory<AllowedUserAudit>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AllowedUserAudit',
+      sortKeyPrefix: `${environment}#${destinationId}#${principal}#`,
+      identifyingFields: { principal, environment, destinationId },
+    })
   }
 
   private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {

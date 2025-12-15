@@ -1,5 +1,3 @@
-// TODO: Paul Cahill: Remove this file in favor of the pattern Anusha created for handling environments
-
 /**
  * Centralized environment constants for IZ Gateway
  *
