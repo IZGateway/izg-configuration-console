@@ -5,9 +5,14 @@ import { type SenderData } from './mockData'
 interface AddSenderProps {
   onSave: (newSender: SenderData) => void
   onCancel: () => void
+  validateDuplicate?: (candidate: SenderData) => boolean
 }
 
-const AddSender: React.FC<AddSenderProps> = ({ onSave, onCancel }) => {
+const AddSender: React.FC<AddSenderProps> = ({
+  onSave,
+  onCancel,
+  validateDuplicate,
+}) => {
   // Create a new empty sender object with default values
   const newSenderData: SenderData = {
     id: '',
@@ -31,6 +36,7 @@ const AddSender: React.FC<AddSenderProps> = ({ onSave, onCancel }) => {
       onSave={onSave}
       onCancel={onCancel}
       isAddMode={true}
+      validateDuplicate={validateDuplicate}
     />
   )
 }

@@ -7,6 +7,8 @@ import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
+import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 
 import {
   DeleteCommand,
@@ -18,9 +20,13 @@ import {
   QueryCommandInput,
   PutCommand,
   PutCommandInput,
+  ScanCommand,
+  ScanCommandInput,
   UpdateCommand,
   UpdateCommandInput,
 } from '@aws-sdk/lib-dynamodb'
+
+import { getEnvironmentName } from '../constants/environments'
 
 import {
   DynamoDBClient,
@@ -32,6 +38,12 @@ import DbClient from './DbClient'
 import { setImmediate } from 'timers'
 import { DenyListItem } from '../type/DenyList'
 import { AdsFileTypeItem } from '../type/AdsFileType'
+import {
+  createAuditRecord,
+  fetchAuditHistory,
+  serializeDateFields,
+} from './auditHelper'
+
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
@@ -77,16 +89,6 @@ export const dynamodDbDocClient = DynamoDBDocumentClient.from(
 )
 
 const TABLE_NAME: string = process.env.DYNAMODB_TABLE || 'izgw-hub'
-
-const DEST_TYPES = [
-  null,
-  'PRODUCTION',
-  'TEST',
-  'ONBOARD',
-  'STAGE',
-  'DEV',
-  'UNKNOWN',
-]
 
 async function getConnectionInfo() {
   let connected = false
@@ -400,7 +402,7 @@ class Dynamo implements DbClient {
   async fetchDestinationType(destType: string): Promise<DestinationType> {
     const destTypeId = parseInt(destType, 10)
     return {
-      type: DEST_TYPES[destTypeId] || 'UNKNOWN',
+      type: getEnvironmentName(destTypeId),
       typeId: destTypeId,
     }
   }
@@ -1368,6 +1370,288 @@ class Dynamo implements DbClient {
       })
 
       throw error
+    }
+  }
+
+  async fetchAllowedUser(
+    environment: number,
+    destinationId: string,
+    principal: string
+  ): Promise<AllowedUser | null> {
+    logger.debug(
+      `Fetching allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+    )
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AllowedUser',
+        sortKey: `${environment}#${destinationId}#${principal}`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      if (!result.Item) {
+        logger.debug(
+          `No allowed user found for environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+        )
+        return null
+      }
+      logger.debug(
+        `Successfully fetched allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+      )
+      return this.convertResponseToAllowedUser(result.Item)
+    } catch (error) {
+      logger.error('Error fetching allowed user from DynamoDB', {
+        environment,
+        destinationId,
+        principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchAllowedUser',
+      })
+      throw error
+    }
+  }
+
+  async fetchAllowedUsers(): Promise<AllowedUser[]> {
+    logger.debug('Fetching all allowed users')
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'AllowedUser',
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      logger.debug(`Fetched ${result.Items?.length || 0} allowed users`)
+      return result.Items.map((item) => this.convertResponseToAllowedUser(item))
+    } catch (error) {
+      logger.error('Error fetching all allowed users from DynamoDB', {
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchAllowedUsers',
+      })
+      throw error
+    }
+  }
+
+  async fetchAllowedUsersByDestination(
+    isAdmin: boolean,
+    destinations: Array<string>
+  ): Promise<AllowedUser[]> {
+    // NOTE: Query cannot filter on sortKey fragments using FilterExpression referencing primary key.
+    // For non-admin with destination restrictions we fall back to Scan + FilterExpression on destinationId attribute.
+    // Optimization: add a GSI on destinationId to allow efficient queries later.
+    if (isAdmin || destinations.length === 0) {
+      const params: QueryCommandInput = {
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'entityType = :entityType',
+        ExpressionAttributeValues: {
+          ':entityType': 'AllowedUser',
+        },
+      }
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return result.Items.map((item) => this.convertResponseToAllowedUser(item))
+    } else {
+      // Restricted destinations: perform Scan with FilterExpression destinationId IN (...)
+      // DynamoDB does not support IN for attribute names in legacy doc client with Scan; emulate via OR chain.
+      let filterExpr = ''
+      const exprAttrValues: Record<string, any> = {
+        ':entityType': 'AllowedUser',
+      }
+      for (let i = 0; i < destinations.length; i++) {
+        const placeholder = `:d${i}`
+        filterExpr +=
+          (i === 0 ? '(' : ' OR ') + `destinationId = ${placeholder}`
+        exprAttrValues[placeholder] = destinations[i]
+      }
+      filterExpr += ')'
+      const scanParams: ScanCommandInput = {
+        TableName: TABLE_NAME,
+        FilterExpression: `entityType = :entityType AND ${filterExpr}`,
+        ExpressionAttributeValues: exprAttrValues,
+      }
+      try {
+        const result = (await dynamodDbDocClient.send(
+          new ScanCommand(scanParams)
+        )) as { Items?: Array<Record<string, any>> }
+        logger.debug(
+          `Scanned ${
+            result.Items?.length || 0
+          } allowed users (restricted) for destinations=${destinations.join(
+            ', '
+          )}`
+        )
+        return result.Items.map((item) =>
+          this.convertResponseToAllowedUser(item)
+        )
+      } catch (error) {
+        logger.error(
+          'Error scanning allowed users by destination from DynamoDB',
+          {
+            isAdmin,
+            destinations,
+            tableName: TABLE_NAME,
+            entityType: 'AllowedUser',
+            errorMessage: error.message,
+            errorType: error.name,
+            stack: error.stack,
+            operation: 'fetchAllowedUsersByDestination',
+          }
+        )
+        throw error
+      }
+    }
+  }
+
+  async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
+    logger.debug(
+      `Upserting allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
+    )
+
+    const now = new Date().toISOString()
+    const params: PutCommandInput = {
+      TableName: TABLE_NAME,
+      Item: {
+        entityType: 'AllowedUser',
+        sortKey: `${allowedUser.environment}#${allowedUser.destinationId}#${allowedUser.principal}`,
+        principal: allowedUser.principal,
+        environment: allowedUser.environment,
+        destinationId: allowedUser.destinationId,
+        organization: allowedUser.organization,
+        enabled: allowedUser.enabled ?? true,
+        createdBy: allowedUser.createdBy,
+        createdOn: allowedUser.createdOn
+          ? allowedUser.createdOn.toISOString()
+          : now,
+        updatedBy: allowedUser.updatedBy,
+        updatedOn: now,
+        // Honor provided validatedOn (can be null) instead of always now
+        validatedOn: allowedUser.validatedOn
+          ? allowedUser.validatedOn.toISOString()
+          : null,
+      },
+    }
+
+    try {
+      await dynamodDbDocClient.send(new PutCommand(params))
+      logger.info(
+        `Successfully upserted allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
+      )
+      return {
+        ...allowedUser,
+        updatedOn: new Date(now),
+        createdOn: allowedUser.createdOn || new Date(now),
+      }
+    } catch (error) {
+      logger.error('Error upserting allowed user to DynamoDB', {
+        environment: allowedUser.environment,
+        destinationId: allowedUser.destinationId,
+        principal: allowedUser.principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'upsertAllowedUser',
+      })
+      throw error
+    }
+  }
+
+  async deleteAllowedUser(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<boolean> {
+    logger.debug(
+      `Deleting allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+    )
+
+    const params: DeleteCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AllowedUser',
+        sortKey: `${environment}#${destinationId}#${principal}`,
+      },
+    }
+
+    try {
+      await dynamodDbDocClient.send(new DeleteCommand(params))
+      logger.info(
+        `Successfully deleted allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
+      )
+      return true
+    } catch (error) {
+      logger.error('Error deleting allowed user from DynamoDB', {
+        environment,
+        destinationId,
+        principal,
+        tableName: TABLE_NAME,
+        entityType: 'AllowedUser',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'deleteAllowedUser',
+      })
+      throw error
+    }
+  }
+
+  async createAllowedUserAudit(
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
+  ): Promise<boolean> {
+    return createAuditRecord<AllowedUser>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AllowedUserAudit',
+      tableName: 'allowed_users',
+      sortKeyParts: [environment, destinationId, principal],
+      userName,
+      changeType,
+      oldValues,
+      newValues,
+      additionalData: { principal, environment, destinationId },
+      serializeValues: (user) =>
+        serializeDateFields(user, ['createdOn', 'updatedOn', 'validatedOn']),
+    })
+  }
+
+  async fetchAllowedUserAuditHistory(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<AllowedUserAudit[]> {
+    return fetchAuditHistory<AllowedUserAudit>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AllowedUserAudit',
+      sortKeyPrefix: `${environment}#${destinationId}#${principal}#`,
+      identifyingFields: { principal, environment, destinationId },
+    })
+  }
+
+  private convertResponseToAllowedUser(item: Record<string, any>): AllowedUser {
+    return {
+      principal: item.principal,
+      environment: item.environment,
+      destinationId: item.destinationId,
+      organization: item.organization || '',
+      enabled: item.enabled ?? true,
+      createdBy: item.createdBy,
+      createdOn: item.createdOn ? new Date(item.createdOn) : null,
+      updatedBy: item.updatedBy,
+      updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+      validatedOn: item.validatedOn ? new Date(item.validatedOn) : null,
     }
   }
 }
