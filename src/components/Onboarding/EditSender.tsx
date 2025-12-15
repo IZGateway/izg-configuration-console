@@ -23,7 +23,7 @@ import {
 } from '@mui/material'
 import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { type SenderData } from './mockData'
+import { type SenderData } from './SenderData'
 import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
 import DestinationSelector from '../DestinationSelector'
 import EnvironmentSelect from '../Dropdown/EnvironmentSelect'

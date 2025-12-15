@@ -27,7 +27,7 @@ import {
 import { useSession } from 'next-auth/react'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
-import { mockSenderData, type SenderData } from './mockData'
+import { type SenderData } from './SenderData'
 import type { SerializedAllowedUser } from '../../lib/type/AllowedUser'
 import EditSender from './EditSender'
 import AddSender from './AddSender'
@@ -199,13 +199,11 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
   // Sender data state management
   const [senderData, setSenderData] = useState<SenderData[]>(() => {
-    // Use allowedUsers if provided, otherwise use data prop, finally fall back to mockData
+    // Use allowedUsers if provided, otherwise use data prop
     if (allowedUsers.length > 0) {
       return mapAllowedUsersToSenderData(allowedUsers)
-    } else if (data.length > 0) {
-      return data
     } else {
-      return mockSenderData
+      return data
     }
   })
 

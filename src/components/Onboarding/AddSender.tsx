@@ -1,6 +1,6 @@
 import React from 'react'
 import EditSender from './EditSender'
-import { type SenderData } from './mockData'
+import { type SenderData } from './SenderData'
 
 interface AddSenderProps {
   onSave: (newSender: SenderData) => void
