@@ -5,7 +5,6 @@ import {
   Select,
   MenuItem,
   Typography,
-  Box,
 } from '@mui/material'
 import palette from '../../styles/theme/palette'
 import SearchableSingleSelect from '../Dropdown/SearchableSingleSelect'
@@ -71,7 +70,10 @@ const OrganizationCertificateSelector: React.FC<
         }
 
         const orgData = await response.json()
-        const processedOrgs: Organization[] = orgData.map((org: any) => {
+        const processedOrgs: Organization[] = orgData.map((org: {
+          organizationName?: string;
+          principalNames: string[];
+        }) => {
           let principalNames: string[] = []
 
           principalNames = Array.from(org.principalNames)

@@ -9,6 +9,7 @@ export interface AllowedUser {
   updatedBy: string
   updatedOn: Date | null
   validatedOn: Date | null
+  [key: string]: string | number | boolean | Date | null
 }
 
 // Serialized version for Next.js getServerSideProps (Date -> string)

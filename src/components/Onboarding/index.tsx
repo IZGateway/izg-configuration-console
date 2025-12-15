@@ -29,7 +29,6 @@ import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { mockSenderData, type SenderData } from './mockData'
 import type {
-  AllowedUser,
   SerializedAllowedUser,
 } from '../../lib/type/AllowedUser'
 import EditSender from './EditSender'
@@ -271,8 +270,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     try {
       // Parse sender ID to get environment and destinationId
       // ID format: ${environment}-${destinationId}-${principal}
-      const [envName, destinationCode, ...principalParts] = senderId.split('-')
-      const principal = principalParts.join('-') // In case principal contains dashes
+      const [envName] = senderId.split('-')
 
       // Map environment name to environment ID
       const environment = getEnvironmentId(envName) || 5

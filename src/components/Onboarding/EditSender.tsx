@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import {
   Box,
   Typography,
-  TextField,
   Button,
   RadioGroup,
   FormControlLabel,
@@ -125,16 +124,6 @@ const EditSender: React.FC<EditSenderProps> = ({
       ? 'Production'
       : 'Onboarding'
   }
-
-  // Helper function to create labels with red asterisks
-  const createLabelWithRedAsterisk = (text: string) => (
-    <>
-      {text.replace(' *', '')}{' '}
-      <Box component="span" sx={{ color: palette.error }}>
-        *
-      </Box>
-    </>
-  )
 
   const handleInputChange = (
     field: keyof SenderData,

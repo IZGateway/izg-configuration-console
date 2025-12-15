@@ -5,12 +5,10 @@ import {
   Select,
   MenuItem,
   Typography,
-  Box,
 } from '@mui/material'
 import palette from '../../styles/theme/palette'
 import {
   ENVIRONMENT_IDS,
-  ENVIRONMENT_NAMES,
 } from '../../lib/constants/environments'
 import SearchableSingleSelect from '../Dropdown/SearchableSingleSelect'
 
@@ -86,7 +84,16 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
         }
 
         const destData = await response.json()
-        const processedDests: DestinationItem[] = destData.map((dest: any) => ({
+        const processedDests: DestinationItem[] = destData.map((dest: {
+          destId: string;
+          destTypeId?: number;
+          destinationType?: { typeId: number };
+          destUri: string;
+          jurisdictionId?: string;
+          jurisdiction?: { jurisdictionId: string };
+          facilityId: string;
+          username: string;
+        }) => ({
           destId: dest.destId,
           destTypeId: dest.destTypeId || dest.destinationType?.typeId,
           destUri: dest.destUri,
@@ -109,7 +116,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     }
 
     fetchDestinations()
-  }, [])
+  }, [DESTINATION_TYPES])
 
   // Filter destinations when destination type changes
   useEffect(() => {

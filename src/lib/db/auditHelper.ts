@@ -1,8 +1,11 @@
 import {
   PutCommand,
   PutCommandInput,
+  PutCommandOutput,
   QueryCommand,
   QueryCommandInput,
+  QueryCommandOutput,
+  DynamoDBDocumentClient,
 } from '@aws-sdk/lib-dynamodb'
 import logger from '../../../logger'
 
@@ -17,8 +20,8 @@ export interface CreateAuditConfig<T> {
   changeType: string
   oldValues: T | null
   newValues: T | null
-  additionalData?: Record<string, any>
-  serializeValues?: (value: T | null) => any
+  additionalData?: Record<string, unknown>
+  serializeValues?: (value: T | null) => unknown
 }
 
 /**
@@ -27,8 +30,8 @@ export interface CreateAuditConfig<T> {
 export interface FetchAuditConfig {
   entityType: string
   sortKeyPrefix: string
-  identifyingFields: Record<string, any>
-  transformResult?: (item: any) => any
+  identifyingFields: Record<string, unknown>
+  transformResult?: (item: Record<string, unknown>) => unknown
 }
 
 /**
@@ -57,7 +60,7 @@ export interface FetchAuditConfig {
  * ```
  */
 export async function createAuditRecord<T>(
-  dynamoClient: any,
+  dynamoClient: DynamoDBDocumentClient,
   tableName: string,
   config: CreateAuditConfig<T>
 ): Promise<boolean> {
@@ -120,7 +123,7 @@ export async function createAuditRecord<T>(
   })
 
   try {
-    const result = await dynamoClient.send(new PutCommand(params))
+    const result: PutCommandOutput = await dynamoClient.send(new PutCommand(params))
     logger.info(`Successfully created ${entityType} in DynamoDB`, {
       entityType,
       changeType,
@@ -167,7 +170,7 @@ export async function createAuditRecord<T>(
  * ```
  */
 export async function fetchAuditHistory<T>(
-  dynamoClient: any,
+  dynamoClient: DynamoDBDocumentClient,
   tableName: string,
   config: FetchAuditConfig
 ): Promise<T[]> {
@@ -185,11 +188,11 @@ export async function fetchAuditHistory<T>(
   }
 
   try {
-    const result = await dynamoClient.send(new QueryCommand(params))
-    return result.Items.map((item) => {
+    const result: QueryCommandOutput = await dynamoClient.send(new QueryCommand(params))
+    return (result.Items || []).map((item) => {
       const baseItem = {
         ...item,
-        createdAt: new Date(item.createdAt),
+        createdAt: new Date(item.createdAt as string | number | Date),
         id: item.sortKey,
       }
       return transformResult ? transformResult(baseItem) : baseItem
@@ -220,13 +223,13 @@ export async function fetchAuditHistory<T>(
  * const serialized = serializeDateFields(user, ['createdOn', 'updatedOn', 'validatedOn'])
  * ```
  */
-export function serializeDateFields<T extends Record<string, any>>(
+export function serializeDateFields<T extends Record<string, unknown>>(
   obj: T | null,
   dateFields: string[]
-): any {
+): Record<string, unknown> | null {
   if (!obj) return null
 
-  const result: any = { ...obj }
+  const result: Record<string, unknown> = { ...obj }
   for (const field of dateFields) {
     if (result[field] instanceof Date) {
       result[field] = result[field].toISOString()

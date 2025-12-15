@@ -8,6 +8,8 @@ import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
+import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import {
   encrypt,
   decrypt,
@@ -88,12 +90,12 @@ class EncryptedRepository implements DbClient {
     environment: number,
     destinationId: string,
     principal: string
-  ) => Promise<any>
-  fetchAllowedUsers!: () => Promise<any[]>
+  ) => Promise<AllowedUser>
+  fetchAllowedUsers!: () => Promise<AllowedUser[]>
   fetchAllowedUsersByDestination!: (
     isAdmin: boolean,
     destinations: Array<string>
-  ) => Promise<any[]>
+  ) => Promise<AllowedUser[]>
   deleteAllowedUser!: (
     principal: string,
     environment: number,
@@ -105,14 +107,14 @@ class EncryptedRepository implements DbClient {
     environment: number,
     destinationId: string,
     userName: string,
-    oldValues: any,
-    newValues: any
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
   ) => Promise<boolean>
   fetchAllowedUserAuditHistory!: (
     principal: string,
     environment: number,
     destinationId: string
-  ) => Promise<any[]>
+  ) => Promise<AllowedUserAudit[]>
 
   private repository: DbClient
 
@@ -341,7 +343,7 @@ class EncryptedRepository implements DbClient {
     return await this.repository.checkAdsFileTypeRecordExists(sortKey)
   }
 
-  async upsertAllowedUser(allowedUser: any): Promise<any> {
+  async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
     return await this.repository.upsertAllowedUser(allowedUser)
   }
 }
