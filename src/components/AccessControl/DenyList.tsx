@@ -12,6 +12,7 @@ import useSWR, { mutate } from 'swr'
 import { DenyListItem } from '../../lib/type/DenyList'
 import CombinedContext from '../../contexts/app'
 import Loader from '../Loader'
+import { DEST_TYPES } from '../../lib/desttypehelper'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -273,15 +274,6 @@ const DenyList: React.FC<DenyListComponentProps> = ({
 
     try {
       setIsDeleting(true)
-      const DEST_TYPES = [
-        null,
-        'PRODUCTION',
-        'TEST',
-        'ONBOARD',
-        'STAGE',
-        'DEV',
-        'UNKNOWN',
-      ]
       let envNum = rowToDelete.environment
       if (typeof envNum === 'string') {
         envNum = DEST_TYPES.indexOf(envNum)

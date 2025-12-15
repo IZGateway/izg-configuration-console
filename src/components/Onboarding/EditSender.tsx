@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import {
   Box,
   Typography,
-  TextField,
   Button,
   RadioGroup,
   FormControlLabel,
@@ -20,21 +19,26 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Tooltip,
 } from '@mui/material'
 import { Info as InfoIcon, Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { type SenderData } from './mockData'
+import { type SenderData } from './SenderData'
+import OrganizationCertificateSelector from '../OrganizationCertificateSelector'
+import DestinationSelector from '../DestinationSelector'
+import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
+import {
+  getDestinationTypeId,
+  getEnvironmentName,
+} from '../../lib/desttypehelper'
+import CustomSnackbar from '../SnackBar'
 
 interface EditSenderProps {
   senderData: SenderData
   onSave: (data: SenderData) => void
   onCancel: () => void
   isAddMode?: boolean
+  validateDuplicate?: (candidate: SenderData) => boolean
 }
 
 const EditSender: React.FC<EditSenderProps> = ({
@@ -42,48 +46,84 @@ const EditSender: React.FC<EditSenderProps> = ({
   onSave,
   onCancel,
   isAddMode = false,
+  validateDuplicate,
 }) => {
-  const [formData, setFormData] = useState<SenderData>(senderData)
-  const [statusInfoOpen, setStatusInfoOpen] = useState(false)
+  // Normalize incoming senderData.status to canonical codes ('validate' | 'ready')
+  const normalizeStatus = (status: string): 'validate' | 'ready' => {
+    const s = (status || '').toLowerCase()
+    if (s.includes('validate')) return 'validate'
+    if (s.includes('ready') || s.includes('live')) return 'ready'
+    // Fallback: default to 'validate'
+    return 'validate'
+  }
 
-  // Helper function to create labels with red asterisks
-  const createLabelWithRedAsterisk = (text: string) => (
-    <>
-      {text.replace(' *', '')}{' '}
-      <Box component="span" sx={{ color: palette.error }}>
-        *
-      </Box>
-    </>
+  // Initialize destinationType from the destination field if available
+  const getInitialDestinationType = (): number | string => {
+    if (senderData.destination) {
+      // Parse environment from destination field format: "destId (environment)"
+      const match = senderData.destination.match(/\(([^)]+)\)/)
+      if (match) {
+        const environmentName = match[1].trim().toUpperCase()
+        // Handle ONBOARDING as alias for ONBOARD
+        const normalizedName =
+          environmentName === 'ONBOARDING' ? 'ONBOARD' : environmentName
+        return getDestinationTypeId(normalizedName) || ''
+      }
+    }
+    return ''
+  }
+
+  // Parse destination code from destination field if destinationCode is not available
+  const getInitialDestinationCode = (): string => {
+    // First try to use the destinationCode if it exists
+    if (senderData.destinationCode) {
+      return senderData.destinationCode
+    }
+    // Fallback: parse from destination field format: "destId (environment)"
+    if (senderData.destination) {
+      const match = senderData.destination.match(/^(.+?)\s*\(/)
+      if (match) {
+        return match[1].trim()
+      }
+    }
+    return ''
+  }
+
+  const [formData, setFormData] = useState<SenderData>(() => {
+    const initialData = {
+      ...senderData,
+      status: normalizeStatus(senderData.status),
+      destinationCode: getInitialDestinationCode(),
+    }
+    console.log('[EditSender] Initial formData:', {
+      sender: initialData.sender,
+      senderDetails: initialData.senderDetails,
+      destinationCode: initialData.destinationCode,
+      isAddMode,
+    })
+    return initialData
+  })
+  const [statusInfoOpen, setStatusInfoOpen] = useState(false)
+  // Local duplicate snackbar state so Add page can display message immediately
+  const [dupSnackbarOpen, setDupSnackbarOpen] = useState(false)
+  const [dupSnackbarMessage, setDupSnackbarMessage] = useState('')
+
+  const [destinationType, setDestinationType] = useState<number | string>(
+    getInitialDestinationType()
   )
 
-  // Available sender options for dropdown in add mode
-  const availableSenders = [
-    { name: 'CDC Atlanta IIS', certificate: 'cdc-atlanta.immunizations.gov' },
-    {
-      name: 'State Health Department IIS',
-      certificate: 'state-health-dept.gov',
-    },
-    { name: 'Regional Medical Center', certificate: 'regional-med-center.com' },
-    { name: 'County Public Health', certificate: 'county-public-health.org' },
-    {
-      name: 'University Hospital System',
-      certificate: 'university-hospital.edu',
-    },
-    {
-      name: 'Private Practice Network',
-      certificate: 'private-practice-net.com',
-    },
-    { name: 'Pharmacy Chain IIS', certificate: 'pharmacy-chain.com' },
-    {
-      name: 'Laboratory Information System',
-      certificate: 'lab-info-system.net',
-    },
-    { name: 'Electronic Health Record System', certificate: 'ehr-system.com' },
-    {
-      name: 'Other Healthcare Provider',
-      certificate: 'healthcare-provider.org',
-    },
-  ]
+  const getSelectedDestinationTypeLabel = (): string => {
+    const num =
+      typeof destinationType === 'number'
+        ? destinationType
+        : Number(destinationType)
+    if (!Number.isNaN(num) && num > 0) {
+      return getEnvironmentName(num)
+    }
+    return formData.connectionType === 'production'
+      ? 'Production'
+      : 'Onboarding'
+  }
 
   const handleInputChange = (
     field: keyof SenderData,
@@ -95,30 +135,49 @@ const EditSender: React.FC<EditSenderProps> = ({
     }))
   }
 
-  const handleSenderChange = (senderName: string) => {
-    const selectedSender = availableSenders.find(
-      (sender) => sender.name === senderName
-    )
+  const handleOrganizationChange = (organizationName: string) => {
     setFormData((prev) => ({
       ...prev,
-      sender: senderName,
-      senderDetails: selectedSender?.certificate || '',
+      sender: organizationName,
+      senderDetails: '',
+    }))
+  }
+
+  const handleCertificateChange = (certificateName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      senderDetails: certificateName,
+    }))
+  }
+
+  const handleDestinationTypeChange = (destTypeId: number | string) => {
+    setDestinationType(destTypeId)
+    setFormData((prev) => ({
+      ...prev,
+      destinationCode: '',
+    }))
+  }
+
+  const handleDestinationChange = (destId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      destinationCode: destId,
     }))
   }
 
   // Form validation for required fields
   const isFormValid = () => {
     const requiredFields = [
-      'id',
       'sender',
       'senderDetails',
-      'destination',
       'destinationCode',
-      'msh3',
-      'msh4',
-      'facilityId',
       'status',
     ]
+
+    // In edit mode, also require the ID
+    if (!isAddMode) {
+      requiredFields.unshift('id')
+    }
 
     return requiredFields.every((field) => {
       const value = formData[field as keyof SenderData]
@@ -129,15 +188,21 @@ const EditSender: React.FC<EditSenderProps> = ({
   const getStatusOptions = () => {
     if (formData.connectionType === 'production') {
       return [
-        { value: 'Production Validate', label: 'Production Validate' },
-        { value: 'Production Live', label: 'Production Live' },
+        { value: 'validate', label: 'Production Validate' },
+        { value: 'ready', label: 'Production Live' },
       ]
     } else {
       return [
-        { value: 'Test Validate', label: 'Test Validate' },
-        { value: 'Testing Ready', label: 'Testing Ready' },
+        { value: 'validate', label: 'Test Validate' },
+        { value: 'ready', label: 'Testing Ready' },
       ]
     }
+  }
+
+  const getDisplayStatus = () => {
+    const opts = getStatusOptions()
+    const match = opts.find((o) => o.value === formData.status)
+    return match ? match.label : formData.status
   }
 
   const getStatusInfoData = () => {
@@ -171,6 +236,19 @@ const EditSender: React.FC<EditSenderProps> = ({
   }
 
   const handleSave = () => {
+    // In add mode, check for duplicates first and block save
+    if (isAddMode && validateDuplicate) {
+      const willBlock = validateDuplicate({ ...formData })
+      if (willBlock) {
+        const destTypeLabel = getSelectedDestinationTypeLabel()
+        setDupSnackbarMessage(
+          `Duplicate sender not allowed. Sender: ${formData.sender} • Destination Code: ${formData.destinationCode} • Destination Type: ${destTypeLabel}`
+        )
+        setDupSnackbarOpen(true)
+        return
+      }
+    }
+
     // Auto-generate the lastUpdated field with current date
     const currentDate = new Date().toLocaleDateString('en-US', {
       month: '2-digit',
@@ -178,9 +256,39 @@ const EditSender: React.FC<EditSenderProps> = ({
       year: 'numeric',
     })
 
+    // Auto-generate ID if it's empty (in add mode)
+    let generatedId = formData.id
+    if (isAddMode && !formData.id) {
+      // Parse environment and destinationId from destination field
+      const destinationMatch = formData.destination.match(/^(.+?)\s*\((.+?)\)$/)
+      const destinationId = destinationMatch
+        ? destinationMatch[1].trim()
+        : 'unknown'
+      const environmentName = destinationMatch
+        ? destinationMatch[2].trim()
+        : 'ONBOARD'
+
+      // Map environment name to ID
+      const environment = getDestinationTypeId(environmentName) || 3
+
+      // Generate ID in format: environment-destinationId-principal
+      generatedId = `${environment}-${destinationId}-${formData.sender}`
+    }
+
+    // Build destination display string consistently (DestinationCode + environment)
+    const envLabel = getSelectedDestinationTypeLabel()
+    const destinationDisplay = formData.destination
+      ? formData.destination
+      : formData.destinationCode
+      ? `${formData.destinationCode} (${envLabel})`
+      : ''
+
     const updatedFormData = {
       ...formData,
+      id: generatedId,
       lastUpdated: currentDate,
+      destination: destinationDisplay,
+      destinationCode: formData.destinationCode,
     }
 
     onSave(updatedFormData)
@@ -190,6 +298,9 @@ const EditSender: React.FC<EditSenderProps> = ({
     <Box
       sx={{
         width: '100%',
+        minHeight: '100vh',
+        overflowY: 'auto',
+        pb: 6,
       }}
     >
       {/* Title Header */}
@@ -245,7 +356,7 @@ const EditSender: React.FC<EditSenderProps> = ({
             ) : (
               <>
                 Reference - Destination: {formData.destination} • Status:{' '}
-                {formData.status} • Certificate: {formData.senderDetails}
+                {getDisplayStatus()} • Certificate: {formData.senderDetails}
               </>
             )}
           </Typography>
@@ -277,113 +388,6 @@ const EditSender: React.FC<EditSenderProps> = ({
             : 'Use this form to edit an existing sender entry. Update the details for the sender, their intended destination, MSH information, and current status. The last updated date will be automatically set when you save your changes.'}
         </Typography>
 
-        {/* Sender Info Section */}
-        <Box sx={{ marginBottom: '32px' }}>
-          <Typography
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              marginBottom: '16px',
-              color: palette.black,
-            }}
-          >
-            Sender Info
-          </Typography>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: '16px',
-              marginBottom: '16px',
-            }}
-          >
-            <TextField
-              label={createLabelWithRedAsterisk('Sender Identifier *')}
-              value={formData.id}
-              onChange={(e) => handleInputChange('id', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-          </Box>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-              gap: '16px',
-            }}
-          >
-            {isAddMode ? (
-              <FormControl fullWidth size="medium">
-                <InputLabel>
-                  {createLabelWithRedAsterisk('Sender Name *')}
-                </InputLabel>
-                <Select
-                  value={formData.sender}
-                  label="Sender Name *"
-                  onChange={(e) => handleSenderChange(e.target.value)}
-                  sx={{
-                    borderRadius: '8px',
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      style: { maxHeight: 200 }, // menu height + scroll inside paper
-                    },
-                  }}
-                >
-                  {availableSenders.map((sender) => (
-                    <MenuItem key={sender.name} value={sender.name}>
-                      {sender.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            ) : (
-              <TextField
-                label={createLabelWithRedAsterisk('Sender Name *')}
-                value={formData.sender}
-                onChange={(e) => handleInputChange('sender', e.target.value)}
-                variant="outlined"
-                fullWidth
-                size="medium"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                  },
-                }}
-              />
-            )}
-            <TextField
-              label={createLabelWithRedAsterisk('Sender Certificate Name *')}
-              value={formData.senderDetails}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              InputProps={{
-                readOnly: true,
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                  backgroundColor: '#f5f5f5',
-                },
-                '& .MuiInputBase-input': {
-                  fontFamily: 'monospace',
-                  cursor: 'default',
-                },
-              }}
-            />
-          </Box>
-        </Box>
-
         {/* Destination Info Section */}
         <Box sx={{ marginBottom: '32px' }}>
           <Typography
@@ -404,38 +408,33 @@ const EditSender: React.FC<EditSenderProps> = ({
               gap: '16px',
             }}
           >
-            <TextField
-              label={createLabelWithRedAsterisk('Destination *')}
-              value={formData.destination}
-              onChange={(e) => handleInputChange('destination', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
+            {/* Environment selector */}
+            <EnvironmentSelect
+              label="Environment"
+              value={String(destinationType || '')}
+              onChange={(val) => handleDestinationTypeChange(Number(val))}
+              required
+              disabled={!isAddMode}
             />
-            <TextField
-              label={createLabelWithRedAsterisk('Destination Code *')}
-              value={formData.destinationCode}
-              onChange={(e) =>
-                handleInputChange('destinationCode', e.target.value)
-              }
-              variant="outlined"
-              fullWidth
+            {/* use selected Environment to filter destinations */}
+            <DestinationSelector
+              destinationTypeValue={destinationType}
+              destinationValue={formData.destinationCode}
+              onDestinationTypeChange={handleDestinationTypeChange}
+              onDestinationChange={handleDestinationChange}
+              destinationTypeLabel="Environment"
+              hideDestinationType={true}
+              searchable={true}
+              destinationLabel="Destination"
+              required={true}
               size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
+              fullWidth={true}
+              disabled={!isAddMode}
             />
           </Box>
         </Box>
 
-        {/* MSH and Facility Info Section */}
+        {/* Sender Info Section */}
         <Box sx={{ marginBottom: '32px' }}>
           <Typography
             variant="h6"
@@ -445,54 +444,28 @@ const EditSender: React.FC<EditSenderProps> = ({
               color: palette.black,
             }}
           >
-            MSH and Facility Info
+            Sender Info
           </Typography>
 
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
               gap: '16px',
             }}
           >
-            <TextField
-              label={createLabelWithRedAsterisk('MSH-3 *')}
-              value={formData.msh3}
-              onChange={(e) => handleInputChange('msh3', e.target.value)}
-              variant="outlined"
-              fullWidth
+            <OrganizationCertificateSelector
+              organizationValue={formData.sender}
+              certificateValue={formData.senderDetails}
+              onOrganizationChange={handleOrganizationChange}
+              onCertificateChange={handleCertificateChange}
+              organizationLabel="Sender Name"
+              certificateLabel="Certificate Name"
+              searchable={true}
+              required={true}
               size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label={createLabelWithRedAsterisk('MSH-4 *')}
-              value={formData.msh4}
-              onChange={(e) => handleInputChange('msh4', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
-            />
-            <TextField
-              label={createLabelWithRedAsterisk('Facility ID *')}
-              value={formData.facilityId}
-              onChange={(e) => handleInputChange('facilityId', e.target.value)}
-              variant="outlined"
-              fullWidth
-              size="medium"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: '8px',
-                },
-              }}
+              fullWidth={true}
+              disabled={!isAddMode}
             />
           </Box>
         </Box>
@@ -696,6 +669,9 @@ const EditSender: React.FC<EditSenderProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 5,
         }}
       >
         <Button
@@ -846,6 +822,13 @@ const EditSender: React.FC<EditSenderProps> = ({
           </TableContainer>
         </DialogContent>
       </Dialog>
+
+      <CustomSnackbar
+        open={dupSnackbarOpen}
+        severity="error"
+        message={dupSnackbarMessage}
+        onClose={() => setDupSnackbarOpen(false)}
+      />
     </Box>
   )
 }

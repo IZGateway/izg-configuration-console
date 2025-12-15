@@ -12,7 +12,7 @@ import {
   Upgrade as UpgradeIcon,
 } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
-import { SenderData } from './mockData'
+import { SenderData } from './SenderData'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 
 interface StatusPromoteDemoteProps {
@@ -38,7 +38,7 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
   }
 
   // Status hierarchies based on connection type
-  const getStatusHierarchy = (connectionType: 'production' | 'onboarding') => {
+  const getStatusHierarchy = (connectionType: string) => {
     if (connectionType === 'production') {
       return ['Production Ready', 'Production Live']
     } else {
