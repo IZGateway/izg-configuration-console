@@ -455,12 +455,15 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   // Provide a duplicate validation function to AddSender so the dialog can show immediately in the Add view
   const validateDuplicate = (candidate: SenderData) => {
     const normalize = (s: string) => (s || '').trim().toLowerCase()
-    return senderData.some(
-      (s) =>
+    const candidateEnv = Number(candidate.destinationType) || 0
+    return senderData.some((s) => {
+      const existingEnv = Number(s.destinationType) || 0
+      return (
         normalize(s.sender) === normalize(candidate.sender) &&
         normalize(s.destinationCode) === normalize(candidate.destinationCode) &&
-        s.connectionType === candidate.connectionType
-    )
+        existingEnv === candidateEnv
+      )
+    })
   }
 
   const handleCancelEdit = () => {
