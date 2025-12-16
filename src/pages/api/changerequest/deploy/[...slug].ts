@@ -97,10 +97,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         maintReason: undefined,
         maintStart: undefined,
         maintEnd: undefined,
+        createdBy: undefined, // TODO: Clean this up.
+        createdOn: undefined, // TODO: Clean this up.
+        updatedBy: undefined, // TODO: Clean this up.
+        updatedOn: undefined, // TODO: Clean this up.
         jurisdiction: {
           jurisdictionId: changeRequest.jurisdiction.jurisdictionId,
           name: undefined,
           description: undefined,
+          createdBy: undefined, // TODO: Clean this up.
+          createdOn: undefined, // TODO: Clean this up.
+          updatedBy: undefined, // TODO: Clean this up.
+          updatedOn: undefined, // TODO: Clean this up.
         },
         destinationType: {
           type: changeRequest.destType.type,
@@ -112,12 +120,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       Promise.allSettled([
-        await dbClient.updateDestination(updatedDestination),
+        await dbClient.updateDestination(updatedDestination),  // Log updator info
         await dbClient.createDestinationChangeRequestDeploymentAudit(
           changeRequest,
           session.user.name
-        ),
-        await dbClient.deleteDestinationChangeRequest(changeRequestId),
+        ),  // log creator info
+        await dbClient.deleteDestinationChangeRequest(changeRequestId),  // log deleter info
       ]).then((results) => {
         enum calls {
           updateDestination = 0,

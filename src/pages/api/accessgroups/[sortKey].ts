@@ -50,7 +50,7 @@ const handler = async (
       })
 
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.updateAccessGroup(sortKey, req.body)
+      const result = await dbClient.updateAccessGroup(sortKey, req.body) /// TODO: Log updater info
 
       if (result) {
         res.json(result)
@@ -88,7 +88,7 @@ const handler = async (
       })
 
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.deleteAccessGroup(sortKey)
+      const result = await dbClient.deleteAccessGroup(sortKey)  // TODO: Log deleter info
 
       if (result) {
         res.status(200).json({ message: 'Access group deleted successfully' })
