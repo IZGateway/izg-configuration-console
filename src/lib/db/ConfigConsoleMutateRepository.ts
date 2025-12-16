@@ -2,6 +2,7 @@ import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
+import { AllowedUser } from '../type/AllowedUser'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -42,4 +43,19 @@ export default interface ConfigConsoleMutateRepository {
     createdBy: string
   }): Promise<boolean>
   deleteAdsFileTypeRecord(sortKey: string): Promise<boolean>
+  upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser>
+  deleteAllowedUser(
+    principal: string,
+    environment: number,
+    destinationId: string
+  ): Promise<boolean>
+  createAllowedUserAudit(
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
+  ): Promise<boolean>
 }

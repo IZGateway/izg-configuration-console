@@ -7,7 +7,6 @@ import {
   GridToolbarContainer,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
-  GridToolbarProps,
 } from '@mui/x-data-grid'
 import {
   Box,
@@ -25,14 +24,20 @@ import {
   WifiOff as WifiOffIcon,
   Wifi as WifiIcon,
 } from '@mui/icons-material'
+import { useSession } from 'next-auth/react'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
-import { mockSenderData, type SenderData } from './mockData'
+import { type SenderData } from './SenderData'
+import type { SerializedAllowedUser } from '../../lib/type/AllowedUser'
 import EditSender from './EditSender'
 import AddSender from './AddSender'
 import StatusPromoteDemote from './StatusPromoteDemote'
 import CustomSnackbar from '../SnackBar'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import {
+  getEnvironmentName,
+  getDestinationType,
+} from '../../lib/desttypehelper'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -125,7 +130,7 @@ const dataGridCustom = {
   },
 }
 
-interface CustomToolbarProps extends GridToolbarProps {
+interface CustomToolbarProps {
   setFilterButtonEl: React.Dispatch<
     React.SetStateAction<HTMLButtonElement | null>
   >
@@ -154,10 +159,17 @@ const CustomToolbar = ({ setFilterButtonEl }: CustomToolbarProps) => {
 
 interface OnboardSenderProps {
   data?: SenderData[]
+  allowedUsers?: SerializedAllowedUser[]
+  error?: string
 }
 
-const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
+const OnboardSender: React.FC<OnboardSenderProps> = ({
+  data = [],
+  allowedUsers = [],
+  error,
+}) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
+  const { data: session } = useSession()
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -185,9 +197,42 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
   >('success')
 
   // Sender data state management
-  const [senderData, setSenderData] = useState<SenderData[]>(
-    data.length > 0 ? data : mockSenderData
-  )
+  const [senderData, setSenderData] = useState<SenderData[]>(() => {
+    // Use allowedUsers if provided, otherwise use data prop
+    if (allowedUsers.length > 0) {
+      return mapAllowedUsersToSenderData(allowedUsers)
+    } else {
+      return data
+    }
+  })
+
+  // Function to map AllowedUser data to SenderData format
+  function mapAllowedUsersToSenderData(
+    users: SerializedAllowedUser[]
+  ): SenderData[] {
+    return users.map((user) => ({
+      id: `${user.environment}-${user.destinationId}-${user.principal}`,
+      sender: user.organization || user.principal,
+      senderDetails: user.principal,
+      destination: `${user.destinationId} (${getEnvironmentName(
+        user.environment
+      )})`,
+      destinationCode: user.destinationId,
+      destinationType: user.environment,
+      accessLevel: user.enabled ? 'Full Access' : 'Restricted',
+      status: user.enabled ? 'Production Live' : 'Disabled',
+      lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+      connectionType: getDestinationType(user.environment),
+      isConnected: user.enabled,
+      msh3: '', // Not available in AllowedUser data
+      msh4: '', // Not available in AllowedUser data
+      facilityId: user.destinationId,
+    }))
+  }
 
   // Handle responsive design
   React.useEffect(() => {
@@ -212,25 +257,66 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     setIsAddMode(true)
   }
 
-  const handleWifiToggle = (senderId: string) => {
+  const handleWifiToggle = async (senderId: string) => {
     const sender = senderData.find((s) => s.id === senderId)
-    setSenderData((prevData) =>
-      prevData.map((sender) => {
-        if (sender.id === senderId) {
-          const newConnectionState = !sender.isConnected
-          return { ...sender, isConnected: newConnectionState }
-        }
-        return sender
-      })
-    )
+    if (!sender) return
 
-    // Show snackbar notification
-    if (sender) {
+    const newConnectionState = !sender.isConnected
+
+    try {
+      // Use the destinationType field directly
+      const environment = sender.destinationType
+
+      // Update database via API
+      const allowedUser = {
+        principal: sender.senderDetails,
+        environment: environment,
+        destinationId: sender.destinationCode,
+        organization: sender.sender,
+        enabled: newConnectionState,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn:
+          sender.status === 'ready' ? new Date().toISOString() : null,
+      }
+
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update connection status')
+      }
+
+      // Update UI state only after successful API call
+      setSenderData((prevData) =>
+        prevData.map((s) => {
+          if (s.id === senderId) {
+            return { ...s, isConnected: newConnectionState }
+          }
+          return s
+        })
+      )
+
+      // Show success snackbar notification
       const action = sender.isConnected ? 'disconnected from' : 'connected to'
       setSnackbarMessage(
         `Sender "${sender.sender}" has been ${action} the system.`
       )
       setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    } catch (error) {
+      console.error('Error toggling wifi status:', error)
+      setSnackbarMessage(
+        `Failed to update connection status for "${sender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
       setSnackbarOpen(true)
     }
   }
@@ -243,38 +329,138 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     }
   }
 
-  const handleSaveEdit = (updatedSender: SenderData) => {
-    // Update the sender data state with the edited information
-    setSenderData((prevData) =>
-      prevData.map((sender) =>
-        sender.id === updatedSender.id ? updatedSender : sender
+  const handleSaveEdit = async (updatedSender: SenderData) => {
+    try {
+      // Parse environment from sender ID (format: environment-destinationId-principal)
+      const environment = updatedSender.destinationType
+
+      // Create AllowedUser object from SenderData
+      const allowedUser = {
+        principal: updatedSender.senderDetails,
+        environment: environment,
+        destinationId: updatedSender.destinationCode,
+        organization: updatedSender.sender,
+        enabled: updatedSender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn:
+          updatedSender.status === 'ready' ? new Date().toISOString() : null,
+      }
+
+      // Call the API to update the allowed user
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update allowed user')
+      }
+
+      // Update the sender data state with the edited information after successful API call
+      setSenderData((prevData) =>
+        prevData.map((sender) =>
+          sender.id === updatedSender.id ? updatedSender : sender
+        )
       )
-    )
 
-    // Show snackbar notification
-    setSnackbarMessage(
-      `Sender "${updatedSender.sender}" has been successfully updated.`
-    )
-    setSnackbarSeverity('success')
-    setSnackbarOpen(true)
+      // Show snackbar notification
+      setSnackbarMessage(
+        `Sender "${updatedSender.sender}" has been successfully updated.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
 
-    setIsEditMode(false)
-    setEditingSender(null)
+      setIsEditMode(false)
+      setEditingSender(null)
+    } catch (error) {
+      console.error('Error updating sender:', error)
+      setSnackbarMessage(
+        `Failed to update sender "${updatedSender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+    }
   }
 
-  const handleSaveAdd = (newSender: SenderData) => {
-    // Add the new sender to the sender data state
-    setSenderData((prevData) => [...prevData, newSender])
+  const handleSaveAdd = async (newSender: SenderData) => {
+    try {
+      // Use the destinationType field directly
+      const environment = newSender.destinationType
 
-    // Show snackbar notification
-    setSnackbarMessage(
-      `Sender "${newSender.sender}" has been successfully added to onboarding.`
+      // Create AllowedUser object from SenderData
+      const allowedUser = {
+        principal: newSender.senderDetails,
+        environment: environment,
+        destinationId: newSender.destinationCode,
+        organization: newSender.sender,
+        enabled: newSender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        // validatedOn logic: null while validating, timestamp when ready
+        validatedOn:
+          newSender.status === 'ready' ? new Date().toISOString() : null,
+      }
+
+      // Call the API to add the allowed user
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to add allowed user')
+      }
+
+      const result = await response.json()
+
+      // Generate proper ID from the API response (format: environment-destinationId-principal)
+      const properlyIdentifiedSender = {
+        ...newSender,
+        id: `${result.environment}-${result.destinationId}-${result.principal}`,
+      }
+
+      // Add the new sender to the sender data state with proper ID
+      setSenderData((prevData) => [...prevData, properlyIdentifiedSender])
+
+      // Show snackbar notification
+      setSnackbarMessage(
+        `Sender "${newSender.sender}" has been successfully added to onboarding.`
+      )
+      setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+
+      setIsAddMode(false)
+      setEditingSender(null)
+    } catch (error) {
+      console.error('Error adding sender:', error)
+      setSnackbarMessage(
+        `Failed to add sender "${newSender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+    }
+  }
+
+  // Provide a duplicate validation function to AddSender so the dialog can show immediately in the Add view
+  const validateDuplicate = (candidate: SenderData) => {
+    const normalize = (s: string) => (s || '').trim().toLowerCase()
+    return senderData.some(
+      (s) =>
+        normalize(s.sender) === normalize(candidate.sender) &&
+        normalize(s.destinationCode) === normalize(candidate.destinationCode) &&
+        s.connectionType === candidate.connectionType
     )
-    setSnackbarSeverity('success')
-    setSnackbarOpen(true)
-
-    setIsAddMode(false)
-    setEditingSender(null)
   }
 
   const handleCancelEdit = () => {
@@ -337,11 +523,54 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
     }
   }
 
-  const handleConfirmDelete = () => {
-    if (senderToDelete) {
+  const handleConfirmDelete = async () => {
+    if (!senderToDelete) return
+
+    try {
+      // Parse environment from sender ID (format: environment-destinationId-principal)
+      const [envId] = senderToDelete.id.split('-')
+      const environment = parseInt(envId, 10)
+
+      // Validate environment ID
+      if (
+        isNaN(environment) ||
+        !senderToDelete.destinationCode ||
+        !senderToDelete.senderDetails
+      ) {
+        console.error('Invalid sender data for deletion:', {
+          id: senderToDelete.id,
+          environment,
+          destinationCode: senderToDelete.destinationCode,
+          senderDetails: senderToDelete.senderDetails,
+        })
+        throw new Error('Invalid sender data - cannot delete')
+      }
+
+      // Call the API to delete the allowed user
+      const response = await fetch('/api/allowedusers', {
+        method: 'DELETE',
+        body: JSON.stringify({
+          principal: senderToDelete.senderDetails,
+          environment: environment,
+          destinationId: senderToDelete.destinationCode,
+          deletedBy: session?.user?.email || session?.user?.name || 'unknown',
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to delete allowed user')
+      }
+
+      // Remove from UI state only after successful API call
       setSenderData((prevData) =>
         prevData.filter((sender) => sender.id !== senderToDelete.id)
       )
+
       setSnackbarMessage(
         `Sender "${senderToDelete.sender}" has been permanently deleted from onboarding.`
       )
@@ -349,6 +578,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
       setSnackbarOpen(true)
       setDeleteDialogOpen(false)
       setSenderToDelete(null)
+    } catch (error) {
+      console.error('Error deleting sender:', error)
+      setSnackbarMessage(
+        `Failed to delete sender "${senderToDelete.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
+      setSnackbarOpen(true)
+      // Don't close dialog on error so user can try again
     }
   }
 
@@ -659,7 +896,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
 
   // Show AddSender component when in add mode
   if (isAddMode) {
-    return <AddSender onSave={handleSaveAdd} onCancel={handleCancelEdit} />
+    return (
+      <AddSender
+        onSave={handleSaveAdd}
+        onCancel={handleCancelEdit}
+        validateDuplicate={validateDuplicate}
+      />
+    )
   }
 
   // Show EditSender component when in edit mode
@@ -713,6 +956,23 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
           </Typography>
         </Box>
       </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Box
+          sx={{
+            marginBottom: '16px',
+            padding: '16px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+          }}
+        >
+          <Typography variant="body1" sx={{ color: '#856404' }}>
+            ⚠️ {error}
+          </Typography>
+        </Box>
+      )}
 
       {renderMode === 'mobile' ? (
         <Box>
@@ -815,7 +1075,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
             density={'comfortable'}
             pagination
             slots={{
-              toolbar: CustomToolbar,
+              toolbar: CustomToolbar as GridSlots['toolbar'],
               footer: CustomFooterWithButton as GridSlots['footer'],
             }}
             slotProps={{
@@ -823,7 +1083,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({ data = [] }) => {
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-              } as CustomToolbarProps,
+              },
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {
