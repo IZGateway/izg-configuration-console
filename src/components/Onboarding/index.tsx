@@ -219,6 +219,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         user.environment
       )})`,
       destinationCode: user.destinationId,
+      destinationType: user.environment,
       accessLevel: user.enabled ? 'Full Access' : 'Restricted',
       status: user.enabled ? 'Production Live' : 'Disabled',
       lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {
@@ -264,12 +265,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     const newConnectionState = !sender.isConnected
 
     try {
-      // Parse sender ID to get environment and destinationId
-      // ID format: ${environment}-${destinationId}-${principal}
-      const [envName] = senderId.split('-')
-
-      // Map environment name to environment ID
-      const environment = getDestinationTypeId(envName) || 5
+      // Use the destinationType field directly
+      const environment = sender.destinationType
 
       // Update database via API
       const allowedUser = {
@@ -337,7 +334,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     try {
       // Parse environment from sender ID (format: environment-destinationId-principal)
       const [envId] = updatedSender.id.split('-')
-      const environment = parseInt(envId, 10) || 5
+      const environment = updatedSender.destinationType
 
       // Create AllowedUser object from SenderData
       const allowedUser = {
@@ -395,7 +392,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
   const handleSaveAdd = async (newSender: SenderData) => {
     try {
-      const environment = 5 // TODO: Determine environment dynamically based on destination type
+      // Use the destinationType field directly
+      const environment = newSender.destinationType
 
       // Create AllowedUser object from SenderData
       const allowedUser = {

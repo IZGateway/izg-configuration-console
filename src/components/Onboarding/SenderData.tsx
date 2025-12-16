@@ -4,6 +4,7 @@ export interface SenderData {
   senderDetails: string
   destination: string
   destinationCode: string
+  destinationType: number // Environment ID (1-6) representing PRODUCTION, TEST, ONBOARD, STAGE, DEV, or UNKNOWN
   accessLevel: string
   status: string
   lastUpdated: string

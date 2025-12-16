@@ -57,20 +57,24 @@ const EditSender: React.FC<EditSenderProps> = ({
     return 'validate'
   }
 
-  // Initialize destinationType from the destination field if available
-  const getInitialDestinationType = (): number | string => {
+  // Initialize destinationType from the destination field or senderData if available
+  const getInitialDestinationType = (): number => {
+    // First, check if destinationType is already set in senderData
+    if (senderData.destinationType) {
+      return senderData.destinationType
+    }
+    // Fallback: parse from destination field format: "destId (environment)"
     if (senderData.destination) {
-      // Parse environment from destination field format: "destId (environment)"
       const match = senderData.destination.match(/\(([^)]+)\)/)
       if (match) {
         const environmentName = match[1].trim().toUpperCase()
         // Handle ONBOARDING as alias for ONBOARD
         const normalizedName =
           environmentName === 'ONBOARDING' ? 'ONBOARD' : environmentName
-        return getDestinationTypeId(normalizedName) || ''
+        return getDestinationTypeId(normalizedName) || 0
       }
     }
-    return ''
+    return 0
   }
 
   // Parse destination code from destination field if destinationCode is not available
@@ -94,11 +98,13 @@ const EditSender: React.FC<EditSenderProps> = ({
       ...senderData,
       status: normalizeStatus(senderData.status),
       destinationCode: getInitialDestinationCode(),
+      destinationType: getInitialDestinationType(),
     }
     console.log('[EditSender] Initial formData:', {
       sender: initialData.sender,
       senderDetails: initialData.senderDetails,
       destinationCode: initialData.destinationCode,
+      destinationType: initialData.destinationType,
       isAddMode,
     })
     return initialData
@@ -108,17 +114,9 @@ const EditSender: React.FC<EditSenderProps> = ({
   const [dupSnackbarOpen, setDupSnackbarOpen] = useState(false)
   const [dupSnackbarMessage, setDupSnackbarMessage] = useState('')
 
-  const [destinationType, setDestinationType] = useState<number | string>(
-    getInitialDestinationType()
-  )
-
   const getSelectedDestinationTypeLabel = (): string => {
-    const num =
-      typeof destinationType === 'number'
-        ? destinationType
-        : Number(destinationType)
-    if (!Number.isNaN(num) && num > 0) {
-      return getEnvironmentName(num)
+    if (formData.destinationType && formData.destinationType > 0) {
+      return getEnvironmentName(formData.destinationType)
     }
     return formData.connectionType === 'production'
       ? 'Production'
@@ -151,10 +149,11 @@ const EditSender: React.FC<EditSenderProps> = ({
   }
 
   const handleDestinationTypeChange = (destTypeId: number | string) => {
-    setDestinationType(destTypeId)
     setFormData((prev) => ({
       ...prev,
-      destinationCode: '',
+      destinationType:
+        typeof destTypeId === 'number' ? destTypeId : Number(destTypeId) || 0,
+      destinationCode: '', // Clear destination when environment changes
     }))
   }
 
@@ -288,7 +287,6 @@ const EditSender: React.FC<EditSenderProps> = ({
       id: generatedId,
       lastUpdated: currentDate,
       destination: destinationDisplay,
-      destinationCode: formData.destinationCode,
     }
 
     onSave(updatedFormData)
@@ -411,14 +409,14 @@ const EditSender: React.FC<EditSenderProps> = ({
             {/* Environment selector */}
             <EnvironmentSelect
               label="Environment"
-              value={String(destinationType || '')}
+              value={String(formData.destinationType || '')}
               onChange={(val) => handleDestinationTypeChange(Number(val))}
               required
               disabled={!isAddMode}
             />
             {/* use selected Environment to filter destinations */}
             <DestinationSelector
-              destinationTypeValue={destinationType}
+              destinationTypeValue={formData.destinationType}
               destinationValue={formData.destinationCode}
               onDestinationTypeChange={handleDestinationTypeChange}
               onDestinationChange={handleDestinationChange}
