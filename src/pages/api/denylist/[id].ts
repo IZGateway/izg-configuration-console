@@ -36,7 +36,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Delete the record
-      const success = await dbClient.deleteDenyListRecord(id)
+      const success = await dbClient.deleteDenyListRecord(id) // log deleter info
 
       if (!success) {
         logger.error('Failed to delete deny list record', {

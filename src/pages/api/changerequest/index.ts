@@ -129,7 +129,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           if (_.isNull(changeRequestTicketResponse)) {
             await dbClient.deleteDestinationChangeRequest(
               changeRequestDBResponse.id
-            )
+            ) // TODO: Log deleter info
           }
         }
       }
@@ -154,6 +154,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             scheduledAt: requestBody.scheduledAt,
             isDraft: false,
             isPasswordDifferent: requestBody.isPasswordDifferent,
+            createdBy: requestBody.createdBy, // TODO: Clean this up.
+            createdOn: requestBody.createdOn, // TODO: Clean this up.
+            updatedBy: requestBody.updatedBy, // TODO: Clean this up.
+            updatedOn: requestBody.updatedOn, // TODO: Clean this up.
             requested: {
               destUri: requestBody.requested.destUri,
               username: requestBody.requested.username,
@@ -177,6 +181,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }
       } else {
         try {
+          // TODO: Record updator info
           await dbClient.upsertDestinationChangeRequest(requestBody)
           logger.info(
             `Change Request with Jira ticket id ${requestBody.jiraId} was updated.`
@@ -189,7 +194,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     } else if (req.method === 'DELETE') {
       try {
-        await dbClient.deleteDestinationChangeRequest(requestBody.id)
+        await dbClient.deleteDestinationChangeRequest(requestBody.id)  // Log deleter info
         logger.info('Change request deleted successfully', {
           changeRequestId: requestBody.id,
           userId: session?.user?.email,
@@ -223,6 +228,10 @@ const upsertChangeRequest = async (
     requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
+    createdBy: changeRequestDetails.createdBy, // TODO: Clean this up.
+    createdOn: changeRequestDetails.createdOn, // TODO: Clean this up.
+    updatedBy: changeRequestDetails.updatedBy, // TODO: Clean this up.
+    updatedOn: changeRequestDetails.updatedOn, // TODO: Clean this up.
     isPasswordDifferent: changeRequestDetails.isPasswordDifferent || false,
     requested: {
       destUri: changeRequestDetails.requested.destUri,

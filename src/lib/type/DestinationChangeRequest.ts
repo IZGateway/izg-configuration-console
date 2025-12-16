@@ -1,8 +1,9 @@
+import { DbAudit } from './DbAudit'
 import { DestinationConnectionSettings } from './DestinationConnectionSettings'
 import { DestinationType } from './DestinationType'
 import { Jurisdiction } from './Jurisdiction'
 
-export interface DestinationChangeRequest {
+export interface DestinationChangeRequest extends DbAudit {
   id: number
   destId: string
   destType: DestinationType

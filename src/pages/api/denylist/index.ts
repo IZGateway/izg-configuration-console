@@ -57,7 +57,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         reason,
         deniedBy,
         createdBy: createdBy || deniedBy || 'System',
-      })
+      }) // TODO: Log creator info
 
       return res.status(201).json(newRecord)
     } catch (error) {
