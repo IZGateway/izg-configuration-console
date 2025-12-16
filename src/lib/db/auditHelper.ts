@@ -38,7 +38,7 @@ export interface FetchAuditConfig {
  * Generic function to create an audit record in DynamoDB
  *
  * @param dynamoClient - The DynamoDB document client
- * @param tableNam - The DynamoDB table name
+ * @param tableName - The DynamoDB table name
  * @param config - Configuration for the audit record
  * @returns Promise<boolean> - Returns true on success
  *
