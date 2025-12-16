@@ -16,11 +16,16 @@ describe('ConnectionInfoDetail component', () => {
   })
 
   it('renders connection info details correctly', () => {
+    const ts = new Date()
     const destination: Destination = {
       jurisdiction: {
         description: 'Organization Description',
         jurisdictionId: 1,
         name: 'Organization Name',
+        createdBy: 'System',
+        createdOn: ts,
+        updatedBy: 'System',
+        updatedOn: ts,
       },
       destinationType: { type: 'Test', typeId: 1 },
       destUri: 'http://example.com',
@@ -38,6 +43,10 @@ describe('ConnectionInfoDetail component', () => {
       maintReason: 'Routine Maintenance',
       maintStart: new Date('2023-01-01T00:00:00Z'),
       maintEnd: new Date('2023-01-01T00:00:00Z'),
+      createdBy: 'System',
+      createdOn: ts,
+      updatedBy: 'System',
+      updatedOn: ts,
     }
 
     ;(useSWR as jest.Mock).mockReturnValueOnce({
