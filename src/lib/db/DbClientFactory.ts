@@ -8,6 +8,8 @@ import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
+import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import {
   encrypt,
   decrypt,
@@ -84,6 +86,35 @@ class EncryptedRepository implements DbClient {
     destId: string,
     destTypeId: number
   ) => Promise<DestinationChangeRequest>
+  fetchAllowedUser!: (
+    environment: number,
+    destinationId: string,
+    principal: string
+  ) => Promise<AllowedUser>
+  fetchAllowedUsers!: () => Promise<AllowedUser[]>
+  fetchAllowedUsersByDestination!: (
+    isAdmin: boolean,
+    destinations: Array<string>
+  ) => Promise<AllowedUser[]>
+  deleteAllowedUser!: (
+    principal: string,
+    environment: number,
+    destinationId: string
+  ) => Promise<boolean>
+  createAllowedUserAudit!: (
+    changeType: string,
+    principal: string,
+    environment: number,
+    destinationId: string,
+    userName: string,
+    oldValues: AllowedUser | null,
+    newValues: AllowedUser | null
+  ) => Promise<boolean>
+  fetchAllowedUserAuditHistory!: (
+    principal: string,
+    environment: number,
+    destinationId: string
+  ) => Promise<AllowedUserAudit[]>
 
   private repository: DbClient
 
@@ -102,6 +133,15 @@ class EncryptedRepository implements DbClient {
         repository
       )
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
+    this.fetchAllowedUser = repository.fetchAllowedUser.bind(repository)
+    this.fetchAllowedUsers = repository.fetchAllowedUsers.bind(repository)
+    this.fetchAllowedUsersByDestination =
+      repository.fetchAllowedUsersByDestination.bind(repository)
+    this.deleteAllowedUser = repository.deleteAllowedUser.bind(repository)
+    this.createAllowedUserAudit =
+      repository.createAllowedUserAudit.bind(repository)
+    this.fetchAllowedUserAuditHistory =
+      repository.fetchAllowedUserAuditHistory.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
@@ -301,5 +341,9 @@ class EncryptedRepository implements DbClient {
 
   async checkAdsFileTypeRecordExists(sortKey: string): Promise<boolean> {
     return await this.repository.checkAdsFileTypeRecordExists(sortKey)
+  }
+
+  async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
+    return await this.repository.upsertAllowedUser(allowedUser)
   }
 }
