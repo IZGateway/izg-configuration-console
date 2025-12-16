@@ -36,7 +36,6 @@ import CustomSnackbar from '../SnackBar'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import {
   getEnvironmentName,
-  getDestinationTypeId,
   getDestinationType,
 } from '../../lib/desttypehelper'
 
@@ -333,7 +332,6 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   const handleSaveEdit = async (updatedSender: SenderData) => {
     try {
       // Parse environment from sender ID (format: environment-destinationId-principal)
-      const [envId] = updatedSender.id.split('-')
       const environment = updatedSender.destinationType
 
       // Create AllowedUser object from SenderData

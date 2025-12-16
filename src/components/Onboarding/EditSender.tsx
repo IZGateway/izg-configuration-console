@@ -57,48 +57,12 @@ const EditSender: React.FC<EditSenderProps> = ({
     return 'validate'
   }
 
-  // Initialize destinationType from the destination field or senderData if available
-  const getInitialDestinationType = (): number => {
-    // First, check if destinationType is already set in senderData
-    if (senderData.destinationType) {
-      return senderData.destinationType
-    }
-    // Fallback: parse from destination field format: "destId (environment)"
-    if (senderData.destination) {
-      const match = senderData.destination.match(/\(([^)]+)\)/)
-      if (match) {
-        const environmentName = match[1].trim().toUpperCase()
-        // Handle ONBOARDING as alias for ONBOARD
-        const normalizedName =
-          environmentName === 'ONBOARDING' ? 'ONBOARD' : environmentName
-        return getDestinationTypeId(normalizedName) || 0
-      }
-    }
-    return 0
-  }
-
-  // Parse destination code from destination field if destinationCode is not available
-  const getInitialDestinationCode = (): string => {
-    // First try to use the destinationCode if it exists
-    if (senderData.destinationCode) {
-      return senderData.destinationCode
-    }
-    // Fallback: parse from destination field format: "destId (environment)"
-    if (senderData.destination) {
-      const match = senderData.destination.match(/^(.+?)\s*\(/)
-      if (match) {
-        return match[1].trim()
-      }
-    }
-    return ''
-  }
-
   const [formData, setFormData] = useState<SenderData>(() => {
     const initialData = {
       ...senderData,
       status: normalizeStatus(senderData.status),
-      destinationCode: getInitialDestinationCode(),
-      destinationType: getInitialDestinationType(),
+      destinationCode: senderData.destinationCode,
+      destinationType: senderData.destinationType,
     }
     console.log('[EditSender] Initial formData:', {
       sender: initialData.sender,
