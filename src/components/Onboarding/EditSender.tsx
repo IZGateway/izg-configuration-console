@@ -246,11 +246,16 @@ const EditSender: React.FC<EditSenderProps> = ({
       ? `${formData.destinationCode} (${envLabel})`
       : ''
 
+    // Set validatedOn based on status: timestamp if 'validate', null if 'ready'
+    const validatedOn =
+      formData.status === 'validate' ? new Date().toISOString() : null
+
     const updatedFormData = {
       ...formData,
       id: generatedId,
       lastUpdated: currentDate,
       destination: destinationDisplay,
+      validatedOn,
     }
 
     onSave(updatedFormData)

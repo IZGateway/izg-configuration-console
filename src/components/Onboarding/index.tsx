@@ -196,15 +196,22 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     'success' | 'error' | 'warning' | 'info'
   >('success')
 
-  // Sender data state management
-  const [senderData, setSenderData] = useState<SenderData[]>(() => {
-    // Use allowedUsers if provided, otherwise use data prop
-    if (allowedUsers.length > 0) {
-      return mapAllowedUsersToSenderData(allowedUsers)
+  // Function to determine sender status
+  const getStatus = (user: SerializedAllowedUser): string => {
+    if (user.environment === 1) {
+      if (user.validatedOn) {
+        return 'Production Live'
+      } else {
+        return 'Production Ready'
+      }
     } else {
-      return data
+      if (user.validatedOn) {
+        return 'Test Validate'
+      } else {
+        return 'Testing Ready'
+      }
     }
-  })
+  }
 
   // Function to map AllowedUser data to SenderData format
   function mapAllowedUsersToSenderData(
@@ -220,7 +227,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       destinationCode: user.destinationId,
       destinationType: user.environment,
       accessLevel: user.enabled ? 'Full Access' : 'Restricted',
-      status: user.enabled ? 'Production Live' : 'Disabled',
+      //status: user.validatedOn ? 'Production Live' : 'Disabled',
+      status: getStatus(user),
       lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
@@ -233,6 +241,16 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       facilityId: user.destinationId,
     }))
   }
+
+  // Sender data state management
+  const [senderData, setSenderData] = useState<SenderData[]>(() => {
+    // Use allowedUsers if provided, otherwise use data prop
+    if (allowedUsers.length > 0) {
+      return mapAllowedUsersToSenderData(allowedUsers)
+    } else {
+      return data
+    }
+  })
 
   // Handle responsive design
   React.useEffect(() => {
@@ -343,8 +361,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: updatedSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
+        // Use validatedOn from updatedSender if provided, otherwise determine from status
         validatedOn:
-          updatedSender.status === 'ready' ? new Date().toISOString() : null,
+          updatedSender.validatedOn !== undefined
+            ? updatedSender.validatedOn
+            : updatedSender.status === 'ready'
+            ? new Date().toISOString()
+            : null,
       }
 
       // Call the API to update the allowed user
@@ -402,9 +425,13 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: newSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
-        // validatedOn logic: null while validating, timestamp when ready
+        // Use validatedOn from newSender if provided, otherwise determine from status
         validatedOn:
-          newSender.status === 'ready' ? new Date().toISOString() : null,
+          newSender.validatedOn !== undefined
+            ? newSender.validatedOn
+            : newSender.status === 'ready'
+            ? new Date().toISOString()
+            : null,
       }
 
       // Call the API to add the allowed user
