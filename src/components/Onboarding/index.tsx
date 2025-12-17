@@ -197,19 +197,19 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   >('success')
 
   // Function to determine sender status from database data
-  // Logic: validatedOn timestamp exists = 'validate' status, null = 'ready' status
+  // Logic: validatedOn timestamp exists = 'ready' status, null = 'validate' status
   const getStatus = (user: SerializedAllowedUser): string => {
     if (user.environment === 1) {
       if (user.validatedOn) {
-        return 'Production Validate'
-      } else {
         return 'Production Live'
+      } else {
+        return 'Production Validate'
       }
     } else {
       if (user.validatedOn) {
-        return 'Test Validate'
-      } else {
         return 'Testing Ready'
+      } else {
+        return 'Test Validate'
       }
     }
   }
@@ -217,9 +217,9 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   // Function to convert raw status value to display label
   const getStatusDisplayLabel = (
     rawStatus: string,
-    connectionType: string
+    destinationType: number
   ): string => {
-    if (connectionType === 'production') {
+    if (destinationType === 1) {
       return rawStatus === 'validate'
         ? 'Production Validate'
         : 'Production Live'
@@ -376,7 +376,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: updatedSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
-        // validatedOn is set by EditSender: timestamp when 'validate', null when 'ready'
+        // validatedOn is set by EditSender: timestamp when 'ready', null when 'validate'
         validatedOn: updatedSender.validatedOn,
       }
 
@@ -401,7 +401,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         ...updatedSender,
         status: getStatusDisplayLabel(
           updatedSender.status,
-          updatedSender.connectionType
+          updatedSender.destinationType
         ),
       }
 
@@ -446,7 +446,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: newSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
-        // validatedOn is set by AddSender: timestamp when 'validate', null when 'ready'
+        // validatedOn is set by AddSender: timestamp when 'ready', null when 'validate'
         validatedOn: newSender.validatedOn,
       }
 
@@ -474,7 +474,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         id: `${result.environment}-${result.destinationId}-${result.principal}`,
         status: getStatusDisplayLabel(
           newSender.status,
-          newSender.connectionType
+          newSender.destinationType
         ),
       }
 
