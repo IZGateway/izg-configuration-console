@@ -149,7 +149,7 @@ const EditSender: React.FC<EditSenderProps> = ({
   }
 
   const getStatusOptions = () => {
-    if (formData.connectionType === 'production') {
+    if (formData.destinationType === 1) {
       return [
         { value: 'validate', label: 'Production Validate' },
         { value: 'ready', label: 'Production Live' },
