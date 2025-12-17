@@ -169,7 +169,7 @@ const EditSender: React.FC<EditSenderProps> = ({
   }
 
   const getStatusInfoData = () => {
-    if (formData.connectionType === 'production') {
+    if (formData.connectionType === 'PRODUCTION') {
       return [
         {
           status: 'Production Validate',
@@ -739,7 +739,7 @@ const EditSender: React.FC<EditSenderProps> = ({
           >
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               Status Information -{' '}
-              {formData.connectionType === 'production'
+              {formData.connectionType === 'PRODUCTION'
                 ? 'Production'
                 : 'Onboarding'}{' '}
             </Typography>

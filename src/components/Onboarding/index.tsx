@@ -545,23 +545,73 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     marginRight: 2,
   }
 
-  const handleStatusUpdate = (senderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (senderId: string, newStatus: string) => {
     const sender = senderData.find((s) => s.id === senderId)
-    setSenderData((prevData) =>
-      prevData.map((sender) => {
-        if (sender.id === senderId) {
-          return { ...sender, status: newStatus }
-        }
-        return sender
-      })
-    )
+    if (!sender) return
 
-    // Show snackbar notification
-    if (sender) {
+    try {
+      // Normalize the new status to raw value
+      const normalizeStatus = (status: string): 'validate' | 'ready' => {
+        const s = (status || '').toLowerCase()
+        if (s.includes('validate')) return 'validate'
+        if (s.includes('ready') || s.includes('live')) return 'ready'
+        return 'validate'
+      }
+
+      const rawStatus = normalizeStatus(newStatus)
+      
+      // Set validatedOn based on status: timestamp if 'ready', null if 'validate'
+      const validatedOn =
+        rawStatus === 'ready' ? new Date().toISOString() : null
+
+      // Update database via API
+      const allowedUser = {
+        principal: sender.senderDetails,
+        environment: sender.destinationType,
+        destinationId: sender.destinationCode,
+        organization: sender.sender,
+        enabled: sender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn: validatedOn,
+      }
+
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update status')
+      }
+
+      // Update UI state only after successful API call
+      setSenderData((prevData) =>
+        prevData.map((s) => {
+          if (s.id === senderId) {
+            return { ...s, status: newStatus }
+          }
+          return s
+        })
+      )
+
+      // Show success snackbar notification
       setSnackbarMessage(
         `Sender "${sender.sender}" status updated to "${newStatus}".`
       )
       setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    } catch (error) {
+      console.error('Error updating status:', error)
+      setSnackbarMessage(
+        `Failed to update status for "${sender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
       setSnackbarOpen(true)
     }
   }
