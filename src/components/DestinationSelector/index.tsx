@@ -128,13 +128,6 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           : destinationTypeValue
 
       const filtered = destinations.filter((dest) => dest.destTypeId === typeId)
-      console.log('[DestinationSelector] Filtering destinations:', {
-        destinationTypeValue,
-        typeId,
-        totalDestinations: destinations.length,
-        filteredCount: filtered.length,
-        currentDestinationValue: destinationValue,
-      })
       setAvailableDestinations(filtered)
     } else {
       setAvailableDestinations([])

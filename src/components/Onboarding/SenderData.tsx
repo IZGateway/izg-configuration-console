@@ -13,4 +13,5 @@ export interface SenderData {
   msh3: string
   msh4: string
   facilityId: string
+  validatedOn?: string | null // ISO timestamp when status is 'validate', null when status is 'ready'
 }

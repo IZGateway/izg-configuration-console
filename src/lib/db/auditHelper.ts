@@ -100,8 +100,8 @@ export async function createAuditRecord<T>(
     tableName: auditTableName,
     userName,
     changeType,
-    oldValues: serializedOldValues,
-    newValues: serializedNewValues,
+    oldValues: JSON.stringify(serializedOldValues),
+    newValues: JSON.stringify(serializedNewValues),
     createdAt: timestamp,
     ...additionalData,
   }
@@ -123,7 +123,9 @@ export async function createAuditRecord<T>(
   })
 
   try {
-    const result: PutCommandOutput = await dynamoClient.send(new PutCommand(params))
+    const result: PutCommandOutput = await dynamoClient.send(
+      new PutCommand(params)
+    )
     logger.info(`Successfully created ${entityType} in DynamoDB`, {
       entityType,
       changeType,
@@ -188,7 +190,9 @@ export async function fetchAuditHistory<T>(
   }
 
   try {
-    const result: QueryCommandOutput = await dynamoClient.send(new QueryCommand(params))
+    const result: QueryCommandOutput = await dynamoClient.send(
+      new QueryCommand(params)
+    )
     return (result.Items || []).map((item) => {
       const baseItem = {
         ...item,
