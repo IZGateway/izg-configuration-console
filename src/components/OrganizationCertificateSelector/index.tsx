@@ -49,7 +49,7 @@ const OrganizationCertificateSelector: React.FC<
     useState<Organization | null>(null)
 
   // Log incoming props
-  console.log('[OrgCertSelector] Props:', {
+  console.debug('[OrgCertSelector] Props:', {
     organizationValue,
     certificateValue,
     organizationsCount: organizations.length,
@@ -70,21 +70,20 @@ const OrganizationCertificateSelector: React.FC<
         }
 
         const orgData = await response.json()
-        const processedOrgs: Organization[] = orgData.map((org: {
-          organizationName?: string;
-          principalNames: string[];
-        }) => {
-          let principalNames: string[] = []
+        const processedOrgs: Organization[] = orgData.map(
+          (org: { organizationName?: string; principalNames: string[] }) => {
+            let principalNames: string[] = []
 
-          principalNames = Array.from(org.principalNames)
+            principalNames = Array.from(org.principalNames)
 
-          return {
-            organizationName: org.organizationName || 'Unknown Organization',
-            principalNames: principalNames,
+            return {
+              organizationName: org.organizationName || 'Unknown Organization',
+              principalNames: principalNames,
+            }
           }
-        })
+        )
 
-        console.log(
+        console.debug(
           '[OrgCertSelector] Fetched organizations:',
           processedOrgs.map((o) => o.organizationName)
         )
@@ -102,7 +101,7 @@ const OrganizationCertificateSelector: React.FC<
 
   // Update selected organization when organizationValue changes
   useEffect(() => {
-    console.log('[OrgCertSelector] organizationValue changed:', {
+    console.debug('[OrgCertSelector] organizationValue changed:', {
       organizationValue,
       organizationsCount: organizations.length,
       organizationNames: organizations.map((o) => o.organizationName),
@@ -112,7 +111,7 @@ const OrganizationCertificateSelector: React.FC<
       const org = organizations.find(
         (o) => o.organizationName === organizationValue
       )
-      console.log('[OrgCertSelector] Found organization:', {
+      console.debug('[OrgCertSelector] Found organization:', {
         searched: organizationValue,
         found: org?.organizationName,
         principals: org?.principalNames,
