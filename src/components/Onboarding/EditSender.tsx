@@ -64,13 +64,6 @@ const EditSender: React.FC<EditSenderProps> = ({
       destinationCode: senderData.destinationCode,
       destinationType: senderData.destinationType,
     }
-    console.log('[EditSender] Initial formData:', {
-      sender: initialData.sender,
-      senderDetails: initialData.senderDetails,
-      destinationCode: initialData.destinationCode,
-      destinationType: initialData.destinationType,
-      isAddMode,
-    })
     return initialData
   })
   const [statusInfoOpen, setStatusInfoOpen] = useState(false)
@@ -319,7 +312,7 @@ const EditSender: React.FC<EditSenderProps> = ({
           </Box>
           <Typography variant="body2" color="text.secondary">
             {isAddMode ? (
-              'Create a new sender entry for the onboarding system'
+              'Create a new entry to allow a sender to connect to your system'
             ) : (
               <>
                 Reference - Destination: {formData.destination} • Status:{' '}
@@ -351,8 +344,8 @@ const EditSender: React.FC<EditSenderProps> = ({
           }}
         >
           {isAddMode
-            ? 'Use this form to create a new sender entry for onboarding. Fill in the required details for the sender, their intended destination, MSH information, and initial status. All fields marked with * are required.'
-            : 'Use this form to edit an existing sender entry. Update the details for the sender, their intended destination, MSH information, and current status. The last updated date will be automatically set when you save your changes.'}
+            ? 'Fill in the required details for the environment, intended destination, and sender. All fields marked with * are required.'
+            : 'Use this form to edit an existing sender entry. You may update their current validation status or connection status.'}
         </Typography>
 
         {/* Destination Info Section */}
@@ -436,29 +429,6 @@ const EditSender: React.FC<EditSenderProps> = ({
             />
           </Box>
         </Box>
-
-        {/* Connection Type Callout - Only shown in Add Mode */}
-        {isAddMode && (
-          <Box sx={{ marginBottom: '32px' }}>
-            <Box
-              sx={{
-                backgroundColor: '#f5f5f5',
-                border: '1px solid #e0e0e0',
-                borderRadius: '8px',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                <strong>Connection Type:</strong> New senders must start with
-                onboarding connection type and can be upgraded to production
-                after validation.
-              </Typography>
-            </Box>
-          </Box>
-        )}
 
         {/* Status Section */}
         <Box sx={{ marginBottom: '32px' }}>

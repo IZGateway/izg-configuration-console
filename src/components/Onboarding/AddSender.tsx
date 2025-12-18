@@ -22,7 +22,7 @@ const AddSender: React.FC<AddSenderProps> = ({
     destinationCode: '',
     destinationType: 0, // Will be set by user via dropdown
     accessLevel: 'Full Access',
-    status: 'Testing Ready',
+    status: 'validate',
     lastUpdated: '',
     connectionType: 'onboarding',
     isConnected: false,
