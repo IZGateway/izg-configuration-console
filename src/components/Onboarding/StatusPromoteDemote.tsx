@@ -37,12 +37,13 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
     return 'secondary'
   }
 
-  // Status hierarchies based on connection type
+  // Status hierarchies based on connection type (ordered from lowest to highest)
   const getStatusHierarchy = (connectionType: string) => {
-    if (connectionType === 'production') {
-      return ['Production Ready', 'Production Live']
+    const normalizedType = connectionType.toLowerCase()
+    if (normalizedType === 'production') {
+      return ['Production Validate', 'Production Live']
     } else {
-      return ['Testing Ready', 'Test Validate']
+      return ['Test Validate', 'Testing Ready']
     }
   }
 

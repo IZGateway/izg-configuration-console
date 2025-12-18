@@ -196,15 +196,37 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     'success' | 'error' | 'warning' | 'info'
   >('success')
 
-  // Sender data state management
-  const [senderData, setSenderData] = useState<SenderData[]>(() => {
-    // Use allowedUsers if provided, otherwise use data prop
-    if (allowedUsers.length > 0) {
-      return mapAllowedUsersToSenderData(allowedUsers)
+  // Function to determine sender status from database data
+  // Logic: validatedOn timestamp exists = 'ready' status, null = 'validate' status
+  const getStatus = (user: SerializedAllowedUser): string => {
+    if (user.environment === 1) {
+      if (user.validatedOn) {
+        return 'Production Live'
+      } else {
+        return 'Production Validate'
+      }
     } else {
-      return data
+      if (user.validatedOn) {
+        return 'Testing Ready'
+      } else {
+        return 'Test Validate'
+      }
     }
-  })
+  }
+
+  // Function to convert raw status value to display label
+  const getStatusDisplayLabel = (
+    rawStatus: string,
+    destinationType: number
+  ): string => {
+    if (destinationType === 1) {
+      return rawStatus === 'validate'
+        ? 'Production Validate'
+        : 'Production Live'
+    } else {
+      return rawStatus === 'validate' ? 'Test Validate' : 'Testing Ready'
+    }
+  }
 
   // Function to map AllowedUser data to SenderData format
   function mapAllowedUsersToSenderData(
@@ -220,7 +242,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       destinationCode: user.destinationId,
       destinationType: user.environment,
       accessLevel: user.enabled ? 'Full Access' : 'Restricted',
-      status: user.enabled ? 'Production Live' : 'Disabled',
+      //status: user.validatedOn ? 'Production Live' : 'Disabled',
+      status: getStatus(user),
       lastUpdated: new Date(user.updatedOn).toLocaleDateString('en-US', {
         month: '2-digit',
         day: '2-digit',
@@ -233,6 +256,16 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       facilityId: user.destinationId,
     }))
   }
+
+  // Sender data state management
+  const [senderData, setSenderData] = useState<SenderData[]>(() => {
+    // Use allowedUsers if provided, otherwise use data prop
+    if (allowedUsers.length > 0) {
+      return mapAllowedUsersToSenderData(allowedUsers)
+    } else {
+      return data
+    }
+  })
 
   // Handle responsive design
   React.useEffect(() => {
@@ -343,8 +376,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: updatedSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
-        validatedOn:
-          updatedSender.status === 'ready' ? new Date().toISOString() : null,
+        // validatedOn is set by EditSender: timestamp when 'ready', null when 'validate'
+        validatedOn: updatedSender.validatedOn,
       }
 
       // Call the API to update the allowed user
@@ -363,9 +396,20 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       }
 
       // Update the sender data state with the edited information after successful API call
+      // Convert raw status value to display label for UI consistency
+      const updatedSenderWithDisplayStatus = {
+        ...updatedSender,
+        status: getStatusDisplayLabel(
+          updatedSender.status,
+          updatedSender.destinationType
+        ),
+      }
+
       setSenderData((prevData) =>
         prevData.map((sender) =>
-          sender.id === updatedSender.id ? updatedSender : sender
+          sender.id === updatedSender.id
+            ? updatedSenderWithDisplayStatus
+            : sender
         )
       )
 
@@ -402,9 +446,8 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         enabled: newSender.isConnected,
         createdBy: session?.user?.email || 'unknown',
         updatedBy: session?.user?.email || 'unknown',
-        // validatedOn logic: null while validating, timestamp when ready
-        validatedOn:
-          newSender.status === 'ready' ? new Date().toISOString() : null,
+        // validatedOn is set by AddSender: timestamp when 'ready', null when 'validate'
+        validatedOn: newSender.validatedOn,
       }
 
       // Call the API to add the allowed user
@@ -425,9 +468,14 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       const result = await response.json()
 
       // Generate proper ID from the API response (format: environment-destinationId-principal)
+      // and convert raw status value to display label for UI consistency
       const properlyIdentifiedSender = {
         ...newSender,
         id: `${result.environment}-${result.destinationId}-${result.principal}`,
+        status: getStatusDisplayLabel(
+          newSender.status,
+          newSender.destinationType
+        ),
       }
 
       // Add the new sender to the sender data state with proper ID
@@ -455,12 +503,15 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   // Provide a duplicate validation function to AddSender so the dialog can show immediately in the Add view
   const validateDuplicate = (candidate: SenderData) => {
     const normalize = (s: string) => (s || '').trim().toLowerCase()
-    return senderData.some(
-      (s) =>
+    const candidateEnv = Number(candidate.destinationType) || 0
+    return senderData.some((s) => {
+      const existingEnv = Number(s.destinationType) || 0
+      return (
         normalize(s.sender) === normalize(candidate.sender) &&
         normalize(s.destinationCode) === normalize(candidate.destinationCode) &&
-        s.connectionType === candidate.connectionType
-    )
+        existingEnv === candidateEnv
+      )
+    })
   }
 
   const handleCancelEdit = () => {
@@ -494,23 +545,73 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
     marginRight: 2,
   }
 
-  const handleStatusUpdate = (senderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (senderId: string, newStatus: string) => {
     const sender = senderData.find((s) => s.id === senderId)
-    setSenderData((prevData) =>
-      prevData.map((sender) => {
-        if (sender.id === senderId) {
-          return { ...sender, status: newStatus }
-        }
-        return sender
-      })
-    )
+    if (!sender) return
 
-    // Show snackbar notification
-    if (sender) {
+    try {
+      // Normalize the new status to raw value
+      const normalizeStatus = (status: string): 'validate' | 'ready' => {
+        const s = (status || '').toLowerCase()
+        if (s.includes('validate')) return 'validate'
+        if (s.includes('ready') || s.includes('live')) return 'ready'
+        return 'validate'
+      }
+
+      const rawStatus = normalizeStatus(newStatus)
+      
+      // Set validatedOn based on status: timestamp if 'ready', null if 'validate'
+      const validatedOn =
+        rawStatus === 'ready' ? new Date().toISOString() : null
+
+      // Update database via API
+      const allowedUser = {
+        principal: sender.senderDetails,
+        environment: sender.destinationType,
+        destinationId: sender.destinationCode,
+        organization: sender.sender,
+        enabled: sender.isConnected,
+        createdBy: session?.user?.email || 'unknown',
+        updatedBy: session?.user?.email || 'unknown',
+        validatedOn: validatedOn,
+      }
+
+      const response = await fetch('/api/allowedusers', {
+        method: 'POST',
+        body: JSON.stringify(allowedUser),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error('API error response:', errorData)
+        throw new Error('Failed to update status')
+      }
+
+      // Update UI state only after successful API call
+      setSenderData((prevData) =>
+        prevData.map((s) => {
+          if (s.id === senderId) {
+            return { ...s, status: newStatus }
+          }
+          return s
+        })
+      )
+
+      // Show success snackbar notification
       setSnackbarMessage(
         `Sender "${sender.sender}" status updated to "${newStatus}".`
       )
       setSnackbarSeverity('success')
+      setSnackbarOpen(true)
+    } catch (error) {
+      console.error('Error updating status:', error)
+      setSnackbarMessage(
+        `Failed to update status for "${sender.sender}". Please try again.`
+      )
+      setSnackbarSeverity('error')
       setSnackbarOpen(true)
     }
   }
