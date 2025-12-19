@@ -52,6 +52,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         ? maintData.reinstatementDateTime
         : null,
       maintStart: maintData.startDateTime ? maintData.startDateTime : null,
+      createdBy: undefined, 
+      createdOn: undefined, 
+      updatedBy: undefined, 
+      updatedOn: undefined, 
     })
     res.json(result)
     if (maintData.startDateTime === null) {

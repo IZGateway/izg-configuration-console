@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import logger from '../../../logger'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
+import { asyncRequestContext, Context } from '../../lib/Context'
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -28,7 +29,9 @@ const captureErrors: Middleware = async (req, res, next) => {
 
 // log the api requests and response code
 const logApiRequest: Middleware = async (req, res, next) => {
-  const session = await getServerSession(req, res, authOptions)
+  const context = asyncRequestContext.getStore()
+  const user = context?.user || null
+  const sub = context?.sub || null
   if (LOG_LEVEL.toLocaleLowerCase() === 'debug') {
     logger.warn(
       'WARNING: LOG_LEVEL is set to DEBUG, this will log sensitive information for every API request'
@@ -36,15 +39,15 @@ const logApiRequest: Middleware = async (req, res, next) => {
     logger.info('API Request ' + req.url, {
       req,
       res,
-      user: session?.user?.email || null,
-      sub: session?.user?.sub || null,
+      user,
+      sub,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
   } else {
     logger.info('API Request ' + req.url, {
-      user: session?.user?.email || null,
-      sub: session?.user?.sub || null,
+      user,
+      sub,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
@@ -55,13 +58,16 @@ const logApiRequest: Middleware = async (req, res, next) => {
 // check access to destination
 const checkAccessToDestId: Middleware = async (req, res, next) => {
   const destId = req.query.id.toString()
-  const session = await getServerSession(req, res, authOptions)
-  const hasAccess = hasAccessToDestId(destId, session)
+  const context = asyncRequestContext.getStore()
+  const user = context?.user || 'unknown'
+  const sub = context?.sub || null
+  const hasAccess = hasAccessToDestId(destId, user)
   if (hasAccess) {
     logger.debug('Api request ' + req.url, {
       req,
       res,
-      user: session.user.email,
+      user,
+      sub,
     })
     await next()
   } else {
@@ -69,20 +75,24 @@ const checkAccessToDestId: Middleware = async (req, res, next) => {
     logger.debug('Api request ' + req.url, {
       req,
       res,
-      user: session.user.email,
+      user,
+      sub,
     })
   }
 }
 const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
   const { slug } = req.query
   const destId = slug[1]
-  const session = await getServerSession(req, res, authOptions)
-  const hasAccess = hasAccessToDestId(destId, session)
+  const context = asyncRequestContext.getStore()
+  const user = context?.user || 'unknown'
+  const sub = context?.sub || null
+  const hasAccess = hasAccessToDestId(destId, user)
   if (hasAccess) {
     logger.debug('Api request ' + req.url, {
       req,
       res,
-      user: session.user.email,
+      user,
+      sub,
     })
     await next()
   } else {
@@ -90,7 +100,8 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
     logger.debug('Api request ' + req.url, {
       req,
       res,
-      user: session.user.email,
+      user,
+      sub,
     })
   }
 }
@@ -108,14 +119,25 @@ const withMiddleware = (...middlewareNames: string[]) => {
 
   return (handler: NextApiHandler) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
-      const dispatch = async (i: number): Promise<void> => {
-        if (i < stack.length) {
-          await stack[i](req, res, () => dispatch(i + 1))
-        } else {
-          await handler(req, res)
+      // Setup DbRequestContext for this request
+      const session = await getServerSession(req, res, authOptions)
+      const user = session?.user?.name || session?.user?.email || 'unknown'
+      const ipAddress =
+        (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+        req.socket?.remoteAddress ||
+        'unknown'
+      const sub = session?.user?.sub || undefined
+      const context: Context = { user, ipAddress, sub }
+      await asyncRequestContext.run(context, async () => {
+        const dispatch = async (i: number): Promise<void> => {
+          if (i < stack.length) {
+            await stack[i](req, res, () => dispatch(i + 1))
+          } else {
+            await handler(req, res)
+          }
         }
-      }
-      await dispatch(0)
+        await dispatch(0)
+      })
     }
   }
 }
