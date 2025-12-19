@@ -656,6 +656,7 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {},
       ReturnValues: 'ALL_NEW',
     }
+
     let separator = 'set'
     const stringKeys = [
       'facilityId',
@@ -700,6 +701,11 @@ class Dynamo implements DbClient {
         params.ExpressionAttributeValues[`:${key}`] = value ? value : null
       }
     }
+    destination.updatedBy = getAuditUserString()
+    destination.updatedOn = new Date()
+    params.UpdateExpression += 'SET updatedBy = :updatedBy, updatedOn = :updatedOn'
+    params.ExpressionAttributeValues[':updatedBy'] = destination.updatedBy
+    params.ExpressionAttributeValues[':updatedOn'] = destination.updatedOn.toISOString()
     const data = await dynamodDbDocClient.send(new UpdateCommand(params))
     const maskedDest = { ...destination }
     maskPassword(maskedDest)
