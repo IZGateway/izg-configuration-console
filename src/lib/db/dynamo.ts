@@ -9,7 +9,8 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
-
+import { asyncRequestContext } from '../Context'
+import os from 'os'
 import {
   DeleteCommand,
   DeleteCommandInput,
@@ -44,6 +45,8 @@ import {
   serializeDateFields,
 } from './auditHelper'
 
+import { access } from 'fs'
+import { get } from 'lodash'
 global.setImmediate = global.setImmediate || setImmediate
 
 // DynamoDB Configuration
@@ -61,10 +64,21 @@ if (process.env.AWS_ACCESS_KEY_ID) {
   }
 }
 
+function getAuditUserString() : string {
+    const context = asyncRequestContext.getStore()
+    const user = context?.user || 'system'
+    const ipAddress = context?.ipAddress || os.hostname();
+    return `${user}@${ipAddress}`
+}
+
 function maskPassword(auditData: any) {
   if (auditData && auditData['password']) {
     auditData = { ...auditData }
     auditData['password'] = '.........'
+  }
+  if (auditData && auditData[':password']) {
+    auditData = { ...auditData }
+    auditData[':password'] = '.........'
   }
   return auditData
 }
@@ -236,10 +250,18 @@ class Dynamo implements DbClient {
       maintStart,
       maintEnd,
       destinationType: await this.fetchDestinationType(item.destTypeId),
+      createdBy: item?.createdBy,
+      createdOn: item?.createdOn,
+      updatedBy: item?.updatedBy,
+      updatedOn: item?.updatedOn,
       jurisdiction: {
         jurisdictionId: item.jurisdictionId,
         name: jurisdiction?.name || '',
         description: jurisdiction?.description || '',
+        createdBy: jurisdiction?.createdBy,
+        createdOn: jurisdiction?.createdOn,
+        updatedBy: jurisdiction?.updatedBy,
+        updatedOn: jurisdiction?.updatedOn,
       },
     }
   }
@@ -357,6 +379,10 @@ class Dynamo implements DbClient {
       requestedAt: item.requestedAt ? new Date(item.requestedAt) : null,
       requestedBy: item.requestedBy,
       scheduledAt: item.scheduledAt ? new Date(item.scheduledAt) : null,
+      createdBy: item?.createdBy,
+      createdOn: item?.createdOn,
+      updatedBy: item?.updatedBy,
+      updatedOn: item?.updatedOn,
       jurisdiction: destination.jurisdiction,
       requested: {
         destUri: item.destUri,
@@ -501,6 +527,17 @@ class Dynamo implements DbClient {
         changeRequestData.destType.typeId
       )
 
+    // Determine if this is an update or insert  
+    const getParams: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+    };
+    const existing = await dynamodDbDocClient.send(new GetCommand(getParams));
+    const isUpdate = !!existing.Item; 
+    const ts = new Date().toISOString();
     const params: PutCommandInput = {
       TableName: TABLE_NAME,
       Item: {
@@ -522,6 +559,10 @@ class Dynamo implements DbClient {
         msh11: changeRequestData.requested.MSH11 || null,
         msh22: changeRequestData.requested.MSH22 || null,
         rxa11: changeRequestData.requested.RXA11 || null,
+        createdBy: isUpdate ? existing.Item.createdBy : getAuditUserString(), 
+        createdOn: isUpdate ? existing.Item.createdOn : ts, 
+        updatedBy: getAuditUserString(), 
+        updatedOn: ts,
       },
     }
     if (changeRequestData.hasOwnProperty('isAsap')) {
@@ -540,7 +581,13 @@ class Dynamo implements DbClient {
     const result = await dynamodDbDocClient.send(new PutCommand(params))
     if (result) {
       changeRequestData.id = id
-      return await this.convertResponseToDestinationChangeRequest(params.Item)
+      const dcr = await this.convertResponseToDestinationChangeRequest(params.Item)
+      const maskedDcr = { ...dcr, 
+      } as DestinationChangeRequest
+      maskPassword(maskedDcr.requested)
+      maskPassword(maskedDcr.current)
+      logger.info('DestinationChangeRequest upserted', { changeRequest: maskedDcr })
+      return dcr
     }
     return null
   }
@@ -553,7 +600,13 @@ class Dynamo implements DbClient {
         sortKey: `${id}`,
       },
     }
+    const dcr = await this.fetchDestinationChangeRequestById(id)
     const result = await dynamodDbDocClient.send(new DeleteCommand(params))
+    if (!!result && dcr) {
+      maskPassword(dcr.requested)
+      maskPassword(dcr.current)
+      logger.info('Deleted DestinationChangeRequest', { changeRequest: dcr })
+    }
     return !!result
   }
 
@@ -588,6 +641,7 @@ class Dynamo implements DbClient {
       },
     }
     await dynamodDbDocClient.send(new PutCommand(params))
+    logger.info('Created DestinationAudit', { deploymentAudit: auditData })
     return true
   }
 
@@ -602,6 +656,7 @@ class Dynamo implements DbClient {
       ExpressionAttributeValues: {},
       ReturnValues: 'ALL_NEW',
     }
+
     let separator = 'set'
     const stringKeys = [
       'facilityId',
@@ -646,7 +701,19 @@ class Dynamo implements DbClient {
         params.ExpressionAttributeValues[`:${key}`] = value ? value : null
       }
     }
+    destination.updatedBy = getAuditUserString()
+    destination.updatedOn = new Date()
+    params.UpdateExpression += 'SET updatedBy = :updatedBy, updatedOn = :updatedOn'
+    params.ExpressionAttributeValues[':updatedBy'] = destination.updatedBy
+    params.ExpressionAttributeValues[':updatedOn'] = destination.updatedOn.toISOString()
     const data = await dynamodDbDocClient.send(new UpdateCommand(params))
+    const maskedDest = { ...destination }
+    maskPassword(maskedDest)
+    maskPassword(params.ExpressionAttributeValues)
+    logger.info('Updated Destination', {
+      destination: maskedDest,
+      updatedAttributes: Object.keys(params.ExpressionAttributeValues)
+    })
     return true
   }
 
@@ -727,8 +794,9 @@ class Dynamo implements DbClient {
     updates.push('#updatedOn = :updatedOn')
     params.ExpressionAttributeNames['#updatedBy'] = 'updatedBy'
     params.ExpressionAttributeNames['#updatedOn'] = 'updatedOn'
-    params.ExpressionAttributeValues[':updatedBy'] =
-      updateData.updatedBy || 'system'
+    // Set updatedBy to user@ipAddress from DbRequestContext
+
+    params.ExpressionAttributeValues[':updatedBy'] = getAuditUserString()
     params.ExpressionAttributeValues[':updatedOn'] = new Date().toISOString()
 
     // Build the update expression
@@ -745,24 +813,11 @@ class Dynamo implements DbClient {
       params.UpdateExpression += removeExpressions.join(', ')
     }
 
-    logger.info('About to execute UpdateCommand', {
-      sortKey,
-      Key: params.Key,
-      UpdateExpression: params.UpdateExpression,
-      ConditionExpression: params.ConditionExpression,
-    })
-
     try {
       const result = await dynamodDbDocClient.send(new UpdateCommand(params))
 
-      logger.info('Updated access group in DynamoDB', {
-        sortKey,
-        updatedFields: Object.keys(updateData),
-      })
-
-      // Convert the result back to the expected format
       if (result.Attributes) {
-        return {
+        const agr = {
           ...result.Attributes,
           roles: Array.isArray(result.Attributes.roles)
             ? result.Attributes.roles
@@ -780,13 +835,15 @@ class Dynamo implements DbClient {
             ? Array.from(result.Attributes.groups)
             : [],
         }
+        logger.info('Udpated AccessGroupRecord', { accessGroup: agr })
+        return agr
       }
 
       return result.Attributes
     } catch (error) {
       if (error.name === 'ConditionalCheckFailedException') {
         logger.error('Access group not found in DynamoDB', {
-          sortKey,
+          sortKey: sortKey,
           entityType: 'AccessGroup',
           operation: 'updateAccessGroup',
           errorMessage: 'Item does not exist - cannot update',
@@ -837,8 +894,8 @@ class Dynamo implements DbClient {
         accessGroup.groups && accessGroup.groups.length > 0
           ? new Set(accessGroup.groups)
           : undefined,
-      createdBy: accessGroup.createdBy,
-      updatedBy: accessGroup.createdBy,
+      createdBy: getAuditUserString(),
+      updatedBy: getAuditUserString(),
       createdOn: now,
       updatedOn: now,
     }
@@ -857,18 +914,25 @@ class Dynamo implements DbClient {
     try {
       await dynamodDbDocClient.send(new PutCommand(params))
 
-      logger.info('Added access group to DynamoDB', {
-        sortKey,
-        groupName: accessGroup.groupName,
-        environment: accessGroup.environment,
+      logger.info('Added AccessGroupRecord', {
+        sortKey: sortKey,
+        accessGroup: item
       })
 
       // Return the created item in the expected format
       return {
-        ...item,
+        environment: item.environment,
+        groupName: item.groupName,
+        sortKey: item.sortKey,
+        entityType: item.entityType,
+        description: item?.description,
         roles: item.roles ? Array.from(item.roles) : [],
         users: item.users ? Array.from(item.users) : [],
         groups: item.groups ? Array.from(item.groups) : [],
+        createdBy: item?.createdBy,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        updatedBy: item?.updatedBy,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
       } as AccessGroupRecord
     } catch (error) {
       if (error.name === 'ConditionalCheckFailedException') {
@@ -905,12 +969,19 @@ class Dynamo implements DbClient {
     }
 
     try {
+      const agr = await this.fetchAccessGroups().then((groups) =>
+        groups.find((g) => g.sortKey === sortKey)
+      )
+
       await dynamodDbDocClient.send(new DeleteCommand(params))
 
-      logger.info('Deleted access group from DynamoDB', {
-        sortKey,
-        operation: 'deleteAccessGroup',
-      })
+      if (agr) {
+        logger.info('Deleted AccessGroupRecord', {
+          sortKey: sortKey,
+          accessGroup: agr,
+          operation: 'deleteAccessGroup',
+        })
+      }
 
       return true
     } catch (error) {
@@ -923,7 +994,7 @@ class Dynamo implements DbClient {
       }
 
       logger.error('Error deleting access group from DynamoDB', {
-        sortKey,
+        sortKey: sortKey,
         errorMessage: error.message,
         errorType: error.name,
         stack: error.stack,
@@ -962,11 +1033,11 @@ class Dynamo implements DbClient {
       environment: item.environment as string,
       groupName: item.groupName as string,
       sortKey: item.sortKey as string,
+      entityType: item.entityType as string,
+      updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+      createdOn: item.createdOn ? new Date(item.createdOn) : null,
       updatedBy: item.updatedBy as string,
       createdBy: item.createdBy as string,
-      entityType: item.entityType as string,
-      updatedOn: item.updatedOn as string,
-      createdOn: item.createdOn as string,
       description: item.description as string | undefined,
       roles: Array.isArray(item.roles)
         ? item.roles
@@ -1038,6 +1109,10 @@ class Dynamo implements DbClient {
           : item.principalNames
           ? Array.from(item.principalNames)
           : [],
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        updatedBy: item.updatedBy as string,
+        createdBy: item.createdBy as string
       }))
     } catch (error) {
       console.error('Error querying organizations:', error)
@@ -1147,7 +1222,8 @@ class Dynamo implements DbClient {
     createdBy: string
   }): Promise<DenyListItem> {
     try {
-      const timestamp = new Date().toISOString()
+      const ts = new Date()
+      const timestamp = ts.toISOString()
       const sortKey = `${denyListItem.environment}#${denyListItem.principal}`
 
       // Check if record already exists
@@ -1166,10 +1242,12 @@ class Dynamo implements DbClient {
         environment: denyListItem.environment,
         sortKey: sortKey,
         reason: denyListItem.reason || '',
+        dateDenied: timestamp,
+        deniedBy: getAuditUserString(),
         createdOn: timestamp,
         updatedOn: timestamp,
-        createdBy: denyListItem.createdBy,
-        updatedBy: denyListItem.createdBy,
+        createdBy: getAuditUserString(),
+        updatedBy: getAuditUserString(),
       }
 
       const params: PutCommandInput = {
@@ -1178,26 +1256,29 @@ class Dynamo implements DbClient {
       }
 
       await dynamodDbDocClient.send(new PutCommand(params))
-      console.log(
-        'Successfully added deny list record:',
-        JSON.stringify(itemToInsert, null, 2)
-      )
+      logger.info('Added DenyListRecord', {
+        sortKey: sortKey,
+        denyListRecord: itemToInsert
+      })
+
       const destinationType = await this.fetchDestinationType(
         denyListItem.environment.toString()
       )
-      return {
+      const dlr = {
         id: sortKey,
         name: await this.fetchOrganizationName(denyListItem.principal),
-        reason: denyListItem.reason || 'Not specified',
+        reason: itemToInsert.reason || 'Not specified',
         dateDenied: timestamp,
-        deniedBy: 'System',
+        deniedBy: itemToInsert.deniedBy,
         certificationName: denyListItem.principal || 'N/A',
         environment: destinationType.type,
-        createdBy: denyListItem.createdBy,
-        createdOn: new Date(),
-        updatedBy: undefined,
-        updatedOn: undefined,
+        createdBy: itemToInsert.createdBy,
+        createdOn: ts,
+        updatedBy: itemToInsert.updatedBy,
+        updatedOn: ts,
       }
+      logger.info('Created DenyListRecord', { denyListRecord: itemToInsert }) 
+      return dlr
     } catch (error) {
       console.error('Error adding deny list record:', error)
       throw error
@@ -1206,6 +1287,9 @@ class Dynamo implements DbClient {
 
   async deleteDenyListRecord(id: string): Promise<boolean> {
     try {
+      const dlr = await this.fetchDenyListData().then((records) =>
+        records.find((r) => r.id === id)
+      )
       const params: DeleteCommandInput = {
         TableName: TABLE_NAME,
         Key: {
@@ -1217,11 +1301,9 @@ class Dynamo implements DbClient {
 
       await dynamodDbDocClient.send(new DeleteCommand(params))
 
-      logger.info('Deny list record deleted successfully', {
-        operation: 'deleteDenyListRecord',
-        tableName: TABLE_NAME,
-        entityType: 'DenyListRecord',
+      logger.info('Deleted DenyListRecord', {
         sortKey: id,
+        denyListRecord: dlr,
       })
 
       return true
@@ -1303,8 +1385,8 @@ class Dynamo implements DbClient {
         sortKey: fileTypeItem.sortKey,
         createdOn: timestamp,
         updatedOn: timestamp,
-        createdBy: fileTypeItem.createdBy || 'System',
-        updatedBy: fileTypeItem.createdBy || 'System',
+        createdBy: getAuditUserString(),
+        updatedBy: getAuditUserString(),
       }
 
       const params: PutCommandInput = {
@@ -1314,9 +1396,10 @@ class Dynamo implements DbClient {
       }
 
       await dynamodDbDocClient.send(new PutCommand(params))
-      console.log(
-        'Successfully added ads file type record:',
-        JSON.stringify(itemToInsert, null, 2)
+      logger.info(
+        'Created FileType', {
+          fileTypeRecord: itemToInsert
+        }
       )
 
       return true
@@ -1328,6 +1411,9 @@ class Dynamo implements DbClient {
 
   async deleteAdsFileTypeRecord(sortKey: string): Promise<boolean> {
     try {
+      const ftr = await this.fetchFileTypeList().then((records) =>
+        records.find((r) => r.sortKey === sortKey)
+      )
       const params: DeleteCommandInput = {
         TableName: TABLE_NAME,
         Key: {
@@ -1339,12 +1425,11 @@ class Dynamo implements DbClient {
 
       await dynamodDbDocClient.send(new DeleteCommand(params))
 
-      logger.info('ADS file type record deleted successfully', {
-        operation: 'deleteAdsFileTypeRecord',
-        tableName: TABLE_NAME,
-        entityType: 'FileType',
-        sortKey: sortKey,
-      })
+      if (ftr) {
+        logger.info('Deleted FileType', {
+          fileType : ftr
+        })
+      }
 
       return true
     } catch (error) {
@@ -1515,6 +1600,15 @@ class Dynamo implements DbClient {
     logger.debug(
       `Upserting allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
     )
+    const getParams: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'AllowedUser',
+        sortKey: `${allowedUser.environment}#${allowedUser.destinationId}#${allowedUser.principal}`,
+      },
+    };
+    const existing = await dynamodDbDocClient.send(new GetCommand(getParams));
+    const isUpdate = !!existing.Item; // true if update, false if insert
 
     const now = new Date().toISOString()
     const params: PutCommandInput = {
@@ -1527,11 +1621,9 @@ class Dynamo implements DbClient {
         destinationId: allowedUser.destinationId,
         organization: allowedUser.organization,
         enabled: allowedUser.enabled ?? true,
-        createdBy: allowedUser.createdBy,
-        createdOn: allowedUser.createdOn
-          ? allowedUser.createdOn.toISOString()
-          : now,
-        updatedBy: allowedUser.updatedBy,
+        createdBy: isUpdate ? existing.Item.createdBy : getAuditUserString(),
+        createdOn: isUpdate ? existing.Item.createdOn : now,
+        updatedBy: getAuditUserString(),
         updatedOn: now,
         // Honor provided validatedOn (can be null) instead of always now
         validatedOn: allowedUser.validatedOn
@@ -1542,9 +1634,9 @@ class Dynamo implements DbClient {
 
     try {
       await dynamodDbDocClient.send(new PutCommand(params))
-      logger.info(
-        `Successfully upserted allowed user: environment=${allowedUser.environment}, destinationId=${allowedUser.destinationId}, principal=${allowedUser.principal}`
-      )
+      logger.info('Successfully upserted AllowedUser', {
+        allowedUser: params.Item
+      })
       return {
         ...allowedUser,
         updatedOn: new Date(now),
@@ -1584,11 +1676,13 @@ class Dynamo implements DbClient {
     }
 
     try {
-      await dynamodDbDocClient.send(new DeleteCommand(params))
-      logger.info(
-        `Successfully deleted allowed user: environment=${environment}, destinationId=${destinationId}, principal=${principal}`
-      )
-      return true
+      // Fetch the AllowedUser before deletion
+      const allowedUser = await this.fetchAllowedUser(environment, destinationId, principal);
+      await dynamodDbDocClient.send(new DeleteCommand(params));
+      logger.info('Successfully deleted AllowedUser', {
+        allowedUser: allowedUser || { environment, destinationId, principal }
+      });
+      return true;
     } catch (error) {
       logger.error('Error deleting allowed user from DynamoDB', {
         environment,
@@ -1600,8 +1694,8 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'deleteAllowedUser',
-      })
-      throw error
+      });
+      throw error;
     }
   }
 

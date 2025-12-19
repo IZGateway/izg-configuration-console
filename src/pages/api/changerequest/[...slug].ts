@@ -44,7 +44,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!changeRequest.isDraft) {
         await changeRequestTicketComment(changeRequest.jiraId, new Date())
       }
-      await dbClient.deleteDestinationChangeRequest(id)
+      await dbClient.deleteDestinationChangeRequest(id) 
       logger.info(`Change Request with ID ${id} is deleted by user`)
       res.status(200).json('Change Request is deleted')
     } catch (error) {
