@@ -9,7 +9,7 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
-import { asyncRequestContext } from '../../lib/db/DbRequestContext'
+import { asyncRequestContext } from '../Context'
 import os from 'os'
 import {
   DeleteCommand,

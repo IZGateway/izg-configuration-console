@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import logger from '../../../logger'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
-import { asyncRequestContext, DbRequestContext } from '../../lib/db/DbRequestContext'
+import { asyncRequestContext, Context } from '../../lib/Context'
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -127,7 +127,7 @@ const withMiddleware = (...middlewareNames: string[]) => {
         req.socket?.remoteAddress ||
         'unknown'
       const sub = session?.user?.sub || undefined
-      const context: DbRequestContext = { user, ipAddress, sub }
+      const context: Context = { user, ipAddress, sub }
       await asyncRequestContext.run(context, async () => {
         const dispatch = async (i: number): Promise<void> => {
           if (i < stack.length) {
