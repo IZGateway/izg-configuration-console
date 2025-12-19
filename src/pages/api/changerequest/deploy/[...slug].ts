@@ -97,18 +97,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         maintReason: undefined,
         maintStart: undefined,
         maintEnd: undefined,
-        createdBy: undefined, // TODO: Clean this up.
-        createdOn: undefined, // TODO: Clean this up.
-        updatedBy: undefined, // TODO: Clean this up.
-        updatedOn: undefined, // TODO: Clean this up.
+        createdBy: undefined, 
+        createdOn: undefined, 
+        updatedBy: undefined, 
+        updatedOn: undefined, 
         jurisdiction: {
           jurisdictionId: changeRequest.jurisdiction.jurisdictionId,
           name: undefined,
           description: undefined,
-          createdBy: undefined, // TODO: Clean this up.
-          createdOn: undefined, // TODO: Clean this up.
-          updatedBy: undefined, // TODO: Clean this up.
-          updatedOn: undefined, // TODO: Clean this up.
+          createdBy: undefined, 
+          createdOn: undefined, 
+          updatedBy: undefined, 
+          updatedOn: undefined, 
         },
         destinationType: {
           type: changeRequest.destType.type,

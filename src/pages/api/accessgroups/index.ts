@@ -53,7 +53,7 @@ const handler = async (
         ...req.body,
         environment: String(req.body.environment),
         createdBy: session.user.email || 'System',
-      })  // TODO: Log creator info
+      })  
 
       if (result) {
         res.status(201).json(result)

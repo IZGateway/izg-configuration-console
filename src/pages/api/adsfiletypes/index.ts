@@ -39,7 +39,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         fileTypeName,
         sortKey,
         createdBy,
-      })  // TODO: Log creator info
+      })  
 
       return res.status(201).json(newRecord)
     } catch (error) {

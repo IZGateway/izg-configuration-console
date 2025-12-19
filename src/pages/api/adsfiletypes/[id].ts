@@ -31,7 +31,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Delete the record
-      const success = await dbClient.deleteAdsFileTypeRecord(id)  // TODO: Log deleter info
+      const success = await dbClient.deleteAdsFileTypeRecord(id)
 
       if (!success) {
         logger.error('Failed to delete file type record', {
