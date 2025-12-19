@@ -1256,10 +1256,6 @@ class Dynamo implements DbClient {
       }
 
       await dynamodDbDocClient.send(new PutCommand(params))
-      logger.info('Added DenyListRecord', {
-        sortKey: sortKey,
-        denyListRecord: itemToInsert
-      })
 
       const destinationType = await this.fetchDestinationType(
         denyListItem.environment.toString()
