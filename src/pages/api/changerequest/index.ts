@@ -129,7 +129,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           if (_.isNull(changeRequestTicketResponse)) {
             await dbClient.deleteDestinationChangeRequest(
               changeRequestDBResponse.id
-            )
+            ) 
           }
         }
       }
@@ -154,6 +154,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             scheduledAt: requestBody.scheduledAt,
             isDraft: false,
             isPasswordDifferent: requestBody.isPasswordDifferent,
+            createdBy: requestBody.createdBy, 
+            createdOn: requestBody.createdOn, 
+            updatedBy: requestBody.updatedBy, 
+            updatedOn: requestBody.updatedOn, 
             requested: {
               destUri: requestBody.requested.destUri,
               username: requestBody.requested.username,
@@ -189,7 +193,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     } else if (req.method === 'DELETE') {
       try {
-        await dbClient.deleteDestinationChangeRequest(requestBody.id)
+        await dbClient.deleteDestinationChangeRequest(requestBody.id)  // Log deleter info
         logger.info('Change request deleted successfully', {
           changeRequestId: requestBody.id,
           userId: session?.user?.email,
@@ -223,6 +227,10 @@ const upsertChangeRequest = async (
     requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
+    createdBy: changeRequestDetails.createdBy, 
+    createdOn: changeRequestDetails.createdOn, 
+    updatedBy: changeRequestDetails.updatedBy, 
+    updatedOn: changeRequestDetails.updatedOn, 
     isPasswordDifferent: changeRequestDetails.isPasswordDifferent || false,
     requested: {
       destUri: changeRequestDetails.requested.destUri,
