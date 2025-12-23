@@ -1,4 +1,6 @@
-export interface SenderRecord {
+import { DbAudit } from "./DbAudit"
+
+export interface SenderRecord extends DbAudit {
   id: string
   sender: string
   senderDetails: string

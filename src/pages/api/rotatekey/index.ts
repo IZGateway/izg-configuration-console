@@ -3,7 +3,6 @@ import withMiddleware from '../api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { rotateKey } from '../../../lib/security/crypto/DbCrypto'
 import logger from '../../../../logger'
-
 let dbClient: Awaited<ReturnType<typeof DbClientFactory.getDbClient>>
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -34,5 +33,4 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     })
   }
 }
-
 export default withMiddleware()(handler)
