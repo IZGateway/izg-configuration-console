@@ -61,7 +61,7 @@ const checkAccessToDestId: Middleware = async (req, res, next) => {
   const context = asyncRequestContext.getStore()
   const user = context?.user || 'unknown'
   const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, user)
+  const hasAccess = hasAccessToDestId(destId, context?.session)
   if (hasAccess) {
     logger.debug('Api request ' + req.url, {
       req,
@@ -86,7 +86,7 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
   const context = asyncRequestContext.getStore()
   const user = context?.user || 'unknown'
   const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, user)
+  const hasAccess = hasAccessToDestId(destId, context?.session)
   if (hasAccess) {
     logger.debug('Api request ' + req.url, {
       req,
@@ -127,7 +127,7 @@ const withMiddleware = (...middlewareNames: string[]) => {
         req.socket?.remoteAddress ||
         'unknown'
       const sub = session?.user?.sub || undefined
-      const context: Context = { user, ipAddress, sub }
+      const context: Context = { user, ipAddress, sub, session }
       await asyncRequestContext.run(context, async () => {
         const dispatch = async (i: number): Promise<void> => {
           if (i < stack.length) {
