@@ -80,35 +80,43 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }
       }
 
+      // Fetch current destination from database to get complete record
+      const currentDestination: Destination | null =
+        await dbClient.fetchDestination(
+          changeRequest.destId,
+          changeRequest.destType.typeId
+        )
+
       const updatedDestination: Destination = {
         destId: changeRequest.destId,
         destUri: changeRequest.requested.destUri,
-        destVersion: undefined,
+        destVersion: currentDestination?.destVersion ?? undefined,
         username: changeRequest.requested.username,
-        MSH6: changeRequest.requested.MSH6 || undefined,
-        MSH11: changeRequest.requested.MSH11 || undefined,
-        MSH22: changeRequest.requested.MSH22 || undefined,
-        MSH3: changeRequest.requested.MSH3 || undefined,
-        MSH4: changeRequest.requested.MSH4 || undefined,
-        MSH5: changeRequest.requested.MSH5 || undefined,
-        RXA11: changeRequest.requested.RXA11 || undefined,
-        facilityId: changeRequest.requested.facilityId || undefined,
-        passExpiry: undefined,
-        maintReason: undefined,
-        maintStart: undefined,
-        maintEnd: undefined,
-        createdBy: undefined, 
-        createdOn: undefined, 
-        updatedBy: undefined, 
-        updatedOn: undefined, 
+        MSH6: changeRequest.requested.MSH6 ?? undefined,
+        MSH11: changeRequest.requested.MSH11 ?? undefined,
+        MSH22: changeRequest.requested.MSH22 ?? undefined,
+        MSH3: changeRequest.requested.MSH3 ?? undefined,
+        MSH4: changeRequest.requested.MSH4 ?? undefined,
+        MSH5: changeRequest.requested.MSH5 ?? undefined,
+        RXA11: changeRequest.requested.RXA11 ?? undefined,
+        facilityId: changeRequest.requested.facilityId ?? undefined,
+        passExpiry: currentDestination?.passExpiry ?? undefined,
+        maintReason: currentDestination?.maintReason ?? undefined,
+        maintStart: currentDestination?.maintStart ?? undefined,
+        maintEnd: currentDestination?.maintEnd ?? undefined,
+        createdBy: currentDestination?.createdBy ?? undefined,
+        createdOn: currentDestination?.createdOn ?? undefined,
+        updatedBy: currentDestination?.updatedBy ?? undefined,
+        updatedOn: currentDestination?.updatedOn ?? undefined,
         jurisdiction: {
           jurisdictionId: changeRequest.jurisdiction.jurisdictionId,
-          name: undefined,
-          description: undefined,
-          createdBy: undefined, 
-          createdOn: undefined, 
-          updatedBy: undefined, 
-          updatedOn: undefined, 
+          name: currentDestination?.jurisdiction?.name ?? undefined,
+          description:
+            currentDestination?.jurisdiction?.description ?? undefined,
+          createdBy: currentDestination?.jurisdiction?.createdBy ?? undefined,
+          createdOn: currentDestination?.jurisdiction?.createdOn ?? undefined,
+          updatedBy: currentDestination?.jurisdiction?.updatedBy ?? undefined,
+          updatedOn: currentDestination?.jurisdiction?.updatedOn ?? undefined,
         },
         destinationType: {
           type: changeRequest.destType.type,
@@ -120,12 +128,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       Promise.allSettled([
-        await dbClient.updateDestination(updatedDestination),  // Log updator info
-        await dbClient.createDestinationChangeRequestDeploymentAudit(
+        dbClient.updateDestination(updatedDestination), // Log updator info
+        dbClient.createDestinationChangeRequestDeploymentAudit(
           changeRequest,
           session.user.name
-        ),  // log creator info
-        await dbClient.deleteDestinationChangeRequest(changeRequestId),  // log deleter info
+        ), // log creator info
+        dbClient.deleteDestinationChangeRequest(changeRequestId), // log deleter info
       ]).then((results) => {
         enum calls {
           updateDestination = 0,
@@ -146,17 +154,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               session.user.name,
             {
               userName: session.user.name,
+              destId: changeRequest.destId,
+              destinationType: changeRequest.destType.type,
               oldValues: {
-                ...changeRequest.current,
-                password: changeRequest.current?.password
-                  ? '********'
-                  : undefined,
+                destUri: currentDestination?.destUri,
+                username: currentDestination?.username,
+                MSH3: currentDestination?.MSH3,
+                MSH4: currentDestination?.MSH4,
+                MSH5: currentDestination?.MSH5,
+                MSH6: currentDestination?.MSH6,
+                MSH11: currentDestination?.MSH11,
+                MSH22: currentDestination?.MSH22,
+                RXA11: currentDestination?.RXA11,
+                facilityId: currentDestination?.facilityId,
+                password: currentDestination?.password ? '********' : undefined,
               },
               newValues: {
-                ...changeRequest.requested,
-                password: changeRequest.requested?.password
-                  ? '********'
-                  : undefined,
+                destUri: changeRequest.requested.destUri,
+                username: changeRequest.requested.username,
+                MSH3: changeRequest.requested.MSH3,
+                MSH4: changeRequest.requested.MSH4,
+                MSH5: changeRequest.requested.MSH5,
+                MSH6: changeRequest.requested.MSH6,
+                MSH11: changeRequest.requested.MSH11,
+                MSH22: changeRequest.requested.MSH22,
+                RXA11: changeRequest.requested.RXA11,
+                facilityId: changeRequest.requested.facilityId,
+                password: updatedDestination.password ? '********' : undefined,
               },
               passwordChanged: changeRequest.isPasswordDifferent,
               createdAt: new Date(),

@@ -704,8 +704,7 @@ class Dynamo implements DbClient {
     }
     destination.updatedBy = getAuditUserString()
     destination.updatedOn = new Date()
-    params.UpdateExpression +=
-      'SET updatedBy = :updatedBy, updatedOn = :updatedOn'
+    params.UpdateExpression += `${separator} updatedBy = :updatedBy, updatedOn = :updatedOn`
     params.ExpressionAttributeValues[':updatedBy'] = destination.updatedBy
     params.ExpressionAttributeValues[':updatedOn'] =
       destination.updatedOn.toISOString()
