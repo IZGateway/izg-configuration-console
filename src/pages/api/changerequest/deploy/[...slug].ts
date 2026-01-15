@@ -90,33 +90,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const updatedDestination: Destination = {
         destId: changeRequest.destId,
         destUri: changeRequest.requested.destUri,
-        destVersion: currentDestination?.destVersion || undefined,
+        destVersion: currentDestination?.destVersion ?? undefined,
         username: changeRequest.requested.username,
-        MSH6: changeRequest.requested.MSH6 || undefined,
-        MSH11: changeRequest.requested.MSH11 || undefined,
-        MSH22: changeRequest.requested.MSH22 || undefined,
-        MSH3: changeRequest.requested.MSH3 || undefined,
-        MSH4: changeRequest.requested.MSH4 || undefined,
-        MSH5: changeRequest.requested.MSH5 || undefined,
-        RXA11: changeRequest.requested.RXA11 || undefined,
-        facilityId: changeRequest.requested.facilityId || undefined,
-        passExpiry: currentDestination?.passExpiry || undefined,
-        maintReason: currentDestination?.maintReason || undefined,
-        maintStart: currentDestination?.maintStart || undefined,
-        maintEnd: currentDestination?.maintEnd || undefined,
-        createdBy: currentDestination?.createdBy || undefined,
-        createdOn: currentDestination?.createdOn || undefined,
-        updatedBy: currentDestination?.updatedBy || undefined,
-        updatedOn: currentDestination?.updatedOn || undefined,
+        MSH6: changeRequest.requested.MSH6 ?? undefined,
+        MSH11: changeRequest.requested.MSH11 ?? undefined,
+        MSH22: changeRequest.requested.MSH22 ?? undefined,
+        MSH3: changeRequest.requested.MSH3 ?? undefined,
+        MSH4: changeRequest.requested.MSH4 ?? undefined,
+        MSH5: changeRequest.requested.MSH5 ?? undefined,
+        RXA11: changeRequest.requested.RXA11 ?? undefined,
+        facilityId: changeRequest.requested.facilityId ?? undefined,
+        passExpiry: currentDestination?.passExpiry ?? undefined,
+        maintReason: currentDestination?.maintReason ?? undefined,
+        maintStart: currentDestination?.maintStart ?? undefined,
+        maintEnd: currentDestination?.maintEnd ?? undefined,
+        createdBy: currentDestination?.createdBy ?? undefined,
+        createdOn: currentDestination?.createdOn ?? undefined,
+        updatedBy: currentDestination?.updatedBy ?? undefined,
+        updatedOn: currentDestination?.updatedOn ?? undefined,
         jurisdiction: {
           jurisdictionId: changeRequest.jurisdiction.jurisdictionId,
-          name: currentDestination?.jurisdiction?.name || undefined,
+          name: currentDestination?.jurisdiction?.name ?? undefined,
           description:
-            currentDestination?.jurisdiction?.description || undefined,
-          createdBy: currentDestination?.jurisdiction?.createdBy || undefined,
-          createdOn: currentDestination?.jurisdiction?.createdOn || undefined,
-          updatedBy: currentDestination?.jurisdiction?.updatedBy || undefined,
-          updatedOn: currentDestination?.jurisdiction?.updatedOn || undefined,
+            currentDestination?.jurisdiction?.description ?? undefined,
+          createdBy: currentDestination?.jurisdiction?.createdBy ?? undefined,
+          createdOn: currentDestination?.jurisdiction?.createdOn ?? undefined,
+          updatedBy: currentDestination?.jurisdiction?.updatedBy ?? undefined,
+          updatedOn: currentDestination?.jurisdiction?.updatedOn ?? undefined,
         },
         destinationType: {
           type: changeRequest.destType.type,
@@ -128,12 +128,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       Promise.allSettled([
-        await dbClient.updateDestination(updatedDestination), // Log updator info
-        await dbClient.createDestinationChangeRequestDeploymentAudit(
+        dbClient.updateDestination(updatedDestination), // Log updator info
+        dbClient.createDestinationChangeRequestDeploymentAudit(
           changeRequest,
           session.user.name
         ), // log creator info
-        await dbClient.deleteDestinationChangeRequest(changeRequestId), // log deleter info
+        dbClient.deleteDestinationChangeRequest(changeRequestId), // log deleter info
       ]).then((results) => {
         enum calls {
           updateDestination = 0,
