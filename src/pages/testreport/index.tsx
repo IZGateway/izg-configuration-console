@@ -53,10 +53,11 @@ export async function getServerSideProps(context) {
         dest.destId,
         dest.destTypeId
       )
-      const testResult = await connectionTest(
-        destinationToTest,
-        session.user.email
-      )
+      const testResult = await connectionTest(destinationToTest, {
+        name: session.user.name,
+        email: session.user.email,
+        id: session.user.id,
+      })
       return {
         type: destinationToTest?.destinationType.type || 'N/A',
         destId: destinationToTest?.destId || 'N/A',
