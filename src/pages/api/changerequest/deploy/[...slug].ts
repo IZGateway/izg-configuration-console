@@ -169,8 +169,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 RXA11: currentDestination?.RXA11,
                 jurisdictionDescription:
                   currentDestination?.jurisdiction?.description,
-                destType: changeRequest.destType.type,
-                typeId: changeRequest.destType.typeId,
+                destType: changeRequest?.destType?.type,
+                typeId: changeRequest?.destType?.typeId,
                 password: currentDestination?.password ? '********' : undefined,
               },
               newValues: {
