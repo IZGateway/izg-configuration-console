@@ -374,6 +374,7 @@ const EditConnection = (props: editConnectionProps) => {
         jiraId: null,
         requestedBy: session.user.email,
         isDraft: true,
+        scheduledAt: new Date().toISOString(),
       }),
     })
     if (response.ok) {
