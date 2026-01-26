@@ -202,10 +202,10 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
             username: destination.username,
             destId: destination.destId,
           },
-          user: {
+          userContext: {
             name: user.name || 'unknown',
             email: user.email || 'unknown',
-            userId: user.id || 'unknown',
+            userId: user.id || user.email || 'unknown',
           },
           timestamp: moment().toISOString(true),
         }
