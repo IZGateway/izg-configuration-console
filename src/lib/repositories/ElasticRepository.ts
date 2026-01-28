@@ -10,7 +10,7 @@
 interface ElasticRepositoryConfig {
   elasticUrl?: string
   apiKey?: string
-  template: string | Record<string, any>
+  template: string | Record<string, unknown>
 }
 
 interface QueryParams {
@@ -92,7 +92,7 @@ export class ElasticRepositoryClient {
    * })
    * // Response: { hits: { total: { value: 100 }, hits: [...] }, took: 15, ... }
    */
-  async getData(params: QueryParams): Promise<any> {
+  async getData(params: QueryParams): Promise<unknown> {
     try {
       const body = this.getRequest(params)
 
@@ -138,7 +138,7 @@ export class ElasticRepositoryClient {
    * )
    */
   static create(
-    template: string | Record<string, any>
+    template: string | Record<string, unknown>
   ): ElasticRepositoryClient {
     return new ElasticRepositoryClient({ template })
   }
@@ -157,7 +157,7 @@ export class ElasticRepositoryClient {
    * Example:
    * const results = await client.getTestData()
    */
-  async getTestData(): Promise<any> {
+  async getTestData(): Promise<unknown> {
     const hardcodedParams = {
       searchTerm: 'error',
       startDate: '2026-01-01T00:00:00Z',

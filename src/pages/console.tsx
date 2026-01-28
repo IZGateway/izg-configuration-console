@@ -9,47 +9,18 @@ import {
   Alert,
 } from '@mui/material'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/router'
 
 const Console = () => {
   const { data: session, status } = useSession()
-  const router = useRouter()
-  const [results, setResults] = useState<any[]>([])
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [rawResponse, setRawResponse] = useState<any>(null)
+  const [rawResponse, setRawResponse] = useState<unknown>(null)
 
-  // Redirect if not authenticated or not admin
-  if (status === 'loading') {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    )
-  }
-
-  if (!session?.user?.isAdmin) {
-    return (
-      <Container maxWidth="sm">
-        <Box sx={{ mt: 4 }}>
-          <Alert severity="error">
-            You do not have permission to access the Console. Admin access is
-            required.
-          </Alert>
-        </Box>
-      </Container>
-    )
-  }
-
-  // Automatically fetch data when page loads
+  // Automatically fetch data when page loads - MUST be before early returns
   useEffect(() => {
     // Only fetch if authenticated and is admin
     if (status !== 'authenticated' || !session?.user?.isAdmin) {
+      setLoading(false)
       return
     }
 
@@ -100,13 +71,15 @@ const Console = () => {
 
         if (!response.ok) {
           let errorMessage = ''
-          let errorDetails: any = {}
+          let errorDetails: unknown = {}
 
           try {
             errorDetails = await response.json()
             errorMessage =
-              errorDetails?.message ||
-              errorDetails?.error ||
+              String(
+                (errorDetails as Record<string, unknown>)?.message || ''
+              ) ||
+              String((errorDetails as Record<string, unknown>)?.error || '') ||
               `HTTP Error: ${response.statusText}`
           } catch (e) {
             errorMessage = response.statusText || 'Unknown error'
@@ -121,13 +94,8 @@ const Console = () => {
           throw new Error(errorMessage)
         }
 
-        const responseData = await response.json()
+        const responseData = (await response.json()) as unknown
 
-        // Extract hits from the Elasticsearch response
-        const hits = responseData.hits?.hits || []
-        const parsedResults = hits.map((hit: any) => hit._source)
-
-        setResults(parsedResults)
         setRawResponse(responseData)
       } catch (err) {
         console.error('Error fetching data:', err)
@@ -143,6 +111,33 @@ const Console = () => {
 
     fetchData()
   }, [status, session?.user?.isAdmin])
+
+  // Redirect if not authenticated or not admin
+  if (status === 'loading') {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  if (!session?.user?.isAdmin) {
+    return (
+      <Container maxWidth="sm">
+        <Box sx={{ mt: 4 }}>
+          <Alert severity="error">
+            You do not have permission to access the Console. Admin access is
+            required.
+          </Alert>
+        </Box>
+      </Container>
+    )
+  }
 
   // Loading state while fetching
   if (loading) {
@@ -209,10 +204,18 @@ const Console = () => {
                   variant="h4"
                   sx={{ fontWeight: 'bold', color: '#388e3c' }}
                 >
-                  {rawResponse.aggregations?.stats?.avg !== undefined &&
-                  rawResponse.aggregations?.stats?.avg !== null
-                    ? (rawResponse.aggregations.stats.avg / 1000000).toFixed(2)
-                    : 'N/A'}
+                  {(() => {
+                    const response = rawResponse as Record<string, unknown>
+                    const aggregations = response?.aggregations as Record<
+                      string,
+                      unknown
+                    >
+                    const stats = aggregations?.stats as Record<string, unknown>
+                    const avg = stats?.avg as number | undefined
+                    return avg !== undefined && avg !== null
+                      ? (avg / 1000000).toFixed(2)
+                      : 'N/A'
+                  })()}
                   <Typography
                     component="span"
                     variant="body2"
