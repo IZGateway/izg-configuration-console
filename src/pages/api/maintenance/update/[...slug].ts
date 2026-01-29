@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
 import withMiddleware from '../../api-middleware-helper'
 import logger from '../../../../../logger'
-import DbClientFactory from '../../../../lib/db/DbClientFactory' 
+import DbClientFactory from '../../../../lib/db/DbClientFactory'
 
 /**
  * @swagger
@@ -52,29 +52,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         ? maintData.reinstatementDateTime
         : null,
       maintStart: maintData.startDateTime ? maintData.startDateTime : null,
-      createdBy: undefined, 
-      createdOn: undefined, 
-      updatedBy: undefined, 
-      updatedOn: undefined, 
+      createdBy: undefined,
+      createdOn: undefined,
+      updatedBy: undefined,
+      updatedOn: undefined,
     })
     res.json(result)
-    if (maintData.startDateTime === null) {
-      logger.info(
-        'Cancelled maintenance request for ' +
-          destId +
-          ' on ' +
-          maintData.destType +
-          ' environment'
-      )
-    } else {
-      logger.info(
-        'Created maintenance request for ' +
-          destId +
-          ' on ' +
-          maintData.destType +
-          ' environment'
-      )
-    }
   } else {
     throw new Error(
       `The HTTP ${req.method} method is not supported at this route.`

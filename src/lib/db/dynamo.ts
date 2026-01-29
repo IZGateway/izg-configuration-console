@@ -712,10 +712,31 @@ class Dynamo implements DbClient {
     const maskedDest = { ...destination }
     maskPassword(maskedDest)
     maskPassword(params.ExpressionAttributeValues)
-    logger.info('Updated Destination', {
-      destination: maskedDest,
-      updatedAttributes: Object.keys(params.ExpressionAttributeValues),
-    })
+
+    // Check if maintenance-related fields were updated
+    const maintFields = [':maintReason', ':maintStart', ':maintEnd']
+    const hasMaintChange = maintFields.some(
+      (field) => field in params.ExpressionAttributeValues
+    )
+
+    if (hasMaintChange) {
+      const maintStart = params.ExpressionAttributeValues[':maintStart']
+      const logMessage =
+        maintStart !== null && maintStart !== undefined && maintStart !== ''
+          ? 'Maintenance Scheduled'
+          : 'Maintenance Canceled'
+
+      logger.info(logMessage, {
+        destination: maskedDest,
+        updatedAttributes: params.ExpressionAttributeValues,
+      })
+    } else {
+      logger.info('Updated Destination', {
+        destination: maskedDest,
+        updatedAttributes: params.ExpressionAttributeValues,
+      })
+    }
+
     return true
   }
 
