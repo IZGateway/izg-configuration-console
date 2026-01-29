@@ -709,18 +709,17 @@ class Dynamo implements DbClient {
     params.ExpressionAttributeValues[':updatedOn'] =
       destination.updatedOn.toISOString()
     const data = await dynamodDbDocClient.send(new UpdateCommand(params))
-    const maskedDest = { ...destination }
-    maskPassword(maskedDest)
-    maskPassword(params.ExpressionAttributeValues)
+    const maskedDest = maskPassword({ ...destination })
+    const maskedAttributes = maskPassword(params.ExpressionAttributeValues)
 
     // Check if maintenance-related fields were updated
     const maintFields = [':maintReason', ':maintStart', ':maintEnd']
-    const hasMaintChange = maintFields.some(
-      (field) => field in params.ExpressionAttributeValues
+    const hasMaintChange = maintFields.some((field) =>
+      Object.prototype.hasOwnProperty.call(maskedAttributes, field)
     )
 
     if (hasMaintChange) {
-      const maintStart = params.ExpressionAttributeValues[':maintStart']
+      const maintStart = maskedAttributes[':maintStart']
       const logMessage =
         maintStart !== null && maintStart !== undefined && maintStart !== ''
           ? 'Maintenance Scheduled'
@@ -728,12 +727,12 @@ class Dynamo implements DbClient {
 
       logger.info(logMessage, {
         destination: maskedDest,
-        updatedAttributes: params.ExpressionAttributeValues,
+        updatedAttributes: maskedAttributes,
       })
     } else {
       logger.info('Updated Destination', {
         destination: maskedDest,
-        updatedAttributes: params.ExpressionAttributeValues,
+        updatedAttributes: maskedAttributes,
       })
     }
 
