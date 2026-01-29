@@ -17,7 +17,7 @@ ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
 ARG NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
 RUN npm run build
 
-FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
+FROM ghcr.io/izgateway/alpine-node-openssl-fips@sha256:76a3695db03488fc760f15faeead129647f557311ecff338057b5fd3f628338c AS runner
 WORKDIR /app
 
 ENV NEXT_TELEMETRY_DISABLED 1
