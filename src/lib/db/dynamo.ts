@@ -720,10 +720,9 @@ class Dynamo implements DbClient {
 
     if (hasMaintChange) {
       const maintStart = maskedAttributes[':maintStart']
-      const logMessage =
-        maintStart !== null && maintStart !== undefined && maintStart !== ''
-          ? 'Maintenance Scheduled'
-          : 'Maintenance Canceled'
+      const logMessage = maintStart
+        ? 'Maintenance Scheduled'
+        : 'Maintenance Cancelled'
 
       logger.info(logMessage, {
         destination: maskedDest,
