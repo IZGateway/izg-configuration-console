@@ -2,13 +2,13 @@ services:
   mysql:
     build: ./database
     ports:
-      - '3306:3306'
+      - "3306:3306"
   config-console:
     build:
       context: ./
       dockerfile: ./Dockerfile
     ports:
-      - '443:443'
+      - "443:443"
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
