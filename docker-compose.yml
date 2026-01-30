@@ -2,13 +2,13 @@ services:
   mysql:
     build: ./database
     ports:
-      - "3306:3306"
+      - '3306:3306'
   config-console:
     build:
       context: ./
       dockerfile: ./Dockerfile
     ports:
-      - "443:443"
+      - '443:443'
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -32,6 +32,7 @@ services:
       NEXT_PUBLIC_OKTA_ISSUER: ${NEXT_PUBLIC_OKTA_ISSUER}
       NEXT_PUBLIC_BUILD_ID: ${NEXT_PUBLIC_BUILD_ID}
       NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
+      NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV}
       ELASTIC_ENV_TAG: ${ELASTIC_ENV_TAG}
       ELASTIC_HOST: ${ELASTIC_HOST}
       ELASTIC_API_KEY: ${ELASTIC_API_KEY}
