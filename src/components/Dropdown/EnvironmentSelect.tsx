@@ -57,8 +57,6 @@ const getAvailableEnvironments = (
 ): Array<{ value: string; label: string }> => {
   const appEnv =
     process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() || 'development'
-  console.warn('DEBUG: NEXT_PUBLIC_APP_ENV =', process.env.NEXT_PUBLIC_APP_ENV)
-  console.warn('DEBUG: appEnv (normalized) =', appEnv)
   const stringValue = String(currentValue)
 
   // Map NEXT_PUBLIC_APP_ENV to corresponding environment values
@@ -71,14 +69,11 @@ const getAvailableEnvironments = (
   }
 
   const allowedEnvValues = envMapping[appEnv]
-  console.warn('DEBUG: allowedEnvValues =', allowedEnvValues)
 
   // Get filtered environments based on NEXT_PUBLIC_APP_ENV
   const filteredEnvironments = allowedEnvValues
     ? allEnvironments.filter((env) => allowedEnvValues.includes(env.value))
     : allEnvironments
-
-  console.warn('DEBUG: filteredEnvironments =', filteredEnvironments)
 
   // If disabled (edit mode)
   if (disabled && stringValue) {
