@@ -55,7 +55,8 @@ const getAvailableEnvironments = (
   disabled = false,
   currentValue = ''
 ): Array<{ value: string; label: string }> => {
-  const appEnv = process.env.NEXT_PUBLIC_APP_ENV?.toLowerCase() || 'development'
+  const appEnv =
+    process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() || 'development'
   const stringValue = String(currentValue)
 
   // Map NEXT_PUBLIC_APP_ENV to corresponding environment values
