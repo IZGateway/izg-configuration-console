@@ -101,7 +101,7 @@
     "dompurify": "3.2.5",
     "sha.js": "2.4.12",
     "js-yaml": "4.1.1",
-    "preact": "10.28.2"
-
+    "preact": "10.28.2",
+    "fast-xml-parser": "5.3.4"
   }
 }
