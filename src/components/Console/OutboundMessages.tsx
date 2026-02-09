@@ -4,7 +4,12 @@ const OutboundMessages = (props) => {
   return (
     <div>
       <Card
-        sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}
+        sx={{
+          marginTop: 4,
+          borderRadius: '0px 0px 16px 16px',
+          boxShadow: 'none',
+          border: '1px solid #E0E0E0',
+        }}
         id="outbound-messages"
       >
         <CardHeader

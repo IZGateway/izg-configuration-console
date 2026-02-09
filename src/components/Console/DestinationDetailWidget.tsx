@@ -7,7 +7,7 @@ const DestinationDetailWidget = (props) => {
         sx={{
           marginTop: 4,
           borderRadius: '50px',
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+          boxShadow: 'none',
           border: '1px solid #e0e0e0',
         }}
         id="my-izGateway-status-widget"
@@ -15,7 +15,6 @@ const DestinationDetailWidget = (props) => {
         <CardHeader
           title="My IZ Gateway Status"
           subheader="Status Health - Last Updated at 3:45PM"
-          titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           subheaderTypographyProps={{ variant: 'body2', color: '#999' }}
           action={
             <Box
@@ -27,7 +26,7 @@ const DestinationDetailWidget = (props) => {
               }}
             >
               <Typography
-                variant="h4"
+                variant="h5"
                 sx={{ color: '#1976d2', fontWeight: 700 }}
               >
                 99.8%
@@ -44,7 +43,7 @@ const DestinationDetailWidget = (props) => {
         sx={{
           marginTop: 4,
           borderRadius: '50px',
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+          boxShadow: 'none',
           border: '1px solid #e0e0e0',
         }}
         id="total-messages"
@@ -52,7 +51,6 @@ const DestinationDetailWidget = (props) => {
         <CardHeader
           title="Total Messages (24h)"
           subheader="All Message Traffic"
-          titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           subheaderTypographyProps={{ variant: 'body2', color: '#999' }}
           action={
             <Box
@@ -64,7 +62,7 @@ const DestinationDetailWidget = (props) => {
               }}
             >
               <Typography
-                variant="h4"
+                variant="h5"
                 sx={{ color: '#1976d2', fontWeight: 700 }}
               >
                 33,234
@@ -81,7 +79,7 @@ const DestinationDetailWidget = (props) => {
         sx={{
           marginTop: 4,
           borderRadius: '50px',
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+          boxShadow: 'none',
           border: '1px solid #e0e0e0',
         }}
         id="success-rate"
@@ -89,7 +87,6 @@ const DestinationDetailWidget = (props) => {
         <CardHeader
           title="Success Rate"
           subheader="Message Processing Status"
-          titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
           subheaderTypographyProps={{ variant: 'body2', color: '#999' }}
           action={
             <Box
@@ -101,7 +98,7 @@ const DestinationDetailWidget = (props) => {
               }}
             >
               <Typography
-                variant="h4"
+                variant="h5"
                 sx={{ color: '#1976d2', fontWeight: 700 }}
               >
                 98.5%
