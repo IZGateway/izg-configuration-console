@@ -344,7 +344,7 @@ const Console = () => {
             flexDirection: 'column',
           }}
         >
-          <DestinationDetailWidget />
+          <DestinationDetailWidget selectedConnection={selectedConnection} />
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
