@@ -34,8 +34,6 @@ const Console = () => {
   const { data: session, status } = useSession()
   const [error, setError] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [rawResponse, setRawResponse] = useState<unknown>(null)
-  const [refreshTime, setRefreshTime] = useState<string>('')
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [selectedConnection, setSelectedConnection] = useState('')
