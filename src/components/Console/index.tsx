@@ -32,12 +32,9 @@ interface Destination {
 
 const Console = () => {
   const { data: session, status } = useSession()
-  const [error, setError] = useState<string>('')
-  const [loading, setLoading] = useState(true)
-  const [rawResponse, setRawResponse] = useState<unknown>(null)
-  const [refreshTime, setRefreshTime] = useState<string>('')
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [destinationsLoading, setDestinationsLoading] = useState(true)
+  const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
   function Item(props: BoxProps) {
     const { sx, ...other } = props
@@ -56,6 +53,7 @@ const Console = () => {
     const fetchDestinations = async () => {
       try {
         setDestinationsLoading(true)
+        setDestinationsError('')
         const response = await fetch('/api/destinations')
         if (response.ok) {
           const data = await response.json()
@@ -63,8 +61,17 @@ const Console = () => {
           if (data.length > 0) {
             setSelectedConnection(data[0].destId)
           }
+        } else {
+          const errorMessage = `Failed to load destinations: ${response.status} ${response.statusText}`
+          setDestinationsError(errorMessage)
+          console.error(errorMessage)
         }
       } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : 'An error occurred while fetching destinations'
+        setDestinationsError(errorMessage)
         console.error('Error fetching destinations:', err)
       } finally {
         setDestinationsLoading(false)
@@ -75,103 +82,6 @@ const Console = () => {
       fetchDestinations()
     }
   }, [status])
-
-  // Automatically fetch data when page loads - MUST be before early returns
-  useEffect(() => {
-    // Only fetch if authenticated and is admin
-    if (status !== 'authenticated' || !session?.user?.isAdmin) {
-      setLoading(false)
-      return
-    }
-
-    const fetchData = async () => {
-      setLoading(true)
-      setError('')
-      setRefreshTime(new Date().toLocaleTimeString())
-
-      console.log('Starting Elasticsearch query...')
-
-      try {
-        // Query to get duration statistics from event.duration field
-        const query = {
-          query: {
-            range: {
-              '@timestamp': {
-                gte: 'now-24h',
-              },
-            },
-          },
-          aggs: {
-            stats: {
-              stats: {
-                field: 'event.duration',
-              },
-            },
-          },
-          size: 10,
-        }
-
-        console.log('Sending request to /api/elasticsearch/query', {
-          index: 'izgw-config-console-dev',
-          query: query,
-        })
-
-        // Call the API endpoint to execute the query
-        const response = await fetch('/api/elasticsearch/query', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            index: 'izgw-config-console-dev',
-            query: query,
-          }),
-        })
-
-        console.log('Response status:', response.status)
-
-        if (!response.ok) {
-          let errorMessage = ''
-          let errorDetails: unknown = {}
-
-          try {
-            errorDetails = await response.json()
-            errorMessage =
-              String(
-                (errorDetails as Record<string, unknown>)?.message || ''
-              ) ||
-              String((errorDetails as Record<string, unknown>)?.error || '') ||
-              `HTTP Error: ${response.statusText}`
-          } catch (e) {
-            errorMessage = response.statusText || 'Unknown error'
-          }
-
-          console.error('API Error Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            details: errorDetails,
-          })
-
-          throw new Error(errorMessage)
-        }
-
-        const responseData = (await response.json()) as unknown
-
-        setRawResponse(responseData)
-      } catch (err) {
-        console.error('Error fetching data:', err)
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'An error occurred while fetching data'
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [status, session?.user?.isAdmin])
 
   // Redirect if not authenticated or not admin
   if (status === 'loading') {
@@ -195,28 +105,6 @@ const Console = () => {
             You do not have permission to access the Console. Admin access is
             required.
           </Alert>
-        </Box>
-      </Container>
-    )
-  }
-
-  // Loading state while fetching
-  if (loading) {
-    return (
-      <Container title="Operations Console">
-        <AppHeaderBar open />
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
-          }}
-        >
-          <Box sx={{ textAlign: 'center' }}>
-            <CircularProgress sx={{ mb: 2 }} />
-            <Typography>Loading operational data...</Typography>
-          </Box>
         </Box>
       </Container>
     )
@@ -279,6 +167,11 @@ const Console = () => {
           mb: 4,
         }}
       >
+        {destinationsError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {destinationsError}
+          </Alert>
+        )}
         <Box
           sx={{
             display: 'flex',

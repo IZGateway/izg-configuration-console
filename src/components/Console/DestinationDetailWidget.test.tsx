@@ -561,10 +561,8 @@ describe('DestinationDetailWidget', () => {
       expect(
         container.querySelector('#median-response-time')
       ).toBeInTheDocument()
-      // Note: #95-response-time is not a valid CSS selector (starts with number)
-      // Use attribute selector instead
       expect(
-        container.querySelector('[id="95-response-time"]')
+        container.querySelector('#percentile-95-response-time')
       ).toBeInTheDocument()
     })
   })

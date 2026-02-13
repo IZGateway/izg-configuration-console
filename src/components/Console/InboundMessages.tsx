@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, Divider } from '@mui/material'
 
-const InboundMessages = (props) => {
+const InboundMessages = () => {
   return (
     <div>
       <Card

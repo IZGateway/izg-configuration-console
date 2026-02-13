@@ -13,7 +13,7 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
         filter: [
           {
             match_phrase: {
-              'tags.keyword': 'dev',
+              'tags.keyword': process.env.ELASTIC_ENV_TAG || 'dev',
             },
           },
           {
@@ -51,7 +51,6 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
                           range: {
                             '@timestamp': {
                               gte: 'now-24h',
-                              time_zone: 'America/New_York',
                             },
                           },
                         },
@@ -76,7 +75,6 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
                             '@timestamp': {
                               gte: 'now-48h',
                               lte: 'now-24h',
-                              time_zone: 'America/New_York',
                             },
                           },
                         },
@@ -269,5 +267,6 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
   }
 }
 
-export const ELASTICSEARCH_INDEX = 'izgw-dev-logstash'
+export const ELASTICSEARCH_INDEX =
+  process.env.NEXT_PUBLIC_ELASTIC_INDEX || 'izgw-dev-logstash'
 export const ELASTICSEARCH_API_ENDPOINT = '/api/elasticsearch/query'

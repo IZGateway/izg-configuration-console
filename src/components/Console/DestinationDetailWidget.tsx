@@ -47,8 +47,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
       try {
         const query = buildDestinationMetricsQuery(selectedConnection)
 
-        console.log('Elasticsearch Query:', JSON.stringify(query, null, 2))
-
         const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -66,14 +64,9 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
 
         const data = await response.json()
 
-        console.log('Elasticsearch response:', data)
-
         if (data?.aggregations) {
-          console.log('Aggregations:', data.aggregations)
           const bucket0 = data.aggregations['0']?.buckets?.['Last 24h']
           const prevBucket = data.aggregations['0']?.buckets?.['Previous 24h']
-          console.log('Bucket0:', bucket0)
-          console.log('Previous Bucket:', prevBucket)
           if (bucket0) {
             // Connectivity Test buckets
             const ctErrors = bucket0['1-bucket']?.doc_count || 0 // connectivityTest errors
@@ -214,7 +207,9 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
           }
         }
       } catch (err) {
-        console.error('Error fetching destination data:', err)
+        if (err instanceof Error) {
+          console.error('Error fetching destination data:', err)
+        }
       } finally {
         setLoading(false)
       }
@@ -275,7 +270,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
 
       {/* 95th Percentile Response Time */}
       <MetricCard
-        id="95-response-time"
+        id="percentile-95-response-time"
         title="95th Percentile Response Time"
         subheader="Response Time Threshold"
         value={percentile95ResponseTime}

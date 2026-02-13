@@ -1,18 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import * as React from 'react'
 import Container from '../../components/Container'
 import Console from '../../components/Console/index'
 import { useRouter } from 'next/router'
 import ErrorBoundary from '../../components/ErrorBoundary'
-import { useEffect } from 'react'
 
-const ConsolePage = (props) => {
+const ConsolePage = () => {
   const router = useRouter()
-  const { isReady, query } = router
-
-  useEffect(() => {
-    if (!isReady) return
-  }, [isReady, query])
+  const { isReady } = router
 
   return !isReady ? (
     <>Loading....</>
