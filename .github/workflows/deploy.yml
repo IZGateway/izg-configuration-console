@@ -135,6 +135,8 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64
+          provenance: false
+          sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
           push: true
@@ -198,6 +200,8 @@ jobs:
           context: .
           file: Dockerfile
           platforms: linux/amd64
+          provenance: false
+          sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
           push: true
