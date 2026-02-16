@@ -26,8 +26,8 @@ ENV NEXT_MANUAL_SIG_HANDLE true
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 # Install Dependencies and cleanup yarn.lock if present
-RUN apk add --no-cache bash nginx gettext tini curl libc6-compat &&
-    npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
+RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY package.json package-lock.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
