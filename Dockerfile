@@ -1,5 +1,4 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
-#RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN  npm ci
@@ -24,15 +23,13 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NEXT_MANUAL_SIG_HANDLE true
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-RUN apk add bash
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-# Install Nginx, gettext (for envsubst), and tini
-RUN apk add --no-cache nginx gettext tini
+# Install Dependencies and cleanup yarn.lock if present
+RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY package.json package-lock.json ./
-RUN  npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
@@ -41,25 +38,23 @@ COPY --from=builder --chown=nextjs:nodejs /app/run_and_monitor.sh ./run_and_moni
 COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
 
-RUN apk add curl libc6-compat
-
 # Replace default filebeat config with custom config file 
- RUN cd ../filebeat && \
+RUN cd ../filebeat && \
      rm -rf /filebeat.yml && \
      cp ../app/filebeat.yml ./filebeat.yml
 
 # Replace default metricbeat config with custom config file
- RUN cd ../metricbeat && \
+RUN cd ../metricbeat && \
      rm -rf /metricbeat.yml && \
      cp ../app/metricbeat.yml ./metricbeat.yml
 
-# Copy Nginx Configuration Template
-RUN mkdir -p /etc/nginx/conf.d
+# Make scripts executable and copy Nginx Configuration Template
+RUN chmod a+x replace-variable.sh \
+	&& chmod a+x run_and_monitor.sh\
+    && mkdir -p /etc/nginx/conf.d
 COPY nginx.conf.template /app/nginx.conf.template
 
-#USER nextjs
-RUN chmod a+x replace-variable.sh
-RUN chmod a+x run_and_monitor.sh
+RUN 
 
 # Expose only 443 (to nginx)
 EXPOSE 443
