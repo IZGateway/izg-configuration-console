@@ -1,4 +1,4 @@
-import useSWR from 'swr'
+import useSWR, { SWRConfiguration } from 'swr'
 
 export interface ElasticTemplateQueryParams {
   [key: string]: string | number | boolean
@@ -11,6 +11,7 @@ export interface ElasticTemplateQueryConfig {
   template: ElasticTemplate
   params: ElasticTemplateQueryParams
   enabled?: boolean
+  swrOptions?: SWRConfiguration
 }
 
 const buildElasticRequest = (
@@ -70,12 +71,18 @@ const useElasticTemplateQuery = ({
   template,
   params,
   enabled = true,
+  swrOptions,
 }: ElasticTemplateQueryConfig) => {
   const key = enabled
-    ? ['elastic-template-query', index, template, params]
+    ? [
+        'elastic-template-query',
+        index,
+        JSON.stringify(template),
+        JSON.stringify(params),
+      ]
     : null
 
-  return useSWR(key, () => postElasticQuery(index, template, params))
+  return useSWR(key, () => postElasticQuery(index, template, params), swrOptions)
 }
 
 export default useElasticTemplateQuery
