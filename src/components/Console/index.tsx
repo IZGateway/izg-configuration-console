@@ -241,8 +241,8 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <InboundMessages />
           <OutboundMessages />
+          <InboundMessages selectedConnection={selectedConnection} />
         </Item>
       </Box>
     </div>
