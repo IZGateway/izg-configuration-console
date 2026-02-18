@@ -50,7 +50,7 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
                         {
                           range: {
                             '@timestamp': {
-                              gte: 'now-24h',
+                              gt: 'now-24h',
                             },
                           },
                         },
