@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import {
   Box,
   Card,
@@ -65,39 +65,39 @@ const toPercent = (value?: number | null) => {
 const SystemResourcesWidget = () => {
   const { data: session } = useSession()
 
-  const { index, template, params } = useMemo(() => {
-    const now = new Date()
-    const start = new Date(now.getTime() - 15 * 60 * 1000).toISOString()
-    const end = now.toISOString()
+  const now = new Date()
+  const start = new Date(now.getTime() - 15 * 60 * 1000).toISOString()
+  const end = now.toISOString()
 
-    return {
-      index: process.env.NEXT_PUBLIC_ELASTIC_INDEX || 'izgw-config-console-dev',
-      template: {
-        size: 0,
-        query: {
-          range: {
-            '@timestamp': {
-              gte: '${start}',
-              lte: '${end}',
-            },
-          },
-        },
-        aggs: {
-          cpu: { avg: { field: 'system.cpu.total.pct' } },
-          memory: { avg: { field: 'system.memory.actual.used.pct' } },
-          disk: { avg: { field: 'system.filesystem.used.pct' } },
-          connections: { max: { field: 'system.socket.summary.tcp.all' } },
-        },
-      },
-      params: { start, end },
-    }
-  }, [])
+  const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
+  if (!elasticIndex) {
+    throw new Error('NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.')
+  }
 
   const { data, error, isLoading } = useElasticTemplateQuery({
-    index,
-    template,
-    params,
+    index: elasticIndex,
+    template: {
+      size: 0,
+      query: {
+        range: {
+          '@timestamp': {
+            gte: '${start}',
+            lte: '${end}',
+          },
+        },
+      },
+      aggs: {
+        cpu: { avg: { field: 'system.cpu.total.pct' } },
+        memory: { avg: { field: 'system.memory.actual.used.pct' } },
+        disk: { avg: { field: 'system.filesystem.used.pct' } },
+        connections: { max: { field: 'system.socket.summary.tcp.all' } },
+      },
+    },
+    params: { start, end },
     enabled: Boolean(session?.user?.isAdmin),
+    swrOptions: {
+      refreshInterval: 60000, // Refresh every 60 seconds
+    },
   })
 
   const cpu = toPercent(data?.aggregations?.cpu?.value)
@@ -127,31 +127,31 @@ const SystemResourcesWidget = () => {
             Unable to load system resources.
           </Typography>
         )}
-        {isLoading && (
-          <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
-            Loading system resources...
-          </Typography>
-        )}
-        {!isLoading && (
-          <>
-            <ResourceRow label="CPU Usage" value={cpu} color={palette.primary} />
-            <ResourceRow
-              label="Memory Usage"
-              value={memory}
-              color={palette.secondary}
-            />
-            <ResourceRow label="Disk Usage" value={disk} color={palette.primaryLight} />
-            <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
-              Active Connections: {connections ?? 'N/A'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ display: 'block', mt: 1, color: palette.grey }}
-            >
-              Scheduled maintenance: Not reported
-            </Typography>
-          </>
-        )}
+        <ResourceRow
+          label="CPU Usage"
+          value={error || isLoading ? null : cpu}
+          color={palette.primary}
+        />
+        <ResourceRow
+          label="Memory Usage"
+          value={error || isLoading ? null : memory}
+          color={palette.secondary}
+        />
+        <ResourceRow
+          label="Disk Usage"
+          value={error || isLoading ? null : disk}
+          color={palette.primaryLight}
+        />
+        <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
+          Active Connections:{' '}
+          {error || isLoading ? 'N/A' : connections ?? 'N/A'}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{ display: 'block', mt: 1, color: palette.grey }}
+        >
+          Scheduled maintenance: Not reported
+        </Typography>
       </CardContent>
     </Card>
   )
