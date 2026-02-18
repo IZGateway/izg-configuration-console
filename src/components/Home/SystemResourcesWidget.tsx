@@ -97,7 +97,7 @@ const SystemResourcesWidget = () => {
     index,
     template,
     params,
-    enabled: Boolean(session?.user),
+    enabled: Boolean(session?.user?.isAdmin),
   })
 
   const cpu = toPercent(data?.aggregations?.cpu?.value)
