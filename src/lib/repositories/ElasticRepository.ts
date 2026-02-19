@@ -1,171 +1,206 @@
 /**
- * Generalized Next.js Library for querying Elasticsearch
- * Inspired by ElasticStatusRepository structure
+ * Server-side Elasticsearch Repository
+ * Provides a clean interface for querying Elasticsearch from API routes
+ *
+ * IMPORTANT: This module is for SERVER-SIDE USE ONLY (API routes)
+ * Do not import this in client-side components as it uses server environment variables
  *
  * The main class, ElasticRepositoryClient, provides:
- * - getRequest(params): builds request body from template with parameter replacements
- * - getData(params): sends request to Elasticsearch and returns parsed JS object
+ * - query(index, queryBody): sends a query to Elasticsearch and returns parsed response
+ * - queryWithTemplate(index, template, params): builds query from template and executes
  */
 
+import logger from '../../../logger'
+
 interface ElasticRepositoryConfig {
-  elasticUrl?: string
+  elasticHost?: string
   apiKey?: string
-  template: string | Record<string, unknown>
 }
 
 interface QueryParams {
   [key: string]: string | number | boolean
 }
 
+interface ElasticsearchResponse {
+  hits?: {
+    total?: { value: number }
+    hits?: unknown[]
+  }
+  aggregations?: Record<string, unknown>
+  took?: number
+  timed_out?: boolean
+  _shards?: {
+    total: number
+    successful: number
+    skipped: number
+    failed: number
+  }
+}
+
 /**
- * ElasticRepositoryClient provides a generalized interface for querying Elasticsearch
- * Uses template-based parameter substitution for flexible query building
+ * ElasticRepositoryClient provides a server-side interface for querying Elasticsearch
+ * Handles authentication, error handling, and logging
  *
- * Example:
- * const client = new ElasticRepositoryClient({
- *   elasticUrl: process.env.ELASTIC_HOST,
- *   apiKey: process.env.ELASTIC_API_KEY,
- *   template: `{
- *     "query": {
- *       "range": {
- *         "timestamp": {
- *           "gte": "${start}",
- *           "lte": "${end}"
- *         }
- *       }
- *     }
- *   }`
+ * Example usage in API route:
+ * ```
+ * import { elasticClient } from '@/lib/repositories/ElasticRepository'
+ *
+ * const data = await elasticClient.query('my-index', {
+ *   query: { match_all: {} }
  * })
- *
- * const data = await client.getData({ start: '2026-01-01', end: '2026-01-31' })
+ * ```
  */
 export class ElasticRepositoryClient {
-  private elasticUrl: string
+  private elasticHost: string
   private apiKey: string
-  private template: string
 
-  constructor(config: ElasticRepositoryConfig) {
-    this.elasticUrl = process.env.ELASTIC_HOST || 'https://localhost:9200'
-    this.apiKey = process.env.ELASTIC_API_KEY || ''
-    // Convert template object to JSON string if needed
-    this.template =
-      typeof config.template === 'string'
-        ? config.template
-        : JSON.stringify(config.template)
+  constructor(config?: ElasticRepositoryConfig) {
+    this.elasticHost = config?.elasticHost || process.env.ELASTIC_HOST || ''
+    this.apiKey = config?.apiKey || process.env.ELASTIC_API_KEY || ''
   }
 
   /**
-   * Build the request body by replacing template placeholders with parameter values
-   * Replaces all ${key} patterns with corresponding values from params map
-   *
-   * @param params - Map of key-value pairs to replace in template
-   * @returns String containing the populated request body
-   *
-   * Example:
-   * Template: '{"query": {"term": {"status": "${status}"}}}'
-   * Params: { status: 'active' }
-   * Result: '{"query": {"term": {"status": "active"}}}'
+   * Check if the client is properly configured
    */
-  getRequest(params: QueryParams): string {
-    let request = this.template
-
-    for (const [key, value] of Object.entries(params)) {
-      // Replace ${key} with the value (with proper escaping for regex special chars)
-      const regex = new RegExp(`\\$\\{${key}\\}`, 'g')
-      request = request.replace(regex, String(value))
-    }
-
-    return request
+  isConfigured(): boolean {
+    return Boolean(this.elasticHost && this.apiKey)
   }
 
   /**
-   * Send request to Elasticsearch and return parsed JavaScript object
-   * Handles authentication and error responses
+   * Build request headers for Elasticsearch API calls
+   */
+  private getHeaders(): Record<string, string> {
+    const encodedApiKey = Buffer.from(this.apiKey).toString('base64')
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `ApiKey ${encodedApiKey}`,
+    }
+  }
+
+  /**
+   * Execute a query against Elasticsearch
    *
-   * @param params - Map of parameters to substitute in template
+   * @param index - The Elasticsearch index to query
+   * @param queryBody - The query body object
+   * @param userEmail - Optional user email for logging
    * @returns Promise with parsed Elasticsearch response
    *
    * Example:
-   * const response = await client.getData({
-   *   start: '2026-01-01T00:00:00Z',
-   *   end: '2026-01-31T23:59:59Z'
+   * ```
+   * const response = await client.query('izgw-dev-logstash', {
+   *   query: { match: { status: 'success' } },
+   *   size: 10
    * })
-   * // Response: { hits: { total: { value: 100 }, hits: [...] }, took: 15, ... }
+   * ```
    */
-  async getData(params: QueryParams): Promise<unknown> {
+  async query(
+    index: string,
+    queryBody: Record<string, unknown>,
+    userEmail?: string
+  ): Promise<ElasticsearchResponse> {
+    if (!this.isConfigured()) {
+      logger.error('ElasticRepositoryClient not configured', {
+        operation: 'elasticsearch_query',
+        hasHost: Boolean(this.elasticHost),
+        hasApiKey: Boolean(this.apiKey),
+      })
+      throw new Error('Elasticsearch is not properly configured')
+    }
+
     try {
-      const body = this.getRequest(params)
+      const url = `${this.elasticHost}/${index}/_search`
 
-      // Build headers
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-
-      if (this.apiKey) {
-        headers['Authorization'] = `ApiKey ${this.apiKey}`
-      }
-
-      // Send request to Elasticsearch
-      const response = await fetch(this.elasticUrl, {
+      const response = await fetch(url, {
         method: 'POST',
-        headers,
-        body,
+        headers: this.getHeaders(),
+        body: JSON.stringify(queryBody),
       })
 
       if (!response.ok) {
         const errorText = await response.text()
+        logger.error('Elasticsearch query failed', {
+          operation: 'elasticsearch_query',
+          user: userEmail,
+          index,
+          status: response.status,
+          error: errorText,
+        })
         throw new Error(
-          `Elasticsearch error: ${response.status} - ${errorText}`
+          `Elasticsearch query failed: ${response.status} - ${errorText}`
         )
       }
 
-      return await response.json()
+      const data = (await response.json()) as ElasticsearchResponse
+
+      logger.info('Elasticsearch query successful', {
+        operation: 'elasticsearch_query',
+        user: userEmail,
+        index,
+        hitsCount: data.hits?.hits?.length || 0,
+        totalHits: data.hits?.total?.value || 0,
+      })
+
+      return data
     } catch (error) {
-      console.error('ElasticRepositoryClient.getData error:', error)
+      logger.error('ElasticRepositoryClient.query error', {
+        operation: 'elasticsearch_query',
+        user: userEmail,
+        index,
+        error: error instanceof Error ? error.message : String(error),
+      })
       throw error
     }
   }
 
   /**
-   * Helper method to create a client with a custom template for a specific query
+   * Build and execute a query using template-based parameter substitution
    *
-   * @param template - Elasticsearch query template with ${param} placeholders
-   * @returns New ElasticRepositoryClient instance
+   * @param index - The Elasticsearch index to query
+   * @param template - Query template with ${param} placeholders
+   * @param params - Map of parameters to substitute in template
+   * @param userEmail - Optional user email for logging
+   * @returns Promise with parsed Elasticsearch response
    *
    * Example:
-   * const client = ElasticRepositoryClient.create(
-   *   '{"query": {"match": {"message": "${searchTerm}"}}}'
+   * ```
+   * const response = await client.queryWithTemplate(
+   *   'my-index',
+   *   '{"query": {"range": {"@timestamp": {"gte": "${startDate}", "lte": "${endDate}"}}}}',
+   *   { startDate: '2026-01-01', endDate: '2026-01-31' }
    * )
+   * ```
    */
-  static create(
-    template: string | Record<string, unknown>
-  ): ElasticRepositoryClient {
-    return new ElasticRepositoryClient({ template })
+  async queryWithTemplate(
+    index: string,
+    template: string | Record<string, unknown>,
+    params: QueryParams,
+    userEmail?: string
+  ): Promise<ElasticsearchResponse> {
+    const templateStr =
+      typeof template === 'string' ? template : JSON.stringify(template)
+
+    let populatedQuery = templateStr
+    for (const [key, value] of Object.entries(params)) {
+      const regex = new RegExp(`\\$\\{${key}\\}`, 'g')
+      populatedQuery = populatedQuery.replace(regex, String(value))
+    }
+
+    const queryBody = JSON.parse(populatedQuery)
+    return this.query(index, queryBody, userEmail)
   }
 
   /**
-   * Get hardcoded test data with searchTerm, startDate, and endDate
-   * Used for development/testing purposes
-   *
-   * Hardcoded values:
-   * - searchTerm: 'error'
-   * - startDate: '2026-01-01T00:00:00Z'
-   * - endDate: '2026-01-31T23:59:59Z'
-   *
-   * @returns Promise with test data
-   *
-   * Example:
-   * const results = await client.getTestData()
+   * Create a new client instance with custom configuration
    */
-  async getTestData(): Promise<unknown> {
-    const hardcodedParams = {
-      searchTerm: 'error',
-      startDate: '2026-01-01T00:00:00Z',
-      endDate: '2026-01-31T23:59:59Z',
-    }
-
-    return this.getData(hardcodedParams)
+  static create(config?: ElasticRepositoryConfig): ElasticRepositoryClient {
+    return new ElasticRepositoryClient(config)
   }
 }
+
+/**
+ * Default singleton instance using environment variables
+ * Use this for most cases in API routes
+ */
+export const elasticClient = new ElasticRepositoryClient()
 
 export default ElasticRepositoryClient
