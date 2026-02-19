@@ -7,10 +7,10 @@
 export const buildInboundMetricsQuery = (
   selectedConnection: string,
   selectedOrganization?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: any[] = [
+  const filters: Record<string, unknown>[] = [
     {
       bool: {
         should: [
@@ -225,10 +225,10 @@ export const buildInboundMetricsQuery = (
 export const buildInboundErrorsQuery = (
   selectedConnection: string,
   selectedOrganization?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: any[] = [
+  const filters: Record<string, unknown>[] = [
     {
       bool: {
         should: [
@@ -942,6 +942,94 @@ export const buildInboundErrorsQuery = (
                     must_not: [],
                   },
                 },
+                'Under Maintenance': {
+                  bool: {
+                    must: [],
+                    filter: [
+                      {
+                        bool: {
+                          should: [
+                            {
+                              match_phrase: {
+                                'transactionData.processError':
+                                  'Under Maintenance',
+                              },
+                            },
+                          ],
+                          minimum_should_match: 1,
+                        },
+                      },
+                    ],
+                    should: [],
+                    must_not: [],
+                  },
+                },
+                'Source Attack Exception': {
+                  bool: {
+                    must: [],
+                    filter: [
+                      {
+                        bool: {
+                          should: [
+                            {
+                              match_phrase: {
+                                'transactionData.processError':
+                                  'Source Attack Exception',
+                              },
+                            },
+                          ],
+                          minimum_should_match: 1,
+                        },
+                      },
+                    ],
+                    should: [],
+                    must_not: [],
+                  },
+                },
+                'Invalid Response': {
+                  bool: {
+                    must: [],
+                    filter: [
+                      {
+                        bool: {
+                          should: [
+                            {
+                              match_phrase: {
+                                'transactionData.processError':
+                                  'Invalid Response',
+                              },
+                            },
+                          ],
+                          minimum_should_match: 1,
+                        },
+                      },
+                    ],
+                    should: [],
+                    must_not: [],
+                  },
+                },
+                'Response Message Too Large': {
+                  bool: {
+                    must: [],
+                    filter: [
+                      {
+                        bool: {
+                          should: [
+                            {
+                              match_phrase: {
+                                'transactionData.processError':
+                                  'Response Message Too Large',
+                              },
+                            },
+                          ],
+                          minimum_should_match: 1,
+                        },
+                      },
+                    ],
+                    should: [],
+                    must_not: [],
+                  },
+                },
               },
             },
           },
@@ -961,10 +1049,10 @@ export const buildInboundErrorsQuery = (
 export const buildInboundCombinedQuery = (
   selectedConnection: string,
   selectedOrganization?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: any[] = [
+  const filters: Record<string, unknown>[] = [
     {
       bool: {
         should: [
