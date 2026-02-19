@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import _ from 'lodash'
 import {
   Box,
   Typography,
@@ -201,7 +202,10 @@ const Console = () => {
               ) : destinations.length === 0 ? (
                 <MenuItem value="">No destinations available</MenuItem>
               ) : (
-                destinations.map((dest) => (
+                _.sortBy(
+                  destinations,
+                  (dest) => dest.jurisdiction?.description || dest.destId || ''
+                ).map((dest) => (
                   <MenuItem key={dest.destId} value={dest.destId}>
                     {dest.jurisdiction?.description
                       ? `${dest.jurisdiction.description} - ${dest.destId}`

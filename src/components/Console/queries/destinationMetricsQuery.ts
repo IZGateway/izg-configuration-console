@@ -13,7 +13,7 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
         filter: [
           {
             match_phrase: {
-              'tags.keyword': process.env.ELASTIC_ENV_TAG || 'dev',
+              'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
             },
           },
           {
