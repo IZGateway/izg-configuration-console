@@ -942,27 +942,6 @@ export const buildInboundErrorsQuery = (
                     must_not: [],
                   },
                 },
-                'Total Errors': {
-                  bool: {
-                    must: [],
-                    filter: [
-                      {
-                        bool: {
-                          should: [
-                            {
-                              match: {
-                                'transactionData.hasProcessError': true,
-                              },
-                            },
-                          ],
-                          minimum_should_match: 1,
-                        },
-                      },
-                    ],
-                    should: [],
-                    must_not: [],
-                  },
-                },
               },
             },
           },
@@ -1048,9 +1027,20 @@ export const buildInboundCombinedQuery = (
         selectedConnection,
         selectedOrganization
       ).aggs['0'],
-      // Error aggregations (organization-based) - extract the '0' aggregation
-      errors: buildInboundErrorsQuery(selectedConnection, selectedOrganization)
-        .aggs['0'],
+      // Error aggregations (organization-based) - wrapped in filter for hasProcessError
+      errors: {
+        filter: {
+          match: {
+            'transactionData.hasProcessError': true,
+          },
+        },
+        aggs: {
+          organizations: buildInboundErrorsQuery(
+            selectedConnection,
+            selectedOrganization
+          ).aggs['0'],
+        },
+      },
     },
     size: 0,
   }

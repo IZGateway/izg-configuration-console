@@ -151,8 +151,8 @@ const MessagesWidget = ({
         }
 
         // Process errors data
-        if (data?.aggregations?.errors?.buckets) {
-          const orgBuckets = data.aggregations.errors.buckets
+        if (data?.aggregations?.errors?.organizations?.buckets) {
+          const orgBuckets = data.aggregations.errors.organizations.buckets
           const failureTypes: FailureDetail[] = []
 
           // Aggregate error types across all organizations
@@ -161,14 +161,12 @@ const MessagesWidget = ({
           orgBuckets.forEach((orgBucket: any) => {
             const filters = orgBucket['1']?.buckets
             if (filters) {
-              // Use Total Errors to get all errors for this org, if available
-              const totalErrorsForOrg = filters['Total Errors']?.doc_count
+              // Use organization bucket's doc_count to get total errors for this org
+              const totalErrorsForOrg = orgBucket.doc_count
 
               Object.keys(filters).forEach((errorType) => {
                 // Skip meta categories and use individual error types
                 if (
-                  errorType !== 'Total Errors' &&
-                  errorType !== 'Total Successes' &&
                   errorType !== '*' &&
                   errorType !== 'HTTP Errors (All)' // Skip the HTTP Errors (All) category too
                 ) {
@@ -182,13 +180,7 @@ const MessagesWidget = ({
 
               // Calculate uncategorized errors
               const categorizedSum = Object.keys(filters)
-                .filter(
-                  (key) =>
-                    key !== 'Total Errors' &&
-                    key !== 'Total Successes' &&
-                    key !== '*' &&
-                    key !== 'HTTP Errors (All)'
-                )
+                .filter((key) => key !== '*' && key !== 'HTTP Errors (All)')
                 .reduce((sum, key) => sum + (filters[key]?.doc_count || 0), 0)
 
               const uncategorized = totalErrorsForOrg - categorizedSum
@@ -350,10 +342,6 @@ const MessagesWidget = ({
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
                     Avg Response
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#999' }}>
-                    (RVRS_S: IN-[
-                    <span style={{ color: '#1976d2' }}>DENT_I</span>], S)
                   </Typography>
                 </Box>
 
