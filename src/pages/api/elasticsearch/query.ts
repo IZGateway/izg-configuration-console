@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
+import logger from '../../../../logger'
 
 /**
  * API endpoint for querying Elasticsearch
@@ -43,6 +44,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    logger.info('Elasticsearch query requested', {
+      operation: 'elasticsearch_query',
+      user: session.user.email,
+      index,
+      query,
+    })
+
     // Check if Elasticsearch is properly configured
     if (!elasticClient.isConfigured()) {
       return res.status(500).json({
@@ -58,8 +66,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       session.user.email || undefined
     )
 
+    // Log successful query
+    logger.info('Elasticsearch query successful', {
+      operation: 'elasticsearch_query',
+      user: session.user.email,
+      index,
+      hitsCount: data.hits?.hits?.length || 0,
+      totalHits: data.hits?.total?.value || 0,
+    })
+
     res.status(200).json(data)
   } catch (error) {
+    logger.error('Elasticsearch query error', {
+      operation: 'elasticsearch_query',
+      error: error instanceof Error ? error.message : String(error),
+      user: session?.user?.email,
+    })
+
     res.status(500).json({
       error: 'Server Error',
       message: 'An error occurred while querying Elasticsearch',
