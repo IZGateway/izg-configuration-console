@@ -43,6 +43,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    logger.info('Elasticsearch query requested', {
+      operation: 'elasticsearch_query',
+      user: session.user.email,
+      index,
+      query,
+    })
+
     // Get Elasticsearch connection details from environment
     const elasticHost = process.env.ELASTIC_HOST || 'https://localhost:9200'
     const elasticApiKey = process.env.ELASTIC_API_KEY
