@@ -90,18 +90,20 @@ function HomeComponent() {
                       Manage Connections
                     </Button>
                   </Link>
-                  <Link href="/api-doc">
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      sx={{
-                        width: { xs: '100%', sm: 'auto' },
-                        minWidth: '200px',
-                      }}
-                    >
-                      OUR API
-                    </Button>
-                  </Link>
+                  {isOperationsRole(session?.user.role) && (
+                    <Link href="/api-doc">
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        sx={{
+                          width: { xs: '100%', sm: 'auto' },
+                          minWidth: '200px',
+                        }}
+                      >
+                        OUR API
+                      </Button>
+                    </Link>
+                  )}
                 </Box>
               </Box>
             </Slide>
