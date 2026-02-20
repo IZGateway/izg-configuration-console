@@ -1,0 +1,31 @@
+import { Card, CardContent, CardHeader, Divider } from '@mui/material'
+
+const OutboundMessages = () => {
+  return (
+    <div>
+      <Card
+        sx={{
+          marginTop: 4,
+          borderRadius: '0px 0px 16px 16px',
+          boxShadow: 'none',
+          border: '1px solid #E0E0E0',
+        }}
+        id="outbound-messages"
+      >
+        <CardHeader
+          sx={{
+            '&& .MuiCardHeader-content': {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
+          }}
+          title="Outbound messages"
+        ></CardHeader>
+        <Divider />
+        <CardContent></CardContent>
+      </Card>
+    </div>
+  )
+}
+export default OutboundMessages
