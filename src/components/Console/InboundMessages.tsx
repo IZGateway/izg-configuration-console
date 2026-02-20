@@ -11,6 +11,7 @@ const InboundMessages = ({ selectedConnection }: InboundMessagesProps) => {
       title="Inbound Messages"
       cardId="inbound-messages"
       selectedConnection={selectedConnection}
+      direction="inbound"
       queryBuilder={buildInboundCombinedQuery}
     />
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -36,6 +36,15 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+
+  // Get the description for the selected destination
+  const selectedDestinationDescription = useMemo(() => {
+    const selectedDest = destinations.find(
+      (d) => d.destId === selectedConnection
+    )
+    return selectedDest?.jurisdiction?.description || selectedConnection
+  }, [destinations, selectedConnection])
+
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (
@@ -241,7 +250,7 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <OutboundMessages />
+          <OutboundMessages selectedConnection={selectedConnection} />
           <InboundMessages selectedConnection={selectedConnection} />
         </Item>
       </Box>

@@ -32,6 +32,7 @@ interface MessagesWidgetProps {
   title: string
   cardId: string
   selectedConnection?: string
+  direction: 'inbound' | 'outbound'
   queryBuilder: (connection: string, organization?: string) => any
 }
 
@@ -39,6 +40,7 @@ const MessagesWidget = ({
   title,
   cardId,
   selectedConnection,
+  direction,
   queryBuilder,
 }: MessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
@@ -254,10 +256,14 @@ const MessagesWidget = ({
                   },
                 }}
                 renderValue={(selected) => {
-                  if (!selected || selected === 'IZGateway') {
-                    return `IZGateway - ${selectedConnection || 'Destination'}`
-                  }
-                  return `${selected} - ${selectedConnection || 'Destination'}`
+                  const dest = selectedConnection || 'Destination'
+                  const org =
+                    !selected || selected === 'IZGateway'
+                      ? 'IZGateway'
+                      : selected
+                  return direction === 'inbound'
+                    ? `${org} - ${dest}`
+                    : `${dest} - ${org}`
                 }}
               >
                 <MenuItem value="IZGateway">
