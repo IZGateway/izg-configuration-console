@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import pack from '../../../package.json'
 import {
   Container,
@@ -26,9 +27,11 @@ import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
 import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
+import isOperationsRole from '../../lib/security/accessutils'
 
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
+  const { data: session } = useSession()
   return (
     <>
       <AppHeaderBar open />
