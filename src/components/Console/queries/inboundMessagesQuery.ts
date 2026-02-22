@@ -1,12 +1,12 @@
 /**
  * Builds the Elasticsearch query for inbound message metrics
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
 export const buildInboundMetricsQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -40,13 +40,11 @@ export const buildInboundMetricsQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'transactionData.source.organization.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -219,12 +217,12 @@ export const buildInboundMetricsQuery = (
 /**
  * Builds the Elasticsearch query for inbound message errors/failures
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
 export const buildInboundErrorsQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -270,13 +268,11 @@ export const buildInboundErrorsQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'transactionData.source.organization.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -1043,12 +1039,12 @@ export const buildInboundErrorsQuery = (
 /**
  * Builds the combined Elasticsearch query for inbound message metrics and errors
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object with both metrics and error aggregations
  */
 export const buildInboundCombinedQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -1089,13 +1085,11 @@ export const buildInboundCombinedQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'transactionData.source.organization.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -1111,10 +1105,8 @@ export const buildInboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: buildInboundMetricsQuery(
-        selectedConnection,
-        selectedOrganization
-      ).aggs['0'],
+      metrics: buildInboundMetricsQuery(selectedConnection, principalNames)
+        .aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
         filter: {
@@ -1125,7 +1117,7 @@ export const buildInboundCombinedQuery = (
         aggs: {
           organizations: buildInboundErrorsQuery(
             selectedConnection,
-            selectedOrganization
+            principalNames
           ).aggs['0'],
         },
       },

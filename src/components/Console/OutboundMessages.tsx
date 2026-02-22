@@ -1,6 +1,13 @@
 import { Card, CardContent, CardHeader, Divider } from '@mui/material'
+import { Organization } from './MessagesWidget'
 
-const OutboundMessages = () => {
+interface OutboundMessagesProps {
+  organizations?: Organization[]
+  organizationsLoading?: boolean
+}
+
+// TODO: Wire to MessagesWidget with outbound query builder when available
+const OutboundMessages = (_props: OutboundMessagesProps) => {
   return (
     <div>
       <Card

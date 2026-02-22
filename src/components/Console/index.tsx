@@ -15,6 +15,7 @@ import Container from '../Container'
 import InboundMessages from './InboundMessages'
 import OutboundMessages from './OutboundMessages'
 import DestinationDetailWidget from './DestinationDetailWidget'
+import { Organization } from './MessagesWidget'
 
 interface Destination {
   destId: string
@@ -36,6 +37,9 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [organizationsLoading, setOrganizationsLoading] = useState(false)
+
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (
@@ -81,6 +85,34 @@ const Console = () => {
     if (status === 'authenticated') {
       fetchDestinations()
     }
+  }, [status])
+
+  // Fetch organizations
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    const fetchOrganizations = async () => {
+      try {
+        const response = await fetch('/api/organizations')
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+        const orgData = await response.json()
+        const processedOrgs: Organization[] = orgData.map(
+          (org: { organizationName?: string; principalNames: string[] }) => ({
+            organizationName: org.organizationName || 'Unknown Organization',
+            principalNames: Array.from(org.principalNames || []),
+          })
+        )
+        setOrganizations(processedOrgs)
+      } catch (error) {
+        console.error('Error fetching organizations:', error)
+        setOrganizations([])
+      } finally {
+        setOrganizationsLoading(false)
+      }
+    }
+
+    fetchOrganizations()
   }, [status])
 
   // Redirect if not authenticated or not admin
@@ -241,8 +273,15 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <OutboundMessages />
-          <InboundMessages selectedConnection={selectedConnection} />
+          <OutboundMessages
+            organizations={organizations}
+            organizationsLoading={organizationsLoading}
+          />
+          <InboundMessages
+            selectedConnection={selectedConnection}
+            organizations={organizations}
+            organizationsLoading={organizationsLoading}
+          />
         </Item>
       </Box>
     </div>
