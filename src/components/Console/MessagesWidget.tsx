@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Card,
   CardContent,
@@ -23,7 +23,7 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/inboundMessagesQuery'
 
-interface Organization {
+export interface Organization {
   organizationName: string
   principalNames: string[]
 }
@@ -33,7 +33,13 @@ interface MessagesWidgetProps {
   cardId: string
   selectedConnection?: string
   direction: 'inbound' | 'outbound'
-  queryBuilder: (connection: string, organization?: string) => any
+  organizations?: Organization[]
+  organizationsLoading?: boolean
+  queryBuilder: (
+    connection: string,
+    principalNames?: string[],
+    organization?: string
+  ) => any
 }
 
 const MessagesWidget = ({
@@ -41,6 +47,8 @@ const MessagesWidget = ({
   cardId,
   selectedConnection,
   direction,
+  organizations = [],
+  organizationsLoading = false,
   queryBuilder,
 }: MessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
@@ -49,59 +57,49 @@ const MessagesWidget = ({
   const [failures, setFailures] = useState<FailureDetail[]>([])
   const [loading, setLoading] = useState(false)
   const [showAllFailures, setShowAllFailures] = useState(false)
-  const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrganization, setSelectedOrganization] = useState('IZGateway')
-  const [loadingOrganizations, setLoadingOrganizations] = useState(false)
 
-  // Fetch organizations on component mount
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      setLoadingOrganizations(true)
-      try {
-        const response = await fetch('/api/organizations')
-        if (!response.ok) {
-          throw new Error('Failed to fetch organizations')
-        }
-        const orgData = await response.json()
-        const processedOrgs: Organization[] = orgData.map(
-          (org: { organizationName?: string; principalNames: string[] }) => ({
-            organizationName: org.organizationName || 'Unknown Organization',
-            principalNames: Array.from(org.principalNames || []),
-          })
-        )
-        setOrganizations(processedOrgs)
-      } catch (error) {
-        console.error('Error fetching organizations:', error)
-        setOrganizations([])
-      } finally {
-        setLoadingOrganizations(false)
-      }
+  // Compute principal names for the selected organization
+  const principalNames = useMemo(() => {
+    if (selectedOrganization === 'IZGateway') {
+      return undefined
     }
+    const selectedOrg = organizations.find(
+      (org) => org.organizationName === selectedOrganization
+    )
+    return selectedOrg?.principalNames
+  }, [selectedOrganization, organizations])
 
-    fetchOrganizations()
-  }, [])
+  // Create a stable key for principalNames to avoid refetch on reference change
+  // Spread to a copy before sorting to avoid mutating the memoized array
+  const principalNamesKey = principalNames
+    ? JSON.stringify([...principalNames].sort())
+    : 'undefined'
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
     if (!selectedConnection) return
 
+    const controller = new AbortController()
+
     const fetchMessageData = async () => {
       setLoading(true)
       try {
         // Fetch combined metrics and errors data in a single call
-        const combinedQuery = queryBuilder(
-          selectedConnection,
-          selectedOrganization
-        )
+        const combinedQuery = queryBuilder(selectedConnection, principalNames)
+
+        const requestBody = {
+          index: ELASTICSEARCH_INDEX,
+          query: combinedQuery,
+        }
+
         const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            index: ELASTICSEARCH_INDEX,
-            query: combinedQuery,
-          }),
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
         })
 
         if (!response.ok) {
@@ -216,6 +214,7 @@ const MessagesWidget = ({
           setFailures(failureTypes)
         }
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching message data:', err)
       } finally {
         setLoading(false)
@@ -223,7 +222,11 @@ const MessagesWidget = ({
     }
 
     fetchMessageData()
-  }, [selectedConnection, selectedOrganization, queryBuilder])
+    return () => controller.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConnection, principalNamesKey, queryBuilder])
+  // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
+  // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
   return (
     <div>
@@ -247,7 +250,7 @@ const MessagesWidget = ({
               <Select
                 value={selectedOrganization}
                 onChange={(e) => setSelectedOrganization(e.target.value)}
-                disabled={loadingOrganizations}
+                disabled={organizationsLoading}
                 displayEmpty
                 sx={{
                   fontSize: '14px',

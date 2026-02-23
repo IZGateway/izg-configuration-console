@@ -1,8 +1,11 @@
 import MessagesWidget from './MessagesWidget'
 import { buildOutboundCombinedQuery } from './queries/outboundMessagesQuery'
+import { Organization } from './MessagesWidget'
 
 interface OutboundMessagesProps {
   selectedConnection?: string
+  organizations?: Organization[]
+  organizationsLoading?: boolean
 }
 
 const OutboundMessages = ({ selectedConnection }: OutboundMessagesProps) => {

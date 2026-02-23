@@ -1,12 +1,12 @@
 /**
- * Builds the Elasticsearch query for outbound message metrics
+ * Builds the Elasticsearch query for Outbound message metrics
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
 export const buildOutboundMetricsQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -40,13 +40,11 @@ export const buildOutboundMetricsQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'destination.fips.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -217,14 +215,14 @@ export const buildOutboundMetricsQuery = (
 }
 
 /**
- * Builds the Elasticsearch query for outbound message errors/failures
+ * Builds the Elasticsearch query for Outbound message errors/failures
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
-export const buildoutboundErrorsQuery = (
+export const buildOutboundErrorsQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -270,13 +268,11 @@ export const buildoutboundErrorsQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'destination.fips.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -293,7 +289,7 @@ export const buildoutboundErrorsQuery = (
     aggs: {
       '0': {
         terms: {
-          field: 'destination.fips.keyword',
+          field: 'transactionData.source.organization.keyword',
           order: {
             _count: 'desc',
           },
@@ -1041,14 +1037,14 @@ export const buildoutboundErrorsQuery = (
 }
 
 /**
- * Builds the combined Elasticsearch query for outbound message metrics and errors
+ * Builds the combined Elasticsearch query for Outbound message metrics and errors
  * @param selectedConnection - The destination FIPS code to filter by
- * @param selectedOrganization - Optional organization name to filter by
+ * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object with both metrics and error aggregations
  */
 export const buildOutboundCombinedQuery = (
   selectedConnection: string,
-  selectedOrganization?: string
+  principalNames?: string[]
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -1089,13 +1085,11 @@ export const buildOutboundCombinedQuery = (
     },
   ]
 
-  // Add organization filter if specified
-  if (selectedOrganization && selectedOrganization !== 'IZGateway') {
+  // Add principal names filter if specified
+  if (principalNames && principalNames.length > 0) {
     filters.push({
-      term: {
-        'destination.fips.keyword': {
-          value: selectedOrganization,
-        },
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
     })
   }
@@ -1111,10 +1105,8 @@ export const buildOutboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: buildOutboundMetricsQuery(
-        selectedConnection,
-        selectedOrganization
-      ).aggs['0'],
+      metrics: buildOutboundMetricsQuery(selectedConnection, principalNames)
+        .aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
         filter: {
@@ -1123,9 +1115,9 @@ export const buildOutboundCombinedQuery = (
           },
         },
         aggs: {
-          organizations: buildOutboundMetricsQuery(
+          organizations: buildOutboundErrorsQuery(
             selectedConnection,
-            selectedOrganization
+            principalNames
           ).aggs['0'],
         },
       },
