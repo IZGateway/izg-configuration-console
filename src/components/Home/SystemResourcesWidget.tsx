@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import {
   Box,
   Card,
@@ -65,39 +65,54 @@ const toPercent = (value?: number | null) => {
 const SystemResourcesWidget = () => {
   const { data: session } = useSession()
 
-  const now = new Date()
-  const start = new Date(now.getTime() - 15 * 60 * 1000).toISOString()
-  const end = now.toISOString()
+  const [refreshToken, setRefreshToken] = useState(0)
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setRefreshToken((token) => token + 1)
+    }, 60000)
+
+    return () => clearInterval(intervalId)
+  }, [])
 
   const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
   if (!elasticIndex) {
     throw new Error('NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.')
   }
 
-  const { data, error, isLoading } = useElasticTemplateQuery({
-    index: elasticIndex,
-    template: {
-      size: 0,
-      query: {
-        range: {
-          '@timestamp': {
-            gte: '${start}',
-            lte: '${end}',
+  const { index, template, params } = useMemo(() => {
+    const now = new Date()
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+    const end = now.toISOString()
+
+    return {
+      index: elasticIndex,
+      template: {
+        size: 0,
+        query: {
+          range: {
+            '@timestamp': {
+              gte: '${start}',
+              lte: '${end}',
+            },
           },
         },
+        aggs: {
+          cpu: { avg: { field: 'system.cpu.total.pct' } },
+          memory: { avg: { field: 'system.memory.actual.used.pct' } },
+          disk: { avg: { field: 'system.filesystem.used.pct' } },
+          connections: { max: { field: 'system.socket.summary.tcp.all' } },
+        },
       },
-      aggs: {
-        cpu: { avg: { field: 'system.cpu.total.pct' } },
-        memory: { avg: { field: 'system.memory.actual.used.pct' } },
-        disk: { avg: { field: 'system.filesystem.used.pct' } },
-        connections: { max: { field: 'system.socket.summary.tcp.all' } },
-      },
-    },
-    params: { start, end },
+      params: { start, end },
+    }
+  }, [refreshToken])
+
+  const { data, error, isLoading } = useElasticTemplateQuery({
+    index,
+    template,
+    params,
     enabled: Boolean(session?.user?.isAdmin),
-    swrOptions: {
-      refreshInterval: 60000, // Refresh every 60 seconds
-    },
   })
 
   const cpu = toPercent(data?.aggregations?.cpu?.value)
@@ -127,31 +142,40 @@ const SystemResourcesWidget = () => {
             Unable to load system resources.
           </Typography>
         )}
-        <ResourceRow
-          label="CPU Usage"
-          value={error || isLoading ? null : cpu}
-          color={palette.primary}
-        />
-        <ResourceRow
-          label="Memory Usage"
-          value={error || isLoading ? null : memory}
-          color={palette.secondary}
-        />
-        <ResourceRow
-          label="Disk Usage"
-          value={error || isLoading ? null : disk}
-          color={palette.primaryLight}
-        />
-        <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
-          Active Connections:{' '}
-          {error || isLoading ? 'N/A' : connections ?? 'N/A'}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{ display: 'block', mt: 1, color: palette.grey }}
-        >
-          Scheduled maintenance: Not reported
-        </Typography>
+        {isLoading && (
+          <Typography
+            variant="body2"
+            sx={{ color: palette.greyDarkTypography, mb: 2 }}
+          >
+            Loading system resources...
+          </Typography>
+        )}
+        <>
+          <ResourceRow
+            label="CPU Usage"
+            value={error || isLoading ? null : cpu}
+            color={palette.primary}
+          />
+          <ResourceRow
+            label="Memory Usage"
+            value={error || isLoading ? null : memory}
+            color={palette.secondary}
+          />
+          <ResourceRow
+            label="Disk Usage"
+            value={error || isLoading ? null : disk}
+            color={palette.primaryLight}
+          />
+          <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
+            Active Connections: {error || isLoading ? 'N/A' : connections ?? 'N/A'}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', mt: 1, color: palette.grey }}
+          >
+            Scheduled maintenance: Not reported
+          </Typography>
+        </>
       </CardContent>
     </Card>
   )

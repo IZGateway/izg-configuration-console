@@ -51,6 +51,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       query,
     })
 
+    const elasticHost = process.env.ELASTIC_HOST
+    const elasticApiKey = process.env.ELASTIC_API_KEY
+
+    if (!elasticHost || !elasticApiKey) {
+      logger.error('Elasticsearch environment variables not configured', {
+        operation: 'elasticsearch_query',
+        user: session.user.email,
+        index,
+        hasElasticHost: Boolean(elasticHost),
+        hasElasticApiKey: Boolean(elasticApiKey),
+      })
+
+      return res.status(500).json({
+        error: 'Server Error',
+        message: 'Elasticsearch is not properly configured',
+      })
+    }
+
     // Check if Elasticsearch is properly configured
     if (!elasticClient.isConfigured()) {
       return res.status(500).json({
