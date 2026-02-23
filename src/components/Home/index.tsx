@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import pack from '../../../package.json'
 import {
   Container,
@@ -24,8 +25,8 @@ import UseCases from './UseCases'
 import Requirements from './Requirements'
 import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
+import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
-import { useSession } from 'next-auth/react'
 import isOperationsRole from '../../lib/security/accessutils'
 
 function HomeComponent() {
@@ -119,16 +120,18 @@ function HomeComponent() {
               }}
             >
               <Slide in={true} timeout={1200} direction="down">
-                <Image
-                  src={homePageBanner}
-                  width={300}
-                  height={180}
-                  alt="general error image"
-                  style={{
-                    maxWidth: '100%',
-                    height: 'auto',
-                  }}
-                />
+                <Box>
+                  <Image
+                    src={homePageBanner}
+                    width={300}
+                    height={180}
+                    alt="general error image"
+                    style={{
+                      maxWidth: '100%',
+                      height: 'auto',
+                    }}
+                  />
+                </Box>
               </Slide>
             </Box>
           </Container>
@@ -243,6 +246,11 @@ function HomeComponent() {
                     </Box>
                   </CardContent>
                 </Card>
+              </Slide>
+              <Slide in={true} timeout={1400} direction="up">
+                <Box>
+                  <SystemResourcesWidget />
+                </Box>
               </Slide>
               <HomeCircleCallouts />
             </Box>
