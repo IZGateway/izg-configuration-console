@@ -1,4 +1,4 @@
-import { Box, Typography, Link } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 interface FailureItemProps {

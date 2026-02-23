@@ -403,9 +403,9 @@ const MessagesWidget = ({
               {failures.length > 0 ? (
                 <Box>
                   {(showAllFailures ? failures : failures.slice(0, 4)).map(
-                    (failure, index) => (
+                    (failure) => (
                       <FailureItem
-                        key={index}
+                        key={failure.type}
                         type={failure.type}
                         logLevel={failure.logLevel}
                         count={failure.count}

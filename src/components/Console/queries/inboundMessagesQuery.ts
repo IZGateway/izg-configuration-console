@@ -7,7 +7,7 @@
 export const buildInboundMetricsQuery = (
   selectedConnection: string,
   principalNames?: string[]
-): Record<string, unknown> => {
+) => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [
@@ -223,7 +223,7 @@ export const buildInboundMetricsQuery = (
 export const buildInboundErrorsQuery = (
   selectedConnection: string,
   principalNames?: string[]
-): Record<string, unknown> => {
+) => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [
@@ -781,7 +781,7 @@ export const buildInboundErrorsQuery = (
                           should: [
                             {
                               match_phrase: {
-                                processError:
+                                'transactionData.processError':
                                   'Unable to invoke IIS destination web service',
                               },
                             },
@@ -1045,7 +1045,7 @@ export const buildInboundErrorsQuery = (
 export const buildInboundCombinedQuery = (
   selectedConnection: string,
   principalNames?: string[]
-): Record<string, unknown> => {
+) => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [

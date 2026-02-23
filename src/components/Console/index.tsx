@@ -15,7 +15,7 @@ import Container from '../Container'
 import InboundMessages from './InboundMessages'
 import OutboundMessages from './OutboundMessages'
 import DestinationDetailWidget from './DestinationDetailWidget'
-import { Organization } from './MessagesWidget'
+import type { Organization } from './MessagesWidget'
 
 interface Destination {
   destId: string
@@ -89,7 +89,10 @@ const Console = () => {
 
   // Fetch organizations
   useEffect(() => {
-    if (status !== 'authenticated') return
+    if (status !== 'authenticated') {
+      setOrganizationsLoading(false)
+      return
+    }
     const fetchOrganizations = async () => {
       try {
         const response = await fetch('/api/organizations')

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, Divider } from '@mui/material'
-import { Organization } from './MessagesWidget'
+import type { Organization } from './MessagesWidget'
 
 interface OutboundMessagesProps {
   organizations?: Organization[]

@@ -1,4 +1,4 @@
-import MessagesWidget, { Organization } from './MessagesWidget'
+import MessagesWidget, { type Organization } from './MessagesWidget'
 import { buildInboundCombinedQuery } from './queries/inboundMessagesQuery'
 
 interface InboundMessagesProps {
