@@ -11,12 +11,12 @@ This project uses an automated workflow to keep dependencies current and secure.
 - **Manual:** Can be triggered via GitHub Actions UI
 
 ### What it does:
-1. Checks out the `develop` branch
+1. Checks out the branch that triggered the workflow (default branch for scheduled runs)
 2. Runs `ncu --target minor -u` to update dependencies
 3. If no changes detected, exits with a summary
 4. If changes detected:
    - Creates a new branch (`automated-security-updates-YYYYMMDD-HHMMSS`)
-   - Installs updated dependencies
+   - Installs updated dependencies (without `--legacy-peer-deps`)
    - Adds security overrides for vulnerable transitive dependencies (all severity levels)
    - Runs `scripts/test-overrides.js` to remove unnecessary overrides
    - Commits the changes
@@ -29,6 +29,7 @@ This project uses an automated workflow to keep dependencies current and secure.
 - **Security-First:** Addresses all security vulnerabilities (critical, high, moderate, low)
 - **Automatic Overrides:** Adds package overrides for vulnerable transitive dependencies
 - **Override Cleanup:** Automatically removes unnecessary package overrides
+- **Proper Peer Dependencies:** Uses npm's native peer dependency resolution (no `--legacy-peer-deps`)
 - **Full Testing:** Runs all quality checks before creating PR
 - **Transparent:** Detailed summary in PR description
 
