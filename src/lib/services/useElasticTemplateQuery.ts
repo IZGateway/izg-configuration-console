@@ -23,7 +23,11 @@ const buildElasticRequest = (
 
   for (const [key, value] of Object.entries(params)) {
     const regex = new RegExp(`\\$\\{${key}\\}`, 'g')
-    request = request.replace(regex, String(value))
+    const replacement =
+      typeof value === 'string'
+        ? JSON.stringify(value).slice(1, -1)
+        : String(value)
+    request = request.replace(regex, replacement)
   }
 
   return request
@@ -82,7 +86,11 @@ const useElasticTemplateQuery = ({
       ]
     : null
 
-  return useSWR(key, () => postElasticQuery(index, template, params), swrOptions)
+  return useSWR(
+    key,
+    () => postElasticQuery(index, template, params),
+    swrOptions
+  )
 }
 
 export default useElasticTemplateQuery

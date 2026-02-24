@@ -32,6 +32,7 @@ import isOperationsRole from '../../lib/security/accessutils'
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
   const { data: session } = useSession()
+  const isAdmin = Boolean(session?.user?.isAdmin)
   return (
     <>
       <AppHeaderBar open />
@@ -249,7 +250,34 @@ function HomeComponent() {
               </Slide>
               <Slide in={true} timeout={1400} direction="up">
                 <Box>
-                  <SystemResourcesWidget />
+                  {isAdmin ? (
+                    <SystemResourcesWidget />
+                  ) : (
+                    <Card
+                      sx={{
+                        width: '-webkit-fill-available',
+                        borderRadius: '0px 0px 30px 30px',
+                      }}
+                    >
+                      <CardHeader
+                        titleTypographyProps={{
+                          fontSize: { xs: '1.1em', md: '1.3em' },
+                          fontWeight: '500',
+                        }}
+                        title="System Resources"
+                        subheader="All Resources"
+                        sx={{ pt: 2, pl: 2, pb: 0 }}
+                      />
+                      <CardContent sx={{ px: { xs: 2, md: 3 } }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: palette.greyDarkTypography }}
+                        >
+                          System resources are available to administrators only.
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  )}
                 </Box>
               </Slide>
               <HomeCircleCallouts />

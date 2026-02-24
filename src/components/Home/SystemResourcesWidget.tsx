@@ -64,6 +64,7 @@ const toPercent = (value?: number | null) => {
 
 const SystemResourcesWidget = () => {
   const { data: session } = useSession()
+  const isAdmin = Boolean(session?.user?.isAdmin)
 
   const [refreshToken, setRefreshToken] = useState(0)
 
@@ -77,7 +78,14 @@ const SystemResourcesWidget = () => {
 
   const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
   if (!elasticIndex) {
-    throw new Error('NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.')
+    return (
+      <Box sx={{ p: 2 }}>
+        <Typography variant="body2" color="error">
+          System resources data is unavailable: required environment variable{' '}
+          <strong>NEXT_PUBLIC_ELASTIC_INDEX</strong> is not set.
+        </Typography>
+      </Box>
+    )
   }
 
   const { index, template, params } = useMemo(() => {
@@ -106,13 +114,13 @@ const SystemResourcesWidget = () => {
       },
       params: { start, end },
     }
-  }, [refreshToken])
+  }, [refreshToken, elasticIndex])
 
   const { data, error, isLoading } = useElasticTemplateQuery({
     index,
     template,
     params,
-    enabled: Boolean(session?.user?.isAdmin),
+    enabled: isAdmin,
   })
 
   const cpu = toPercent(data?.aggregations?.cpu?.value)
@@ -137,12 +145,20 @@ const SystemResourcesWidget = () => {
         sx={{ pt: 2, pl: 2, pb: 0 }}
       />
       <CardContent sx={{ px: { xs: 2, md: 3 } }}>
-        {error && (
+        {!isAdmin && (
+          <Typography
+            variant="body2"
+            sx={{ color: palette.greyDarkTypography, mb: 2 }}
+          >
+            System resources are available to administrators only.
+          </Typography>
+        )}
+        {isAdmin && error && (
           <Typography variant="body2" sx={{ color: palette.error, mb: 2 }}>
             Unable to load system resources.
           </Typography>
         )}
-        {isLoading && (
+        {isAdmin && isLoading && (
           <Typography
             variant="body2"
             sx={{ color: palette.greyDarkTypography, mb: 2 }}
@@ -166,14 +182,12 @@ const SystemResourcesWidget = () => {
             value={error || isLoading ? null : disk}
             color={palette.primaryLight}
           />
-          <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
-            Active Connections: {error || isLoading ? 'N/A' : connections ?? 'N/A'}
-          </Typography>
           <Typography
-            variant="caption"
-            sx={{ display: 'block', mt: 1, color: palette.grey }}
+            variant="body2"
+            sx={{ color: palette.greyDarkTypography }}
           >
-            Scheduled maintenance: Not reported
+            Active Connections:{' '}
+            {error || isLoading ? 'N/A' : connections ?? 'N/A'}
           </Typography>
         </>
       </CardContent>
