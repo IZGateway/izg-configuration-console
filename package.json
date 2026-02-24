@@ -92,9 +92,18 @@
     "prettier": "^2.8.8",
     "react-axe": "^3.5.4",
     "rimraf": "^5.0.1",
+    "semver": "^7.6.3",
     "ts-jest": "^29.4.1",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
+  },
+  "overrides": {
+    "babel-plugin-istanbul": "19.0.2",
+    "eslint-plugin-import": "12.0.4",
+    "eslint-plugin-jsx-a11y": "12.0.4",
+    "glob": "19.0.2",
+    "minimatch": "19.0.2",
+    "test-exclude": "19.0.2"
   }
 }
