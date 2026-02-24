@@ -32,7 +32,7 @@ const MetricCard = ({
               color: change.isUp ? '#4caf50' : '#f44336',
             }}
           >
-            {change.isUp ? '↓' : '↑'}
+            {change.isUp ? '↑' : '↓'}
           </span>{' '}
           {change.percent} {change.isUp ? 'Faster' : 'Slower'} Than Yesterday
         </Typography>

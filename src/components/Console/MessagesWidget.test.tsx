@@ -22,6 +22,9 @@ const createMockOrganizationsResponse = () => [
   },
 ]
 
+// Mock organizations to pass as prop
+const mockOrganizations = createMockOrganizationsResponse()
+
 // Helper to create a mock Elasticsearch response
 const createMockElasticsearchResponse = (overrides?: {
   successCount?: number
@@ -83,7 +86,7 @@ const createMockElasticsearchResponse = (overrides?: {
 
 describe('MessagesWidget', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.resetAllMocks()
     // Suppress console.error during tests
     jest.spyOn(console, 'error').mockImplementation(() => {
       // Intentionally empty - suppress console.error output
@@ -108,6 +111,7 @@ describe('MessagesWidget', () => {
             title="Inbound Messages"
             cardId="inbound-messages"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -127,6 +131,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -149,6 +154,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -160,17 +166,12 @@ describe('MessagesWidget', () => {
     })
 
     it('should show loading spinner initially', async () => {
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve([]),
-        })
-        .mockImplementation(
-          () =>
-            new Promise((resolve) => {
-              setTimeout(() => resolve({ ok: true, json: () => ({}) }), 1000)
-            })
-        )
+      mockFetch.mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            setTimeout(() => resolve({ ok: true, json: () => ({}) }), 1000)
+          })
+      )
 
       await act(async () => {
         render(
@@ -179,104 +180,19 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
-      // Organizations fetch completes, now waiting for data fetch
+      // Waiting for data fetch to complete
       await waitFor(() => {
         expect(screen.queryByRole('progressbar')).toBeInTheDocument()
       })
     })
   })
 
-  describe('Organizations Fetching', () => {
-    it('should fetch organizations on mount', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(createMockOrganizationsResponse()),
-      })
-
-      await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            queryBuilder={mockQueryBuilder}
-          />
-        )
-      })
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/organizations')
-    })
-
-    it('should display organization dropdown with fetched organizations', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(createMockOrganizationsResponse()),
-      })
-
-      await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            selectedConnection="TX"
-            queryBuilder={mockQueryBuilder}
-          />
-        )
-      })
-
-      await waitFor(() => {
-        expect(screen.getByText('IZGateway - TX')).toBeInTheDocument()
-      })
-
-      // Open the dropdown
-      const selectElement = screen.getByRole('combobox')
-      await act(async () => {
-        fireEvent.mouseDown(selectElement)
-      })
-
-      await waitFor(() => {
-        expect(
-          screen.getByText('IZGateway (All Organizations)')
-        ).toBeInTheDocument()
-        expect(screen.getByText('Organization A')).toBeInTheDocument()
-        expect(screen.getByText('Organization B')).toBeInTheDocument()
-      })
-    })
-
-    it('should handle organization fetch failure gracefully', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'))
-
-      await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            queryBuilder={mockQueryBuilder}
-          />
-        )
-      })
-
-      await waitFor(() => {
-        expect(console.error).toHaveBeenCalledWith(
-          'Error fetching organizations:',
-          expect.any(Error)
-        )
-      })
-    })
-  })
-
   describe('Data Fetching', () => {
-    beforeEach(() => {
-      // Mock organizations fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]),
-      })
-    })
-
     it('should not fetch data when selectedConnection is undefined', async () => {
       await act(async () => {
         render(
@@ -284,13 +200,13 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
-      // Only organizations fetch should be called
-      expect(mockFetch).toHaveBeenCalledTimes(1)
-      expect(mockFetch).toHaveBeenCalledWith('/api/organizations')
+      // No data fetch should be called when selectedConnection is undefined
+      expect(mockFetch).not.toHaveBeenCalled()
     })
 
     it('should fetch data when selectedConnection is provided', async () => {
@@ -306,6 +222,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -334,12 +251,13 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', 'IZGateway')
+        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
       })
     })
 
@@ -361,12 +279,13 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', 'IZGateway')
+        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
       })
 
       mockQueryBuilder.mockClear()
@@ -378,12 +297,13 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="CA"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('CA', 'IZGateway')
+        expect(mockQueryBuilder).toHaveBeenCalledWith('CA', undefined)
       })
     })
 
@@ -397,6 +317,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -411,14 +332,6 @@ describe('MessagesWidget', () => {
   })
 
   describe('Metric Calculations', () => {
-    beforeEach(() => {
-      // Mock organizations fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]),
-      })
-    })
-
     it('should calculate total messages correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -438,6 +351,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -466,6 +380,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -493,6 +408,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -520,6 +436,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -548,6 +465,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -561,14 +479,6 @@ describe('MessagesWidget', () => {
   })
 
   describe('Failure List', () => {
-    beforeEach(() => {
-      // Mock organizations fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]),
-      })
-    })
-
     it('should display failure types', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -582,6 +492,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -606,6 +517,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -648,6 +560,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -692,6 +605,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -731,6 +645,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -772,6 +687,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -809,6 +725,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
@@ -821,14 +738,6 @@ describe('MessagesWidget', () => {
   })
 
   describe('Organization Filtering', () => {
-    beforeEach(() => {
-      // Mock organizations fetch
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(createMockOrganizationsResponse()),
-      })
-    })
-
     it('should pass selected organization to queryBuilder', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -842,13 +751,14 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })
 
-      // Wait for initial load with "IZGateway"
+      // Wait for initial load with "IZGateway" (undefined principal names)
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', 'IZGateway')
+        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
       })
 
       mockQueryBuilder.mockClear()
@@ -870,7 +780,10 @@ describe('MessagesWidget', () => {
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', 'Organization A')
+        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', [
+          'principal1',
+          'principal2',
+        ])
       })
     })
 
@@ -887,6 +800,7 @@ describe('MessagesWidget', () => {
             cardId="test-messages"
             selectedConnection="TX"
             queryBuilder={mockQueryBuilder}
+            organizations={mockOrganizations}
           />
         )
       })

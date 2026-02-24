@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import MessagesWidget, { Organization } from './MessagesWidget'
+=======
+import MessagesWidget, { type Organization } from './MessagesWidget'
+>>>>>>> develop
 import { buildInboundCombinedQuery } from './queries/inboundMessagesQuery'
 
 interface InboundMessagesProps {

@@ -32,6 +32,7 @@ interface MessagesWidgetProps {
   title: string
   cardId: string
   selectedConnection?: string
+<<<<<<< HEAD
   direction: 'inbound' | 'outbound'
   organizations?: Organization[]
   organizationsLoading?: boolean
@@ -40,13 +41,21 @@ interface MessagesWidgetProps {
     principalNames?: string[],
     organization?: string
   ) => any
+=======
+  organizations?: Organization[]
+  organizationsLoading?: boolean
+  queryBuilder: (connection: string, principalNames?: string[]) => any
+>>>>>>> develop
 }
 
 const MessagesWidget = ({
   title,
   cardId,
   selectedConnection,
+<<<<<<< HEAD
   direction,
+=======
+>>>>>>> develop
   organizations = [],
   organizationsLoading = false,
   queryBuilder,
@@ -259,6 +268,7 @@ const MessagesWidget = ({
                   },
                 }}
                 renderValue={(selected) => {
+<<<<<<< HEAD
                   const dest = selectedConnection || 'Destination'
                   const org =
                     !selected || selected === 'IZGateway'
@@ -267,6 +277,12 @@ const MessagesWidget = ({
                   return direction === 'inbound'
                     ? `${org} - ${dest}`
                     : `${dest} - ${org}`
+=======
+                  if (!selected || selected === 'IZGateway') {
+                    return `IZGateway - ${selectedConnection || 'Destination'}`
+                  }
+                  return `${selected} - ${selectedConnection || 'Destination'}`
+>>>>>>> develop
                 }}
               >
                 <MenuItem value="IZGateway">
@@ -413,9 +429,15 @@ const MessagesWidget = ({
               {failures.length > 0 ? (
                 <Box>
                   {(showAllFailures ? failures : failures.slice(0, 4)).map(
+<<<<<<< HEAD
                     (failure, index) => (
                       <FailureItem
                         key={index}
+=======
+                    (failure) => (
+                      <FailureItem
+                        key={failure.type}
+>>>>>>> develop
                         type={failure.type}
                         logLevel={failure.logLevel}
                         count={failure.count}
