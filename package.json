@@ -99,6 +99,7 @@
   },
   "overrides": {
     "dompurify": "3.3.1",
-    "fast-xml-parser": "5.3.6"
+    "fast-xml-parser": "5.3.6",
+    "minimatch": "^10.2.1"
   }
 }
