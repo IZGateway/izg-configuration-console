@@ -186,8 +186,7 @@ jobs:
             --base develop \
             --head ${{ env.branch_name }} \
             --title "chore(deps): security and dependency updates" \
-            --body "$PR_BODY" \
-            --label "dependencies,automated,security"
+            --body "$PR_BODY"
           
           echo "## ✅ Pull Request Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
