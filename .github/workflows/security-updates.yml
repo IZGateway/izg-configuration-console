@@ -66,7 +66,7 @@ jobs:
       - name: Create update branch
         if: steps.ncu_check.outputs.has_changes == 'true'
         run: |
-          BRANCH_NAME="automated-ncu-minor-$(date +%Y%m%d-%H%M%S)"
+          BRANCH_NAME="automated-security-updates-$(date +%Y%m%d-%H%M%S)"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
           git checkout -b $BRANCH_NAME
           echo "✓ Created branch: $BRANCH_NAME"
@@ -202,3 +202,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ env.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base:** \`develop\`" >> $GITHUB_STEP_SUMMARY
+

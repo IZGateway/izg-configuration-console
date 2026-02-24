@@ -15,7 +15,7 @@ This project uses an automated workflow to keep dependencies current and secure.
 2. Runs `ncu --target minor -u` to update dependencies
 3. If no changes detected, exits with a summary
 4. If changes detected:
-   - Creates a new branch (`automated-ncu-minor-YYYYMMDD-HHMMSS`)
+   - Creates a new branch (`automated-security-updates-YYYYMMDD-HHMMSS`)
    - Installs updated dependencies
    - Adds security overrides for vulnerable transitive dependencies (all severity levels)
    - Runs `scripts/test-overrides.js` to remove unnecessary overrides
@@ -143,3 +143,4 @@ ncu --target minor -u
 # All updates (including major - not recommended)
 ncu --target latest -u
 ```
+
