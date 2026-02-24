@@ -1185,7 +1185,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
                 setFilterButtonEl,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 500 },
-              },
+              } as any,
               panel: {
                 anchorEl: filterButtonEl,
                 sx: {
