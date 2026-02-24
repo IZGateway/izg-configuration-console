@@ -7,6 +7,7 @@ import {
   GridToolbarContainer,
   GridToolbarFilterButton,
   GridToolbarQuickFilter,
+  GridToolbarProps,
 } from '@mui/x-data-grid'
 import {
   Box,
@@ -130,7 +131,7 @@ const dataGridCustom = {
   },
 }
 
-interface CustomToolbarProps {
+interface CustomToolbarProps extends GridToolbarProps {
   setFilterButtonEl: React.Dispatch<
     React.SetStateAction<HTMLButtonElement | null>
   >
