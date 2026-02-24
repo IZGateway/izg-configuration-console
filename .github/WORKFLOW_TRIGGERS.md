@@ -71,8 +71,19 @@ This means:
 ### Option 1: Push to Branch (Recommended)
 Push your workflow changes to a feature branch and verify the workflow runs with your changes.
 
+**Important for `security-updates.yml`:**
+- The workflow uses the branch that triggers it (no hardcoded `ref`)
+- This means when you manually trigger from a feature branch, it will use your updated scripts
+- Test your script changes by:
+  1. Push your changes to a feature branch
+  2. Go to Actions → Security Updates → Run workflow
+  3. Select your feature branch from the dropdown
+  4. The workflow will use the scripts from your branch
+
 ### Option 2: Manual Trigger
 Use `workflow_dispatch` from the GitHub Actions UI to manually trigger the workflow.
+- For scheduled workflows, select the branch you want to test from the branch dropdown
+- The workflow will checkout and use code from that branch
 
 ### Option 3: Create PR
 Create a PR with your workflow changes to see if it triggers correctly on the PR event.

@@ -168,26 +168,24 @@ on:
     - cron: '0 3 * * *'  # Daily at 3 AM UTC
 ```
 
-### Change Target Branch
+### Branch Behavior
 
-Update the `ref` in the checkout step:
+The workflow automatically uses the branch that triggered it:
+- **Scheduled runs** - Uses the default branch (typically `main` or `develop`)
+- **Manual triggers** - Uses the branch selected when running the workflow
+- **Testing workflow changes** - Push to a feature branch and manually trigger to test your changes
 
-```yaml
-- name: Checkout develop branch
-  uses: actions/checkout@v4
-  with:
-    ref: develop  # Change to your preferred branch
-```
+This allows you to test updated scripts and workflow changes before merging to the main branch.
 
 ### Modify Update Strategy
 
-Change the `ncu` flags:
+Change the `ncu` flags in the workflow:
 
 ```yaml
 # Patch only
 ncu --target patch -u
 
-# Minor and patch
+# Minor and patch (current default)
 ncu --target minor -u
 
 # All updates (including major - not recommended)
