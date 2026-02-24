@@ -81,6 +81,7 @@ jobs:
         if: steps.ncu_check.outputs.has_changes == 'true'
         run: |
           echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
+          find . -name add-security-overrides.js -print
           node scripts/add-security-overrides.js
           
           # If overrides were added, reinstall to apply them

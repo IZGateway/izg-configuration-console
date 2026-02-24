@@ -76,6 +76,56 @@ If `package-lock.json` shows all instances of `prismjs` are `>= 1.30.0`, the ove
 
 ---
 
+## Preventing Workflow Triggering on Workflow File Changes
+
+To avoid infinite loops and unnecessary workflow runs when workflow files are updated, workflows triggered by `push` or `pull_request` events use a refined `paths-ignore` pattern:
+
+```yaml
+on:
+  push:
+    branches:
+      - 'release/**'
+    paths-ignore:
+      - '.github/workflows/*'
+      - '!.github/workflows/deploy.yml'
+  pull_request:
+    branches:
+      - develop
+    paths-ignore:
+      - '.github/workflows/*'
+      - '!.github/workflows/deploy.yml'
+  workflow_dispatch:
+```
+
+### How This Works:
+
+- **`.github/workflows/*`** - Ignores changes to all workflow files
+- **`!.github/workflows/deploy.yml`** - Exception: DO NOT ignore changes to `deploy.yml` itself
+
+This pattern means:
+- ✅ Changes to `deploy.yml` **WILL** trigger the deploy workflow (allows testing workflow changes)
+- ❌ Changes to `security-updates.yml`, `gitleaks.yml`, etc. **WILL NOT** trigger the deploy workflow
+- ❌ Automated dependency PRs that only touch workflow files **WILL NOT** trigger builds
+
+### Why This Matters:
+
+**Important:** GitHub Actions uses the workflow file from the branch where the push/PR occurred, not the default branch. This means:
+
+1. **Test Workflow Changes** - When you modify `deploy.yml`, you need it to run so you can verify your changes work
+2. **Prevents Infinite Loops** - Automated workflows (like security-updates.yml) that create PRs won't trigger other workflows
+3. **Reduces CI Load** - Changes to unrelated workflow files don't trigger unnecessary builds
+
+### Testing Workflow Changes:
+
+When you modify a workflow file:
+
+1. **Changes to the workflow itself** (e.g., `deploy.yml`) → Workflow WILL run with your changes
+2. **Changes to other workflows** (e.g., `security-updates.yml`) → Workflow will NOT run
+3. **Manual trigger** - Always available via `workflow_dispatch` for testing
+4. **Test in a PR** - Create a PR to see if the workflow triggers as expected
+
+---
+
 ## Troubleshooting
 
 ### Workflow fails at build step
