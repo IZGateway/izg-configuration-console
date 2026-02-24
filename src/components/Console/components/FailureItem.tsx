@@ -1,4 +1,4 @@
-import { Box, Typography, Link } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 
 interface FailureItemProps {
@@ -11,12 +11,7 @@ interface FailureItemProps {
 /**
  * Component for displaying a single failure item in the Recent Failures list
  */
-const FailureItem = ({
-  type,
-  logLevel,
-  count,
-  percentage,
-}: FailureItemProps) => {
+const FailureItem = ({ type, count, percentage }: FailureItemProps) => {
   return (
     <Box
       sx={{
