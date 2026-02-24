@@ -1,10 +1,10 @@
-# Automated Dependency Update Workflow
+# Automated Security and Dependency Update Workflow
 
-This project uses an automated dependency update workflow to keep dependencies current.
+This project uses an automated workflow to keep dependencies current and secure.
 
-## NCU Minor Dependency Updates (`.github/workflows/ncu-minor-update.yml`)
+## Security Updates (`.github/workflows/security-updates.yml`)
 
-**Purpose:** Automatically updates dependencies to their latest **minor versions** using `npm-check-updates`.
+**Purpose:** Automatically updates dependencies to their latest **minor versions** and addresses security vulnerabilities at all severity levels (critical, high, moderate, and low).
 
 ### When it runs:
 - **Schedule:** Daily at 3 AM UTC
@@ -17,13 +17,17 @@ This project uses an automated dependency update workflow to keep dependencies c
 4. If changes detected:
    - Creates a new branch (`automated-ncu-minor-YYYYMMDD-HHMMSS`)
    - Installs updated dependencies
+   - Adds security overrides for vulnerable transitive dependencies (all severity levels)
    - Runs `scripts/test-overrides.js` to remove unnecessary overrides
    - Commits the changes
    - Runs linting, type-checking, tests, and build
+   - Runs security audit with `--audit-level=low`
    - Creates a PR to `develop` branch
 
 ### Key Features:
 - **Safe Updates:** Only minor version updates (no breaking changes)
+- **Security-First:** Addresses all security vulnerabilities (critical, high, moderate, low)
+- **Automatic Overrides:** Adds package overrides for vulnerable transitive dependencies
 - **Override Cleanup:** Automatically removes unnecessary package overrides
 - **Full Testing:** Runs all quality checks before creating PR
 - **Transparent:** Detailed summary in PR description
@@ -31,19 +35,23 @@ This project uses an automated dependency update workflow to keep dependencies c
 ### Labels applied:
 - `dependencies`
 - `automated`
-- `minor-updates`
+- `security`
 
 ## Manual Triggers
 
 The workflow can be manually triggered:
 
 1. Go to **Actions** tab in GitHub
-2. Select the "NCU Minor Dependency Updates" workflow
+2. Select the "Security Updates" workflow
 3. Click **Run workflow**
 4. Select the branch (if applicable)
 5. Click **Run workflow** button
 
 ---
+
+## Understanding Security Overrides
+
+The `scripts/add-security-overrides.js` script automatically adds package overrides for vulnerable transitive dependencies at all severity levels (critical, high, moderate, and low). This ensures that even indirect dependencies are updated to secure versions.
 
 ## Understanding the Override Removal
 
@@ -89,11 +97,12 @@ If `package-lock.json` shows all instances of `prismjs` are `>= 1.30.0`, the ove
 
 ## Best Practices
 
-1. **Review PRs promptly** - Don't let automated PRs pile up
+1. **Review PRs promptly** - Security updates should be merged quickly
 2. **Test locally** - For major changes, pull the branch and test
-3. **Monitor security** - Check the audit results in PR descriptions
+3. **Monitor security audit** - Check the audit results in PR descriptions
 4. **Keep overrides minimal** - Only use when absolutely necessary
 5. **Update regularly** - The more frequent, the smaller the changes
+6. **Prioritize security** - Address all severity levels, not just critical/high
 
 ---
 
