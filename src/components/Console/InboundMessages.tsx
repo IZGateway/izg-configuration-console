@@ -17,6 +17,7 @@ const InboundMessages = ({
       title="Inbound Messages"
       cardId="inbound-messages"
       selectedConnection={selectedConnection}
+      direction="inbound"
       organizations={organizations}
       organizationsLoading={organizationsLoading}
       queryBuilder={buildInboundCombinedQuery}
