@@ -1247,14 +1247,6 @@ class Dynamo implements DbClient {
       const timestamp = ts.toISOString()
       const sortKey = `${denyListItem.environment}#${denyListItem.principal}`
 
-      logger.info('Adding deny list record', {
-        operation: 'addDenyListRecord',
-        principal: denyListItem.principal,
-        environment: denyListItem.environment,
-        reason: denyListItem.reason || 'Not specified',
-        createdBy: getAuditUserString(),
-      })
-
       // Check if record already exists
       const recordExists = await this.checkDenyListRecordExists(sortKey)
       if (recordExists) {
