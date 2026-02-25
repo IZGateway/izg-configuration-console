@@ -1127,6 +1127,7 @@ export const buildInboundCombinedQuery = (
 }
 
 export const ELASTICSEARCH_INDEX =
-  process.env.NEXT_PUBLIC_ELASTIC_INDEX || 'izgw-dev-logstash'
+  process.env.NEXT_PUBLIC_OPERATIONS_CONSOLE_ELASTIC_INDEX ||
+  'izgw-dev-logstash'
 
 export const ELASTICSEARCH_API_ENDPOINT = '/api/elasticsearch/query'
