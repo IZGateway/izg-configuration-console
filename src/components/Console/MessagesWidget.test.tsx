@@ -110,6 +110,7 @@ describe('MessagesWidget', () => {
           <MessagesWidget
             title="Inbound Messages"
             cardId="inbound-messages"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -130,6 +131,7 @@ describe('MessagesWidget', () => {
           <MessagesWidget
             title="Test Messages"
             cardId="test-messages"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -153,6 +155,7 @@ describe('MessagesWidget', () => {
           <MessagesWidget
             title="Test Messages"
             cardId="test-messages"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -179,6 +182,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -199,6 +203,7 @@ describe('MessagesWidget', () => {
           <MessagesWidget
             title="Test Messages"
             cardId="test-messages"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -221,6 +226,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -250,6 +256,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -278,6 +285,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -296,6 +304,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="CA"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -316,6 +325,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -350,6 +360,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -379,6 +390,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -407,6 +419,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -435,6 +448,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -464,6 +478,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -491,6 +506,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -516,6 +532,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -559,6 +576,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -604,6 +622,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -644,6 +663,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -686,6 +706,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -724,6 +745,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -750,6 +772,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
@@ -799,6 +822,7 @@ describe('MessagesWidget', () => {
             title="Test Messages"
             cardId="test-messages"
             selectedConnection="TX"
+            direction="inbound"
             queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
