@@ -47,7 +47,7 @@ module.exports = async (phase, { defaultConfig }) => {
       USER_GROUP: `${process.env.USER_GROUP}`,
       NEXT_PUBLIC_ELASTIC_ENV_TAG: `${process.env.ELASTIC_ENV_TAG || 'dev'}`,
       NEXT_PUBLIC_ELASTIC_INDEX: `${
-        process.env.ELASTIC_INDEX || 'izgw-dev-logstash'
+        process.env.OPERATIONS_CONSOLE_ELASTIC_INDEX || 'izgw-dev-logstash'
       }`,
     },
     webpack(config, { nextRuntime }) {

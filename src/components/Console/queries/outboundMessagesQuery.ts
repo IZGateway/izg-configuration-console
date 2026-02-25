@@ -1,13 +1,13 @@
 /**
- * Builds the Elasticsearch query for inbound message metrics
+ * Builds the Elasticsearch query for Outbound message metrics
  * @param selectedConnection - The destination FIPS code to filter by
  * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
-export const buildInboundMetricsQuery = (
+export const buildOutboundMetricsQuery = (
   selectedConnection: string,
   principalNames?: string[]
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [
@@ -215,15 +215,15 @@ export const buildInboundMetricsQuery = (
 }
 
 /**
- * Builds the Elasticsearch query for inbound message errors/failures
+ * Builds the Elasticsearch query for Outbound message errors/failures
  * @param selectedConnection - The destination FIPS code to filter by
  * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object
  */
-export const buildInboundErrorsQuery = (
+export const buildOutboundErrorsQuery = (
   selectedConnection: string,
   principalNames?: string[]
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [
@@ -781,7 +781,7 @@ export const buildInboundErrorsQuery = (
                           should: [
                             {
                               match_phrase: {
-                                'transactionData.processError':
+                                processError:
                                   'Unable to invoke IIS destination web service',
                               },
                             },
@@ -1037,15 +1037,15 @@ export const buildInboundErrorsQuery = (
 }
 
 /**
- * Builds the combined Elasticsearch query for inbound message metrics and errors
+ * Builds the combined Elasticsearch query for Outbound message metrics and errors
  * @param selectedConnection - The destination FIPS code to filter by
  * @param principalNames - Optional array of principal names to filter by
  * @returns The Elasticsearch query object with both metrics and error aggregations
  */
-export const buildInboundCombinedQuery = (
+export const buildOutboundCombinedQuery = (
   selectedConnection: string,
   principalNames?: string[]
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
   const filters: Record<string, unknown>[] = [
@@ -1105,7 +1105,7 @@ export const buildInboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: buildInboundMetricsQuery(selectedConnection, principalNames)
+      metrics: buildOutboundMetricsQuery(selectedConnection, principalNames)
         .aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
@@ -1115,7 +1115,7 @@ export const buildInboundCombinedQuery = (
           },
         },
         aggs: {
-          organizations: buildInboundErrorsQuery(
+          organizations: buildOutboundErrorsQuery(
             selectedConnection,
             principalNames
           ).aggs['0'],

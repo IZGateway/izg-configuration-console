@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -37,6 +37,14 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+
+  // Get the description for the selected destination
+  const selectedDestinationDescription = useMemo(() => {
+    const selectedDest = destinations.find(
+      (d) => d.destId === selectedConnection
+    )
+    return selectedDest?.jurisdiction?.description || selectedConnection
+  }, [destinations, selectedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
 
@@ -277,6 +285,7 @@ const Console = () => {
 
         <Item sx={{ flexGrow: 1 }}>
           <OutboundMessages
+            selectedConnection={selectedConnection}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
           />
