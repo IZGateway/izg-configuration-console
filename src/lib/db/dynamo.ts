@@ -1247,9 +1247,22 @@ class Dynamo implements DbClient {
       const timestamp = ts.toISOString()
       const sortKey = `${denyListItem.environment}#${denyListItem.principal}`
 
+      logger.info('Adding deny list record', {
+        operation: 'addDenyListRecord',
+        principal: denyListItem.principal,
+        environment: denyListItem.environment,
+        reason: denyListItem.reason || 'Not specified',
+        createdBy: getAuditUserString(),
+      })
+
       // Check if record already exists
       const recordExists = await this.checkDenyListRecordExists(sortKey)
       if (recordExists) {
+        logger.warn('Deny list entry already exists', {
+          operation: 'addDenyListRecord',
+          principal: denyListItem.principal,
+          environment: denyListItem.environment,
+        })
         const error = new Error(
           `A deny list entry already exists for certificate ${denyListItem.principal} for this environment.`
         )
@@ -1277,6 +1290,14 @@ class Dynamo implements DbClient {
       }
 
       await dynamodDbDocClient.send(new PutCommand(params))
+
+      logger.info('Deny list record added successfully', {
+        operation: 'addDenyListRecord',
+        principal: denyListItem.principal,
+        environment: denyListItem.environment,
+        sortKey: sortKey,
+        timestamp: timestamp,
+      })
 
       const destinationType = await this.fetchDestinationType(
         denyListItem.environment.toString()
