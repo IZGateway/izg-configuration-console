@@ -82,14 +82,13 @@ const SystemResourcesWidget = () => {
 
   const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
   if (!elasticIndex) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography variant="body2" color="error">
-          System resources data is unavailable: required environment variable{' '}
-          <strong>NEXT_PUBLIC_ELASTIC_INDEX</strong> is not set.
-        </Typography>
-      </Box>
-    )
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.error(
+        'NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.'
+      )
+    }
+    return null
   }
 
   const { index, template, params } = useMemo(() => {
