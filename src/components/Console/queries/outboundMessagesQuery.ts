@@ -1105,8 +1105,10 @@ export const buildOutboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: (buildOutboundMetricsQuery(principalNames, destinationFromOrganization)
-        .aggs as Record<string, unknown>)['0'],
+      metrics: buildOutboundMetricsQuery(
+        principalNames,
+        destinationFromOrganization
+      ).aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
         filter: {
@@ -1115,10 +1117,10 @@ export const buildOutboundCombinedQuery = (
           },
         },
         aggs: {
-          organizations: (buildOutboundErrorsQuery(
+          organizations: buildOutboundErrorsQuery(
             principalNames,
             destinationFromOrganization
-          ).aggs as Record<string, unknown>)['0'],
+          ).aggs['0'],
         },
       },
     },
