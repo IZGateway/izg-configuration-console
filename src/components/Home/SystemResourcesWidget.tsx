@@ -66,6 +66,10 @@ const SystemResourcesWidget = () => {
   const { data: session } = useSession()
   const isAdmin = Boolean(session?.user?.isAdmin)
 
+  if (!isAdmin) {
+    return null
+  }
+
   const [refreshToken, setRefreshToken] = useState(0)
 
   useEffect(() => {
@@ -145,20 +149,12 @@ const SystemResourcesWidget = () => {
         sx={{ pt: 2, pl: 2, pb: 0 }}
       />
       <CardContent sx={{ px: { xs: 2, md: 3 } }}>
-        {!isAdmin && (
-          <Typography
-            variant="body2"
-            sx={{ color: palette.greyDarkTypography, mb: 2 }}
-          >
-            System resources are available to administrators only.
-          </Typography>
-        )}
-        {isAdmin && error && (
+        {error && (
           <Typography variant="body2" sx={{ color: palette.error, mb: 2 }}>
             Unable to load system resources.
           </Typography>
         )}
-        {isAdmin && isLoading && (
+        {isLoading && (
           <Typography
             variant="body2"
             sx={{ color: palette.greyDarkTypography, mb: 2 }}
