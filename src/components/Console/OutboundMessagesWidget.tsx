@@ -83,8 +83,6 @@ const OutboundMessagesWidget = ({
     return matchingDest?.destId
   }, [selectedOrganization, destinations])
 
-  console.log(principalNames)
-  console.log(destinationFromOrganization)
   // Create a stable key for principalNames to avoid refetch on reference change
   // Spread to a copy before sorting to avoid mutating the memoized array
   const principalNamesKey = principalNames
@@ -242,7 +240,12 @@ const OutboundMessagesWidget = ({
     fetchMessageData()
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConnection, principalNamesKey, selectedOrganization])
+  }, [
+    selectedConnection,
+    principalNamesKey,
+    selectedOrganization,
+    destinationFromOrganization,
+  ])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
