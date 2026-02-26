@@ -43,7 +43,10 @@ const Console = () => {
     const selectedDest = destinations.find(
       (d) => d.destId === selectedConnection
     )
-    return selectedDest?.jurisdiction?.description || selectedConnection
+    if (selectedDest?.jurisdiction?.description) {
+      return `${selectedDest.jurisdiction.description} (${selectedConnection})`
+    }
+    return selectedConnection
   }, [destinations, selectedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
@@ -246,7 +249,9 @@ const Console = () => {
               ) : (
                 destinations.map((dest) => (
                   <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.jurisdiction?.description || dest.destId}
+                    {dest.jurisdiction?.description
+                      ? `${dest.jurisdiction.description} (${dest.destId})`
+                      : dest.destId}
                   </MenuItem>
                 ))
               )}
