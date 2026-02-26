@@ -40,6 +40,13 @@ test('Verify homepage section headers', async () => {
   }
 })
 
+test('Verify System Resources widget is visible', async () => {
+  await expect(page.getByText('System Resources')).toBeVisible()
+  await expect(page.getByText('CPU Usage')).toBeVisible()
+  await expect(page.getByText('Memory Usage')).toBeVisible()
+  await expect(page.getByText('Disk Usage')).toBeVisible()
+})
+
 test('Verify CTA buttons on cards', async () => {
   const buttons = [
     'Read More...',

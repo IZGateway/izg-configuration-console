@@ -10,6 +10,8 @@ metricbeat.modules:
       - diskio # Disk IO
       - socket # Sockets and connection info (linux only)
       - uptime
+      - filesystem
+      - fsstat
     enabled: true
     period: 60s
     cpu.metrics: ['percentages', 'normalized_percentages']
