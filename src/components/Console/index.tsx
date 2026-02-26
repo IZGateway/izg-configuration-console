@@ -12,10 +12,10 @@ import {
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 import Container from '../Container'
-import InboundMessages from './InboundMessages'
-import OutboundMessages from './OutboundMessages'
+import InboundMessagesWidget from './InboundMessagesWidget'
+import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
-import type { Organization } from './MessagesWidget'
+import type { Organization } from './MessagesWidgetContent'
 
 interface Destination {
   destId: string
@@ -284,12 +284,13 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <OutboundMessages
+          <OutboundMessagesWidget
             selectedConnection={selectedConnection}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
+            destinations={destinations}
           />
-          <InboundMessages
+          <InboundMessagesWidget
             selectedConnection={selectedConnection}
             organizations={organizations}
             organizationsLoading={organizationsLoading}

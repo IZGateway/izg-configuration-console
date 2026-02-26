@@ -1,14 +1,11 @@
 import React from 'react'
 import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
-import MessagesWidget from './MessagesWidget'
+import InboundMessagesWidget from './InboundMessagesWidget'
 
 // Mock fetch globally
 const mockFetch = jest.fn()
 global.fetch = mockFetch
-
-// Mock query builder function
-const mockQueryBuilder = jest.fn()
 
 // Helper to create a mock organizations response
 const createMockOrganizationsResponse = () => [
@@ -84,14 +81,13 @@ const createMockElasticsearchResponse = (overrides?: {
   }
 }
 
-describe('MessagesWidget', () => {
+describe('InboundMessagesWidget', () => {
   beforeEach(() => {
     jest.resetAllMocks()
     // Suppress console.error during tests
     jest.spyOn(console, 'error').mockImplementation(() => {
       // Intentionally empty - suppress console.error output
     })
-    mockQueryBuilder.mockReturnValue({})
   })
 
   afterEach(() => {
@@ -106,15 +102,7 @@ describe('MessagesWidget', () => {
       })
 
       await act(async () => {
-        render(
-          <MessagesWidget
-            title="Inbound Messages"
-            cardId="inbound-messages"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
-            organizations={mockOrganizations}
-          />
-        )
+        render(<InboundMessagesWidget organizations={mockOrganizations} />)
       })
 
       expect(screen.getByText('Inbound Messages')).toBeInTheDocument()
@@ -127,15 +115,7 @@ describe('MessagesWidget', () => {
       })
 
       await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
-            organizations={mockOrganizations}
-          />
-        )
+        render(<InboundMessagesWidget organizations={mockOrganizations} />)
       })
 
       expect(screen.getByText('Total Messages')).toBeInTheDocument()
@@ -151,15 +131,7 @@ describe('MessagesWidget', () => {
       })
 
       await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
-            organizations={mockOrganizations}
-          />
-        )
+        render(<InboundMessagesWidget organizations={mockOrganizations} />)
       })
 
       // Check for default values - use getAllByText for values that appear multiple times
@@ -178,12 +150,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -199,15 +167,7 @@ describe('MessagesWidget', () => {
   describe('Data Fetching', () => {
     it('should not fetch data when selectedConnection is undefined', async () => {
       await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
-            organizations={mockOrganizations}
-          />
-        )
+        render(<InboundMessagesWidget organizations={mockOrganizations} />)
       })
 
       // No data fetch should be called when selectedConnection is undefined
@@ -222,12 +182,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -244,30 +200,6 @@ describe('MessagesWidget', () => {
       })
     })
 
-    it('should call queryBuilder with correct parameters', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(createMockElasticsearchResponse()),
-      })
-
-      await act(async () => {
-        render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
-            selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
-            organizations={mockOrganizations}
-          />
-        )
-      })
-
-      await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
-      })
-    })
-
     it('should refetch data when selectedConnection changes', async () => {
       mockFetch
         .mockResolvedValueOnce({
@@ -281,38 +213,28 @@ describe('MessagesWidget', () => {
 
       const { rerender } = await act(async () => {
         return render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
+        expect(mockFetch).toHaveBeenCalledTimes(1)
       })
-
-      mockQueryBuilder.mockClear()
 
       await act(async () => {
         rerender(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="CA"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('CA', undefined)
+        expect(mockFetch).toHaveBeenCalledTimes(2)
       })
     })
 
@@ -321,12 +243,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -356,12 +274,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -386,12 +300,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -415,12 +325,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -444,12 +350,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -474,12 +376,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -502,12 +400,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -528,12 +422,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -572,12 +462,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -618,12 +504,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -659,12 +541,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -702,12 +580,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -741,12 +615,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
@@ -760,7 +630,7 @@ describe('MessagesWidget', () => {
   })
 
   describe('Organization Filtering', () => {
-    it('should pass selected organization to queryBuilder', async () => {
+    it('should refetch data when organization changes', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -768,23 +638,17 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
       })
 
-      // Wait for initial load with "IZGateway" (undefined principal names)
+      // Wait for initial load
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', undefined)
+        expect(mockFetch).toHaveBeenCalledTimes(1)
       })
-
-      mockQueryBuilder.mockClear()
 
       // Change organization selection
       const selectElement = screen.getByRole('combobox')
@@ -803,10 +667,7 @@ describe('MessagesWidget', () => {
       })
 
       await waitFor(() => {
-        expect(mockQueryBuilder).toHaveBeenCalledWith('TX', [
-          'principal1',
-          'principal2',
-        ])
+        expect(mockFetch).toHaveBeenCalledTimes(2)
       })
     })
 
@@ -818,12 +679,8 @@ describe('MessagesWidget', () => {
 
       await act(async () => {
         render(
-          <MessagesWidget
-            title="Test Messages"
-            cardId="test-messages"
+          <InboundMessagesWidget
             selectedConnection="TX"
-            direction="inbound"
-            queryBuilder={mockQueryBuilder}
             organizations={mockOrganizations}
           />
         )
