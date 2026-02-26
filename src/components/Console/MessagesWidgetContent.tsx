@@ -25,6 +25,7 @@ interface MessagesWidgetContentProps {
   cardId: string
   direction: 'inbound' | 'outbound'
   selectedConnection?: string
+  selectedConnectionDescription?: string
   metrics: MessageMetrics
   failures: FailureDetail[]
   loading: boolean
@@ -41,6 +42,7 @@ const MessagesWidgetContent = ({
   cardId,
   direction,
   selectedConnection,
+  selectedConnectionDescription,
   metrics,
   failures,
   loading,
@@ -82,7 +84,10 @@ const MessagesWidgetContent = ({
                   },
                 }}
                 renderValue={(selected) => {
-                  const dest = selectedConnection || 'Destination'
+                  const dest =
+                    selectedConnectionDescription ||
+                    selectedConnection ||
+                    'Destination'
                   const org =
                     !selected || selected === 'IZGateway'
                       ? 'IZGateway'

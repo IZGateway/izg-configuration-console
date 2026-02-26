@@ -13,12 +13,14 @@ import {
 
 interface InboundMessagesWidgetProps {
   selectedConnection?: string
+  selectedConnectionDescription?: string
   organizations?: Organization[]
   organizationsLoading?: boolean
 }
 
 const InboundMessagesWidget = ({
   selectedConnection,
+  selectedConnectionDescription,
   organizations = [],
   organizationsLoading = false,
 }: InboundMessagesWidgetProps) => {
@@ -208,6 +210,7 @@ const InboundMessagesWidget = ({
       cardId="inbound-messages"
       direction="inbound"
       selectedConnection={selectedConnection}
+      selectedConnectionDescription={selectedConnectionDescription}
       metrics={metrics}
       failures={failures}
       loading={loading}

@@ -246,7 +246,7 @@ const Console = () => {
               ) : (
                 destinations.map((dest) => (
                   <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.destId || dest.jurisdiction?.description}
+                    {dest.jurisdiction?.description || dest.destId}
                   </MenuItem>
                 ))
               )}
@@ -286,12 +286,14 @@ const Console = () => {
         <Item sx={{ flexGrow: 1 }}>
           <OutboundMessagesWidget
             selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
             destinations={destinations}
           />
           <InboundMessagesWidget
             selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
           />

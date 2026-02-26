@@ -27,6 +27,7 @@ interface Destination {
 
 interface OutboundMessagesWidgetProps {
   selectedConnection?: string
+  selectedConnectionDescription?: string
   organizations?: Organization[]
   organizationsLoading?: boolean
   destinations?: Destination[]
@@ -34,6 +35,7 @@ interface OutboundMessagesWidgetProps {
 
 const OutboundMessagesWidget = ({
   selectedConnection,
+  selectedConnectionDescription,
   organizations = [],
   organizationsLoading = false,
   destinations = [],
@@ -250,6 +252,7 @@ const OutboundMessagesWidget = ({
       cardId="outbound-messages"
       direction="outbound"
       selectedConnection={selectedConnection}
+      selectedConnectionDescription={selectedConnectionDescription}
       metrics={metrics}
       failures={failures}
       loading={loading}
