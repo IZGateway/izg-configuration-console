@@ -5,9 +5,15 @@ on:
   push:
     branches:
       - 'release/**'
+    paths-ignore:
+      - '.github/workflows/*'
+      - '!.github/workflows/deploy.yml'
   pull_request:
     branches:
       - develop
+    paths-ignore:
+      - '.github/workflows/*'
+      - '!.github/workflows/deploy.yml'
   workflow_dispatch:
 
 env:
