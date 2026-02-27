@@ -11,12 +11,7 @@ interface FailureItemProps {
 /**
  * Component for displaying a single failure item in the Recent Failures list
  */
-const FailureItem = ({
-  type,
-  logLevel,
-  count,
-  percentage,
-}: FailureItemProps) => {
+const FailureItem = ({ type, count, percentage }: FailureItemProps) => {
   return (
     <Box
       sx={{
