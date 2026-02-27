@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -12,10 +12,10 @@ import {
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 import Container from '../Container'
-import InboundMessages from './InboundMessages'
-import OutboundMessages from './OutboundMessages'
+import InboundMessagesWidget from './InboundMessagesWidget'
+import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
-import type { Organization } from './MessagesWidget'
+import type { Organization } from './MessagesWidgetContent'
 
 interface Destination {
   destId: string
@@ -37,6 +37,17 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+
+  // Get the description for the selected destination
+  const selectedDestinationDescription = useMemo(() => {
+    const selectedDest = destinations.find(
+      (d) => d.destId === selectedConnection
+    )
+    if (selectedDest?.jurisdiction?.description) {
+      return `${selectedDest.jurisdiction.description} (${selectedConnection})`
+    }
+    return selectedConnection
+  }, [destinations, selectedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
 
@@ -238,7 +249,9 @@ const Console = () => {
               ) : (
                 destinations.map((dest) => (
                   <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.destId || dest.jurisdiction?.description}
+                    {dest.jurisdiction?.description
+                      ? `${dest.jurisdiction.description} (${dest.destId})`
+                      : dest.destId}
                   </MenuItem>
                 ))
               )}
@@ -276,12 +289,16 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <OutboundMessages
+          <OutboundMessagesWidget
+            selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
+            destinations={destinations}
           />
-          <InboundMessages
+          <InboundMessagesWidget
             selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
           />

@@ -2,13 +2,13 @@ services:
   mysql:
     build: ./database
     ports:
-      - "3306:3306"
+      - '3306:3306'
   config-console:
     build:
       context: ./
       dockerfile: ./Dockerfile
     ports:
-      - "443:443"
+      - '443:443'
     environment:
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
@@ -35,7 +35,7 @@ services:
       ELASTIC_ENV_TAG: ${ELASTIC_ENV_TAG}
       ELASTIC_HOST: ${ELASTIC_HOST}
       ELASTIC_API_KEY: ${ELASTIC_API_KEY}
-      ELASTIC_INDEX: ${ELASTIC_INDEX}
+      OPERATIONS_CONSOLE_ELASTIC_INDEX: ${OPERATIONS_CONSOLE_ELASTIC_INDEX}
       ELASTIC_INDEX_NGINX: ${ELASTIC_INDEX_NGINX}
       NGINX_READ_TIMEOUT: ${NGINX_READ_TIMEOUT}
     volumes:
