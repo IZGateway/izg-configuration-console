@@ -55,6 +55,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '24.x'
+      - name: Clear npm cache
+        run: npm cache clean --force
       - name: Install Dependencies
         run: npm ci --force
       # - name: Run Jest Unit Tests
