@@ -45,53 +45,92 @@ jobs:
           cat ncu_output.txt
           
           if git diff --quiet package.json; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_ncu_changes=false" >> $GITHUB_OUTPUT
             echo "✓ No minor dependency updates available"
           else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_ncu_changes=true" >> $GITHUB_OUTPUT
             echo "✓ Minor dependency updates found"
           fi
       
+      - name: Update existing overrides
+        id: override_check
+        run: |
+          echo "Updating packages in overrides section..."
+          node scripts/update-overrides.js
+          
+          if git diff --quiet package.json; then
+            echo "has_override_changes=false" >> $GITHUB_OUTPUT
+            echo "✓ No override updates needed"
+          else
+            echo "has_override_changes=true" >> $GITHUB_OUTPUT
+            echo "✓ Override updates found"
+          fi
+      
+      - name: Add security overrides for vulnerabilities
+        id: security_check
+        run: |
+          echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
+          node scripts/add-security-overrides.js
+          
+          if git diff --quiet package.json; then
+            echo "has_security_changes=false" >> $GITHUB_OUTPUT
+            echo "✓ No security overrides needed"
+          else
+            echo "has_security_changes=true" >> $GITHUB_OUTPUT
+            echo "✓ Security overrides added"
+          fi
+      
+      - name: Check if any changes were made
+        id: final_check
+        run: |
+          if [[ "${{ steps.ncu_check.outputs.has_ncu_changes }}" == "true" || \
+                "${{ steps.override_check.outputs.has_override_changes }}" == "true" || \
+                "${{ steps.security_check.outputs.has_security_changes }}" == "true" ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✓ Changes detected, proceeding with PR creation"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "✓ No changes detected"
+          fi
+      
       - name: Stop if no changes
-        if: steps.ncu_check.outputs.has_changes == 'false'
+        if: steps.final_check.outputs.has_changes == 'false'
         run: |
           echo "## No Dependency Updates Available" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All dependencies are up-to-date within minor version constraints." >> $GITHUB_STEP_SUMMARY
+          echo "All dependencies and overrides are up-to-date." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Next check:** Next scheduled run or manual trigger" >> $GITHUB_STEP_SUMMARY
           exit 0
       
       - name: Create update branch
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           BRANCH_NAME="automated-security-updates-$(date +%Y%m%d-%H%M%S)"
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_ENV
           git checkout -b $BRANCH_NAME
           echo "✓ Created branch: $BRANCH_NAME"
       
+      - name: Update existing overrides
+        if: steps.final_check.outputs.has_changes == 'true'
+        run: |
+          echo "Updating packages in overrides section..."
+          node scripts/update-overrides.js
+      
       - name: Add security overrides for vulnerabilities
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
           node scripts/add-security-overrides.js
-          
-          # If overrides were added, reinstall to apply them
-          if git diff --quiet package.json; then
-            echo "No security overrides needed"
-          else
-            echo "Security overrides added, reinstalling..."
-            npm install
-          fi
       
       - name: Test override removal
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Testing if overrides can be removed..."
           node scripts/test-overrides.js
       
       - name: Commit changes
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           # Ensure package-lock.json is updated with any override changes
           npm install 
@@ -99,6 +138,7 @@ jobs:
           git commit -m "chore(deps): security and dependency updates
 
           - Updated dependencies using ncu --target minor
+          - Updated existing overrides to latest minor versions
           - Added security overrides for vulnerable transitive dependencies (all severity levels)
           - Removed unnecessary overrides where applicable
           - Updated package-lock.json
@@ -106,33 +146,33 @@ jobs:
           Generated by security-updates workflow"
       
       - name: Run code quality checks
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Running code quality checks..."
           npm run code-quality-check
       
       - name: Run tests
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Running tests..."
           npm run test
         continue-on-error: true
       
       - name: Build application
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Building application..."
           npm run build
       
       - name: Run security audit
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Running security audit (all severity levels)..."
           npm audit --audit-level=low || echo "::warning::Some vulnerabilities remain after updates"
         continue-on-error: true
       
       - name: Generate change summary
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Generating change summary..."
           echo "# Security and Dependency Update Summary" > pr_body.md
@@ -166,13 +206,13 @@ jobs:
           echo "**Workflow Run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> pr_body.md
       
       - name: Push branch
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         run: |
           git push origin ${{ env.branch_name }}
           echo "✓ Pushed branch: ${{ env.branch_name }}"
       
       - name: Create Pull Request
-        if: steps.ncu_check.outputs.has_changes == 'true'
+        if: steps.final_check.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
