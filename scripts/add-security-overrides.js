@@ -44,11 +44,23 @@ const overridesToAdd = {};
 const existingOverrides = { ...packageJson.overrides };
 let changesDetected = false;
 
+// Packages that should NOT be automatically overridden due to breaking changes
+// These require manual updates to direct dependencies instead
+const OVERRIDE_BLOCKLIST = [
+  'ajv', // ajv@6 -> ajv@8 breaks @eslint/eslintrc and other tools expecting v6 API
+];
+
 // Analyze vulnerabilities
 for (const [pkgName, vulnData] of Object.entries(auditData.vulnerabilities)) {
   // Consider all severity levels: critical, high, moderate, and low
   if (!['critical', 'high', 'moderate', 'low'].includes(vulnData.severity)) {
     console.log(`⏭ Skipping ${pkgName} (severity: ${vulnData.severity})`);
+    continue;
+  }
+
+  // Check if this package is on the blocklist
+  if (OVERRIDE_BLOCKLIST.includes(pkgName)) {
+    console.log(`🚫 ${pkgName}: Blocked from automatic override due to breaking changes - requires manual update`);
     continue;
   }
 
