@@ -70,17 +70,10 @@ jobs:
           git checkout -b $BRANCH_NAME
           echo "✓ Created branch: $BRANCH_NAME"
       
-      - name: Install updated dependencies
-        if: steps.ncu_check.outputs.has_changes == 'true'
-        run: |
-          echo "Installing updated dependencies..."
-          npm install
-      
       - name: Add security overrides for vulnerabilities
         if: steps.ncu_check.outputs.has_changes == 'true'
         run: |
           echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
-          find . -name add-security-overrides.js -print
           node scripts/add-security-overrides.js
           
           # If overrides were added, reinstall to apply them
@@ -100,6 +93,8 @@ jobs:
       - name: Commit changes
         if: steps.ncu_check.outputs.has_changes == 'true'
         run: |
+          # Ensure package-lock.json is updated with any override changes
+          npm install 
           git add package.json package-lock.json
           git commit -m "chore(deps): security and dependency updates
 
