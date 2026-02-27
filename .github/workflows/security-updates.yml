@@ -1,0 +1,18 @@
+name: Security Updates
+
+on:
+  schedule:
+    # Run daily at 3 AM UTC (avoids conflict with E2E tests at 7 AM)
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  do-nothing:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Print message
+        run: echo "This workflow does nothing"
+      
+      - name: Exit successfully
+        run: exit 0

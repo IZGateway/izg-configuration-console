@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import _ from 'lodash'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Typography,
@@ -13,9 +12,10 @@ import {
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 import Container from '../Container'
-import InboundMessages from './InboundMessages'
-import OutboundMessages from './OutboundMessages'
+import InboundMessagesWidget from './InboundMessagesWidget'
+import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
+import type { Organization } from './MessagesWidgetContent'
 
 interface Destination {
   destId: string
@@ -37,6 +37,20 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+
+  // Get the description for the selected destination
+  const selectedDestinationDescription = useMemo(() => {
+    const selectedDest = destinations.find(
+      (d) => d.destId === selectedConnection
+    )
+    if (selectedDest?.jurisdiction?.description) {
+      return `${selectedDest.jurisdiction.description} (${selectedConnection})`
+    }
+    return selectedConnection
+  }, [destinations, selectedConnection])
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [organizationsLoading, setOrganizationsLoading] = useState(false)
+
   function Item(props: BoxProps) {
     const { sx, ...other } = props
     return (
@@ -82,6 +96,37 @@ const Console = () => {
     if (status === 'authenticated') {
       fetchDestinations()
     }
+  }, [status])
+
+  // Fetch organizations
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      setOrganizationsLoading(false)
+      return
+    }
+    const fetchOrganizations = async () => {
+      try {
+        const response = await fetch('/api/organizations')
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+        const orgData = await response.json()
+        const processedOrgs: Organization[] = orgData.map(
+          (org: { organizationName?: string; principalNames: string[] }) => ({
+            organizationName: org.organizationName || 'Unknown Organization',
+            principalNames: Array.from(org.principalNames || []),
+          })
+        )
+        setOrganizations(processedOrgs)
+      } catch (error) {
+        console.error('Error fetching organizations:', error)
+        setOrganizations([])
+      } finally {
+        setOrganizationsLoading(false)
+      }
+    }
+
+    fetchOrganizations()
   }, [status])
 
   // Redirect if not authenticated or not admin
@@ -202,13 +247,10 @@ const Console = () => {
               ) : destinations.length === 0 ? (
                 <MenuItem value="">No destinations available</MenuItem>
               ) : (
-                _.sortBy(
-                  destinations,
-                  (dest) => dest.jurisdiction?.description || dest.destId || ''
-                ).map((dest) => (
+                destinations.map((dest) => (
                   <MenuItem key={dest.destId} value={dest.destId}>
                     {dest.jurisdiction?.description
-                      ? `${dest.jurisdiction.description} - ${dest.destId}`
+                      ? `${dest.jurisdiction.description} (${dest.destId})`
                       : dest.destId}
                   </MenuItem>
                 ))
@@ -247,8 +289,19 @@ const Console = () => {
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <InboundMessages />
-          <OutboundMessages />
+          <OutboundMessagesWidget
+            selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
+            organizations={organizations}
+            organizationsLoading={organizationsLoading}
+            destinations={destinations}
+          />
+          <InboundMessagesWidget
+            selectedConnection={selectedConnection}
+            selectedConnectionDescription={selectedDestinationDescription}
+            organizations={organizations}
+            organizationsLoading={organizationsLoading}
+          />
         </Item>
       </Box>
     </div>
