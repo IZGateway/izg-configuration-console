@@ -194,4 +194,3 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ env.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base:** \`develop\`" >> $GITHUB_STEP_SUMMARY
-
