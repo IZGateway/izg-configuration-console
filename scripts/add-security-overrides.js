@@ -61,8 +61,36 @@ for (const [pkgName, vulnData] of Object.entries(auditData.vulnerabilities)) {
   }
 
   // Get the fix version
-  const fixVersion = vulnData.fixAvailable?.version || 
-                     vulnData.via?.[0]?.fixAvailable?.version;
+  // For transitive dependencies, extract fix version from the vulnerability range
+  let fixVersion;
+  
+  // First, try to get the version from the vulnerability's "via" range
+  const viaWithRange = vulnData.via?.find(v => v.range);
+  if (viaWithRange?.range) {
+    const range = viaWithRange.range;
+    
+    // For ranges like ">=10.2.0 <10.5.0", extract the upper bound (10.5.0)
+    // For ranges like "<3.14.2", extract 3.14.2
+    // For ranges like "10.0.0 - 10.2.2", extract the upper bound
+    
+    // Try to find version after < or <= (upper bound)
+    let upperBoundMatch = range.match(/<=?\s*(\d+\.\d+\.\d+)/);
+    if (upperBoundMatch) {
+      fixVersion = upperBoundMatch[1];
+    } else {
+      // If no upper bound, try to find any version number
+      const anyVersionMatch = range.match(/(\d+\.\d+\.\d+)/);
+      if (anyVersionMatch) {
+        fixVersion = anyVersionMatch[1];
+      }
+    }
+  }
+  
+  // Fallback to fixAvailable version (for direct dependencies)
+  if (!fixVersion) {
+    fixVersion = vulnData.fixAvailable?.version || 
+                 vulnData.via?.[0]?.fixAvailable?.version;
+  }
   
   if (!fixVersion) {
     console.log(`⚠ ${pkgName}: No fix available for ${vulnData.severity} vulnerability`);
