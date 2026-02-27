@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import pack from '../../../package.json'
 import {
   Container,
@@ -24,13 +25,14 @@ import UseCases from './UseCases'
 import Requirements from './Requirements'
 import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
+import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
-import { useSession } from 'next-auth/react'
 import isOperationsRole from '../../lib/security/accessutils'
 
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
   const { data: session } = useSession()
+  const isAdmin = Boolean(session?.user?.isAdmin)
   return (
     <>
       <AppHeaderBar open />
@@ -119,16 +121,18 @@ function HomeComponent() {
               }}
             >
               <Slide in={true} timeout={1200} direction="down">
-                <Image
-                  src={homePageBanner}
-                  width={300}
-                  height={180}
-                  alt="general error image"
-                  style={{
-                    maxWidth: '100%',
-                    height: 'auto',
-                  }}
-                />
+                <Box>
+                  <Image
+                    src={homePageBanner}
+                    width={300}
+                    height={180}
+                    alt="general error image"
+                    style={{
+                      maxWidth: '100%',
+                      height: 'auto',
+                    }}
+                  />
+                </Box>
               </Slide>
             </Box>
           </Container>
@@ -243,6 +247,38 @@ function HomeComponent() {
                     </Box>
                   </CardContent>
                 </Card>
+              </Slide>
+              <Slide in={true} timeout={1400} direction="up">
+                <Box>
+                  {isAdmin ? (
+                    <SystemResourcesWidget />
+                  ) : (
+                    <Card
+                      sx={{
+                        width: '-webkit-fill-available',
+                        borderRadius: '0px 0px 30px 30px',
+                      }}
+                    >
+                      <CardHeader
+                        titleTypographyProps={{
+                          fontSize: { xs: '1.1em', md: '1.3em' },
+                          fontWeight: '500',
+                        }}
+                        title="System Resources"
+                        subheader="All Resources"
+                        sx={{ pt: 2, pl: 2, pb: 0 }}
+                      />
+                      <CardContent sx={{ px: { xs: 2, md: 3 } }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: palette.greyDarkTypography }}
+                        >
+                          System resources are available to administrators only.
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  )}
+                </Box>
               </Slide>
               <HomeCircleCallouts />
             </Box>
