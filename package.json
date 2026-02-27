@@ -92,6 +92,7 @@
     "prettier": "^2.8.8",
     "react-axe": "^3.5.4",
     "rimraf": "^5.0.10",
+    "semver": "^7.6.3",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.1",
     "ts-node-dev": "^2.0.0",
