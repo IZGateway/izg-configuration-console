@@ -1285,10 +1285,17 @@ class Dynamo implements DbClient {
 
       logger.info('Deny list record added successfully', {
         operation: 'addDenyListRecord',
-        principal: denyListItem.principal,
+        entityType: 'DenyListRecord',
+        certificateName: denyListItem.principal,
         environment: denyListItem.environment,
         sortKey: sortKey,
-        timestamp: timestamp,
+        reason: denyListItem.reason || '',
+        dateDenied: timestamp,
+        deniedBy: getAuditUserString(),
+        createdOn: timestamp,
+        updatedOn: timestamp,
+        createdBy: getAuditUserString(),
+        updatedBy: getAuditUserString(),
       })
 
       const destinationType = await this.fetchDestinationType(
