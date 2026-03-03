@@ -1129,7 +1129,6 @@ export const buildOutboundCombinedQuery = (
 }
 
 export const ELASTICSEARCH_INDEX =
-  process.env.NEXT_PUBLIC_ELASTIC_INDEX ||
   process.env.NEXT_PUBLIC_OPERATIONS_CONSOLE_ELASTIC_INDEX ||
   'izgw-dev-logstash'
 
