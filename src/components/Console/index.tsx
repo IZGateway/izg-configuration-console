@@ -173,7 +173,7 @@ const Console = () => {
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             gap: 2,
           }}
         >
@@ -210,7 +210,7 @@ const Console = () => {
           boxShadow: 'none',
           border: '1px solid #e0e0e0',
           p: 1.5,
-          mb: 4,
+          mb: 1,
         }}
       >
         {destinationsError && (
@@ -221,54 +221,73 @@ const Console = () => {
         <Box
           sx={{
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
             gap: 3,
           }}
         >
-          <FormControl sx={{ minWidth: 200 }}>
-            <Select
-              value={selectedConnection}
-              onChange={(e) => setSelectedConnection(e.target.value)}
-              disabled={destinationsLoading}
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none',
-                },
-              }}
-            >
-              {destinationsLoading ? (
-                <MenuItem value="">
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  Loading...
-                </MenuItem>
-              ) : destinations.length === 0 ? (
-                <MenuItem value="">No destinations available</MenuItem>
-              ) : (
-                destinations.map((dest) => (
-                  <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.jurisdiction?.description
-                      ? `${dest.jurisdiction.description} (${dest.destId})`
-                      : dest.destId}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-          <Typography
-            variant="body2"
-            color="textSecondary"
-            sx={{
-              flex: 1,
-              textAlign: 'right',
-            }}
-          >
-            Use the dropdown menu to switch between connections or data sources,
-            allowing you to explore metrics for different environments,
-            accounts, or systems as needed.
-          </Typography>
+          {destinationsLoading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Typography variant="body2">Loading destinations...</Typography>
+              <CircularProgress size={20} />
+            </Box>
+          ) : (
+            <>
+              <FormControl sx={{ minWidth: '40%' }}>
+                <Select
+                  value={selectedConnection}
+                  onChange={(e) => setSelectedConnection(e.target.value)}
+                  disabled={destinationsLoading}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                      },
+                    },
+                  }}
+                  sx={{
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderRadius: '0px 8px 8px 16px',
+                      border: `0.5px solid #e0e0e0`,
+                    },
+                    '& .MuiSvgIcon-root': {
+                      color: '#1976d2',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+                      borderRadius: '0px 8px 8px 16px',
+                    },
+                  }}
+                >
+                  {destinations.length === 0 ? (
+                    <MenuItem value="">No destinations available</MenuItem>
+                  ) : (
+                    destinations.map((dest) => (
+                      <MenuItem key={dest.destId} value={dest.destId}>
+                        {dest.jurisdiction?.description
+                          ? `${dest.jurisdiction.description} (${dest.destId})`
+                          : dest.destId}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                sx={{
+                  flex: 1,
+                  textAlign: 'left',
+                  fontSize: '13px',
+                }}
+              >
+                Use the dropdown menu to switch between connections or data
+                sources, allowing you to explore metrics for different
+                environments, accounts, or systems as needed.
+              </Typography>
+            </>
+          )}
         </Box>
       </Box>
       <Box

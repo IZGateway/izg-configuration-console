@@ -13,6 +13,8 @@ import {
 } from '@mui/material'
 import FailureItem from './components/FailureItem'
 import { MessageMetrics, FailureDetail } from './types/messageMetrics'
+import AnimatedNumber from './components/AnimatedNumber'
+import palette from '../../styles/theme/palette'
 
 // Common types
 export interface Organization {
@@ -92,9 +94,22 @@ const MessagesWidgetContent = ({
                     !selected || selected === 'IZGateway'
                       ? 'IZGateway'
                       : selected
-                  return direction === 'inbound'
-                    ? `${org} - ${dest}`
-                    : `${dest} - ${org}`
+                  return (
+                    <span>
+                      {direction === 'inbound' ? org : dest}
+                      <span
+                        style={{
+                          color: palette.secondary,
+                          margin: '0 4px',
+                          fontWeight: 'bold',
+                          fontSize: '16px',
+                        }}
+                      >
+                        →
+                      </span>
+                      {direction === 'inbound' ? dest : org}
+                    </span>
+                  )
                 }}
               >
                 <MenuItem value="IZGateway">
@@ -141,7 +156,10 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{ fontWeight: 700, color: '#1976d2', mb: 0.5 }}
                   >
-                    {metrics.totalMessages.toLocaleString()}
+                    <AnimatedNumber
+                      value={metrics.totalMessages}
+                      duration={1200}
+                    />
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
                     Total Messages
@@ -156,17 +174,26 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{ fontWeight: 700, color: '#1976d2', mb: 0.5 }}
                   >
-                    {metrics.successRate}
+                    <AnimatedNumber
+                      value={metrics.successRate}
+                      duration={1200}
+                    />
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
                     Success Rate
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#999' }}>
                     (
-                    {(
-                      metrics.totalMessages - metrics.totalFailures
-                    ).toLocaleString()}
-                    /{metrics.totalMessages.toLocaleString()} Successful)
+                    <AnimatedNumber
+                      value={metrics.totalMessages - metrics.totalFailures}
+                      duration={1200}
+                    />
+                    /
+                    <AnimatedNumber
+                      value={metrics.totalMessages}
+                      duration={1200}
+                    />{' '}
+                    Successful)
                   </Typography>
                 </Box>
 
@@ -175,7 +202,10 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{ fontWeight: 700, color: '#1976d2', mb: 0.5 }}
                   >
-                    {metrics.avgResponseTime}
+                    <AnimatedNumber
+                      value={metrics.avgResponseTime}
+                      duration={1200}
+                    />
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
                     Avg Response
@@ -187,19 +217,27 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{ fontWeight: 700, color: '#1976d2', mb: 0.5 }}
                   >
-                    {metrics.totalFailures}
+                    <AnimatedNumber
+                      value={metrics.totalFailures}
+                      duration={1200}
+                    />
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666', mb: 0.5 }}>
                     Total Failures
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#999' }}>
-                    {metrics.totalMessages > 0
-                      ? (
-                          (metrics.totalFailures / metrics.totalMessages) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    % of Traffic
+                    <AnimatedNumber
+                      value={
+                        metrics.totalMessages > 0
+                          ? (
+                              (metrics.totalFailures / metrics.totalMessages) *
+                              100
+                            ).toFixed(1) + '%'
+                          : '0%'
+                      }
+                      duration={1200}
+                    />{' '}
+                    of Traffic
                   </Typography>
                 </Box>
               </Box>

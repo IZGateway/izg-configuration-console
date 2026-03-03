@@ -1,5 +1,6 @@
 import { Card, CardHeader, Typography, Box } from '@mui/material'
 import { MetricChange } from '../types/destinationMetrics'
+import AnimatedNumber from './AnimatedNumber'
 
 interface MetricCardProps {
   id: string
@@ -77,7 +78,7 @@ const MetricCard = ({
             }}
           >
             <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 700 }}>
-              {value}
+              <AnimatedNumber value={value} duration={1200} />
             </Typography>
             {getChangeText()}
           </Box>
