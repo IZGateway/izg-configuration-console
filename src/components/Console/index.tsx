@@ -5,17 +5,27 @@ import {
   CircularProgress,
   Alert,
   BoxProps,
-  FormControl,
-  Select,
-  MenuItem,
+  Chip,
+  TextField,
+  InputAdornment,
+  Popover,
+  Divider,
 } from '@mui/material'
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+import SearchIcon from '@mui/icons-material/Search'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
+// ⚠️  TEMPORARY – set to false before committing
+import { mockDestinations } from './__mocks__/mockDestinations'
+const USE_MOCK_DATA = true
 import Container from '../Container'
 import InboundMessagesWidget from './InboundMessagesWidget'
 import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
 import type { Organization } from './MessagesWidgetContent'
+import { getElasticEnvTag } from '../../lib/desttypehelper'
 
 interface Destination {
   destId: string
@@ -26,9 +36,21 @@ interface Destination {
     description: string
   }
   destinationType?: {
-    typeId: string
-    typeName: string
+    typeId: number
+    type: string
   }
+}
+
+function toDisplayLabel(envType: string): string {
+  const map: Record<string, string> = {
+    PRODUCTION: 'Production',
+    TEST: 'Test',
+    ONBOARD: 'Onboarding',
+    STAGE: 'Staging',
+    DEV: 'Development',
+    UNKNOWN: 'Unknown',
+  }
+  return map[envType?.toUpperCase()] ?? envType
 }
 
 const Console = () => {
@@ -37,17 +59,50 @@ const Console = () => {
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
   const [selectedConnection, setSelectedConnection] = useState('')
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('')
+  const [destPopoverAnchor, setDestPopoverAnchor] =
+    useState<null | HTMLElement>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Get the description for the selected destination
-  const selectedDestinationDescription = useMemo(() => {
-    const selectedDest = destinations.find(
-      (d) => d.destId === selectedConnection
-    )
-    if (selectedDest?.jurisdiction?.description) {
-      return `${selectedDest.jurisdiction.description} (${selectedConnection})`
-    }
-    return selectedConnection
+  // Unique destinations for the dropdown (deduplicated by destId)
+  const uniqueDestinations = useMemo(() => {
+    const seen = new Set<string>()
+    return destinations.filter((d) => {
+      if (seen.has(d.destId)) return false
+      seen.add(d.destId)
+      return true
+    })
+  }, [destinations])
+
+  // Environments available for the currently selected destId (sorted)
+  const availableEnvironmentsForSelected = useMemo(() => {
+    return destinations
+      .filter((d) => d.destId === selectedConnection && d.destinationType?.type)
+      .map((d) => d.destinationType?.type as string)
+      .sort()
   }, [destinations, selectedConnection])
+
+  // Full destination record matching both selected destId AND environment
+  const selectedDestRecord = useMemo(() => {
+    return destinations.find(
+      (d) =>
+        d.destId === selectedConnection &&
+        d.destinationType?.type === selectedEnvironment
+    )
+  }, [destinations, selectedConnection, selectedEnvironment])
+
+  const selectedDestTypeId = selectedDestRecord?.destinationType?.typeId
+  const selectedEnvTag = selectedEnvironment
+    ? getElasticEnvTag(selectedEnvironment)
+    : undefined
+
+  // Description shown in widget headers
+  const selectedDestinationDescription = useMemo(() => {
+    const base =
+      uniqueDestinations.find((d) => d.destId === selectedConnection)
+        ?.jurisdiction?.description ?? selectedConnection
+    return `${base} (${selectedConnection})`
+  }, [uniqueDestinations, selectedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
 
@@ -66,6 +121,15 @@ const Console = () => {
   // Fetch destinations based on user session (admin or non-admin)
   useEffect(() => {
     const fetchDestinations = async () => {
+      // ⚠️  TEMPORARY MOCK – remove before committing
+      if (USE_MOCK_DATA) {
+        setDestinationsLoading(false)
+        setDestinations(mockDestinations)
+        const first = mockDestinations[0]
+        setSelectedConnection(first.destId)
+        setSelectedEnvironment(first.destinationType?.type ?? '')
+        return
+      }
       try {
         setDestinationsLoading(true)
         setDestinationsError('')
@@ -74,7 +138,9 @@ const Console = () => {
           const data = await response.json()
           setDestinations(data)
           if (data.length > 0) {
-            setSelectedConnection(data[0].destId)
+            const first = data[0]
+            setSelectedConnection(first.destId)
+            setSelectedEnvironment(first.destinationType?.type ?? '')
           }
         } else {
           const errorMessage = `Failed to load destinations: ${response.status} ${response.statusText}`
@@ -218,58 +284,222 @@ const Console = () => {
             {destinationsError}
           </Alert>
         )}
+
+        {/* ── Destination selector trigger ─────────────────────────── */}
         <Box
+          onClick={(e) =>
+            !destinationsLoading && setDestPopoverAnchor(e.currentTarget)
+          }
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 3,
+            gap: 1.5,
+            cursor: destinationsLoading ? 'default' : 'pointer',
+            borderRadius: 2,
+            px: 2,
+            py: 1,
+            border: '1px solid',
+            borderColor: destPopoverAnchor ? 'primary.main' : '#e0e0e0',
+            transition: 'border-color 0.15s, box-shadow 0.15s',
+            '&:hover': {
+              borderColor: 'primary.main',
+              boxShadow: '0 0 0 2px rgba(25,118,210,0.08)',
+            },
+            userSelect: 'none',
           }}
         >
-          <FormControl sx={{ minWidth: 200 }}>
-            <Select
-              value={selectedConnection}
-              onChange={(e) => setSelectedConnection(e.target.value)}
-              disabled={destinationsLoading}
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none',
-                },
-              }}
+          {destinationsLoading ? (
+            <CircularProgress size={18} />
+          ) : (
+            <Typography
+              fontWeight={700}
+              sx={{ fontSize: '20px', lineHeight: 1.2, color: 'text.primary' }}
             >
-              {destinationsLoading ? (
-                <MenuItem value="">
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  Loading...
-                </MenuItem>
-              ) : destinations.length === 0 ? (
-                <MenuItem value="">No destinations available</MenuItem>
-              ) : (
-                destinations.map((dest) => (
-                  <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.jurisdiction?.description
-                      ? `${dest.jurisdiction.description} (${dest.destId})`
-                      : dest.destId}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-          <Typography
-            variant="body2"
-            color="textSecondary"
+              {uniqueDestinations.find((d) => d.destId === selectedConnection)
+                ?.jurisdiction?.description ?? selectedConnection}
+            </Typography>
+          )}
+          {!destinationsLoading && selectedEnvironment && (
+            <Chip
+              icon={
+                <RadioButtonCheckedIcon sx={{ fontSize: '13px !important' }} />
+              }
+              label={toDisplayLabel(selectedEnvironment)}
+              color="primary"
+              size="small"
+              sx={{ fontWeight: 600, pointerEvents: 'none' }}
+            />
+          )}
+          <ExpandMoreIcon
             sx={{
-              flex: 1,
-              textAlign: 'right',
+              color: 'text.secondary',
+              fontSize: 20,
+              transform: destPopoverAnchor ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+            }}
+          />
+        </Box>
+
+        {/* ── Popover: env chips + destination search ───────────────── */}
+        <Popover
+          open={Boolean(destPopoverAnchor)}
+          anchorEl={destPopoverAnchor}
+          onClose={() => {
+            setDestPopoverAnchor(null)
+            setSearchQuery('')
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: { mt: 0.5, borderRadius: 2, boxShadow: 4, width: 420 },
+          }}
+        >
+          {/* Env chips + search row */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              pt: 1.5,
+              pb: 1,
+              flexWrap: 'wrap',
             }}
           >
-            Use the dropdown menu to switch between connections or data sources,
-            allowing you to explore metrics for different environments,
-            accounts, or systems as needed.
-          </Typography>
-        </Box>
+            {availableEnvironmentsForSelected.map((env) => {
+              const selected = selectedEnvironment === env
+              return (
+                <Chip
+                  key={env}
+                  icon={
+                    selected ? (
+                      <RadioButtonCheckedIcon
+                        sx={{ fontSize: '14px !important' }}
+                      />
+                    ) : (
+                      <RadioButtonUncheckedIcon
+                        sx={{ fontSize: '14px !important' }}
+                      />
+                    )
+                  }
+                  label={toDisplayLabel(env)}
+                  onClick={() => setSelectedEnvironment(env)}
+                  color={selected ? 'primary' : 'default'}
+                  variant={selected ? 'filled' : 'outlined'}
+                  size="small"
+                  clickable
+                  sx={{ fontWeight: selected ? 600 : 400 }}
+                />
+              )
+            })}
+
+            <TextField
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for destinations"
+              size="small"
+              sx={{
+                flex: 1,
+                minWidth: 160,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon
+                      sx={{ fontSize: 16, color: 'text.secondary' }}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+
+          <Divider />
+
+          {/* Destination list */}
+          {(() => {
+            const filtered = uniqueDestinations.filter((d) => {
+              const q = searchQuery.toLowerCase()
+              return (
+                (d.jurisdiction?.description ?? '').toLowerCase().includes(q) ||
+                d.destId.toLowerCase().includes(q)
+              )
+            })
+            return filtered.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ px: 2, py: 1.5 }}
+              >
+                No destinations found
+              </Typography>
+            ) : (
+              <Box
+                component="ul"
+                sx={{
+                  m: 0,
+                  p: 0,
+                  listStyle: 'none',
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                }}
+              >
+                {filtered.map((dest) => {
+                  const isSelected = dest.destId === selectedConnection
+                  return (
+                    <Box
+                      component="li"
+                      key={dest.destId}
+                      onClick={() => {
+                        setSelectedConnection(dest.destId)
+                        const firstEnv =
+                          destinations
+                            .filter(
+                              (d) =>
+                                d.destId === dest.destId &&
+                                d.destinationType?.type
+                            )
+                            .map((d) => d.destinationType?.type as string)
+                            .sort()[0] ?? ''
+                        setSelectedEnvironment(firstEnv)
+                        setDestPopoverAnchor(null)
+                        setSearchQuery('')
+                      }}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        cursor: 'pointer',
+                        bgcolor: isSelected ? 'primary.50' : 'transparent',
+                        borderLeft: isSelected
+                          ? '3px solid'
+                          : '3px solid transparent',
+                        borderColor: isSelected
+                          ? 'primary.main'
+                          : 'transparent',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={isSelected ? 600 : 400}
+                      >
+                        {dest.jurisdiction?.description ?? dest.destId}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {dest.destId}
+                      </Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
+            )
+          })()}
+        </Popover>
       </Box>
       <Box
         sx={{
@@ -285,7 +515,11 @@ const Console = () => {
             flexDirection: 'column',
           }}
         >
-          <DestinationDetailWidget selectedConnection={selectedConnection} />
+          <DestinationDetailWidget
+            selectedConnection={selectedConnection}
+            destTypeId={selectedDestTypeId}
+            envTag={selectedEnvTag}
+          />
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
@@ -295,12 +529,16 @@ const Console = () => {
             organizations={organizations}
             organizationsLoading={organizationsLoading}
             destinations={destinations}
+            destTypeId={selectedDestTypeId}
+            envTag={selectedEnvTag}
           />
           <InboundMessagesWidget
             selectedConnection={selectedConnection}
             selectedConnectionDescription={selectedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
+            destTypeId={selectedDestTypeId}
+            envTag={selectedEnvTag}
           />
         </Item>
       </Box>
