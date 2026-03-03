@@ -22,7 +22,7 @@ import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 // ⚠️  TEMPORARY – set to false before committing
 import { mockDestinations } from './__mocks__/mockDestinations'
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 import Container from '../Container'
 import palette from '../../styles/theme/palette'
 import InboundMessagesWidget from './InboundMessagesWidget'
@@ -50,6 +50,9 @@ function toDisplayLabel(envType: string): string {
     DEV: 'Development',
     PRODUCTION: 'Production',
     ONBOARD: 'Onboarding',
+    TEST: 'Test',
+    STAGE: 'Staging',
+    UNKNOWN: 'Unknown',
   }
   return map[envType?.toUpperCase()] ?? envType
 }
@@ -59,6 +62,9 @@ function getEnvColor(envType: string): string {
     DEV: palette.secondary,
     PRODUCTION: palette.active,
     ONBOARD: palette.warning,
+    TEST: palette.primaryLight,
+    STAGE: palette.secondaryDark,
+    UNKNOWN: palette.grey,
   }
   return colorMap[envType?.toUpperCase()] ?? palette.grey
 }

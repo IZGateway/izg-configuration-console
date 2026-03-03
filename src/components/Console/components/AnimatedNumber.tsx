@@ -22,13 +22,15 @@ const AnimatedNumber = ({
     const extractNumber = (val: string | number): number => {
       if (typeof val === 'number') return val
       const numStr = val.replace(/[^0-9.-]/g, '')
-      return parseFloat(numStr) || 0
+      const parsed = parseFloat(numStr)
+      return isNaN(parsed) ? NaN : parsed
     }
 
     // Extract suffix (%, s, msg/min, etc.)
+    // Preserve any leading whitespace before the suffix so spacing matches the original value
     const extractSuffix = (val: string | number): string => {
       if (typeof val === 'number') return ''
-      const match = val.match(/[^\d.,\s-]+.*$/)
+      const match = val.match(/\s*[^\d.,\s-]+.*$/)
       return match ? match[0] : ''
     }
 
@@ -49,6 +51,7 @@ const AnimatedNumber = ({
 
     const startValue = previousValueRef.current
     const startTime = Date.now()
+    let rafId: number
 
     const animate = () => {
       const elapsed = Date.now() - startTime
@@ -69,13 +72,20 @@ const AnimatedNumber = ({
       setDisplayValue(formattedValue + suffix)
 
       if (progress < 1) {
-        requestAnimationFrame(animate)
+        rafId = requestAnimationFrame(animate)
       } else {
         previousValueRef.current = targetNumber
       }
     }
 
     animate()
+
+    // Cleanup: cancel animation on unmount or when value/duration changes
+    return () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
+    }
   }, [value, duration])
 
   return <span className={className}>{displayValue}</span>

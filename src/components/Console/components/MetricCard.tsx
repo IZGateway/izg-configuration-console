@@ -41,7 +41,7 @@ const MetricCard = ({
               color: change.isUp ? palette.active : palette.error,
             }}
           >
-            {change.isUp ? '↑' : '↓'} {change.percent}
+            {change.isUp ? '↓' : '↑'} {change.percent}
           </Box>{' '}
           {change.isUp ? 'Faster' : 'Slower'} Than Yesterday
         </Typography>
