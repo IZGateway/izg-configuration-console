@@ -85,6 +85,15 @@ const MessagesWidgetContent = ({
                     borderColor: '#e0e0e0',
                   },
                 }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      right: 64,
+                      maxWidth: 300,
+                    },
+                  },
+                }}
                 renderValue={(selected) => {
                   const dest =
                     selectedConnectionDescription ||

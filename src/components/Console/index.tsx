@@ -226,8 +226,10 @@ const Console = () => {
           }}
         >
           {destinationsLoading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography variant="body2">Loading destinations...</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1 }}>
+              <Typography variant="body2" fontWeight={600}>
+                Loading destinations...
+              </Typography>
               <CircularProgress size={20} />
             </Box>
           ) : (
