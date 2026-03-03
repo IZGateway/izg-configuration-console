@@ -62,7 +62,7 @@ const MessagesWidgetContent = ({
           marginTop: 4,
           borderRadius: '0px 0px 16px 16px',
           boxShadow: 'none',
-          border: '1px solid #E0E0E0',
+          border: `1px solid ${palette.divider}`,
         }}
         id={cardId}
       >
