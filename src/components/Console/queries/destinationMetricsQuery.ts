@@ -3,7 +3,11 @@
  * @param selectedConnection - The destination FIPS code to filter by
  * @returns The Elasticsearch query object
  */
-export const buildDestinationMetricsQuery = (selectedConnection: string) => {
+export const buildDestinationMetricsQuery = (
+  selectedConnection: string,
+  destTypeId?: number,
+  envTag?: string
+) => {
   const now = new Date()
 
   return {
@@ -13,7 +17,8 @@ export const buildDestinationMetricsQuery = (selectedConnection: string) => {
         filter: [
           {
             match_phrase: {
-              'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+              'tags.keyword':
+                envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
             },
           },
           {

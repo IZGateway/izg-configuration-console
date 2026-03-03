@@ -16,6 +16,8 @@ interface InboundMessagesWidgetProps {
   selectedConnectionDescription?: string
   organizations?: Organization[]
   organizationsLoading?: boolean
+  destTypeId?: number
+  envTag?: string
 }
 
 const InboundMessagesWidget = ({
@@ -23,6 +25,8 @@ const InboundMessagesWidget = ({
   selectedConnectionDescription,
   organizations = [],
   organizationsLoading = false,
+  destTypeId,
+  envTag,
 }: InboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
     DEFAULT_MESSAGE_METRICS
@@ -61,7 +65,9 @@ const InboundMessagesWidget = ({
         // Fetch combined metrics and errors data in a single call
         const combinedQuery = buildInboundCombinedQuery(
           selectedConnection,
-          principalNames
+          principalNames,
+          destTypeId,
+          envTag
         )
 
         const requestBody = {

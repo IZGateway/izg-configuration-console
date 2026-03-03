@@ -20,8 +20,8 @@ interface Destination {
     description: string
   }
   destinationType?: {
-    typeId: string
-    typeName: string
+    typeId: number
+    type: string
   }
 }
 
@@ -31,6 +31,8 @@ interface OutboundMessagesWidgetProps {
   organizations?: Organization[]
   organizationsLoading?: boolean
   destinations?: Destination[]
+  destTypeId?: number
+  envTag?: string
 }
 
 const OutboundMessagesWidget = ({
@@ -39,6 +41,8 @@ const OutboundMessagesWidget = ({
   organizations = [],
   organizationsLoading = false,
   destinations = [],
+  destTypeId,
+  envTag,
 }: OutboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
     DEFAULT_MESSAGE_METRICS
@@ -101,7 +105,9 @@ const OutboundMessagesWidget = ({
         // Fetch combined metrics and errors data in a single call
         const combinedQuery = buildOutboundCombinedQuery(
           principalNames,
-          destinationFromOrganization
+          destinationFromOrganization,
+          destTypeId,
+          envTag
         )
 
         const requestBody = {
