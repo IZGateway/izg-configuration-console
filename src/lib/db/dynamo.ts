@@ -1283,20 +1283,30 @@ class Dynamo implements DbClient {
 
       await dynamodDbDocClient.send(new PutCommand(params))
 
+      const [organizationName, destinationType] = await Promise.all([
+        this.fetchOrganizationName(denyListItem.principal),
+        this.fetchDestinationType(denyListItem.environment.toString()),
+      ])
+
       logger.info('Deny list record added successfully', {
         operation: 'addDenyListRecord',
-        principal: denyListItem.principal,
-        environment: denyListItem.environment,
+        entityType: 'DenyListRecord',
+        name: organizationName,
+        certificateName: denyListItem.principal,
+        environment: destinationType.type,
         sortKey: sortKey,
-        timestamp: timestamp,
+        reason: denyListItem.reason || '',
+        dateDenied: timestamp,
+        deniedBy: getAuditUserString(),
+        createdOn: timestamp,
+        updatedOn: timestamp,
+        createdBy: getAuditUserString(),
+        updatedBy: getAuditUserString(),
       })
 
-      const destinationType = await this.fetchDestinationType(
-        denyListItem.environment.toString()
-      )
       const dlr = {
         id: sortKey,
-        name: await this.fetchOrganizationName(denyListItem.principal),
+        name: organizationName,
         reason: itemToInsert.reason || 'Not specified',
         dateDenied: timestamp,
         deniedBy: itemToInsert.deniedBy,
