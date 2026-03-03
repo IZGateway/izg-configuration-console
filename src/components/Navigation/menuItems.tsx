@@ -46,10 +46,10 @@ export const menuItems: MenuItem[] = [
     path: '/onboarding',
     adminOnly: false,
   },
-  {
-    label: 'Console',
-    icon: <AutoAwesomeMosaicIcon sx={iconSx} />,
-    path: '/console',
-    adminOnly: true,
-  },
+  // {
+  //   label: 'Console',
+  //   icon: <AutoAwesomeMosaicIcon sx={iconSx} />,
+  //   path: '/console',
+  //   adminOnly: true,
+  // },
 ]
