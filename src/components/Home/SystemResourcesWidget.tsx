@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useMemo, useEffect, useState, useRef } from 'react'
 import {
   Box,
   Card,
@@ -71,6 +71,7 @@ const SystemResourcesWidget = () => {
   }
 
   const [refreshToken, setRefreshToken] = useState(0)
+  const missingIndexLoggedRef = useRef(false)
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -82,10 +83,11 @@ const SystemResourcesWidget = () => {
 
   const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
   if (!elasticIndex) {
-    if (process.env.NODE_ENV !== 'production') {
+    if (!missingIndexLoggedRef.current) {
+      missingIndexLoggedRef.current = true
       // eslint-disable-next-line no-console
       console.error(
-        'NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.'
+        '[SystemResourcesWidget] NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.'
       )
     }
     return null
