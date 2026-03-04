@@ -112,7 +112,12 @@ const SystemResourcesWidget = () => {
           cpu: { avg: { field: 'system.cpu.total.pct' } },
           memory: { avg: { field: 'system.memory.actual.used.pct' } },
           disk: { avg: { field: 'system.filesystem.used.pct' } },
-          connections: { max: { field: 'system.socket.summary.tcp.all' } },
+          connectionsEstablished: {
+            max: {
+              field: 'system.socket.summary.tcp.all.established',
+              missing: 0,
+            },
+          },
         },
       },
       params: { start, end },
@@ -129,7 +134,11 @@ const SystemResourcesWidget = () => {
   const cpu = toPercent(data?.aggregations?.cpu?.value)
   const memory = toPercent(data?.aggregations?.memory?.value)
   const disk = toPercent(data?.aggregations?.disk?.value)
-  const connections = data?.aggregations?.connections?.value
+  const establishedConnections =
+    data?.aggregations?.connectionsEstablished?.value
+  const activeConnections = Number.isFinite(establishedConnections)
+    ? Math.max(0, Math.round(establishedConnections))
+    : 0
 
   return (
     <Card
@@ -181,8 +190,7 @@ const SystemResourcesWidget = () => {
             variant="body2"
             sx={{ color: palette.greyDarkTypography }}
           >
-            Active Connections:{' '}
-            {error || isLoading ? 'N/A' : connections ?? 'N/A'}
+            Active Connections: {error || isLoading ? 'N/A' : activeConnections}
           </Typography>
         </>
       </CardContent>
