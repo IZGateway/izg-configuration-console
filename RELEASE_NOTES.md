@@ -1,5 +1,15 @@
 # Release Notes
 
+## Release v1.12.0
+
+- IGDD-2136 - Display System Resources Widget on the Home page
+- IGDD-2137 - Create the Inbound Messages Widget and display it in the status page
+- IGDD-2138 - Create the Outbound Messages Widget and display it in the status page
+- IGDD-2139 - Create the detailed status page and the Destination Widget describing the destination IIS
+- IGDD-2546 - Bump version of js-yaml dependency
+- IGDD-2557 - Bump version of minimatch
+- IGDD-2575 - Enhance deny list loggings
+
 
 ## Release v1.10.1
 
