@@ -6,7 +6,9 @@
  */
 export const buildInboundMetricsQuery = (
   selectedConnection: string,
-  principalNames?: string[]
+  principalNames?: string[],
+  destTypeId?: number,
+  envTag?: string
 ) => {
   const now = new Date()
 
@@ -27,7 +29,8 @@ export const buildInboundMetricsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
       },
     },
     {
@@ -222,7 +225,9 @@ export const buildInboundMetricsQuery = (
  */
 export const buildInboundErrorsQuery = (
   selectedConnection: string,
-  principalNames?: string[]
+  principalNames?: string[],
+  destTypeId?: number,
+  envTag?: string
 ) => {
   const now = new Date()
 
@@ -243,7 +248,8 @@ export const buildInboundErrorsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
       },
     },
     {
@@ -1044,7 +1050,9 @@ export const buildInboundErrorsQuery = (
  */
 export const buildInboundCombinedQuery = (
   selectedConnection: string,
-  principalNames?: string[]
+  principalNames?: string[],
+  destTypeId?: number,
+  envTag?: string
 ) => {
   const now = new Date()
 
@@ -1065,7 +1073,8 @@ export const buildInboundCombinedQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
       },
     },
     {
@@ -1105,8 +1114,12 @@ export const buildInboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: buildInboundMetricsQuery(selectedConnection, principalNames)
-        .aggs['0'],
+      metrics: buildInboundMetricsQuery(
+        selectedConnection,
+        principalNames,
+        destTypeId,
+        envTag
+      ).aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
         filter: {
@@ -1117,7 +1130,9 @@ export const buildInboundCombinedQuery = (
         aggs: {
           organizations: buildInboundErrorsQuery(
             selectedConnection,
-            principalNames
+            principalNames,
+            destTypeId,
+            envTag
           ).aggs['0'],
         },
       },
