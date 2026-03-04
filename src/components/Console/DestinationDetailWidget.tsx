@@ -218,7 +218,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     }
 
     fetchDestinationData()
-  }, [selectedConnection])
+  }, [selectedConnection, destTypeId, envTag])
 
   return (
     <div>

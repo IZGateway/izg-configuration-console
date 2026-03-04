@@ -206,7 +206,7 @@ const InboundMessagesWidget = ({
     fetchMessageData()
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConnection, principalNamesKey])
+  }, [selectedConnection, principalNamesKey, destTypeId, envTag])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
 

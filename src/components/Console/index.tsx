@@ -20,9 +20,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
-// ⚠️  TEMPORARY – set to false before committing
-import { mockDestinations } from './__mocks__/mockDestinations'
-const USE_MOCK_DATA = false
 import Container from '../Container'
 import palette from '../../styles/theme/palette'
 import InboundMessagesWidget from './InboundMessagesWidget'
@@ -69,13 +66,48 @@ function getEnvColor(envType: string): string {
   return colorMap[envType?.toUpperCase()] ?? palette.grey
 }
 
+// Priority order for auto-selecting an environment when a destination is chosen
+const ENV_PRIORITY: Record<string, number> = {
+  PRODUCTION: 0,
+  ONBOARD: 1,
+  STAGE: 2,
+  DEV: 3,
+  TEST: 4,
+}
+
+function pickDefaultEnv(envTypes: string[]): string {
+  if (envTypes.length === 0) return ''
+  return [...envTypes].sort(
+    (a, b) =>
+      (ENV_PRIORITY[a.toUpperCase()] ?? 99) -
+      (ENV_PRIORITY[b.toUpperCase()] ?? 99)
+  )[0]
+}
+
+function Item(props: BoxProps) {
+  const { sx, ...other } = props
+  return (
+    <Box
+      sx={{
+        ...sx,
+      }}
+      {...other}
+    />
+  )
+}
+
 const Console = () => {
   const { data: session, status } = useSession()
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
+  // Browsing state — drives the popover UI (highlight, env chip preview)
   const [selectedConnection, setSelectedConnection] = useState('')
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('')
+  // Committed state — only set when user explicitly clicks a destination.
+  // These are the only values passed to widgets so no API calls fire while browsing.
+  const [committedConnection, setCommittedConnection] = useState('')
+  const [committedEnvironment, setCommittedEnvironment] = useState<string>('')
   const [destPopoverAnchor, setDestPopoverAnchor] =
     useState<null | HTMLElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -98,65 +130,54 @@ const Console = () => {
       .sort()
   }, [destinations, selectedConnection])
 
-  // Full destination record matching both selected destId AND environment
-  const selectedDestRecord = useMemo(() => {
+  // Committed record — drives widget queries; only changes on explicit user selection
+  const committedDestRecord = useMemo(() => {
     return destinations.find(
       (d) =>
-        d.destId === selectedConnection &&
-        d.destinationType?.type === selectedEnvironment
+        d.destId === committedConnection &&
+        d.destinationType?.type === committedEnvironment
     )
-  }, [destinations, selectedConnection, selectedEnvironment])
+  }, [destinations, committedConnection, committedEnvironment])
 
-  const selectedDestTypeId = selectedDestRecord?.destinationType?.typeId
-  const selectedEnvTag = selectedEnvironment
-    ? getElasticEnvTag(selectedEnvironment)
+  const committedDestTypeId = committedDestRecord?.destinationType?.typeId
+  const committedEnvTag = committedEnvironment
+    ? getElasticEnvTag(committedEnvironment)
     : undefined
 
-  // Description shown in widget headers
-  const selectedDestinationDescription = useMemo(() => {
+  // Description shown in widget headers (uses committed connection)
+  const committedDestinationDescription = useMemo(() => {
     const base =
-      uniqueDestinations.find((d) => d.destId === selectedConnection)
-        ?.jurisdiction?.description ?? selectedConnection
-    return `${base} (${selectedConnection})`
-  }, [uniqueDestinations, selectedConnection])
+      uniqueDestinations.find((d) => d.destId === committedConnection)
+        ?.jurisdiction?.description ?? committedConnection
+    return `${base} (${committedConnection})`
+  }, [uniqueDestinations, committedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
-
-  function Item(props: BoxProps) {
-    const { sx, ...other } = props
-    return (
-      <Box
-        sx={{
-          ...sx,
-        }}
-        {...other}
-      />
-    )
-  }
 
   // Fetch destinations based on user session (admin or non-admin)
   useEffect(() => {
     const fetchDestinations = async () => {
-      // ⚠️  TEMPORARY MOCK – remove before committing
-      if (USE_MOCK_DATA) {
-        setDestinationsLoading(false)
-        setDestinations(mockDestinations)
-        const first = mockDestinations[0]
-        setSelectedConnection(first.destId)
-        setSelectedEnvironment(first.destinationType?.type ?? '')
-        return
-      }
       try {
         setDestinationsLoading(true)
         setDestinationsError('')
         const response = await fetch('/api/destinations')
         if (response.ok) {
           const data = await response.json()
+          console.log('Fetched destinations:', data)
           setDestinations(data)
           if (data.length > 0) {
             const first = data[0]
+            const allEnvs = data
+              .filter(
+                (d: Destination) =>
+                  d.destId === first.destId && d.destinationType?.type
+              )
+              .map((d: Destination) => d.destinationType?.type as string)
+            const firstEnv = pickDefaultEnv(allEnvs)
             setSelectedConnection(first.destId)
-            setSelectedEnvironment(first.destinationType?.type ?? '')
+            setSelectedEnvironment(firstEnv)
+            setCommittedConnection(first.destId)
+            setCommittedEnvironment(firstEnv)
           }
         } else {
           const errorMessage = `Failed to load destinations: ${response.status} ${response.statusText}`
@@ -345,7 +366,7 @@ const Console = () => {
           <Box sx={{ display: 'flex', gap: 2 }}>
             {destinationsLoading ? (
               <CircularProgress size={18} />
-            ) : (
+            ) : selectedConnection ? (
               <Typography
                 fontWeight={700}
                 sx={{
@@ -356,6 +377,17 @@ const Console = () => {
               >
                 {uniqueDestinations.find((d) => d.destId === selectedConnection)
                   ?.jurisdiction?.description ?? selectedConnection}
+              </Typography>
+            ) : (
+              <Typography
+                sx={{
+                  fontSize: '16px',
+                  lineHeight: 1.2,
+                  color: 'text.secondary',
+                  fontStyle: 'italic',
+                }}
+              >
+                Select a destination
               </Typography>
             )}
 
@@ -432,7 +464,11 @@ const Console = () => {
                     )
                   }
                   label={toDisplayLabel(env)}
-                  onClick={() => setSelectedEnvironment(env)}
+                  onClick={() => {
+                    setSelectedEnvironment(env)
+                    // Commit immediately — destination is already confirmed
+                    if (committedConnection) setCommittedEnvironment(env)
+                  }}
                   variant={selected ? 'filled' : 'outlined'}
                   size="small"
                   clickable
@@ -516,8 +552,7 @@ const Console = () => {
                       component="li"
                       key={dest.destId}
                       onClick={() => {
-                        setSelectedConnection(dest.destId)
-                        const firstEnv =
+                        const firstEnv = pickDefaultEnv(
                           destinations
                             .filter(
                               (d) =>
@@ -525,8 +560,12 @@ const Console = () => {
                                 d.destinationType?.type
                             )
                             .map((d) => d.destinationType?.type as string)
-                            .sort()[0] ?? ''
+                        )
+                        setSelectedConnection(dest.destId)
                         setSelectedEnvironment(firstEnv)
+                        // Commit — this is the explicit user selection that drives API calls
+                        setCommittedConnection(dest.destId)
+                        setCommittedEnvironment(firstEnv)
                         setDestPopoverAnchor(null)
                         setSearchQuery('')
                       }}
@@ -589,29 +628,31 @@ const Console = () => {
           }}
         >
           <DestinationDetailWidget
-            selectedConnection={selectedConnection}
-            destTypeId={selectedDestTypeId}
-            envTag={selectedEnvTag}
+            selectedConnection={committedConnection}
+            destTypeId={committedDestTypeId}
+            envTag={committedEnvTag}
           />
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
           <OutboundMessagesWidget
-            selectedConnection={selectedConnection}
-            selectedConnectionDescription={selectedDestinationDescription}
+            key={`outbound-${committedConnection}`}
+            selectedConnection={committedConnection}
+            selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
             destinations={destinations}
-            destTypeId={selectedDestTypeId}
-            envTag={selectedEnvTag}
+            destTypeId={committedDestTypeId}
+            envTag={committedEnvTag}
           />
           <InboundMessagesWidget
-            selectedConnection={selectedConnection}
-            selectedConnectionDescription={selectedDestinationDescription}
+            key={`inbound-${committedConnection}`}
+            selectedConnection={committedConnection}
+            selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
-            destTypeId={selectedDestTypeId}
-            envTag={selectedEnvTag}
+            destTypeId={committedDestTypeId}
+            envTag={committedEnvTag}
           />
         </Item>
       </Box>

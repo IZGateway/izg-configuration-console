@@ -251,6 +251,8 @@ const OutboundMessagesWidget = ({
     principalNamesKey,
     selectedOrganization,
     destinationFromOrganization,
+    destTypeId,
+    envTag,
   ])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
