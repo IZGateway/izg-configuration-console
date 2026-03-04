@@ -10,17 +10,21 @@ import {
   InputAdornment,
   Popover,
   Divider,
+  Button,
+  Tooltip,
 } from '@mui/material'
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
 import SearchIcon from '@mui/icons-material/Search'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 // ⚠️  TEMPORARY – set to false before committing
 import { mockDestinations } from './__mocks__/mockDestinations'
-const USE_MOCK_DATA = true
+const USE_MOCK_DATA = false
 import Container from '../Container'
+import palette from '../../styles/theme/palette'
 import InboundMessagesWidget from './InboundMessagesWidget'
 import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
@@ -43,14 +47,26 @@ interface Destination {
 
 function toDisplayLabel(envType: string): string {
   const map: Record<string, string> = {
-    PRODUCTION: 'Production',
-    TEST: 'Test',
-    ONBOARD: 'Onboarding',
-    STAGE: 'Staging',
     DEV: 'Development',
+    PRODUCTION: 'Production',
+    ONBOARD: 'Onboarding',
+    TEST: 'Test',
+    STAGE: 'Staging',
     UNKNOWN: 'Unknown',
   }
   return map[envType?.toUpperCase()] ?? envType
+}
+
+function getEnvColor(envType: string): string {
+  const colorMap: Record<string, string> = {
+    DEV: palette.secondary,
+    PRODUCTION: palette.active,
+    ONBOARD: palette.warning,
+    TEST: palette.primaryLight,
+    STAGE: palette.secondaryDark,
+    UNKNOWN: palette.grey,
+  }
+  return colorMap[envType?.toUpperCase()] ?? palette.grey
 }
 
 const Console = () => {
@@ -239,7 +255,7 @@ const Console = () => {
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             gap: 2,
           }}
         >
@@ -259,13 +275,27 @@ const Console = () => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography
-              variant="caption"
-              color="primary"
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              MANUAL REFRESH
-            </Typography>
+            <Tooltip title="Refresh data" arrow>
+              <Button
+                variant="text"
+                color="primary"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  // Refresh logic will be added here
+                  window.location.reload()
+                }}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  '&:hover .MuiSvgIcon-root': {
+                    transform: 'rotate(180deg)',
+                    transition: 'transform 0.3s ease',
+                  },
+                }}
+              >
+                Refresh
+              </Button>
+            </Tooltip>
           </Box>
         </Box>
       </Box>
@@ -274,9 +304,12 @@ const Console = () => {
           backgroundColor: 'white',
           borderRadius: '0px 0px 32px 32px',
           boxShadow: 'none',
-          border: '1px solid #e0e0e0',
-          p: 1.5,
-          mb: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          border: `1px solid ${palette.divider}`,
+          p: 2,
+          mb: 1,
         }}
       >
         {destinationsError && (
@@ -293,46 +326,61 @@ const Console = () => {
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
+            minWidth: '38%',
             gap: 1.5,
             cursor: destinationsLoading ? 'default' : 'pointer',
-            borderRadius: 2,
-            px: 2,
-            py: 1,
+            borderRadius: '0px 0px 0px 16px',
+            p: 2,
             border: '1px solid',
-            borderColor: destPopoverAnchor ? 'primary.main' : '#e0e0e0',
+            borderColor: palette.divider,
             transition: 'border-color 0.15s, box-shadow 0.15s',
             '&:hover': {
-              borderColor: 'primary.main',
+              borderColor: palette.primary,
               boxShadow: '0 0 0 2px rgba(25,118,210,0.08)',
             },
             userSelect: 'none',
           }}
         >
-          {destinationsLoading ? (
-            <CircularProgress size={18} />
-          ) : (
-            <Typography
-              fontWeight={700}
-              sx={{ fontSize: '20px', lineHeight: 1.2, color: 'text.primary' }}
-            >
-              {uniqueDestinations.find((d) => d.destId === selectedConnection)
-                ?.jurisdiction?.description ?? selectedConnection}
-            </Typography>
-          )}
-          {!destinationsLoading && selectedEnvironment && (
-            <Chip
-              icon={
-                <RadioButtonCheckedIcon sx={{ fontSize: '13px !important' }} />
-              }
-              label={toDisplayLabel(selectedEnvironment)}
-              color="primary"
-              size="small"
-              sx={{ fontWeight: 600, pointerEvents: 'none' }}
-            />
-          )}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {destinationsLoading ? (
+              <CircularProgress size={18} />
+            ) : (
+              <Typography
+                fontWeight={700}
+                sx={{
+                  fontSize: '20px',
+                  lineHeight: 1.2,
+                  color: 'text.primary',
+                }}
+              >
+                {uniqueDestinations.find((d) => d.destId === selectedConnection)
+                  ?.jurisdiction?.description ?? selectedConnection}
+              </Typography>
+            )}
+
+            {!destinationsLoading && selectedEnvironment && (
+              <Chip
+                icon={
+                  <RadioButtonCheckedIcon
+                    sx={{ fontSize: '13px !important' }}
+                  />
+                }
+                label={toDisplayLabel(selectedEnvironment)}
+                size="small"
+                sx={{
+                  fontWeight: 600,
+                  pointerEvents: 'none',
+                  bgcolor: getEnvColor(selectedEnvironment),
+                  color: palette.white,
+                  '& .MuiChip-icon': { color: palette.white },
+                }}
+              />
+            )}
+          </Box>
           <ExpandMoreIcon
             sx={{
-              color: 'text.secondary',
+              color: 'primary.main',
               fontSize: 20,
               transform: destPopoverAnchor ? 'rotate(180deg)' : 'none',
               transition: 'transform 0.2s',
@@ -368,6 +416,7 @@ const Console = () => {
           >
             {availableEnvironmentsForSelected.map((env) => {
               const selected = selectedEnvironment === env
+              const envColor = getEnvColor(env)
               return (
                 <Chip
                   key={env}
@@ -384,11 +433,22 @@ const Console = () => {
                   }
                   label={toDisplayLabel(env)}
                   onClick={() => setSelectedEnvironment(env)}
-                  color={selected ? 'primary' : 'default'}
                   variant={selected ? 'filled' : 'outlined'}
                   size="small"
                   clickable
-                  sx={{ fontWeight: selected ? 600 : 400 }}
+                  sx={{
+                    fontWeight: selected ? 600 : 400,
+                    ...(selected && {
+                      bgcolor: envColor,
+                      color: palette.white,
+                      '& .MuiChip-icon': { color: palette.white },
+                    }),
+                    ...(!selected && {
+                      borderColor: envColor,
+                      color: envColor,
+                      '& .MuiChip-icon': { color: envColor },
+                    }),
+                  }}
                 />
               )
             })}
@@ -479,7 +539,7 @@ const Console = () => {
                           ? '3px solid'
                           : '3px solid transparent',
                         borderColor: isSelected
-                          ? 'primary.main'
+                          ? getEnvColor(selectedEnvironment)
                           : 'transparent',
                         '&:hover': { bgcolor: 'action.hover' },
                       }}
@@ -500,6 +560,19 @@ const Console = () => {
             )
           })()}
         </Popover>
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          sx={{
+            flex: 1,
+            textAlign: 'left',
+            fontSize: '13px',
+          }}
+        >
+          Use the dropdown menu to switch between connections or data sources,
+          allowing you to explore metrics for different environments, accounts,
+          or systems as needed.
+        </Typography>
       </Box>
       <Box
         sx={{

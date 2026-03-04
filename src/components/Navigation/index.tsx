@@ -168,11 +168,11 @@ const MiniDrawer = () => {
                 <ListItemButton
                   sx={{
                     padding: '1rem 1.5rem',
+                    minWidth: '200%',
                     borderBottom: `1px solid ${palette.primaryLight}`,
                     '&& .Mui-selected , && .Mui-selected:hover': {
                       fontWeight: '700',
                     },
-                    width: '150%',
                   }}
                   key={item.label}
                   selected={selectedIndex === index}

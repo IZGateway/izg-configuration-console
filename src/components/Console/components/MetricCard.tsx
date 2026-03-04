@@ -1,5 +1,7 @@
 import { Card, CardHeader, Typography, Box } from '@mui/material'
 import { MetricChange } from '../types/destinationMetrics'
+import AnimatedNumber from './AnimatedNumber'
+import palette from '../../../styles/theme/palette'
 
 interface MetricCardProps {
   id: string
@@ -22,33 +24,41 @@ const MetricCard = ({
   changeLabel = 'updown',
 }: MetricCardProps) => {
   const getChangeText = () => {
-    if (!change) return null
+    if (!change) {
+      return (
+        <Typography fontWeight={600} variant="caption" color="textSecondary">
+          <Box component="span">- No change</Box>
+        </Typography>
+      )
+    }
 
     if (changeLabel === 'fasterslower') {
       return (
-        <Typography variant="body2" color="textSecondary">
-          <span
-            style={{
-              color: change.isUp ? '#4caf50' : '#f44336',
+        <Typography fontWeight={600} variant="caption" color="textSecondary">
+          <Box
+            component="span"
+            sx={{
+              color: change.isUp ? palette.active : palette.error,
             }}
           >
-            {change.isUp ? '↑' : '↓'}
-          </span>{' '}
-          {change.percent} {change.isUp ? 'Faster' : 'Slower'} Than Yesterday
+            {change.isUp ? '↓' : '↑'} {change.percent}
+          </Box>{' '}
+          {change.isUp ? 'Faster' : 'Slower'} Than Yesterday
         </Typography>
       )
     }
 
     return (
-      <Typography variant="body2" color="textSecondary">
-        <span
-          style={{
-            color: change.isUp ? '#4caf50' : '#f44336',
+      <Typography fontWeight={600} variant="caption" color="textSecondary">
+        <Box
+          component="span"
+          sx={{
+            color: change.isUp ? palette.active : palette.error,
           }}
         >
-          {change.isUp ? '↑' : '↓'}
-        </span>{' '}
-        {change.percent} {change.isUp ? 'Up' : 'Down'} From Yesterday
+          {change.isUp ? '↑' : '↓'} {change.percent}
+        </Box>{' '}
+        {change.isUp ? 'Up' : 'Down'} From Yesterday
       </Typography>
     )
   }
@@ -59,14 +69,18 @@ const MetricCard = ({
         marginTop: 4,
         borderRadius: '50px',
         boxShadow: 'none',
-        border: '1px solid #e0e0e0',
+        border: `1px solid ${palette.border}`,
       }}
       id={id}
     >
       <CardHeader
         title={title}
         subheader={subheader}
-        subheaderTypographyProps={{ variant: 'body2', color: '#999' }}
+        titleTypographyProps={{ fontWeight: 600, fontSize: '1.25rem' }}
+        subheaderTypographyProps={{
+          variant: 'body2',
+          color: palette.greyDarkTypography,
+        }}
         action={
           <Box
             sx={{
@@ -74,10 +88,14 @@ const MetricCard = ({
               flexDirection: 'column',
               alignItems: 'flex-end',
               mt: 0.5,
+              gap: 0.5,
             }}
           >
-            <Typography variant="h5" sx={{ color: '#1976d2', fontWeight: 700 }}>
-              {value}
+            <Typography
+              variant="h5"
+              sx={{ color: palette.primary, fontWeight: 700 }}
+            >
+              <AnimatedNumber value={value} duration={1200} />
             </Typography>
             {getChangeText()}
           </Box>
