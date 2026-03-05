@@ -48,6 +48,7 @@ let changesDetected = false;
 // These require manual updates to direct dependencies instead
 const OVERRIDE_BLOCKLIST = [
   'ajv', // ajv@6 -> ajv@8 breaks @eslint/eslintrc and other tools expecting v6 API
+  'immutable', // immutable@3 -> immutable@5 breaks swagger-ui-react which expects v3 API
 ];
 
 // Analyze vulnerabilities

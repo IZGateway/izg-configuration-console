@@ -106,12 +106,14 @@
     "eslint": {
       "ajv": "^6.14.0"
     },
+    "swagger-ui-react": {
+      "immutable": "^4.3.8"
+    },
     "@tootallnate/once": "^3.0.1",
     "ajv": "^8.18.0",
     "dompurify": "^3.3.2",
     "fast-xml-parser": "^5.4.2",
     "http-proxy-agent": "^7.0.2",
-    "immutable": "^5.1.5",
     "js-yaml": "^4.1.1",
     "jsdom": "^28.1.0",
     "qs": "^6.15.0",

@@ -47,7 +47,7 @@ let changesDetected = false;
 // Packages that should NOT be automatically overridden due to breaking changes
 // These require manual review
 const OVERRIDE_BLOCKLIST = [
-  // Add packages here that are known to have breaking changes
+  'immutable', // immutable@3 -> immutable@5 breaks swagger-ui-react which expects v3 API
 ];
 
 /**
