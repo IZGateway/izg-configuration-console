@@ -9,10 +9,12 @@ import {
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
+  destTypeId?: number
+  envTag?: string
 }
 
 const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
-  const { selectedConnection } = props
+  const { selectedConnection, destTypeId, envTag } = props
   const [izgatewayStatus, setIzgatewayStatus] = useState<string>('0%')
   const [totalMessages, setTotalMessages] = useState<string>('0')
   const [messageChange, setMessageChange] = useState<MetricChange>(
@@ -36,16 +38,18 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     DEFAULT_METRIC_CHANGE
   )
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('--')
-  const [loading, setLoading] = useState(false)
 
   // Fetch data from Elasticsearch when selectedConnection changes
   useEffect(() => {
     if (!selectedConnection) return
 
     const fetchDestinationData = async () => {
-      setLoading(true)
       try {
-        const query = buildDestinationMetricsQuery(selectedConnection)
+        const query = buildDestinationMetricsQuery(
+          selectedConnection,
+          destTypeId,
+          envTag
+        )
 
         const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
           method: 'POST',
@@ -210,13 +214,11 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         if (err instanceof Error) {
           console.error('Error fetching destination data:', err)
         }
-      } finally {
-        setLoading(false)
       }
     }
 
     fetchDestinationData()
-  }, [selectedConnection])
+  }, [selectedConnection, destTypeId, envTag])
 
   return (
     <div>

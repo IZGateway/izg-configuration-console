@@ -3,6 +3,17 @@ import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import OutboundMessagesWidget from './OutboundMessagesWidget'
 
+// Mock AnimatedNumber to render final value instantly (bypasses 1200ms rAF animation)
+jest.mock('./components/AnimatedNumber', () => ({
+  __esModule: true,
+  default: function AnimatedNumberMock({ value }: { value: string | number }) {
+    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const display =
+      typeof value === 'number' ? value.toLocaleString() : String(value)
+    return React.createElement('span', null, display)
+  },
+}))
+
 // Mock fetch globally
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -35,8 +46,8 @@ const mockDestinations = [
       description: 'Texas IIS',
     },
     destinationType: {
-      typeId: 'IIS',
-      typeName: 'IIS',
+      typeId: 1,
+      type: 'PRODUCTION',
     },
   },
   {
@@ -47,8 +58,8 @@ const mockDestinations = [
       description: 'California IIS',
     },
     destinationType: {
-      typeId: 'IIS',
-      typeName: 'IIS',
+      typeId: 1,
+      type: 'PRODUCTION',
     },
   },
 ]
@@ -168,9 +179,9 @@ describe('OutboundMessagesWidget', () => {
         )
       })
 
-      // Check for default values - use getAllByText for values that appear multiple times
+      // '0%' appears twice: successRate + failure-rate caption
       expect(screen.getAllByText('0').length).toBeGreaterThan(0)
-      expect(screen.getByText('0%')).toBeInTheDocument()
+      expect(screen.getAllByText('0%').length).toBeGreaterThan(0)
       expect(screen.getByText('0s')).toBeInTheDocument()
     })
 
@@ -353,8 +364,11 @@ describe('OutboundMessagesWidget', () => {
         )
       })
 
+      // totalMessages appears twice (main count + caption denominator)
       await waitFor(() => {
-        expect(screen.getByText('2,000')).toBeInTheDocument()
+        expect(
+          screen.getAllByText((2000).toLocaleString()).length
+        ).toBeGreaterThan(0)
       })
     })
 
@@ -771,10 +785,10 @@ describe('OutboundMessagesWidget', () => {
         )
       })
 
-      // Initially shows "TX - IZGateway" (outbound format)
-      await waitFor(() => {
-        expect(screen.getByText('TX - IZGateway')).toBeInTheDocument()
-      })
+      // Initially the combobox shows TX → IZGateway (outbound format; arrow rendered in separate span)
+      const combobox = screen.getByRole('combobox')
+      expect(combobox.textContent).toMatch(/TX/)
+      expect(combobox.textContent).toMatch(/IZGateway/)
 
       // Change organization
       const selectElement = screen.getByRole('combobox')
@@ -792,9 +806,9 @@ describe('OutboundMessagesWidget', () => {
         fireEvent.click(orgOption)
       })
 
-      // Should now show "TX - Texas"
+      // Should now show TX → Texas
       await waitFor(() => {
-        expect(screen.getByText('TX - Texas')).toBeInTheDocument()
+        expect(screen.getByRole('combobox').textContent).toMatch(/Texas/)
       })
     })
   })
