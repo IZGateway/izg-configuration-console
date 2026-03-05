@@ -3,6 +3,17 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DestinationDetailWidget from './DestinationDetailWidget'
 
+// Mock AnimatedNumber to render final value instantly (bypasses 1200ms rAF animation)
+jest.mock('./components/AnimatedNumber', () => ({
+  __esModule: true,
+  default: function AnimatedNumberMock({ value }: { value: string | number }) {
+    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const display =
+      typeof value === 'number' ? value.toLocaleString() : String(value)
+    return React.createElement('span', null, display)
+  },
+}))
+
 // Mock fetch globally
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -118,7 +129,7 @@ describe('DestinationDetailWidget', () => {
       )
     })
 
-    it('should include the correct index in the request body', async () => {
+    it('should not include index in the request body (resolved server-side)', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -130,7 +141,7 @@ describe('DestinationDetailWidget', () => {
 
       const fetchCall = mockFetch.mock.calls[0]
       const requestBody = JSON.parse(fetchCall[1].body)
-      expect(requestBody.index).toBe('izgw-dev-logstash')
+      expect(requestBody.index).toBeUndefined()
     })
 
     it('should refetch data when selectedConnection changes', async () => {
@@ -177,7 +188,7 @@ describe('DestinationDetailWidget', () => {
 
       // Total = 1500 + 500 = 2000, formatted with locale
       await waitFor(() => {
-        expect(screen.getByText('2,000')).toBeInTheDocument()
+        expect(screen.getByText((2000).toLocaleString())).toBeInTheDocument()
       })
     })
 
