@@ -133,11 +133,7 @@ export function getElasticEnvTag(destType: string): string {
     DEV: 'dev',
     TEST: 'test',
   }
-  return (
-    tagMap[destType?.toUpperCase()] ??
-    process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ??
-    'dev'
-  )
+  return tagMap[destType?.toUpperCase()] ?? 'dev'
 }
 
 const desttypehelper = {
