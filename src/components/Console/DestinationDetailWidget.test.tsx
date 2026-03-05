@@ -3,6 +3,17 @@ import { render, screen, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import DestinationDetailWidget from './DestinationDetailWidget'
 
+// Mock AnimatedNumber to render final value instantly (bypasses 1200ms rAF animation)
+jest.mock('./components/AnimatedNumber', () => ({
+  __esModule: true,
+  default: function AnimatedNumberMock({ value }: { value: string | number }) {
+    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const display =
+      typeof value === 'number' ? value.toLocaleString() : String(value)
+    return React.createElement('span', null, display)
+  },
+}))
+
 // Mock fetch globally
 const mockFetch = jest.fn()
 global.fetch = mockFetch
@@ -177,7 +188,7 @@ describe('DestinationDetailWidget', () => {
 
       // Total = 1500 + 500 = 2000, formatted with locale
       await waitFor(() => {
-        expect(screen.getByText('2,000')).toBeInTheDocument()
+        expect(screen.getByText((2000).toLocaleString())).toBeInTheDocument()
       })
     })
 

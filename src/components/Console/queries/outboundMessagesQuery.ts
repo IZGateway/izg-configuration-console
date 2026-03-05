@@ -6,7 +6,9 @@
  */
 export const buildOutboundMetricsQuery = (
   principalNames: string[],
-  destinationFromOrganization?: string
+  destinationFromOrganization?: string,
+  destTypeId?: number,
+  envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -18,7 +20,8 @@ export const buildOutboundMetricsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? 'dev',
       },
     },
     {
@@ -222,7 +225,9 @@ export const buildOutboundMetricsQuery = (
  */
 export const buildOutboundErrorsQuery = (
   principalNames: string[],
-  destinationFromOrganization?: string
+  destinationFromOrganization?: string,
+  destTypeId?: number,
+  envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -234,7 +239,8 @@ export const buildOutboundErrorsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? 'dev',
       },
     },
     {
@@ -1044,7 +1050,9 @@ export const buildOutboundErrorsQuery = (
  */
 export const buildOutboundCombinedQuery = (
   principalNames: string[],
-  destinationFromOrganization?: string
+  destinationFromOrganization?: string,
+  destTypeId?: number,
+  envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
@@ -1056,7 +1064,8 @@ export const buildOutboundCombinedQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword': process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG || 'dev',
+        'tags.keyword':
+          envTag ?? 'dev',
       },
     },
     {
@@ -1107,7 +1116,9 @@ export const buildOutboundCombinedQuery = (
       // Metrics aggregations (time-based) - extract the '0' aggregation
       metrics: buildOutboundMetricsQuery(
         principalNames,
-        destinationFromOrganization
+        destinationFromOrganization,
+        destTypeId,
+        envTag
       ).aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
       errors: {
@@ -1119,7 +1130,9 @@ export const buildOutboundCombinedQuery = (
         aggs: {
           organizations: buildOutboundErrorsQuery(
             principalNames,
-            destinationFromOrganization
+            destinationFromOrganization,
+            destTypeId,
+            envTag
           ).aggs['0'],
         },
       },
