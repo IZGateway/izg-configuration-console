@@ -14,13 +14,14 @@
     "type-check": "tsc --noEmit",
     "test:watch": "jest --watch",
     "test": "jest",
+    "fix-vulnerabilities": "node scripts/fix-all-vulnerabilities.js && npm install && npm audit",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1000.0",
-    "@aws-sdk/client-secrets-manager": "^3.1000.0",
-    "@aws-sdk/lib-dynamodb": "^3.1000.0",
+    "@aws-sdk/client-dynamodb": "^3.1001.0",
+    "@aws-sdk/client-secrets-manager": "^3.1001.0",
+    "@aws-sdk/lib-dynamodb": "^3.1001.0",
     "@axe-core/react": "^4.11.1",
     "@babel/types": "^7.29.0",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -99,9 +100,24 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "fast-xml-parser": "5.4.1",
-    "glob": "10.5.0",
-    "js-yaml": "3.14.2",
-    "minimatch": "10.2.4"
+    "@eslint/eslintrc": {
+      "ajv": "^6.14.0"
+    },
+    "eslint": {
+      "ajv": "^6.14.0"
+    },
+    "swagger-ui-react": {
+      "immutable": "^4.3.8"
+    },
+    "@tootallnate/once": "^3.0.1",
+    "ajv": "^8.18.0",
+    "dompurify": "^3.3.2",
+    "fast-xml-parser": "^5.4.2",
+    "http-proxy-agent": "^7.0.2",
+    "js-yaml": "^4.1.1",
+    "jsdom": "^28.1.0",
+    "qs": "^6.15.0",
+    "underscore": "^1.13.8",
+    "xmlbuilder2": "^4.0.3"
   }
 }
