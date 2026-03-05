@@ -129,7 +129,7 @@ describe('DestinationDetailWidget', () => {
       )
     })
 
-    it('should include the correct index in the request body', async () => {
+    it('should not include index in the request body (resolved server-side)', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -141,7 +141,7 @@ describe('DestinationDetailWidget', () => {
 
       const fetchCall = mockFetch.mock.calls[0]
       const requestBody = JSON.parse(fetchCall[1].body)
-      expect(requestBody.index).toBe('izgw-dev-logstash')
+      expect(requestBody.index).toBeUndefined()
     })
 
     it('should refetch data when selectedConnection changes', async () => {

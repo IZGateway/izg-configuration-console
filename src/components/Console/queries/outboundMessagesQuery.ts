@@ -20,8 +20,7 @@ export const buildOutboundMetricsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword':
-          envTag ?? 'dev',
+        'tags.keyword': envTag ?? 'dev',
       },
     },
     {
@@ -239,8 +238,7 @@ export const buildOutboundErrorsQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword':
-          envTag ?? 'dev',
+        'tags.keyword': envTag ?? 'dev',
       },
     },
     {
@@ -1064,8 +1062,7 @@ export const buildOutboundCombinedQuery = (
     },
     {
       match_phrase: {
-        'tags.keyword':
-          envTag ?? 'dev',
+        'tags.keyword': envTag ?? 'dev',
       },
     },
     {
@@ -1140,9 +1137,5 @@ export const buildOutboundCombinedQuery = (
     size: 0,
   }
 }
-
-export const ELASTICSEARCH_INDEX =
-  process.env.NEXT_PUBLIC_OPERATIONS_CONSOLE_ELASTIC_INDEX ||
-  'izgw-dev-logstash'
 
 export const ELASTICSEARCH_API_ENDPOINT = '/api/elasticsearch/query'

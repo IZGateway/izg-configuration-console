@@ -6,7 +6,6 @@ import {
   DEFAULT_MESSAGE_METRICS,
 } from './types/messageMetrics'
 import {
-  ELASTICSEARCH_INDEX,
   ELASTICSEARCH_API_ENDPOINT,
   buildInboundCombinedQuery,
 } from './queries/inboundMessagesQuery'
@@ -71,7 +70,6 @@ const InboundMessagesWidget = ({
         )
 
         const requestBody = {
-          index: ELASTICSEARCH_INDEX,
           query: combinedQuery,
         }
 

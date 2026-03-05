@@ -3,7 +3,6 @@ import MetricCard from './components/MetricCard'
 import { MetricChange, DEFAULT_METRIC_CHANGE } from './types/destinationMetrics'
 import {
   buildDestinationMetricsQuery,
-  ELASTICSEARCH_INDEX,
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/destinationMetricsQuery'
 
@@ -57,7 +56,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            index: ELASTICSEARCH_INDEX,
             query: query,
           }),
         })
