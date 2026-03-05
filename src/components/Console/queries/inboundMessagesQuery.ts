@@ -30,7 +30,7 @@ export const buildInboundMetricsQuery = (
     {
       match_phrase: {
         'tags.keyword':
-          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
+          envTag ?? 'dev',
       },
     },
     {
@@ -249,7 +249,7 @@ export const buildInboundErrorsQuery = (
     {
       match_phrase: {
         'tags.keyword':
-          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
+          envTag ?? 'dev',
       },
     },
     {
@@ -1074,7 +1074,7 @@ export const buildInboundCombinedQuery = (
     {
       match_phrase: {
         'tags.keyword':
-          envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
+          envTag ?? 'dev',
       },
     },
     {

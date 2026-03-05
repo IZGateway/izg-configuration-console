@@ -17,8 +17,7 @@ export const buildDestinationMetricsQuery = (
         filter: [
           {
             match_phrase: {
-              'tags.keyword':
-                envTag ?? process.env.NEXT_PUBLIC_ELASTIC_ENV_TAG ?? 'dev',
+              'tags.keyword': envTag ?? 'dev',
             },
           },
           {
