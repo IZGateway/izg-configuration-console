@@ -2,6 +2,99 @@
 
 This directory contains utility scripts for maintaining the project.
 
+## fix-all-vulnerabilities.js ⭐ NEW
+
+**Comprehensive automated vulnerability fixer** - Updates direct dependencies and adds overrides for all vulnerabilities in a single run.
+
+### How it works
+
+1. Runs `npm audit --json` to detect all security vulnerabilities
+2. For each vulnerability:
+   - **Direct dependencies**: Updates to latest compatible version (non-breaking)
+   - **Transitive dependencies**: Adds overrides, even when npm suggests parent updates
+   - **Queries npm registry** for latest versions when audit data is unclear
+3. Applies all changes to `package.json` in one operation
+4. Provides clear summary of all changes made
+
+### Usage
+
+```bash
+# Recommended: Use npm script
+npm run fix-vulnerabilities
+
+# Or run directly
+node scripts/fix-all-vulnerabilities.js
+npm install
+npm audit
+```
+
+### Example Output
+
+```
+🔍 Comprehensive Vulnerability Fixer - Analyzing and fixing vulnerabilities...
+
+Found 13 vulnerable packages
+
+⬆ jest-environment-jsdom: Updating direct dependency (29.7.0 → 30.2.0)
+💡 jsdom: npm suggests updating 'jest-environment-jsdom', trying direct override instead...
+   → Found latest version: 28.1.0
+➕ jsdom: Adding override 28.1.0 (low, currently: 20.0.3)
+➕ dompurify: Adding override 3.3.2 (moderate)
+➕ immutable: Adding override 5.1.5 (high)
+✓ qs: All versions already meet fix requirement
+
+=== Applying Fixes ===
+
+📦 Direct Dependency Updates:
+  jest-environment-jsdom@30.2.0 (devDependencies)
+
+🔧 Override Updates:
+  ajv@8.18.0
+  dompurify@3.3.2
+  immutable@5.1.5
+  js-yaml@4.1.1
+  qs@6.15.0
+  underscore@1.13.8
+
+✅ Updated package.json
+
+📋 Next Steps:
+  1. Run: npm install
+  2. Run: npm audit
+  3. Run: npm test
+  4. Review and commit changes
+```
+
+### Key Features
+
+✅ **Updates direct dependencies** - Detects and updates deps like jest-environment-jsdom  
+✅ **Handles "parent update" cases** - Adds overrides when npm suggests updating parent  
+✅ **Queries npm registry** - Automatically fetches latest versions  
+✅ **Intelligent fallback** - Multiple strategies to determine fix versions  
+✅ **Single-run complete fix** - All changes applied at once  
+✅ **Safe updates only** - Skips major version updates (manual review required)
+
+### When to use
+
+- **Primary tool** for fixing security vulnerabilities
+- After `npm install` shows audit warnings
+- Weekly security maintenance
+- In CI/CD pipelines for automated security updates
+- When you want to fix all vulnerabilities quickly
+
+### Comparison with Other Scripts
+
+| Feature | fix-all-vulnerabilities.js | add-security-overrides.js |
+|---------|---------------------------|--------------------------|
+| Updates direct deps | ✅ Yes | ❌ No |
+| Adds overrides | ✅ Yes | ✅ Yes |
+| Handles parent updates | ✅ Yes (intelligent) | ❌ Skips |
+| Queries npm | ✅ Yes | ❌ No |
+| Severity filter | All levels | High/Critical only |
+| Use case | Complete automation | Conservative approach |
+
+**Recommendation:** Use `fix-all-vulnerabilities.js` as your primary tool. Use `add-security-overrides.js` only if you need conservative, high-severity-only fixes.
+
 ## add-security-overrides.js
 
 Automatically detects and adds npm overrides for vulnerable transitive dependencies.
