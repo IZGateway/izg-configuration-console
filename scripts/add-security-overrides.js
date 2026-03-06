@@ -48,6 +48,7 @@ let changesDetected = false;
 // These require manual updates to direct dependencies instead
 const OVERRIDE_BLOCKLIST = [
   'ajv', // ajv@6 -> ajv@8 breaks @eslint/eslintrc and other tools expecting v6 API
+  'immutable', // immutable@3 -> immutable@5 breaks swagger-ui-react which expects v3 API
 ];
 
 // Analyze vulnerabilities
@@ -76,6 +77,14 @@ for (const [pkgName, vulnData] of Object.entries(auditData.vulnerabilities)) {
   // For transitive dependencies, extract fix version from the vulnerability range
   let fixVersion;
   
+  // Check if fixAvailable refers to a different package (parent dependency)
+  // In this case, we can't override the transitive dependency, it needs a direct dependency update
+  const fixPackageName = vulnData.fixAvailable?.name || vulnData.via?.[0]?.fixAvailable?.name;
+  if (fixPackageName && fixPackageName !== pkgName) {
+    console.log(`⚠ ${pkgName}: Fix requires updating parent package '${fixPackageName}' - cannot override transitive dependency`);
+    continue;
+  }
+  
   // First, try to get the version from the vulnerability's "via" range
   const viaWithRange = vulnData.via?.find(v => v.range);
   if (viaWithRange?.range) {
@@ -98,8 +107,8 @@ for (const [pkgName, vulnData] of Object.entries(auditData.vulnerabilities)) {
     }
   }
   
-  // Fallback to fixAvailable version (for direct dependencies)
-  if (!fixVersion) {
+  // Fallback to fixAvailable version (only if it's for the same package)
+  if (!fixVersion && fixPackageName === pkgName) {
     fixVersion = vulnData.fixAvailable?.version || 
                  vulnData.via?.[0]?.fixAvailable?.version;
   }
@@ -125,21 +134,22 @@ for (const [pkgName, vulnData] of Object.entries(auditData.vulnerabilities)) {
     if (currentOverride) {
       // Check if existing override is sufficient
       try {
-        if (semver.gte(currentOverride, fixVersion)) {
+        const currentVersion = currentOverride.replace(/^[\^~>=]/, '');
+        if (semver.gte(currentVersion, fixVersion)) {
           console.log(`✓ ${pkgName}: Existing override ${currentOverride} is sufficient (>= ${fixVersion})`);
           continue;
         } else {
-          console.log(`⬆ ${pkgName}: Upgrading override from ${currentOverride} to ${fixVersion} (${vulnData.severity})`);
+          console.log(`⬆ ${pkgName}: Upgrading override from ${currentOverride} to ^${fixVersion} (${vulnData.severity})`);
           overridesToAdd[pkgName] = fixVersion;
           changesDetected = true;
         }
       } catch (e) {
-        console.log(`⬆ ${pkgName}: Replacing override ${currentOverride} with ${fixVersion} (${vulnData.severity})`);
+        console.log(`⬆ ${pkgName}: Replacing override ${currentOverride} with ^${fixVersion} (${vulnData.severity})`);
         overridesToAdd[pkgName] = fixVersion;
         changesDetected = true;
       }
     } else {
-      console.log(`➕ ${pkgName}: Adding override ${fixVersion} (${vulnData.severity}, currently: ${resolvedVersions.join(', ')})`);
+      console.log(`➕ ${pkgName}: Adding override ^${fixVersion} (${vulnData.severity}, currently: ${resolvedVersions.join(', ')})`);
       overridesToAdd[pkgName] = fixVersion;
       changesDetected = true;
     }
@@ -153,8 +163,8 @@ if (Object.keys(overridesToAdd).length > 0) {
   console.log('\n=== Adding/Updating Security Overrides ===');
   
   for (const [pkg, version] of Object.entries(overridesToAdd)) {
-    packageJson.overrides[pkg] = version;
-    console.log(`  ${pkg}@${version}`);
+    packageJson.overrides[pkg] = `^${version}`;
+    console.log(`  ${pkg}@^${version}`);
   }
   
   // Sort overrides alphabetically for consistency
