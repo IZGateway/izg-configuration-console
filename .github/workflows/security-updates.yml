@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: read
 
 jobs:
   update-dependencies:
@@ -25,6 +26,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
       
       - name: Configure Git
         run: |
@@ -33,9 +36,13 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
-      - name: Install npm-check-updates
-        run: npm install -g npm-check-updates
+
+      - name: Install security tooling
+        run: |
+          npm install -g npm-check-updates
+          npm install -g @izgateway/dependency-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Run ncu and check for updates
         id: ncu_check
@@ -54,9 +61,11 @@ jobs:
       
       - name: Update existing overrides
         id: override_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Updating packages in overrides section..."
-          node scripts/update-overrides.js
+          node $(which update-overrides)
           
           if git diff --quiet package.json; then
             echo "has_override_changes=false" >> $GITHUB_OUTPUT
@@ -66,18 +75,20 @@ jobs:
             echo "✓ Override updates found"
           fi
       
-      - name: Add security overrides for vulnerabilities
+      - name: Fix all vulnerabilities
         id: security_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
-          node scripts/add-security-overrides.js
+          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
+          node $(which fix-vulnerabilities)
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
-            echo "✓ No security overrides needed"
+            echo "✓ No security fixes needed"
           else
             echo "has_security_changes=true" >> $GITHUB_OUTPUT
-            echo "✓ Security overrides added"
+            echo "✓ Security fixes applied"
           fi
       
       - name: Check if any changes were made
@@ -115,19 +126,19 @@ jobs:
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Updating packages in overrides section..."
-          node scripts/update-overrides.js
+          node $(which update-overrides)
       
-      - name: Add security overrides for vulnerabilities
+      - name: Fix all vulnerabilities
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
-          echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
-          node scripts/add-security-overrides.js
+          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
+          node $(which fix-vulnerabilities)
       
       - name: Test override removal
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Testing if overrides can be removed..."
-          node scripts/test-overrides.js
+          node $(which test-overrides)
       
       - name: Commit changes
         if: steps.final_check.outputs.has_changes == 'true'
@@ -139,7 +150,7 @@ jobs:
 
           - Updated dependencies using ncu --target minor
           - Updated existing overrides to latest minor versions
-          - Added security overrides for vulnerable transitive dependencies (all severity levels)
+          - Fixed all vulnerabilities (updated direct deps + added overrides as needed)
           - Removed unnecessary overrides where applicable
           - Updated package-lock.json
           
@@ -183,7 +194,7 @@ jobs:
           echo "" >> pr_body.md
           echo "### Changes Made:" >> pr_body.md
           echo "- ✅ Updated dependencies to latest compatible minor versions" >> pr_body.md
-          echo "- ✅ Added security overrides for vulnerable transitive dependencies (all severity levels)" >> pr_body.md
+          echo "- ✅ Fixed all vulnerabilities (updated direct deps + added overrides)" >> pr_body.md
           echo "- ✅ Removed unnecessary overrides (where all resolved versions meet requirements)" >> pr_body.md
           echo "- ✅ Updated \`package-lock.json\`" >> pr_body.md
           echo "- ✅ Ran linting, type-checking, and tests" >> pr_body.md
