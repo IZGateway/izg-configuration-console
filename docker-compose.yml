@@ -7,8 +7,6 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
-      secrets:
-        - NPM_TOKEN
     ports:
       - '443:443'
     environment:
@@ -44,7 +42,3 @@ services:
       - type: bind
         source: ${SSL_SOURCE}
         target: ${SSL_SOURCE}
-
-secrets:
-  NPM_TOKEN:
-    environment: GITHUB_TOKEN

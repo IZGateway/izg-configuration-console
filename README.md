@@ -125,12 +125,6 @@ docker compose -f ./local-docker/docker-compose.yml up -d && npm run dev && dock
 
 This will run the Docker image for IZG CC (which has Nginx and the application) as well as a MySQL image loaded with dummy test data.
 
-> **Prerequisite:** The Docker build fetches the `@izgateway/dependency-scripts` package from GitHub Packages, which requires authentication. Before running, export a GitHub token with `read:packages` access:
-> ```bash
-> export GITHUB_TOKEN=$(gh auth token)
-> ```
-> If you don't have the `gh` CLI, create a [Personal Access Token](https://github.com/settings/tokens) with `read:packages` scope and export it as `GITHUB_TOKEN`.
-
 ```
 npm run start:local-docker
 ```
