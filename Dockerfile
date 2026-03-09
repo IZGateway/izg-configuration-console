@@ -1,7 +1,7 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN  npm ci
+RUN npm ci
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
@@ -32,7 +32,7 @@ COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
 RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
-    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete 
+    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
