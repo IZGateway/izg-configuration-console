@@ -28,14 +28,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const { index, query } = req.body
-
-    if (!index) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Index is required',
-      })
-    }
+    const index =
+      process.env.OPERATIONS_CONSOLE_ELASTIC_INDEX || 'izgw-dev-logstash'
+    const { query } = req.body
 
     if (!query) {
       return res.status(400).json({

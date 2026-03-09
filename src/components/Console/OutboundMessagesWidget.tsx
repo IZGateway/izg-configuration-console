@@ -6,7 +6,6 @@ import {
   DEFAULT_MESSAGE_METRICS,
 } from './types/messageMetrics'
 import {
-  ELASTICSEARCH_INDEX,
   ELASTICSEARCH_API_ENDPOINT,
   buildOutboundCombinedQuery,
 } from './queries/outboundMessagesQuery'
@@ -20,8 +19,8 @@ interface Destination {
     description: string
   }
   destinationType?: {
-    typeId: string
-    typeName: string
+    typeId: number
+    type: string
   }
 }
 
@@ -31,6 +30,8 @@ interface OutboundMessagesWidgetProps {
   organizations?: Organization[]
   organizationsLoading?: boolean
   destinations?: Destination[]
+  destTypeId?: number
+  envTag?: string
 }
 
 const OutboundMessagesWidget = ({
@@ -39,6 +40,8 @@ const OutboundMessagesWidget = ({
   organizations = [],
   organizationsLoading = false,
   destinations = [],
+  destTypeId,
+  envTag,
 }: OutboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
     DEFAULT_MESSAGE_METRICS
@@ -101,11 +104,12 @@ const OutboundMessagesWidget = ({
         // Fetch combined metrics and errors data in a single call
         const combinedQuery = buildOutboundCombinedQuery(
           principalNames,
-          destinationFromOrganization
+          destinationFromOrganization,
+          destTypeId,
+          envTag
         )
 
         const requestBody = {
-          index: ELASTICSEARCH_INDEX,
           query: combinedQuery,
         }
 
@@ -245,6 +249,8 @@ const OutboundMessagesWidget = ({
     principalNamesKey,
     selectedOrganization,
     destinationFromOrganization,
+    destTypeId,
+    envTag,
   ])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
