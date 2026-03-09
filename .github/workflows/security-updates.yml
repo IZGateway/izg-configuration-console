@@ -66,18 +66,18 @@ jobs:
             echo "✓ Override updates found"
           fi
       
-      - name: Fix all vulnerabilities
+      - name: Add security overrides for vulnerabilities
         id: security_check
         run: |
-          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node scripts/fix-all-vulnerabilities.js
+          echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
+          node scripts/add-security-overrides.js
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
-            echo "✓ No security fixes needed"
+            echo "✓ No security overrides needed"
           else
             echo "has_security_changes=true" >> $GITHUB_OUTPUT
-            echo "✓ Security fixes applied"
+            echo "✓ Security overrides added"
           fi
       
       - name: Check if any changes were made
@@ -117,11 +117,11 @@ jobs:
           echo "Updating packages in overrides section..."
           node scripts/update-overrides.js
       
-      - name: Fix all vulnerabilities
+      - name: Add security overrides for vulnerabilities
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
-          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node scripts/fix-all-vulnerabilities.js
+          echo "Checking for security vulnerabilities in transitive dependencies (all severity levels)..."
+          node scripts/add-security-overrides.js
       
       - name: Test override removal
         if: steps.final_check.outputs.has_changes == 'true'
@@ -139,7 +139,7 @@ jobs:
 
           - Updated dependencies using ncu --target minor
           - Updated existing overrides to latest minor versions
-          - Fixed all vulnerabilities (updated direct deps + added overrides as needed)
+          - Added security overrides for vulnerable transitive dependencies (all severity levels)
           - Removed unnecessary overrides where applicable
           - Updated package-lock.json
           
@@ -183,7 +183,7 @@ jobs:
           echo "" >> pr_body.md
           echo "### Changes Made:" >> pr_body.md
           echo "- ✅ Updated dependencies to latest compatible minor versions" >> pr_body.md
-          echo "- ✅ Fixed all vulnerabilities (updated direct deps + added overrides)" >> pr_body.md
+          echo "- ✅ Added security overrides for vulnerable transitive dependencies (all severity levels)" >> pr_body.md
           echo "- ✅ Removed unnecessary overrides (where all resolved versions meet requirements)" >> pr_body.md
           echo "- ✅ Updated \`package-lock.json\`" >> pr_body.md
           echo "- ✅ Ran linting, type-checking, and tests" >> pr_body.md

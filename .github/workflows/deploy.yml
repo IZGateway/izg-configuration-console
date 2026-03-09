@@ -8,14 +8,12 @@ on:
     paths-ignore:
       - '.github/workflows/*'
       - '!.github/workflows/deploy.yml'
-      - '.github/scripts/*'
   pull_request:
     branches:
       - develop
     paths-ignore:
       - '.github/workflows/*'
       - '!.github/workflows/deploy.yml'
-      - '.github/scripts/*'
   workflow_dispatch:
 
 env:
