@@ -1,7 +1,11 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN  npm ci
+RUN --mount=type=secret,id=NPM_TOKEN \
+    echo "//npm.pkg.github.com/:_authToken=$(cat /run/secrets/NPM_TOKEN)" > ~/.npmrc \
+    && echo "@izgateway:registry=https://npm.pkg.github.com" >> ~/.npmrc \
+    && npm ci \
+    && rm ~/.npmrc
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
@@ -31,8 +35,12 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
-RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
-    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete 
+RUN --mount=type=secret,id=NPM_TOKEN \
+    echo "//npm.pkg.github.com/:_authToken=$(cat /run/secrets/NPM_TOKEN)" > ~/.npmrc \
+    && echo "@izgateway:registry=https://npm.pkg.github.com" >> ~/.npmrc \
+    && apk add --no-cache bash nginx gettext tini curl libc6-compat \
+    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete \
+    && rm ~/.npmrc
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml

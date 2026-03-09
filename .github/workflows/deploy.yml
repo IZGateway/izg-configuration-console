@@ -151,6 +151,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+          secrets: |
+            NPM_TOKEN=${{ secrets.GITHUB_TOKEN }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
@@ -216,6 +218,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+          secrets: |
+            NPM_TOKEN=${{ secrets.GITHUB_TOKEN }}
           push: true
           tags: |
             ${{ steps.docker_meta_aphl.outputs.tags }}
