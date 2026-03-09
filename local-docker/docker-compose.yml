@@ -6,16 +6,6 @@ services:
     ports:
       - "443:443"
   mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: izgateway
-      MYSQL_USER: izgateway
-      MYSQL_PASSWORD: izgateway
+    build: ../database
     ports:
       - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
