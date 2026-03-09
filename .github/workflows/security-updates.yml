@@ -54,9 +54,11 @@ jobs:
       
       - name: Update existing overrides
         id: override_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Updating packages in overrides section..."
-          node scripts/update-overrides.js
+          update-overrides
           
           if git diff --quiet package.json; then
             echo "has_override_changes=false" >> $GITHUB_OUTPUT
@@ -68,9 +70,11 @@ jobs:
       
       - name: Fix all vulnerabilities
         id: security_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node scripts/fix-all-vulnerabilities.js
+          fix-vulnerabilities
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
