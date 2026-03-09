@@ -59,8 +59,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '24.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
       - name: Install Dependencies
         run: npm ci --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # - name: Run Jest Unit Tests
       #   run: npm run test
       - name: Lint
