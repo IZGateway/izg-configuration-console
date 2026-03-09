@@ -63,8 +63,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '24.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
       - name: Install Dependencies
         run: npm ci --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # - name: Run Jest Unit Tests
       #   run: npm run test
       - name: Lint
@@ -147,6 +151,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+          secrets: |
+            NPM_TOKEN=${{ secrets.GITHUB_TOKEN }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
@@ -212,6 +218,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+          secrets: |
+            NPM_TOKEN=${{ secrets.GITHUB_TOKEN }}
           push: true
           tags: |
             ${{ steps.docker_meta_aphl.outputs.tags }}
