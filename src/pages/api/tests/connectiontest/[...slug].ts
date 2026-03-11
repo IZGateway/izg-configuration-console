@@ -171,10 +171,11 @@ const handler = async (
       })
     }
 
-    const { connectionTestResult } = await connectionTest(
-      fetchedDestination,
-      session.user.email
-    )
+    const { connectionTestResult } = await connectionTest(fetchedDestination, {
+      name: session.user.name,
+      email: session.user.email,
+      id: session.user.id,
+    })
     res.status(200).json({
       destId: destId || 'unknown',
       destUrl: fetchedDestination.dest_uri || 'unknown',

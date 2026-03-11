@@ -21,7 +21,11 @@ export async function getServerSideProps(context) {
   )
   const { connectionTestResult, numberOfTests } = await connectionTest(
     destinationToTest,
-    session.user.email
+    {
+      name: session.user.name,
+      email: session.user.email,
+      id: session.user.id,
+    }
   )
   return {
     props: { connectionTestResult, numberOfTests },

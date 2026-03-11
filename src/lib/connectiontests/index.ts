@@ -7,7 +7,13 @@ import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
 
-const connectionTest = async (destination: Destination, userId: string) => {
+type UserContext = {
+  name?: string
+  email?: string
+  id?: string
+}
+
+const connectionTest = async (destination: Destination, user: UserContext) => {
   enum TestSuite {
     'dns',
     'tcp',
@@ -21,7 +27,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
   const testSuiteKeys = Object.keys(TestSuite).filter((v) => isNaN(Number(v)))
   const numberOfTests = testSuiteKeys.length
   const connectionTestResult = {
-    user: userId,
+    user: user.email || 'unknown',
     timestamp: new Date(Date.now()).toISOString(),
     destId: destination?.destId || 'unknown',
     destUrl: '',
@@ -122,7 +128,7 @@ const connectionTest = async (destination: Destination, userId: string) => {
       destId: destination.destId,
       hostname: connectionTestRequest.url.hostname,
       port: connectionTestRequest.port,
-      userId: userId,
+      userId: user.email,
       operation: 'start_connection_tests',
     })
 
@@ -186,12 +192,24 @@ const connectionTest = async (destination: Destination, userId: string) => {
       }
 
       testResults.push(...result)
-      logger.info(`${TestSuite[test]} completed`, {
-        ...result,
-        timestamp: moment().toISOString(true),
-        destId: destination.destId,
-        username: destination.username,
-      })
+      const testStatus = result[0]?.status || 'UNKNOWN'
+      const testType = TestSuite[test].toUpperCase()
+      logger.info(
+        `${testType} test ${testStatus} for '${destination.destId}'`,
+        {
+          testResult: {
+            ...result[0],
+            username: destination.username,
+            destId: destination.destId,
+          },
+          userContext: {
+            name: user.name || 'unknown',
+            email: user.email || 'unknown',
+            userId: user.id || user.email || 'unknown',
+          },
+          timestamp: moment().toISOString(true),
+        }
+      )
       if (result[0]?.status === TestStatus.FAIL) {
         skipTests = true
       }
