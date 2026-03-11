@@ -2,11 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../api-middleware-helper'
+import { elasticClient } from '../../../lib/repositories/ElasticRepository'
 import logger from '../../../../logger'
 
 /**
  * API endpoint for querying Elasticsearch
- * Forwards queries to Elasticsearch with proper authentication and error handling
+ * Uses ElasticRepositoryClient for proper authentication and error handling
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   // Only allow authenticated admin users
@@ -43,53 +44,36 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
-    // Get Elasticsearch connection details from environment
-    const elasticHost = process.env.ELASTIC_HOST || 'https://localhost:9200'
-    const elasticApiKey = process.env.ELASTIC_API_KEY
+    const queryMetadata = {
+      type: typeof query,
+      isArray: Array.isArray(query),
+      fieldCount:
+        query && typeof query === 'object' && !Array.isArray(query)
+          ? Object.keys(query).length
+          : undefined,
+    }
 
-    if (!elasticApiKey) {
-      logger.error('ELASTIC_API_KEY not configured', {
-        operation: 'elasticsearch_query',
-        user: session.user.email,
-        index,
-      })
+    logger.info('Elasticsearch query requested', {
+      operation: 'elasticsearch_query',
+      user: session.user.email,
+      index,
+      queryMetadata,
+    })
+
+    // Check if Elasticsearch is properly configured
+    if (!elasticClient.isConfigured()) {
       return res.status(500).json({
         error: 'Server Error',
         message: 'Elasticsearch is not properly configured',
       })
     }
 
-    // Base64 encode the API key for the Authorization header
-    const encodedApiKey = Buffer.from(elasticApiKey).toString('base64')
-
-    // Forward the query to Elasticsearch
-    const response = await fetch(`${elasticHost}/${index}/_search`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `ApiKey ${encodedApiKey}`,
-      },
-      body: JSON.stringify(query),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      logger.error('Elasticsearch query failed', {
-        operation: 'elasticsearch_query',
-        user: session.user.email,
-        index,
-        status: response.status,
-        error: errorText,
-      })
-
-      return res.status(response.status).json({
-        error: 'Elasticsearch Error',
-        message: `Failed to query Elasticsearch: ${response.statusText}`,
-        details: errorText,
-      })
-    }
-
-    const data = await response.json()
+    // Execute the query using ElasticRepositoryClient
+    const data = await elasticClient.query(
+      index,
+      query,
+      session.user.email || undefined
+    )
 
     // Log successful query
     logger.info('Elasticsearch query successful', {

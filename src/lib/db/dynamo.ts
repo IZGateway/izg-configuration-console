@@ -1250,6 +1250,11 @@ class Dynamo implements DbClient {
       // Check if record already exists
       const recordExists = await this.checkDenyListRecordExists(sortKey)
       if (recordExists) {
+        logger.warn('Deny list entry already exists', {
+          operation: 'addDenyListRecord',
+          principal: denyListItem.principal,
+          environment: denyListItem.environment,
+        })
         const error = new Error(
           `A deny list entry already exists for certificate ${denyListItem.principal} for this environment.`
         )
@@ -1278,12 +1283,30 @@ class Dynamo implements DbClient {
 
       await dynamodDbDocClient.send(new PutCommand(params))
 
-      const destinationType = await this.fetchDestinationType(
-        denyListItem.environment.toString()
-      )
+      const [organizationName, destinationType] = await Promise.all([
+        this.fetchOrganizationName(denyListItem.principal),
+        this.fetchDestinationType(denyListItem.environment.toString()),
+      ])
+
+      logger.info('Deny list record added successfully', {
+        operation: 'addDenyListRecord',
+        entityType: 'DenyListRecord',
+        name: organizationName,
+        certificateName: denyListItem.principal,
+        environment: destinationType.type,
+        sortKey: sortKey,
+        reason: denyListItem.reason || '',
+        dateDenied: timestamp,
+        deniedBy: getAuditUserString(),
+        createdOn: timestamp,
+        updatedOn: timestamp,
+        createdBy: getAuditUserString(),
+        updatedBy: getAuditUserString(),
+      })
+
       const dlr = {
         id: sortKey,
-        name: await this.fetchOrganizationName(denyListItem.principal),
+        name: organizationName,
         reason: itemToInsert.reason || 'Not specified',
         dateDenied: timestamp,
         deniedBy: itemToInsert.deniedBy,
