@@ -1,5 +1,9 @@
 # Release Notes
 
+## Release v1.12.1
+
+- Dependency version updates
+
 ## Release v1.12.0
 
 - IGDD-2136 - Display System Resources Widget on the Home page
