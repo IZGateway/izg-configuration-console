@@ -39,6 +39,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    const queryObject = query as Record<string, unknown>
+    const aggregations = queryObject?.aggs as
+      | Record<string, unknown>
+      | undefined
+    const hasSystemResourcesAggs =
+      Boolean(aggregations?.cpu) &&
+      Boolean(aggregations?.memory) &&
+      Boolean(aggregations?.disk) &&
+      Boolean(aggregations?.connections)
+
+    if (hasSystemResourcesAggs) {
+      aggregations.connections = {
+        max: {
+          field: 'system.socket.summary.tcp.all.established',
+          missing: 0,
+        },
+      }
+    }
+
     const queryMetadata = {
       type: typeof query,
       isArray: Array.isArray(query),
@@ -46,6 +65,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         query && typeof query === 'object' && !Array.isArray(query)
           ? Object.keys(query).length
           : undefined,
+      hasConnectionsAgg: Boolean(aggregations?.connections),
+      hasSystemResourcesAggs,
+      connectionsField:
+        (
+          aggregations?.connections as {
+            max?: { field?: string; script?: unknown }
+          }
+        )?.max?.field ||
+        ((
+          aggregations?.connections as {
+            max?: { field?: string; script?: unknown }
+          }
+        )?.max?.script
+          ? 'script'
+          : undefined),
     }
 
     logger.info('Elasticsearch query requested', {
@@ -66,7 +100,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Execute the query using ElasticRepositoryClient
     const data = await elasticClient.query(
       index,
-      query,
+      queryObject,
       session.user.email || undefined
     )
 
@@ -77,6 +111,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       index,
       hitsCount: data.hits?.hits?.length || 0,
       totalHits: data.hits?.total?.value || 0,
+      connectionsValue: (
+        data.aggregations as Record<string, { value?: number }>
+      )?.connections?.value,
     })
 
     res.status(200).json(data)
