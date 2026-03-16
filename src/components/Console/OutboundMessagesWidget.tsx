@@ -86,6 +86,11 @@ const OutboundMessagesWidget = ({
 
   // Compute error message if principalNames or destinationFromOrganization can't be found
   const outboundError = useMemo(() => {
+    // Avoid showing an error while organizations are still loading
+    if (organizationsLoading) {
+      return undefined
+    }
+
     // If selectedConnection exists but principalNames couldn't be resolved
     if (selectedConnection && !principalNames) {
       const selectedDest = destinations.find((d) => d.destId === selectedConnection)
@@ -102,7 +107,14 @@ const OutboundMessagesWidget = ({
     }
 
     return undefined
-  }, [selectedConnection, principalNames, selectedOrganization, destinationFromOrganization, destinations])
+  }, [
+    selectedConnection,
+    principalNames,
+    selectedOrganization,
+    destinationFromOrganization,
+    destinations,
+    organizationsLoading,
+  ])
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
