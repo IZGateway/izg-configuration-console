@@ -1,23 +1,29 @@
 /**
  * Builds the Elasticsearch query for Outbound message metrics
- * @param principalNames - Array of principal names to filter by (from destination's jurisdiction)
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction)
  * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object
  */
 export const buildOutboundMetricsQuery = (
-  principalNames: string[],
+  principalNames?: string[],
   destinationFromOrganization?: string,
   destTypeId?: number,
   envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
       terms: {
         'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -30,8 +36,8 @@ export const buildOutboundMetricsQuery = (
           lte: now,
         },
       },
-    },
-  ]
+    }
+  )
 
   // Add destination filter if specified (from organization reverse lookup)
   if (destinationFromOrganization) {
@@ -223,19 +229,25 @@ export const buildOutboundMetricsQuery = (
  * @returns The Elasticsearch query object
  */
 export const buildOutboundErrorsQuery = (
-  principalNames: string[],
+  principalNames?: string[],
   destinationFromOrganization?: string,
   destTypeId?: number,
   envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
       terms: {
         'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -261,7 +273,7 @@ export const buildOutboundErrorsQuery = (
         },
       },
     },
-  ]
+  )
 
   // Add destination filter if specified (from organization reverse lookup)
   if (destinationFromOrganization) {
@@ -1042,24 +1054,30 @@ export const buildOutboundErrorsQuery = (
 
 /**
  * Builds the combined Elasticsearch query for Outbound message metrics and errors
- * @param principalNames - Array of principal names to filter by (from destination's jurisdiction)
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction)
  * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object with both metrics and error aggregations
  */
 export const buildOutboundCombinedQuery = (
-  principalNames: string[],
+  principalNames?: string[],
   destinationFromOrganization?: string,
   destTypeId?: number,
   envTag?: string
 ): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
       terms: {
         'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -1080,7 +1098,7 @@ export const buildOutboundCombinedQuery = (
         },
       },
     },
-  ]
+  )
 
   // Add destination filter if specified (from organization reverse lookup)
   if (destinationFromOrganization) {
