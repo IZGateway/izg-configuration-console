@@ -258,7 +258,7 @@ const OutboundMessagesWidget = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedConnection,
-    principalNames,
+    principalNames ? [...principalNames].sort().join('|') : '',
     selectedOrganization,
     destinationFromOrganization,
     envTag,
