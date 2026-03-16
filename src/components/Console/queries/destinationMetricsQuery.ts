@@ -5,7 +5,6 @@
  */
 export const buildDestinationMetricsQuery = (
   selectedConnection: string,
-  destTypeId?: number,
   envTag?: string
 ) => {
   const now = new Date()
