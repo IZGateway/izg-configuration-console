@@ -7,7 +7,6 @@
 export const buildInboundMetricsQuery = (
   selectedConnection: string,
   principalNames?: string[],
-  destTypeId?: number,
   envTag?: string
 ) => {
   const now = new Date()
@@ -225,7 +224,6 @@ export const buildInboundMetricsQuery = (
 export const buildInboundErrorsQuery = (
   selectedConnection: string,
   principalNames?: string[],
-  destTypeId?: number,
   envTag?: string
 ) => {
   const now = new Date()
@@ -1049,7 +1047,6 @@ export const buildInboundErrorsQuery = (
 export const buildInboundCombinedQuery = (
   selectedConnection: string,
   principalNames?: string[],
-  destTypeId?: number,
   envTag?: string
 ) => {
   const now = new Date()
@@ -1114,7 +1111,6 @@ export const buildInboundCombinedQuery = (
       metrics: buildInboundMetricsQuery(
         selectedConnection,
         principalNames,
-        destTypeId,
         envTag
       ).aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
@@ -1128,7 +1124,6 @@ export const buildInboundCombinedQuery = (
           organizations: buildInboundErrorsQuery(
             selectedConnection,
             principalNames,
-            destTypeId,
             envTag
           ).aggs['0'],
         },

@@ -111,6 +111,7 @@ const Console = () => {
   const [destPopoverAnchor, setDestPopoverAnchor] =
     useState<null | HTMLElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   // Unique destinations for the dropdown (deduplicated by destId)
   const uniqueDestinations = useMemo(() => {
@@ -131,15 +132,7 @@ const Console = () => {
   }, [destinations, selectedConnection])
 
   // Committed record — drives widget queries; only changes on explicit user selection
-  const committedDestRecord = useMemo(() => {
-    return destinations.find(
-      (d) =>
-        d.destId === committedConnection &&
-        d.destinationType?.type === committedEnvironment
-    )
-  }, [destinations, committedConnection, committedEnvironment])
 
-  const committedDestTypeId = committedDestRecord?.destinationType?.typeId
   const committedEnvTag = committedEnvironment
     ? getElasticEnvTag(committedEnvironment)
     : undefined
@@ -163,7 +156,6 @@ const Console = () => {
         const response = await fetch('/api/destinations')
         if (response.ok) {
           const data = await response.json()
-          console.log('Fetched destinations:', data)
           setDestinations(data)
           if (data.length > 0) {
             const first = data[0]
@@ -302,8 +294,7 @@ const Console = () => {
                 color="primary"
                 startIcon={<RefreshIcon />}
                 onClick={() => {
-                  // Refresh logic will be added here
-                  window.location.reload()
+                  setRefreshKey((k) => k + 1)
                 }}
                 sx={{
                   borderRadius: 2,
@@ -628,30 +619,28 @@ const Console = () => {
           }}
         >
           <DestinationDetailWidget
+            key={`detail-${committedConnection}-${refreshKey}`}
             selectedConnection={committedConnection}
-            destTypeId={committedDestTypeId}
             envTag={committedEnvTag}
           />
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
           <OutboundMessagesWidget
-            key={`outbound-${committedConnection}`}
+            key={`outbound-${committedConnection}-${refreshKey}`}
             selectedConnection={committedConnection}
             selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
             destinations={destinations}
-            destTypeId={committedDestTypeId}
             envTag={committedEnvTag}
           />
           <InboundMessagesWidget
-            key={`inbound-${committedConnection}`}
+            key={`inbound-${committedConnection}-${refreshKey}`}
             selectedConnection={committedConnection}
             selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
-            destTypeId={committedDestTypeId}
             envTag={committedEnvTag}
           />
         </Item>

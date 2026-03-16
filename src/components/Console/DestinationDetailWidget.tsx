@@ -8,12 +8,11 @@ import {
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
-  destTypeId?: number
   envTag?: string
 }
 
 const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
-  const { selectedConnection, destTypeId, envTag } = props
+  const { selectedConnection, envTag } = props
   const [izgatewayStatus, setIzgatewayStatus] = useState<string>('0%')
   const [totalMessages, setTotalMessages] = useState<string>('0')
   const [messageChange, setMessageChange] = useState<MetricChange>(
@@ -44,11 +43,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
 
     const fetchDestinationData = async () => {
       try {
-        const query = buildDestinationMetricsQuery(
-          selectedConnection,
-          destTypeId,
-          envTag
-        )
+        const query = buildDestinationMetricsQuery(selectedConnection, envTag)
 
         const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
           method: 'POST',
@@ -216,7 +211,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     }
 
     fetchDestinationData()
-  }, [selectedConnection, destTypeId, envTag])
+  }, [selectedConnection, envTag])
 
   return (
     <div>
