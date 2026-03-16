@@ -223,7 +223,7 @@ export const buildOutboundMetricsQuery = (
 
 /**
  * Builds the Elasticsearch query for Outbound message errors/failures
- * @param principalNames - Array of principal names to filter by (from destination's jurisdiction)
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction); if omitted, errors for all principals are included
  * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object
  */
