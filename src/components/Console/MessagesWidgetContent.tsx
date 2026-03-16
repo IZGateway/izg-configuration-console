@@ -37,6 +37,7 @@ interface MessagesWidgetContentProps {
   organizations: Organization[]
   onOrganizationChange: (org: string) => void
   onToggleShowAll: () => void
+  error?: string
 }
 
 const MessagesWidgetContent = ({
@@ -54,6 +55,7 @@ const MessagesWidgetContent = ({
   organizations,
   onOrganizationChange,
   onToggleShowAll,
+  error,
 }: MessagesWidgetContentProps) => {
   return (
     <div>
@@ -148,6 +150,20 @@ const MessagesWidgetContent = ({
               }}
             >
               <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                py: 8,
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="body2" sx={{ color: '#999' }}>
+                {error}
+              </Typography>
             </Box>
           ) : (
             <>

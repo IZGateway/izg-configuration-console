@@ -84,14 +84,55 @@ const OutboundMessagesWidget = ({
     return matchingDest?.destId
   }, [selectedOrganization, destinations])
 
-  // Create a stable key for principalNames to avoid refetch on reference change
-  // Spread to a copy before sorting to avoid mutating the memoized array
-  const principalNamesKey = principalNames
-    ? JSON.stringify([...principalNames].sort())
-    : 'undefined'
+  // Compute error message if principalNames or destinationFromOrganization can't be found
+  const outboundError = useMemo(() => {
+    // Avoid showing an error while organizations are still loading
+    if (organizationsLoading) {
+      return undefined
+    }
+
+    // If selectedConnection exists but principalNames couldn't be resolved
+    if (
+      selectedConnection &&
+      (!principalNames || principalNames.length === 0)
+    ) {
+      const selectedDest = destinations.find(
+        (d) => d.destId === selectedConnection
+      )
+      const jurisdictionName = selectedDest?.jurisdiction?.name
+      if (jurisdictionName) {
+        if (!principalNames) {
+          return `Cannot display outbound data: no organization found matching the destination's jurisdiction (${jurisdictionName}).`
+        }
+        return `Cannot display outbound data: the organization matching the destination's jurisdiction (${jurisdictionName}) has no principal names configured.`
+      }
+      return 'Cannot display outbound data: unable to resolve organization for the selected destination.'
+    }
+
+    // If a specific organization is selected but destinationFromOrganization couldn't be resolved
+    if (selectedOrganization !== 'IZGateway' && !destinationFromOrganization) {
+      return `Cannot display outbound data: no destination found matching the selected organization (${selectedOrganization}).`
+    }
+
+    return undefined
+  }, [
+    selectedConnection,
+    principalNames,
+    selectedOrganization,
+    destinationFromOrganization,
+    destinations,
+    organizationsLoading,
+  ])
+
   // Fetch message data from Elasticsearch
   useEffect(() => {
-    if (!selectedConnection || !principalNames || principalNames.length === 0)
+    // Don't fetch if there's an error condition, no connection selected, or missing required data
+    if (
+      !selectedConnection ||
+      outboundError ||
+      !principalNames ||
+      principalNames.length === 0
+    )
       return
 
     const controller = new AbortController()
@@ -120,7 +161,9 @@ const OutboundMessagesWidget = ({
         })
 
         if (!response.ok) {
-          throw new Error('Failed to fetch message data')
+          throw new Error(
+            `Failed to fetch message data: ${response.status} ${response.statusText}`
+          )
         }
 
         const data = await response.json()
@@ -243,13 +286,12 @@ const OutboundMessagesWidget = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedConnection,
-    principalNamesKey,
+    principalNames ? [...principalNames].sort().join('|') : '',
     selectedOrganization,
     destinationFromOrganization,
     envTag,
+    outboundError,
   ])
-  // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
-  // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
   return (
     <MessagesWidgetContent
@@ -267,6 +309,7 @@ const OutboundMessagesWidget = ({
       organizations={organizations}
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
+      error={outboundError}
     />
   )
 }
