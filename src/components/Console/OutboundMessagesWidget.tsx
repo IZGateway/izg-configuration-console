@@ -30,7 +30,6 @@ interface OutboundMessagesWidgetProps {
   organizations?: Organization[]
   organizationsLoading?: boolean
   destinations?: Destination[]
-  destTypeId?: number
   envTag?: string
 }
 
@@ -40,7 +39,6 @@ const OutboundMessagesWidget = ({
   organizations = [],
   organizationsLoading = false,
   destinations = [],
-  destTypeId,
   envTag,
 }: OutboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
@@ -120,7 +118,6 @@ const OutboundMessagesWidget = ({
         const combinedQuery = buildOutboundCombinedQuery(
           principalNames,
           destinationFromOrganization,
-          destTypeId,
           envTag
         )
 
@@ -264,7 +261,6 @@ const OutboundMessagesWidget = ({
     principalNames,
     selectedOrganization,
     destinationFromOrganization,
-    destTypeId,
     envTag,
     outboundError,
   ])

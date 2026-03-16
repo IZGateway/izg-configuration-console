@@ -511,6 +511,125 @@ describe('Console – Destination Filter', () => {
     })
   })
 
+  // ── Refresh button ────────────────────────────────────────────────────────
+
+  describe('Refresh button', () => {
+    beforeEach(async () => {
+      await act(async () => {
+        render(<Console />)
+      })
+    })
+
+    it('renders a Refresh button', () => {
+      expect(
+        screen.getByRole('button', { name: /refresh/i })
+      ).toBeInTheDocument()
+    })
+
+    it('keeps all three widgets mounted with the committed connection after refresh', async () => {
+      // Widgets should already show the initial committed connection "dev"
+      expect(screen.getByTestId('detail-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+      expect(screen.getByTestId('outbound-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+      expect(screen.getByTestId('inbound-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+      })
+
+      // All three widgets must still be present with the same connection
+      expect(screen.getByTestId('detail-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+      expect(screen.getByTestId('outbound-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+      expect(screen.getByTestId('inbound-widget')).toHaveAttribute(
+        'data-connection',
+        'dev'
+      )
+    })
+
+    it('clicking Refresh multiple times keeps widgets mounted each time', async () => {
+      const button = screen.getByRole('button', { name: /refresh/i })
+
+      await act(async () => {
+        fireEvent.click(button)
+      })
+      await act(async () => {
+        fireEvent.click(button)
+      })
+      await act(async () => {
+        fireEvent.click(button)
+      })
+
+      expect(screen.getByTestId('detail-widget')).toBeInTheDocument()
+      expect(screen.getByTestId('outbound-widget')).toBeInTheDocument()
+      expect(screen.getByTestId('inbound-widget')).toBeInTheDocument()
+    })
+
+    it('refresh after a destination change keeps the new destination, not the original', async () => {
+      // Switch to Florida SHOTS (destId "202")
+      await openPopover()
+      await act(async () => {
+        fireEvent.click(screen.getByText('Florida SHOTS'))
+      })
+      await waitFor(() => {
+        expect(screen.getByTestId('detail-widget')).toHaveAttribute(
+          'data-connection',
+          '202'
+        )
+      })
+
+      // Now refresh — committed connection must remain "202"
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+      })
+
+      expect(screen.getByTestId('detail-widget')).toHaveAttribute(
+        'data-connection',
+        '202'
+      )
+      expect(screen.getByTestId('outbound-widget')).toHaveAttribute(
+        'data-connection',
+        '202'
+      )
+      expect(screen.getByTestId('inbound-widget')).toHaveAttribute(
+        'data-connection',
+        '202'
+      )
+    })
+
+    it('does not close an open destination popover when Refresh is clicked', async () => {
+      await openPopover()
+      // Popover is open — search field is visible
+      expect(
+        screen.getByPlaceholderText('Search for destinations')
+      ).toBeInTheDocument()
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole('button', { name: /refresh/i, hidden: true })
+        )
+      })
+
+      // Popover should still be open (Refresh only increments refreshKey, not touches popover state)
+      expect(
+        screen.getByPlaceholderText('Search for destinations')
+      ).toBeInTheDocument()
+    })
+  })
+
   // ── Access control ────────────────────────────────────────────────────────
 
   describe('Access control', () => {
