@@ -92,11 +92,19 @@ const OutboundMessagesWidget = ({
     }
 
     // If selectedConnection exists but principalNames couldn't be resolved
-    if (selectedConnection && !principalNames) {
-      const selectedDest = destinations.find((d) => d.destId === selectedConnection)
+    if (
+      selectedConnection &&
+      (!principalNames || principalNames.length === 0)
+    ) {
+      const selectedDest = destinations.find(
+        (d) => d.destId === selectedConnection
+      )
       const jurisdictionName = selectedDest?.jurisdiction?.name
       if (jurisdictionName) {
-        return `Cannot display outbound data: no organization found matching the destination's jurisdiction (${jurisdictionName}).`
+        if (!principalNames) {
+          return `Cannot display outbound data: no organization found matching the destination's jurisdiction (${jurisdictionName}).`
+        }
+        return `Cannot display outbound data: the organization matching the destination's jurisdiction (${jurisdictionName}) has no principal names configured.`
       }
       return 'Cannot display outbound data: unable to resolve organization for the selected destination.'
     }
@@ -119,7 +127,13 @@ const OutboundMessagesWidget = ({
   // Fetch message data from Elasticsearch
   useEffect(() => {
     // Don't fetch if there's an error condition, no connection selected, or missing required data
-    if (!selectedConnection || outboundError || !principalNames || principalNames.length === 0) return
+    if (
+      !selectedConnection ||
+      outboundError ||
+      !principalNames ||
+      principalNames.length === 0
+    )
+      return
 
     const controller = new AbortController()
 
@@ -147,7 +161,9 @@ const OutboundMessagesWidget = ({
         })
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch message data: ${response.status} ${response.statusText}`)
+          throw new Error(
+            `Failed to fetch message data: ${response.status} ${response.statusText}`
+          )
         }
 
         const data = await response.json()
