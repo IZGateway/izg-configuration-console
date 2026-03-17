@@ -80,24 +80,12 @@ const SystemResourcesWidget = () => {
     return () => clearInterval(intervalId)
   }, [])
 
-  const elasticIndex = process.env.NEXT_PUBLIC_ELASTIC_INDEX
-  if (!elasticIndex) {
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.error(
-        'NEXT_PUBLIC_ELASTIC_INDEX environment variable is not set.'
-      )
-    }
-    return null
-  }
-
-  const { index, template, params } = useMemo(() => {
+  const { template, params } = useMemo(() => {
     const now = new Date()
     const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const end = now.toISOString()
 
     return {
-      index: elasticIndex,
       template: {
         size: 0,
         query: {
@@ -112,15 +100,19 @@ const SystemResourcesWidget = () => {
           cpu: { avg: { field: 'system.cpu.total.pct' } },
           memory: { avg: { field: 'system.memory.actual.used.pct' } },
           disk: { avg: { field: 'system.filesystem.used.pct' } },
-          connections: { max: { field: 'system.socket.summary.tcp.all' } },
+          connections: {
+            max: {
+              field: 'system.socket.summary.tcp.all.established',
+              missing: 0,
+            },
+          },
         },
       },
       params: { start, end },
     }
-  }, [refreshToken, elasticIndex])
+  }, [refreshToken])
 
   const { data, error, isLoading } = useElasticTemplateQuery({
-    index,
     template,
     params,
     enabled: isAdmin,
@@ -129,7 +121,12 @@ const SystemResourcesWidget = () => {
   const cpu = toPercent(data?.aggregations?.cpu?.value)
   const memory = toPercent(data?.aggregations?.memory?.value)
   const disk = toPercent(data?.aggregations?.disk?.value)
-  const connections = data?.aggregations?.connections?.value
+  const establishedConnections = [data?.aggregations?.connections?.value].find(
+    (value) => Number.isFinite(value)
+  )
+  const activeConnections = Number.isFinite(establishedConnections)
+    ? Math.max(0, Math.round(establishedConnections as number))
+    : null
 
   return (
     <Card
@@ -182,7 +179,9 @@ const SystemResourcesWidget = () => {
             sx={{ color: palette.greyDarkTypography }}
           >
             Active Connections:{' '}
-            {error || isLoading ? 'N/A' : connections ?? 'N/A'}
+            {error || isLoading || activeConnections === null
+              ? 'N/A'
+              : activeConnections}
           </Typography>
         </>
       </CardContent>

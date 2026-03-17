@@ -7,7 +7,7 @@ export interface ElasticTemplateQueryParams {
 export type ElasticTemplate = string | Record<string, unknown>
 
 export interface ElasticTemplateQueryConfig {
-  index: string
+  index?: string
   template: ElasticTemplate
   params: ElasticTemplateQueryParams
   enabled?: boolean
@@ -34,7 +34,7 @@ const buildElasticRequest = (
 }
 
 const postElasticQuery = async (
-  index: string,
+  index: string | undefined,
   template: ElasticTemplate,
   params: ElasticTemplateQueryParams
 ) => {
@@ -52,10 +52,16 @@ const postElasticQuery = async (
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      index,
-      query: parsedQuery,
-    }),
+    body: JSON.stringify(
+      index
+        ? {
+            index,
+            query: parsedQuery,
+          }
+        : {
+            query: parsedQuery,
+          }
+    ),
   })
 
   if (!response.ok) {
@@ -80,7 +86,7 @@ const useElasticTemplateQuery = ({
   const key = enabled
     ? [
         'elastic-template-query',
-        index,
+        index || '__default_index__',
         JSON.stringify(template),
         JSON.stringify(params),
       ]

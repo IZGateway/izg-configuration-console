@@ -106,4 +106,41 @@ describe('useElasticTemplateQuery', () => {
     const fetcher = mockedUseSWR.mock.calls[0][1]
     await expect(fetcher()).rejects.toThrow('Forbidden')
   })
+
+  it('omits index from request body when index is undefined and uses default SWR index token', async () => {
+    const mockResponse = { ok: true, json: jest.fn().mockResolvedValue({}) }
+    globalAny.fetch.mockResolvedValue(mockResponse)
+
+    mockedUseSWR.mockImplementation((key, fetcher) => ({ key, fetcher }))
+
+    useElasticTemplateQuery({
+      template: {
+        size: 0,
+        query: {
+          match_all: {},
+        },
+      },
+      params: {},
+    })
+
+    const swrKey = mockedUseSWR.mock.calls[0][0]
+    expect(swrKey[0]).toBe('elastic-template-query')
+    expect(swrKey[1]).toBe('__default_index__')
+
+    const fetcher = mockedUseSWR.mock.calls[0][1]
+    await fetcher()
+
+    const fetchArgs = globalAny.fetch.mock.calls[0]
+    const body = JSON.parse(fetchArgs[1].body)
+
+    expect(body).toEqual({
+      query: {
+        size: 0,
+        query: {
+          match_all: {},
+        },
+      },
+    })
+    expect(body).not.toHaveProperty('index')
+  })
 })
