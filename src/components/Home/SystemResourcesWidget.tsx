@@ -126,7 +126,7 @@ const SystemResourcesWidget = () => {
   )
   const activeConnections = Number.isFinite(establishedConnections)
     ? Math.max(0, Math.round(establishedConnections as number))
-    : 0
+    : null
 
   return (
     <Card
@@ -178,7 +178,10 @@ const SystemResourcesWidget = () => {
             variant="body2"
             sx={{ color: palette.greyDarkTypography }}
           >
-            Active Connections: {error || isLoading ? 'N/A' : activeConnections}
+            Active Connections:{' '}
+            {error || isLoading || activeConnections === null
+              ? 'N/A'
+              : activeConnections}
           </Typography>
         </>
       </CardContent>

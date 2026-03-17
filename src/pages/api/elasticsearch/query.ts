@@ -39,6 +39,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    if (typeof query !== 'object' || query === null || Array.isArray(query)) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Query must be a JSON object',
+      })
+    }
+
     const queryObject = query as Record<string, unknown>
     const aggregations = queryObject?.aggs as
       | Record<string, unknown>
