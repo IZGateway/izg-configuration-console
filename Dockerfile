@@ -1,7 +1,7 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN  npm ci
+RUN npm ci
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
@@ -15,9 +15,7 @@ ARG NEXT_PUBLIC_OKTA_ISSUER=BAKED_NEXT_PUBLIC_OKTA_ISSUER
 ARG NEXT_PUBLIC_GA_ID=BAKED_NEXT_PUBLIC_GA_ID
 ARG NEXT_PUBLIC_BUILD_ID=${BUILD_ID}
 ARG NEXT_PUBLIC_APP_ENV=BAKED_NEXT_PUBLIC_APP_ENV
-ARG NEXT_PUBLIC_ELASTIC_ENV_TAG=BAKED_NEXT_PUBLIC_ELASTIC_ENV_TAG
 ARG NEXT_PUBLIC_ELASTIC_INDEX=BAKED_NEXT_PUBLIC_ELASTIC_INDEX
-ARG NEXT_PUBLIC_OPERATIONS_CONSOLE_ELASTIC_INDEX=BAKED_NEXT_PUBLIC_OPERATIONS_CONSOLE_ELASTIC_INDEX
 RUN npm run build
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
@@ -32,7 +30,7 @@ COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
 RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
-    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete 
+    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
