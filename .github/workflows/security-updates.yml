@@ -34,6 +34,31 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
       
+      - name: Configure npm authentication
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Configuring npm authentication for GitHub Packages..."
+          # Configure npm using npm config set commands
+          npm config set @izgateway:registry https://npm.pkg.github.com/
+          npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}
+          echo "✓ npm authentication configured"
+          # Verify configuration without exposing secrets
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "✓ NPM_TOKEN is set"
+          else
+            echo "✗ ERROR: NPM_TOKEN is not set"
+            exit 1
+          fi
+          # Verify registry configuration
+          REGISTRY=$(npm config get @izgateway:registry)
+          if [ "$REGISTRY" = "https://npm.pkg.github.com/" ]; then
+            echo "✓ Registry configured correctly"
+          else
+            echo "✗ ERROR: Registry not configured correctly"
+            exit 1
+          fi
+      
       - name: Install dependencies
         run: npm ci
 
@@ -65,7 +90,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Updating packages in overrides section..."
-          node $(which update-overrides)
+          node node_modules/@izgateway/dependency-scripts/update-overrides.js
           
           if git diff --quiet package.json; then
             echo "has_override_changes=false" >> $GITHUB_OUTPUT
@@ -81,7 +106,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node $(which fix-vulnerabilities)
+          node node_modules/@izgateway/dependency-scripts/fix-all-vulnerabilities.js
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
@@ -122,23 +147,11 @@ jobs:
           git checkout -b $BRANCH_NAME
           echo "✓ Created branch: $BRANCH_NAME"
       
-      - name: Update existing overrides
-        if: steps.final_check.outputs.has_changes == 'true'
-        run: |
-          echo "Updating packages in overrides section..."
-          node $(which update-overrides)
-      
-      - name: Fix all vulnerabilities
-        if: steps.final_check.outputs.has_changes == 'true'
-        run: |
-          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node $(which fix-vulnerabilities)
-      
       - name: Test override removal
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Testing if overrides can be removed..."
-          node $(which test-overrides)
+          node node_modules/@izgateway/dependency-scripts/test-overrides.js
       
       - name: Commit changes
         if: steps.final_check.outputs.has_changes == 'true'
@@ -240,3 +253,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ env.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base:** \`develop\`" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload npm logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-logs-${{ github.run_number }}
+          path: /home/runner/.npm/_logs/
+          retention-days: 7
+          if-no-files-found: warn
