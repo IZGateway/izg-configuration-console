@@ -5,17 +5,28 @@ import {
   CircularProgress,
   Alert,
   BoxProps,
-  FormControl,
-  Select,
-  MenuItem,
+  Chip,
+  TextField,
+  InputAdornment,
+  Popover,
+  Divider,
+  Button,
+  Tooltip,
 } from '@mui/material'
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked'
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked'
+import SearchIcon from '@mui/icons-material/Search'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import RefreshIcon from '@mui/icons-material/Refresh'
 import { useSession } from 'next-auth/react'
 import AppHeaderBar from '../AppHeader'
 import Container from '../Container'
+import palette from '../../styles/theme/palette'
 import InboundMessagesWidget from './InboundMessagesWidget'
 import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
 import type { Organization } from './MessagesWidgetContent'
+import { getElasticEnvTag } from '../../lib/desttypehelper'
 
 interface Destination {
   destId: string
@@ -26,9 +37,63 @@ interface Destination {
     description: string
   }
   destinationType?: {
-    typeId: string
-    typeName: string
+    typeId: number
+    type: string
   }
+}
+
+function toDisplayLabel(envType: string): string {
+  const map: Record<string, string> = {
+    DEV: 'Development',
+    PRODUCTION: 'Production',
+    ONBOARD: 'Onboarding',
+    TEST: 'Test',
+    STAGE: 'Staging',
+    UNKNOWN: 'Unknown',
+  }
+  return map[envType?.toUpperCase()] ?? envType
+}
+
+function getEnvColor(envType: string): string {
+  const colorMap: Record<string, string> = {
+    DEV: palette.secondary,
+    PRODUCTION: palette.active,
+    ONBOARD: palette.warning,
+    TEST: palette.primaryLight,
+    STAGE: palette.secondaryDark,
+    UNKNOWN: palette.grey,
+  }
+  return colorMap[envType?.toUpperCase()] ?? palette.grey
+}
+
+// Priority order for auto-selecting an environment when a destination is chosen
+const ENV_PRIORITY: Record<string, number> = {
+  PRODUCTION: 0,
+  ONBOARD: 1,
+  STAGE: 2,
+  DEV: 3,
+  TEST: 4,
+}
+
+function pickDefaultEnv(envTypes: string[]): string {
+  if (envTypes.length === 0) return ''
+  return [...envTypes].sort(
+    (a, b) =>
+      (ENV_PRIORITY[a.toUpperCase()] ?? 99) -
+      (ENV_PRIORITY[b.toUpperCase()] ?? 99)
+  )[0]
+}
+
+function Item(props: BoxProps) {
+  const { sx, ...other } = props
+  return (
+    <Box
+      sx={{
+        ...sx,
+      }}
+      {...other}
+    />
+  )
 }
 
 const Console = () => {
@@ -36,32 +101,51 @@ const Console = () => {
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
+  // Browsing state — drives the popover UI (highlight, env chip preview)
   const [selectedConnection, setSelectedConnection] = useState('')
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('')
+  // Committed state — only set when user explicitly clicks a destination.
+  // These are the only values passed to widgets so no API calls fire while browsing.
+  const [committedConnection, setCommittedConnection] = useState('')
+  const [committedEnvironment, setCommittedEnvironment] = useState<string>('')
+  const [destPopoverAnchor, setDestPopoverAnchor] =
+    useState<null | HTMLElement>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // Get the description for the selected destination
-  const selectedDestinationDescription = useMemo(() => {
-    const selectedDest = destinations.find(
-      (d) => d.destId === selectedConnection
-    )
-    if (selectedDest?.jurisdiction?.description) {
-      return `${selectedDest.jurisdiction.description} (${selectedConnection})`
-    }
-    return selectedConnection
+  // Unique destinations for the dropdown (deduplicated by destId)
+  const uniqueDestinations = useMemo(() => {
+    const seen = new Set<string>()
+    return destinations.filter((d) => {
+      if (seen.has(d.destId)) return false
+      seen.add(d.destId)
+      return true
+    })
+  }, [destinations])
+
+  // Environments available for the currently selected destId (sorted)
+  const availableEnvironmentsForSelected = useMemo(() => {
+    return destinations
+      .filter((d) => d.destId === selectedConnection && d.destinationType?.type)
+      .map((d) => d.destinationType?.type as string)
+      .sort()
   }, [destinations, selectedConnection])
+
+  // Committed record — drives widget queries; only changes on explicit user selection
+
+  const committedEnvTag = committedEnvironment
+    ? getElasticEnvTag(committedEnvironment)
+    : undefined
+
+  // Description shown in widget headers (uses committed connection)
+  const committedDestinationDescription = useMemo(() => {
+    const base =
+      uniqueDestinations.find((d) => d.destId === committedConnection)
+        ?.jurisdiction?.description ?? committedConnection
+    return `${base} (${committedConnection})`
+  }, [uniqueDestinations, committedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
-
-  function Item(props: BoxProps) {
-    const { sx, ...other } = props
-    return (
-      <Box
-        sx={{
-          ...sx,
-        }}
-        {...other}
-      />
-    )
-  }
 
   // Fetch destinations based on user session (admin or non-admin)
   useEffect(() => {
@@ -74,7 +158,18 @@ const Console = () => {
           const data = await response.json()
           setDestinations(data)
           if (data.length > 0) {
-            setSelectedConnection(data[0].destId)
+            const first = data[0]
+            const allEnvs = data
+              .filter(
+                (d: Destination) =>
+                  d.destId === first.destId && d.destinationType?.type
+              )
+              .map((d: Destination) => d.destinationType?.type as string)
+            const firstEnv = pickDefaultEnv(allEnvs)
+            setSelectedConnection(first.destId)
+            setSelectedEnvironment(firstEnv)
+            setCommittedConnection(first.destId)
+            setCommittedEnvironment(firstEnv)
           }
         } else {
           const errorMessage = `Failed to load destinations: ${response.status} ${response.statusText}`
@@ -173,7 +268,7 @@ const Console = () => {
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             gap: 2,
           }}
         >
@@ -193,13 +288,26 @@ const Console = () => {
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Typography
-              variant="caption"
-              color="primary"
-              sx={{ whiteSpace: 'nowrap' }}
-            >
-              MANUAL REFRESH
-            </Typography>
+            <Tooltip title="Refresh data" arrow>
+              <Button
+                variant="text"
+                color="primary"
+                startIcon={<RefreshIcon />}
+                onClick={() => {
+                  setRefreshKey((k) => k + 1)
+                }}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  '&:hover .MuiSvgIcon-root': {
+                    transform: 'rotate(180deg)',
+                    transition: 'transform 0.3s ease',
+                  },
+                }}
+              >
+                Refresh
+              </Button>
+            </Tooltip>
           </Box>
         </Box>
       </Box>
@@ -208,9 +316,12 @@ const Console = () => {
           backgroundColor: 'white',
           borderRadius: '0px 0px 32px 32px',
           boxShadow: 'none',
-          border: '1px solid #e0e0e0',
-          p: 1.5,
-          mb: 4,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          border: `1px solid ${palette.divider}`,
+          p: 2,
+          mb: 1,
         }}
       >
         {destinationsError && (
@@ -218,58 +329,280 @@ const Console = () => {
             {destinationsError}
           </Alert>
         )}
+
+        {/* ── Destination selector trigger ─────────────────────────── */}
         <Box
+          onClick={(e) =>
+            !destinationsLoading && setDestPopoverAnchor(e.currentTarget)
+          }
           sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: 3,
+            justifyContent: 'space-between',
+            minWidth: '38%',
+            gap: 1.5,
+            cursor: destinationsLoading ? 'default' : 'pointer',
+            borderRadius: '0px 0px 0px 16px',
+            p: 2,
+            border: '1px solid',
+            borderColor: palette.divider,
+            transition: 'border-color 0.15s, box-shadow 0.15s',
+            '&:hover': {
+              borderColor: palette.primary,
+              boxShadow: '0 0 0 2px rgba(25,118,210,0.08)',
+            },
+            userSelect: 'none',
           }}
         >
-          <FormControl sx={{ minWidth: 200 }}>
-            <Select
-              value={selectedConnection}
-              onChange={(e) => setSelectedConnection(e.target.value)}
-              disabled={destinationsLoading}
-              sx={{
-                fontSize: '16px',
-                fontWeight: 500,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: 'none',
-                },
-              }}
-            >
-              {destinationsLoading ? (
-                <MenuItem value="">
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  Loading...
-                </MenuItem>
-              ) : destinations.length === 0 ? (
-                <MenuItem value="">No destinations available</MenuItem>
-              ) : (
-                destinations.map((dest) => (
-                  <MenuItem key={dest.destId} value={dest.destId}>
-                    {dest.jurisdiction?.description
-                      ? `${dest.jurisdiction.description} (${dest.destId})`
-                      : dest.destId}
-                  </MenuItem>
-                ))
-              )}
-            </Select>
-          </FormControl>
-          <Typography
-            variant="body2"
-            color="textSecondary"
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            {destinationsLoading ? (
+              <CircularProgress size={18} />
+            ) : selectedConnection ? (
+              <Typography
+                fontWeight={700}
+                sx={{
+                  fontSize: '20px',
+                  lineHeight: 1.2,
+                  color: 'text.primary',
+                }}
+              >
+                {uniqueDestinations.find((d) => d.destId === selectedConnection)
+                  ?.jurisdiction?.description ?? selectedConnection}
+              </Typography>
+            ) : (
+              <Typography
+                sx={{
+                  fontSize: '16px',
+                  lineHeight: 1.2,
+                  color: 'text.secondary',
+                  fontStyle: 'italic',
+                }}
+              >
+                Select a destination
+              </Typography>
+            )}
+
+            {!destinationsLoading && selectedEnvironment && (
+              <Chip
+                icon={
+                  <RadioButtonCheckedIcon
+                    sx={{ fontSize: '13px !important' }}
+                  />
+                }
+                label={toDisplayLabel(selectedEnvironment)}
+                size="small"
+                sx={{
+                  fontWeight: 600,
+                  pointerEvents: 'none',
+                  bgcolor: getEnvColor(selectedEnvironment),
+                  color: palette.white,
+                  '& .MuiChip-icon': { color: palette.white },
+                }}
+              />
+            )}
+          </Box>
+          <ExpandMoreIcon
             sx={{
-              flex: 1,
-              textAlign: 'right',
+              color: 'primary.main',
+              fontSize: 20,
+              transform: destPopoverAnchor ? 'rotate(180deg)' : 'none',
+              transition: 'transform 0.2s',
+            }}
+          />
+        </Box>
+
+        {/* ── Popover: env chips + destination search ───────────────── */}
+        <Popover
+          open={Boolean(destPopoverAnchor)}
+          anchorEl={destPopoverAnchor}
+          onClose={() => {
+            setDestPopoverAnchor(null)
+            setSearchQuery('')
+          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          PaperProps={{
+            sx: { mt: 0.5, borderRadius: 2, boxShadow: 4, width: 420 },
+          }}
+        >
+          {/* Env chips + search row */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 1.5,
+              pt: 1.5,
+              pb: 1,
+              flexWrap: 'wrap',
             }}
           >
-            Use the dropdown menu to switch between connections or data sources,
-            allowing you to explore metrics for different environments,
-            accounts, or systems as needed.
-          </Typography>
-        </Box>
+            {availableEnvironmentsForSelected.map((env) => {
+              const selected = selectedEnvironment === env
+              const envColor = getEnvColor(env)
+              return (
+                <Chip
+                  key={env}
+                  icon={
+                    selected ? (
+                      <RadioButtonCheckedIcon
+                        sx={{ fontSize: '14px !important' }}
+                      />
+                    ) : (
+                      <RadioButtonUncheckedIcon
+                        sx={{ fontSize: '14px !important' }}
+                      />
+                    )
+                  }
+                  label={toDisplayLabel(env)}
+                  onClick={() => {
+                    setSelectedEnvironment(env)
+                    // Commit immediately — destination is already confirmed
+                    if (committedConnection) setCommittedEnvironment(env)
+                  }}
+                  variant={selected ? 'filled' : 'outlined'}
+                  size="small"
+                  clickable
+                  sx={{
+                    fontWeight: selected ? 600 : 400,
+                    ...(selected && {
+                      bgcolor: envColor,
+                      color: palette.white,
+                      '& .MuiChip-icon': { color: palette.white },
+                    }),
+                    ...(!selected && {
+                      borderColor: envColor,
+                      color: envColor,
+                      '& .MuiChip-icon': { color: envColor },
+                    }),
+                  }}
+                />
+              )
+            })}
+
+            <TextField
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for destinations"
+              size="small"
+              sx={{
+                flex: 1,
+                minWidth: 160,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon
+                      sx={{ fontSize: 16, color: 'text.secondary' }}
+                    />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+
+          <Divider />
+
+          {/* Destination list */}
+          {(() => {
+            const filtered = uniqueDestinations.filter((d) => {
+              const q = searchQuery.toLowerCase()
+              return (
+                (d.jurisdiction?.description ?? '').toLowerCase().includes(q) ||
+                d.destId.toLowerCase().includes(q)
+              )
+            })
+            return filtered.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ px: 2, py: 1.5 }}
+              >
+                No destinations found
+              </Typography>
+            ) : (
+              <Box
+                component="ul"
+                sx={{
+                  m: 0,
+                  p: 0,
+                  listStyle: 'none',
+                  maxHeight: 260,
+                  overflowY: 'auto',
+                }}
+              >
+                {filtered.map((dest) => {
+                  const isSelected = dest.destId === selectedConnection
+                  return (
+                    <Box
+                      component="li"
+                      key={dest.destId}
+                      onClick={() => {
+                        const firstEnv = pickDefaultEnv(
+                          destinations
+                            .filter(
+                              (d) =>
+                                d.destId === dest.destId &&
+                                d.destinationType?.type
+                            )
+                            .map((d) => d.destinationType?.type as string)
+                        )
+                        setSelectedConnection(dest.destId)
+                        setSelectedEnvironment(firstEnv)
+                        // Commit — this is the explicit user selection that drives API calls
+                        setCommittedConnection(dest.destId)
+                        setCommittedEnvironment(firstEnv)
+                        setDestPopoverAnchor(null)
+                        setSearchQuery('')
+                      }}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        cursor: 'pointer',
+                        bgcolor: isSelected ? 'primary.50' : 'transparent',
+                        borderLeft: isSelected
+                          ? '3px solid'
+                          : '3px solid transparent',
+                        borderColor: isSelected
+                          ? getEnvColor(selectedEnvironment)
+                          : 'transparent',
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={isSelected ? 600 : 400}
+                      >
+                        {dest.jurisdiction?.description ?? dest.destId}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {dest.destId}
+                      </Typography>
+                    </Box>
+                  )
+                })}
+              </Box>
+            )
+          })()}
+        </Popover>
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          sx={{
+            flex: 1,
+            textAlign: 'left',
+            fontSize: '13px',
+          }}
+        >
+          Use the dropdown menu to switch between connections or data sources,
+          allowing you to explore metrics for different environments, accounts,
+          or systems as needed.
+        </Typography>
       </Box>
       <Box
         sx={{
@@ -285,22 +618,30 @@ const Console = () => {
             flexDirection: 'column',
           }}
         >
-          <DestinationDetailWidget selectedConnection={selectedConnection} />
+          <DestinationDetailWidget
+            key={`detail-${committedConnection}-${refreshKey}`}
+            selectedConnection={committedConnection}
+            envTag={committedEnvTag}
+          />
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
           <OutboundMessagesWidget
-            selectedConnection={selectedConnection}
-            selectedConnectionDescription={selectedDestinationDescription}
+            key={`outbound-${committedConnection}-${refreshKey}`}
+            selectedConnection={committedConnection}
+            selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
             destinations={destinations}
+            envTag={committedEnvTag}
           />
           <InboundMessagesWidget
-            selectedConnection={selectedConnection}
-            selectedConnectionDescription={selectedDestinationDescription}
+            key={`inbound-${committedConnection}-${refreshKey}`}
+            selectedConnection={committedConnection}
+            selectedConnectionDescription={committedDestinationDescription}
             organizations={organizations}
             organizationsLoading={organizationsLoading}
+            envTag={committedEnvTag}
           />
         </Item>
       </Box>

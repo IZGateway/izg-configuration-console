@@ -119,6 +119,23 @@ function destTypeFormattedToSyncWithApi(dest: string) {
   }
 }
 
+/**
+ * Get the Elasticsearch environment tag for a given destination type name.
+ * Maps the DB type string to the corresponding Elasticsearch index tag.
+ * @param destType - The destination type string (e.g. 'PRODUCTION', 'ONBOARD')
+ * @returns The Elasticsearch tag string
+ */
+export function getElasticEnvTag(destType: string): string {
+  const tagMap: Record<string, string> = {
+    PRODUCTION: 'prod',
+    ONBOARD: 'onboard',
+    STAGE: 'staging',
+    DEV: 'dev',
+    TEST: 'test',
+  }
+  return tagMap[destType?.toUpperCase()] ?? 'dev'
+}
+
 const desttypehelper = {
   destTypeFormattedToSyncWithApi,
   destTypeFormattedToSyncWithDB,

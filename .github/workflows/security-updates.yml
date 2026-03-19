@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  packages: read
 
 jobs:
   update-dependencies:
@@ -25,6 +26,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
       
       - name: Configure Git
         run: |
@@ -58,9 +61,13 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
-      
-      - name: Install npm-check-updates
-        run: npm install -g npm-check-updates
+
+      - name: Install security tooling
+        run: |
+          npm install -g npm-check-updates
+          npm install -g @izgateway/dependency-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Run ncu and check for updates
         id: ncu_check
@@ -79,6 +86,8 @@ jobs:
       
       - name: Update existing overrides
         id: override_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Updating packages in overrides section..."
           node node_modules/@izgateway/dependency-scripts/update-overrides.js
@@ -93,6 +102,8 @@ jobs:
       
       - name: Fix all vulnerabilities
         id: security_check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
           node node_modules/@izgateway/dependency-scripts/fix-all-vulnerabilities.js

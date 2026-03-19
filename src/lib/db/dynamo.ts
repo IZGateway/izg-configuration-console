@@ -835,6 +835,38 @@ class Dynamo implements DbClient {
     }
 
     try {
+      // Fetch the existing record to capture old values for audit logging
+      const oldRecord = await dynamodDbDocClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: {
+            entityType: 'AccessGroup',
+            sortKey: sortKey,
+          },
+        })
+      )
+      const oldValues = oldRecord.Item
+        ? {
+            groupName: oldRecord.Item.groupName,
+            description: oldRecord.Item.description,
+            roles: Array.isArray(oldRecord.Item.roles)
+              ? oldRecord.Item.roles
+              : oldRecord.Item.roles
+              ? Array.from(oldRecord.Item.roles)
+              : [],
+            users: Array.isArray(oldRecord.Item.users)
+              ? oldRecord.Item.users
+              : oldRecord.Item.users
+              ? Array.from(oldRecord.Item.users)
+              : [],
+            groups: Array.isArray(oldRecord.Item.groups)
+              ? oldRecord.Item.groups
+              : oldRecord.Item.groups
+              ? Array.from(oldRecord.Item.groups)
+              : [],
+          }
+        : null
+
       const result = await dynamodDbDocClient.send(new UpdateCommand(params))
 
       if (result.Attributes) {
@@ -856,7 +888,18 @@ class Dynamo implements DbClient {
             ? Array.from(result.Attributes.groups)
             : [],
         }
-        logger.info('Updated AccessGroupRecord', { accessGroup: agr })
+        logger.info('Updated AccessGroupRecord', {
+          sortKey,
+          oldValues,
+          newValues: {
+            groupName: result.Attributes.groupName,
+            description: result.Attributes.description,
+            roles: agr.roles,
+            users: agr.users,
+            groups: agr.groups,
+          },
+          operation: 'updateAccessGroup',
+        })
         return agr
       }
 
@@ -938,6 +981,7 @@ class Dynamo implements DbClient {
       logger.info('Added AccessGroupRecord', {
         sortKey: sortKey,
         accessGroup: item,
+        operation: 'addAccessGroup',
       })
 
       // Return the created item in the expected format

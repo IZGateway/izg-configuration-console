@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import AnimatedNumber from './AnimatedNumber'
 
 interface FailureItemProps {
   type: string
@@ -41,10 +42,10 @@ const FailureItem = ({ type, count, percentage }: FailureItemProps) => {
           variant="h6"
           sx={{ fontWeight: 700, color: '#f44336', mb: 0.5 }}
         >
-          {count}
+          <AnimatedNumber value={count} duration={1200} />
         </Typography>
         <Typography variant="caption" sx={{ color: '#999' }}>
-          {percentage} of Traffic
+          <AnimatedNumber value={percentage} duration={1200} /> of Traffic
         </Typography>
       </Box>
     </Box>
