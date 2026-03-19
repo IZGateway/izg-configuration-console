@@ -81,7 +81,7 @@ jobs:
         id: override_check
         run: |
           echo "Updating packages in overrides section..."
-          update-overrides
+          npx update-overrides 
           
           if git diff --quiet package.json; then
             echo "has_override_changes=false" >> $GITHUB_OUTPUT
@@ -95,7 +95,7 @@ jobs:
         id: security_check
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          fix-vulnerabilities
+          npx fix-vulnerabilities
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
@@ -136,23 +136,11 @@ jobs:
           git checkout -b $BRANCH_NAME
           echo "✓ Created branch: $BRANCH_NAME"
       
-      - name: Update existing overrides
-        if: steps.final_check.outputs.has_changes == 'true'
-        run: |
-          echo "Updating packages in overrides section..."
-          node scripts/update-overrides.js
-      
-      - name: Fix all vulnerabilities
-        if: steps.final_check.outputs.has_changes == 'true'
-        run: |
-          echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          node scripts/fix-all-vulnerabilities.js
-      
       - name: Test override removal
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Testing if overrides can be removed..."
-          node scripts/test-overrides.js
+          npx test-overrides
       
       - name: Commit changes
         if: steps.final_check.outputs.has_changes == 'true'
