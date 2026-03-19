@@ -81,7 +81,7 @@ jobs:
         id: override_check
         run: |
           echo "Updating packages in overrides section..."
-          npx update-overrides 
+          node node_modules/@izgateway/dependency-scripts/update-overrides.js
           
           if git diff --quiet package.json; then
             echo "has_override_changes=false" >> $GITHUB_OUTPUT
@@ -95,7 +95,7 @@ jobs:
         id: security_check
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
-          npx fix-vulnerabilities
+          node node_modules/@izgateway/dependency-scripts/fix-all-vulnerabilities.js
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
@@ -140,7 +140,7 @@ jobs:
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           echo "Testing if overrides can be removed..."
-          npx test-overrides
+          node node_modules/@izgateway/dependency-scripts/test-overrides.js
       
       - name: Commit changes
         if: steps.final_check.outputs.has_changes == 'true'
