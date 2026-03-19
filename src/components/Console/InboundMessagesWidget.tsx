@@ -6,7 +6,6 @@ import {
   DEFAULT_MESSAGE_METRICS,
 } from './types/messageMetrics'
 import {
-  ELASTICSEARCH_INDEX,
   ELASTICSEARCH_API_ENDPOINT,
   buildInboundCombinedQuery,
 } from './queries/inboundMessagesQuery'
@@ -16,6 +15,7 @@ interface InboundMessagesWidgetProps {
   selectedConnectionDescription?: string
   organizations?: Organization[]
   organizationsLoading?: boolean
+  envTag?: string
 }
 
 const InboundMessagesWidget = ({
@@ -23,6 +23,7 @@ const InboundMessagesWidget = ({
   selectedConnectionDescription,
   organizations = [],
   organizationsLoading = false,
+  envTag,
 }: InboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
     DEFAULT_MESSAGE_METRICS
@@ -61,11 +62,11 @@ const InboundMessagesWidget = ({
         // Fetch combined metrics and errors data in a single call
         const combinedQuery = buildInboundCombinedQuery(
           selectedConnection,
-          principalNames
+          principalNames,
+          envTag
         )
 
         const requestBody = {
-          index: ELASTICSEARCH_INDEX,
           query: combinedQuery,
         }
 
@@ -200,7 +201,7 @@ const InboundMessagesWidget = ({
     fetchMessageData()
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConnection, principalNamesKey])
+  }, [selectedConnection, principalNamesKey, envTag])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
