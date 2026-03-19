@@ -145,6 +145,7 @@ jobs:
           file: Dockerfile
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
