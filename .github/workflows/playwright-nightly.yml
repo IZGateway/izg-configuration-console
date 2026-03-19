@@ -78,9 +78,15 @@ jobs:
           done
 
           wait
-      - name: Install dependencies
+      - name: Configure npm authentication
         env:
-          GITHUB_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Configuring npm authentication for GitHub Packages..."
+          npm config set @izgateway:registry https://npm.pkg.github.com/
+          npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}
+          echo "✓ npm authentication configured"
+      - name: Install dependencies
         run: npm ci --force
 
       - name: Install Playwright Browsers
