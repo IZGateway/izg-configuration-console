@@ -57,7 +57,7 @@ jobs:
       - name: Update existing overrides
         id: override_check
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           echo "Updating packages in overrides section..."
           update-overrides
@@ -73,7 +73,7 @@ jobs:
       - name: Fix all vulnerabilities
         id: security_check
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
           fix-vulnerabilities

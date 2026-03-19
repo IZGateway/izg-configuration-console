@@ -27,9 +27,6 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# npm authentication (contains tokens)
-.npmrc
-
 # typescript
 *.tsbuildinfo
 
