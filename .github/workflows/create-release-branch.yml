@@ -61,7 +61,7 @@ jobs:
           node-version: '24.x'
       - name: Install Dependencies
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm ci --force
       # - name: Run Jest Unit Tests
       #   run: npm run test
