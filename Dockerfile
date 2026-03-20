@@ -1,7 +1,10 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+ARG NPM_TOKEN
+RUN npm config set @izgateway:registry https://npm.pkg.github.com/ \
+    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
+    && npm ci
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
@@ -29,7 +32,10 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
+ARG NPM_TOKEN
 RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+    && npm config set @izgateway:registry https://npm.pkg.github.com/ \
+    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next

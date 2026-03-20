@@ -59,6 +59,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '24.x'
+      - name: Configure npm authentication
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Configuring npm authentication for GitHub Packages..."
+          npm config set @izgateway:registry https://npm.pkg.github.com/
+          npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}
+          echo "✓ npm authentication configured"
       - name: Install Dependencies
         run: npm ci --force
       # - name: Run Jest Unit Tests
@@ -137,6 +145,7 @@ jobs:
           file: Dockerfile
           build-args: |
             BUILD_ID=${{ needs.generate-release-timestamp.outputs.releaseDate }}
+            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
           push: true
           tags: |
             ${{ steps.meta.outputs.tags }}
