@@ -76,10 +76,6 @@ export function isUpdateAccessGroupRequest(
   if (!data || typeof data !== 'object') return false
   const obj = data as Record<string, unknown>
 
-  // Validate groupName if provided
-  if (obj.groupName !== undefined && !isValidGroupName(obj.groupName))
-    return false
-
   // Optional arrays
   if (obj.roles !== undefined && !isValidRolesArray(obj.roles)) return false
   if (obj.users !== undefined && !isValidUsersArray(obj.users)) return false
