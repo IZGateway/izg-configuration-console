@@ -1,3 +1,5 @@
+export type StatusLevel = 'healthy' | 'warning' | 'critical' | 'nodata'
+
 export interface MetricChange {
   percent: string
   isUp: boolean
