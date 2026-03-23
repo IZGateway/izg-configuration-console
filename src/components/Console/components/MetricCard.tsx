@@ -1,7 +1,26 @@
 import { Card, CardHeader, Typography, Box } from '@mui/material'
-import { MetricChange } from '../types/destinationMetrics'
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
+import { MetricChange, StatusLevel } from '../types/destinationMetrics'
 import AnimatedNumber from './AnimatedNumber'
 import palette from '../../../styles/theme/palette'
+
+const STATUS_CONFIG: Record<
+  StatusLevel,
+  { icon: React.ReactNode; color: string; label: string }
+> = {
+  healthy: { icon: '\u2713', color: palette.activeDark, label: 'Healthy' },
+  warning: {
+    icon: (
+      <WarningAmberOutlinedIcon
+        sx={{ fontSize: 'inherit', color: palette.warningAccessible }}
+      />
+    ),
+    color: palette.warningAccessible,
+    label: 'Warning',
+  },
+  critical: { icon: '\u2715', color: palette.error, label: 'Critical' },
+  nodata: { icon: '\u2014', color: palette.greyText, label: 'No Data' },
+}
 
 interface MetricCardProps {
   id: string
@@ -10,6 +29,7 @@ interface MetricCardProps {
   value: string
   change?: MetricChange
   changeLabel?: 'updown' | 'fasterslower'
+  status?: StatusLevel
 }
 
 /**
@@ -22,6 +42,7 @@ const MetricCard = ({
   value,
   change,
   changeLabel = 'updown',
+  status,
 }: MetricCardProps) => {
   const getChangeText = () => {
     if (!change) {
@@ -38,10 +59,14 @@ const MetricCard = ({
           <Box
             component="span"
             sx={{
-              color: change.isUp ? palette.active : palette.error,
+              color: change.isUp ? palette.activeDark : palette.error,
             }}
           >
-            {change.isUp ? '↓' : '↑'} {change.percent}
+            {/* aria-hidden: direction text ('Faster'/'Slower') already conveys meaning */}
+            <Box component="span" aria-hidden="true">
+              {change.isUp ? '↓' : '↑'}{' '}
+            </Box>
+            {change.percent}
           </Box>{' '}
           {change.isUp ? 'Faster' : 'Slower'} Than Yesterday
         </Typography>
@@ -53,10 +78,14 @@ const MetricCard = ({
         <Box
           component="span"
           sx={{
-            color: change.isUp ? palette.active : palette.error,
+            color: change.isUp ? palette.activeDark : palette.error,
           }}
         >
-          {change.isUp ? '↑' : '↓'} {change.percent}
+          {/* aria-hidden: direction text ('Up'/'Down') already conveys meaning */}
+          <Box component="span" aria-hidden="true">
+            {change.isUp ? '↑' : '↓'}{' '}
+          </Box>
+          {change.percent}
         </Box>{' '}
         {change.isUp ? 'Up' : 'Down'} From Yesterday
       </Typography>
@@ -65,6 +94,8 @@ const MetricCard = ({
 
   return (
     <Card
+      role="region"
+      aria-label={title}
       sx={{
         marginTop: 4,
         borderRadius: '50px',
@@ -76,7 +107,11 @@ const MetricCard = ({
       <CardHeader
         title={title}
         subheader={subheader}
-        titleTypographyProps={{ fontWeight: 600, fontSize: '1.25rem' }}
+        titleTypographyProps={{
+          component: 'h2',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+        }}
         subheaderTypographyProps={{
           variant: 'body2',
           color: palette.greyDarkTypography,
@@ -93,8 +128,22 @@ const MetricCard = ({
           >
             <Typography
               variant="h5"
-              sx={{ color: palette.primary, fontWeight: 700 }}
+              component="span"
+              sx={{
+                display: 'block',
+                color: status ? STATUS_CONFIG[status].color : palette.primary,
+                fontWeight: 700,
+              }}
             >
+              {status && (
+                <Box
+                  component="span"
+                  aria-label={STATUS_CONFIG[status].label}
+                  sx={{ mr: 0.5, fontSize: '0.85em', verticalAlign: 'middle' }}
+                >
+                  {STATUS_CONFIG[status].icon}
+                </Box>
+              )}
               <AnimatedNumber value={value} duration={1200} />
             </Typography>
             {getChangeText()}
