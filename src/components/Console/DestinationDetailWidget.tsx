@@ -6,13 +6,6 @@ import {
   buildDestinationMetricsQuery,
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/destinationMetricsQuery'
-import {
-  mockDestinationMetrics,
-  mockMetricCardStatuses,
-} from './__mocks__/mockConsoleData'
-
-// TEMP: set to true to use mock data locally — DELETE before merging
-const USE_MOCK_DATA = true
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
@@ -47,23 +40,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
 
   // Fetch data from Elasticsearch when selectedConnection changes
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const m = mockDestinationMetrics
-      setIzgatewayStatus(m.izgatewayStatus)
-      setTotalMessages(m.totalMessages)
-      setMessageChange(m.messageChange)
-      setSuccessRate(m.successRate)
-      setSuccessRateChange(m.successRateChange)
-      setMedianResponseTime(m.medianResponseTime)
-      setMedianResponseTimeChange(m.medianResponseTimeChange)
-      setPercentile95ResponseTime(m.percentile95ResponseTime)
-      setPercentile95Change(m.percentile95Change)
-      setAvgThroughput(m.avgThroughput)
-      setPeakThroughput(m.peakThroughput)
-      setThroughputChange(m.throughputChange)
-      setLastUpdateTime(m.lastUpdateTime)
-      return
-    }
     if (!selectedConnection) return
 
     const fetchDestinationData = async () => {
@@ -255,9 +231,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         title="My IZ Gateway Status"
         subheader={`Status Health - Last Updated at ${lastUpdateTime}`}
         value={izgatewayStatus}
-        status={
-          USE_MOCK_DATA ? mockMetricCardStatuses.izgatewayStatus : undefined
-        }
       />
 
       {/* Total Messages */}
@@ -268,9 +241,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={totalMessages}
         change={messageChange}
         changeLabel="updown"
-        status={
-          USE_MOCK_DATA ? mockMetricCardStatuses.totalMessages : undefined
-        }
       />
 
       {/* Success Rate */}
@@ -281,7 +251,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={successRate}
         change={successRateChange}
         changeLabel="updown"
-        status={USE_MOCK_DATA ? mockMetricCardStatuses.successRate : undefined}
       />
 
       {/* Average Throughput */}
@@ -292,9 +261,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={avgThroughput}
         change={throughputChange}
         changeLabel="updown"
-        status={
-          USE_MOCK_DATA ? mockMetricCardStatuses.avgThroughput : undefined
-        }
       />
 
       {/* Median Response Time */}
@@ -305,9 +271,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={medianResponseTime}
         change={medianResponseTimeChange}
         changeLabel="fasterslower"
-        status={
-          USE_MOCK_DATA ? mockMetricCardStatuses.medianResponseTime : undefined
-        }
       />
 
       {/* 95th Percentile Response Time */}
@@ -318,11 +281,6 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={percentile95ResponseTime}
         change={percentile95Change}
         changeLabel="fasterslower"
-        status={
-          USE_MOCK_DATA
-            ? mockMetricCardStatuses.percentile95ResponseTime
-            : undefined
-        }
       />
     </Box>
   )

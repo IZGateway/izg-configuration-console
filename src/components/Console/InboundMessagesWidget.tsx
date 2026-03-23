@@ -9,14 +9,6 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildInboundCombinedQuery,
 } from './queries/inboundMessagesQuery'
-import {
-  mockInboundMetrics,
-  mockInboundFailures,
-  mockInboundStatuses,
-} from './__mocks__/mockConsoleData'
-
-// TEMP: set to true to use mock data locally — DELETE before merging
-const USE_MOCK_DATA = true
 
 interface InboundMessagesWidgetProps {
   selectedConnection?: string
@@ -60,11 +52,6 @@ const InboundMessagesWidget = ({
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      setMetrics(mockInboundMetrics)
-      setFailures(mockInboundFailures)
-      return
-    }
     if (!selectedConnection) return
 
     const controller = new AbortController()
@@ -234,7 +221,6 @@ const InboundMessagesWidget = ({
       organizations={organizations}
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
-      metricStatuses={USE_MOCK_DATA ? mockInboundStatuses : undefined}
     />
   )
 }

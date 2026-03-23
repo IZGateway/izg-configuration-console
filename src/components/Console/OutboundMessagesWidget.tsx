@@ -9,14 +9,6 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildOutboundCombinedQuery,
 } from './queries/outboundMessagesQuery'
-import {
-  mockOutboundMetrics,
-  mockOutboundFailures,
-  mockOutboundStatuses,
-} from './__mocks__/mockConsoleData'
-
-// TEMP: set to true to use mock data locally — DELETE before merging
-const USE_MOCK_DATA = true
 
 interface Destination {
   destId: string
@@ -94,7 +86,6 @@ const OutboundMessagesWidget = ({
 
   // Compute error message if principalNames or destinationFromOrganization can't be found
   const outboundError = useMemo(() => {
-    if (USE_MOCK_DATA) return undefined
     // Avoid showing an error while organizations are still loading
     if (organizationsLoading) {
       return undefined
@@ -135,11 +126,6 @@ const OutboundMessagesWidget = ({
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      setMetrics(mockOutboundMetrics)
-      setFailures(mockOutboundFailures)
-      return
-    }
     // Don't fetch if there's an error condition, no connection selected, or missing required data
     if (
       !selectedConnection ||
@@ -324,7 +310,6 @@ const OutboundMessagesWidget = ({
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
       error={outboundError}
-      metricStatuses={USE_MOCK_DATA ? mockOutboundStatuses : undefined}
     />
   )
 }

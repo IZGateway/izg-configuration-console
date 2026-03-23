@@ -28,13 +28,6 @@ import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
 import type { Organization } from './MessagesWidgetContent'
 import { getElasticEnvTag } from '../../lib/desttypehelper'
-import {
-  mockDestinations,
-  mockOrganizations,
-} from './__mocks__/mockConsoleData'
-
-// TEMP: set to true to use mock data locally — DELETE before merging
-const USE_MOCK_DATA = true
 
 interface Destination {
   destId: string
@@ -170,23 +163,6 @@ const Console = () => {
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
 
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      const data = mockDestinations
-      setDestinations(data)
-      if (data.length > 0) {
-        const first = data[0]
-        const allEnvs = data
-          .filter((d) => d.destId === first.destId && d.destinationType?.type)
-          .map((d) => d.destinationType?.type as string)
-        const firstEnv = pickDefaultEnv(allEnvs)
-        setSelectedConnection(first.destId)
-        setSelectedEnvironment(firstEnv)
-        setCommittedConnection(first.destId)
-        setCommittedEnvironment(firstEnv)
-      }
-      setDestinationsLoading(false)
-      return
-    }
     const fetchDestinations = async () => {
       try {
         setDestinationsLoading(true)
@@ -232,10 +208,6 @@ const Console = () => {
   }, [status])
 
   useEffect(() => {
-    if (USE_MOCK_DATA) {
-      setOrganizations(mockOrganizations)
-      return
-    }
     if (status !== 'authenticated') {
       setOrganizationsLoading(false)
       return
