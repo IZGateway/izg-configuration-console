@@ -760,13 +760,6 @@ class Dynamo implements DbClient {
 
     const updates: string[] = []
 
-    // Update groupName if provided
-    if (updateData.groupName !== undefined) {
-      updates.push('#groupName = :groupName')
-      params.ExpressionAttributeNames['#groupName'] = 'groupName'
-      params.ExpressionAttributeValues[':groupName'] = updateData.groupName
-    }
-
     // Update description if provided
     if (updateData.description !== undefined) {
       updates.push('#description = :description')
@@ -847,7 +840,6 @@ class Dynamo implements DbClient {
       )
       const oldValues = oldRecord.Item
         ? {
-            groupName: oldRecord.Item.groupName,
             description: oldRecord.Item.description,
             roles: Array.isArray(oldRecord.Item.roles)
               ? oldRecord.Item.roles
@@ -864,6 +856,8 @@ class Dynamo implements DbClient {
               : oldRecord.Item.groups
               ? Array.from(oldRecord.Item.groups)
               : [],
+            updatedBy: oldRecord.Item.updatedBy,
+            updatedOn: oldRecord.Item.updatedOn,
           }
         : null
 
@@ -890,15 +884,19 @@ class Dynamo implements DbClient {
         }
         logger.info('Updated AccessGroupRecord', {
           sortKey,
+          groupName: result.Attributes.groupName,
+          environment: getEnvironmentName(Number(result.Attributes.environment)),
           oldValues,
           newValues: {
-            groupName: result.Attributes.groupName,
             description: result.Attributes.description,
             roles: agr.roles,
             users: agr.users,
             groups: agr.groups,
+            updatedBy: result.Attributes.updatedBy,
+            updatedOn: result.Attributes.updatedOn,
           },
           operation: 'updateAccessGroup',
+          entityType: 'AccessGroup',
         })
         return agr
       }
