@@ -11,7 +11,6 @@ export interface CreateAccessGroupRequest {
 }
 
 export interface UpdateAccessGroupRequest {
-  groupName?: string
   roles?: string[]
   users?: string[]
   groups?: string[]
