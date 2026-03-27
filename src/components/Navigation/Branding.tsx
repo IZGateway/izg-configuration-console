@@ -41,7 +41,7 @@ const IZGLogo = () => {
                 textWrap: 'wrap',
                 fontWeight: '300',
                 lineHeight: '1.4em',
-                fontSize: '10px',
+                fontSize: '12px',
               }}
               variant="caption"
               component="div"
