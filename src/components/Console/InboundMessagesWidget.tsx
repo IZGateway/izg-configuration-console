@@ -9,6 +9,11 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildInboundCombinedQuery,
 } from './queries/inboundMessagesQuery'
+import {
+  getStatusLevel,
+  parseResponseTimeMs,
+  THRESHOLD_MAP,
+} from './config/statusThresholds'
 
 interface InboundMessagesWidgetProps {
   selectedConnection?: string
@@ -205,6 +210,28 @@ const InboundMessagesWidget = ({
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
+  const metricStatuses = useMemo(
+    () => ({
+      totalMessages: getStatusLevel(
+        metrics.totalMessages,
+        THRESHOLD_MAP.inboundTotalMessages
+      ),
+      successRate: getStatusLevel(
+        parseFloat(metrics.successRate),
+        THRESHOLD_MAP.inboundSuccessRate
+      ),
+      avgResponse: getStatusLevel(
+        parseResponseTimeMs(metrics.avgResponseTime),
+        THRESHOLD_MAP.inboundAvgResponse
+      ),
+      totalFailures: getStatusLevel(
+        metrics.totalFailures,
+        THRESHOLD_MAP.inboundTotalFailures
+      ),
+    }),
+    [metrics]
+  )
+
   return (
     <MessagesWidgetContent
       title="Inbound Messages"
@@ -221,6 +248,7 @@ const InboundMessagesWidget = ({
       organizations={organizations}
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
+      metricStatuses={metricStatuses}
     />
   )
 }

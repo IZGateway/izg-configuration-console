@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Box } from '@mui/material'
 import MetricCard from './components/MetricCard'
 import { MetricChange, DEFAULT_METRIC_CHANGE } from './types/destinationMetrics'
@@ -6,6 +6,11 @@ import {
   buildDestinationMetricsQuery,
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/destinationMetricsQuery'
+import {
+  getStatusLevel,
+  parseResponseTimeMs,
+  THRESHOLD_MAP,
+} from './config/statusThresholds'
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
@@ -37,6 +42,43 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     DEFAULT_METRIC_CHANGE
   )
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('--')
+
+  const metricStatuses = useMemo(
+    () => ({
+      izgatewayStatus: getStatusLevel(
+        parseFloat(izgatewayStatus),
+        THRESHOLD_MAP.izgatewayStatus
+      ),
+      totalMessages: getStatusLevel(
+        parseFloat(totalMessages.replace(/,/g, '')),
+        THRESHOLD_MAP.totalMessages
+      ),
+      successRate: getStatusLevel(
+        parseFloat(successRate),
+        THRESHOLD_MAP.successRate
+      ),
+      avgThroughput: getStatusLevel(
+        parseFloat(avgThroughput),
+        THRESHOLD_MAP.avgThroughput
+      ),
+      medianResponseTime: getStatusLevel(
+        parseResponseTimeMs(medianResponseTime),
+        THRESHOLD_MAP.medianResponseTime
+      ),
+      percentile95ResponseTime: getStatusLevel(
+        parseResponseTimeMs(percentile95ResponseTime),
+        THRESHOLD_MAP.percentile95ResponseTime
+      ),
+    }),
+    [
+      izgatewayStatus,
+      totalMessages,
+      successRate,
+      avgThroughput,
+      medianResponseTime,
+      percentile95ResponseTime,
+    ]
+  )
 
   // Fetch data from Elasticsearch when selectedConnection changes
   useEffect(() => {
@@ -231,6 +273,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         title="My IZ Gateway Status"
         subheader={`Status Health - Last Updated at ${lastUpdateTime}`}
         value={izgatewayStatus}
+        status={metricStatuses.izgatewayStatus}
       />
 
       {/* Total Messages */}
@@ -241,6 +284,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={totalMessages}
         change={messageChange}
         changeLabel="updown"
+        status={metricStatuses.totalMessages}
       />
 
       {/* Success Rate */}
@@ -251,6 +295,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={successRate}
         change={successRateChange}
         changeLabel="updown"
+        status={metricStatuses.successRate}
       />
 
       {/* Average Throughput */}
@@ -261,6 +306,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={avgThroughput}
         change={throughputChange}
         changeLabel="updown"
+        status={metricStatuses.avgThroughput}
       />
 
       {/* Median Response Time */}
@@ -271,6 +317,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={medianResponseTime}
         change={medianResponseTimeChange}
         changeLabel="fasterslower"
+        status={metricStatuses.medianResponseTime}
       />
 
       {/* 95th Percentile Response Time */}
@@ -281,6 +328,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={percentile95ResponseTime}
         change={percentile95Change}
         changeLabel="fasterslower"
+        status={metricStatuses.percentile95ResponseTime}
       />
     </Box>
   )

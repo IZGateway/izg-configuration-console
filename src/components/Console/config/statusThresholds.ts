@@ -148,6 +148,21 @@ export const AVG_THROUGHPUT_THRESHOLD: MetricThreshold = {
   warningMin: 1, // >= 1  msg/min → Warning,  < 1 → Critical
 }
 
+// ── Value parsers for formatted metric strings ────────────────────────────────
+
+/**
+ * Parses a formatted response time string ("142ms", "1.2s") to milliseconds.
+ * Returns null for missing / placeholder values so getStatusLevel returns 'nodata'.
+ */
+export function parseResponseTimeMs(
+  value: string | null | undefined
+): number | null {
+  if (!value || value === '--') return null
+  if (value.endsWith('ms')) return parseFloat(value)
+  if (value.endsWith('s')) return parseFloat(value) * 1000
+  return null
+}
+
 // ── Convenience map keyed by metric name ──────────────────────────────────────
 // Matches the keys used in mockMetricCardStatuses and MessagesWidgetContent.
 
