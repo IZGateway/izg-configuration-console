@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { Box } from '@mui/material'
 import MetricCard from './components/MetricCard'
 import { MetricChange, DEFAULT_METRIC_CHANGE } from './types/destinationMetrics'
 import {
   buildDestinationMetricsQuery,
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/destinationMetricsQuery'
+import {
+  getStatusLevel,
+  parseResponseTimeMs,
+  THRESHOLD_MAP,
+} from './config/statusThresholds'
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
@@ -36,6 +42,43 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     DEFAULT_METRIC_CHANGE
   )
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('--')
+
+  const metricStatuses = useMemo(
+    () => ({
+      izgatewayStatus: getStatusLevel(
+        parseFloat(izgatewayStatus),
+        THRESHOLD_MAP.izgatewayStatus
+      ),
+      totalMessages: getStatusLevel(
+        parseFloat(totalMessages.replace(/,/g, '')),
+        THRESHOLD_MAP.totalMessages
+      ),
+      successRate: getStatusLevel(
+        parseFloat(successRate),
+        THRESHOLD_MAP.successRate
+      ),
+      avgThroughput: getStatusLevel(
+        parseFloat(avgThroughput),
+        THRESHOLD_MAP.avgThroughput
+      ),
+      medianResponseTime: getStatusLevel(
+        parseResponseTimeMs(medianResponseTime),
+        THRESHOLD_MAP.medianResponseTime
+      ),
+      percentile95ResponseTime: getStatusLevel(
+        parseResponseTimeMs(percentile95ResponseTime),
+        THRESHOLD_MAP.percentile95ResponseTime
+      ),
+    }),
+    [
+      izgatewayStatus,
+      totalMessages,
+      successRate,
+      avgThroughput,
+      medianResponseTime,
+      percentile95ResponseTime,
+    ]
+  )
 
   // Fetch data from Elasticsearch when selectedConnection changes
   useEffect(() => {
@@ -73,19 +116,16 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             const hl7Success = bucket0['3-bucket']?.doc_count || 0 // submitSingleMessage success
             const hl7Errors = bucket0['4-bucket']?.doc_count || 0 // submitSingleMessage errors
 
-            // Total HL7 messages and success rate
             const totalHL7 = hl7Success + hl7Errors
             const hl7SuccessRatePercent =
               totalHL7 > 0
                 ? ((hl7Success / totalHL7) * 100).toFixed(1) + '%'
                 : '0%'
 
-            // Calculate previous 24h HL7 messages for comparison
             const prevHl7Success = prevBucket?.['3-bucket']?.doc_count || 0
             const prevHl7Errors = prevBucket?.['4-bucket']?.doc_count || 0
             const prevTotalHL7 = prevHl7Success + prevHl7Errors
 
-            // Calculate percentage change for total messages
             let changePercent = 0
             let isUp = true
             if (prevTotalHL7 > 0) {
@@ -111,12 +151,9 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
                 ? ((ctSuccess / ctTotal) * 100).toFixed(1) + '%'
                 : '0%'
 
-            // Response time metrics
             const medianTime = bucket0['median-response-time']?.values?.['50.0']
             const percentile95Time =
               bucket0['95-response-time']?.values?.['95.0']
-
-            // Previous 24h response time metrics
             const prevMedianTime =
               prevBucket?.['median-response-time']?.values?.['50.0']
             const prevPercentile95Time =
@@ -162,12 +199,11 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
               })
             }
 
-            // Calculate average throughput (messages per minute)
+            // messages per minute (1440 min/day)
             const throughputPerMin = totalHL7 / 1440
             const prevThroughputPerMin = prevTotalHL7 / 1440
             setAvgThroughput(throughputPerMin.toFixed(2) + ' msg/min')
 
-            // Calculate throughput change
             let throughputChangePercent = 0
             let isThroughputUp = true
             if (prevThroughputPerMin > 0) {
@@ -194,13 +230,9 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
                 maxHourlyCount = hl7Count
               }
             }
-            // Convert to messages per minute (max in an hour / 60)
             const peakPerMin = (maxHourlyCount / 60).toFixed(2)
             setPeakThroughput(peakPerMin + ' msg/min')
-
-            // Set last update time
-            const now = new Date()
-            setLastUpdateTime(now.toLocaleTimeString())
+            setLastUpdateTime(new Date().toLocaleTimeString())
           }
         }
       } catch (err) {
@@ -214,13 +246,34 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
   }, [selectedConnection, envTag])
 
   return (
-    <div>
+    <Box component="section" aria-label="Destination detail metrics">
+      {/* Polite live region announces when metrics data refreshes */}
+      <Box
+        aria-live="polite"
+        aria-atomic="true"
+        sx={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: 0,
+          margin: '-1px',
+          overflow: 'hidden',
+          clipPath: 'inset(50%)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {lastUpdateTime !== '--'
+          ? `Destination metrics updated at ${lastUpdateTime}`
+          : ''}
+      </Box>
       {/* IZ Gateway Status */}
       <MetricCard
         id="my-izGateway-status-widget"
         title="My IZ Gateway Status"
         subheader={`Status Health - Last Updated at ${lastUpdateTime}`}
         value={izgatewayStatus}
+        status={metricStatuses.izgatewayStatus}
       />
 
       {/* Total Messages */}
@@ -231,6 +284,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={totalMessages}
         change={messageChange}
         changeLabel="updown"
+        status={metricStatuses.totalMessages}
       />
 
       {/* Success Rate */}
@@ -241,6 +295,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={successRate}
         change={successRateChange}
         changeLabel="updown"
+        status={metricStatuses.successRate}
       />
 
       {/* Average Throughput */}
@@ -251,6 +306,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={avgThroughput}
         change={throughputChange}
         changeLabel="updown"
+        status={metricStatuses.avgThroughput}
       />
 
       {/* Median Response Time */}
@@ -261,6 +317,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={medianResponseTime}
         change={medianResponseTimeChange}
         changeLabel="fasterslower"
+        status={metricStatuses.medianResponseTime}
       />
 
       {/* 95th Percentile Response Time */}
@@ -271,8 +328,9 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
         value={percentile95ResponseTime}
         change={percentile95Change}
         changeLabel="fasterslower"
+        status={metricStatuses.percentile95ResponseTime}
       />
-    </div>
+    </Box>
   )
 }
 
