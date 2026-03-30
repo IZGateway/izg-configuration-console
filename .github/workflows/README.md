@@ -38,6 +38,31 @@ This project uses an automated workflow to keep dependencies current and secure.
 - `automated`
 - `security`
 
+## Required Secrets
+
+| Secret | Required | Purpose |
+|--------|----------|---------|
+| `NPM_TOKEN` | ✅ Yes | Authenticate against GitHub Packages to install `@izgateway` scoped packages |
+| `AUTOMATION_TOKEN` | ⚠️ Recommended | A **Personal Access Token** (PAT) used to create the dependency update PR. When this secret is set the pull request event is generated under the PAT owner's identity, which allows other workflows (e.g. `deploy.yml`) to be triggered normally. Without it the workflow falls back to `GITHUB_TOKEN`, but pull-request events created by `GITHUB_TOKEN` are intentionally blocked from triggering further workflow runs by GitHub's security model. |
+
+### Setting up `AUTOMATION_TOKEN`
+
+**Option A — Fine-grained token (recommended):**
+
+1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. Create a new token scoped to this repository with **Read and write** access for **Contents** and **Pull requests**
+3. Go to the repository's **Settings → Secrets and variables → Actions**
+4. Add a new repository secret named `AUTOMATION_TOKEN` with the token value
+
+**Option B — Classic token:**
+
+1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
+2. Create a new token with the `repo` and `workflow` scopes
+3. Go to the repository's **Settings → Secrets and variables → Actions**
+4. Add a new repository secret named `AUTOMATION_TOKEN` with the token value
+
+---
+
 ## Manual Triggers
 
 The workflow can be manually triggered:
