@@ -19,13 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Use AUTOMATION_TOKEN (PAT) when available so that the pull_request
-          # event created by this workflow triggers other workflows (e.g. deploy.yml).
-          # GITHUB_TOKEN-generated events are blocked from triggering further
-          # workflow runs by GitHub's security model.  A PAT or GitHub App token
-          # bypasses that restriction.  If the secret is not configured the workflow
-          # falls back to GITHUB_TOKEN and retains its current behaviour.
-          token: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -249,9 +243,7 @@ jobs:
       - name: Create Pull Request
         if: steps.final_check.outputs.has_changes == 'true'
         env:
-          # See checkout step comment: use AUTOMATION_TOKEN so the resulting
-          # pull_request event propagates to other workflows such as deploy.yml.
-          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_BODY=$(cat pr_body.md)
           gh pr create \
