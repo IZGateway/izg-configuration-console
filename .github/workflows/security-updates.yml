@@ -83,7 +83,7 @@ jobs:
             echo "has_ncu_changes=true" >> $GITHUB_OUTPUT
             echo "✓ Minor dependency updates found"
           fi
-      
+
       - name: Update existing overrides
         id: override_check
         env:
