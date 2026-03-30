@@ -243,7 +243,7 @@ jobs:
       - name: Create Pull Request
         if: steps.final_check.outputs.has_changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.IZGW_ALL_REPO_ACCESS_TOKEN }}
         run: |
           PR_BODY=$(cat pr_body.md)
           gh pr create \
