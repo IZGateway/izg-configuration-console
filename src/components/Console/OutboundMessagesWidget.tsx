@@ -9,6 +9,11 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildOutboundCombinedQuery,
 } from './queries/outboundMessagesQuery'
+import {
+  getStatusLevel,
+  parseResponseTimeMs,
+  THRESHOLD_MAP,
+} from './config/statusThresholds'
 
 interface Destination {
   destId: string
@@ -293,6 +298,28 @@ const OutboundMessagesWidget = ({
     outboundError,
   ])
 
+  const metricStatuses = useMemo(
+    () => ({
+      totalMessages: getStatusLevel(
+        metrics.totalMessages,
+        THRESHOLD_MAP.outboundTotalMessages
+      ),
+      successRate: getStatusLevel(
+        parseFloat(metrics.successRate),
+        THRESHOLD_MAP.outboundSuccessRate
+      ),
+      avgResponse: getStatusLevel(
+        parseResponseTimeMs(metrics.avgResponseTime),
+        THRESHOLD_MAP.outboundAvgResponse
+      ),
+      totalFailures: getStatusLevel(
+        metrics.totalFailures,
+        THRESHOLD_MAP.outboundTotalFailures
+      ),
+    }),
+    [metrics]
+  )
+
   return (
     <MessagesWidgetContent
       title="Outbound Messages"
@@ -310,6 +337,7 @@ const OutboundMessagesWidget = ({
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
       error={outboundError}
+      metricStatuses={metricStatuses}
     />
   )
 }
