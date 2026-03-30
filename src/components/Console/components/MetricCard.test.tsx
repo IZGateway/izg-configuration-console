@@ -75,7 +75,7 @@ describe('MetricCard Component', () => {
       render(<MetricCard {...defaultProps} change={change} />)
 
       const arrow = screen.getByText('↓')
-      expect(arrow).toHaveStyle({ color: '#f44336' })
+      expect(arrow).toHaveStyle({ color: '#B50E16' })
     })
   })
 
@@ -137,7 +137,7 @@ describe('MetricCard Component', () => {
       )
 
       const arrow = screen.getByText('↑')
-      expect(arrow).toHaveStyle({ color: '#f44336' })
+      expect(arrow).toHaveStyle({ color: '#B50E16' })
     })
   })
 
