@@ -73,7 +73,12 @@ jobs:
         id: ncu_check
         run: |
           echo "Running npm-check-updates with --target minor..."
-          ncu --target minor -u > ncu_output.txt 2>&1 || true
+          # Exclude @typescript-eslint/* sub-packages from ncu. These are part of the
+          # typescript-eslint meta-package and must stay in sync with the version that
+          # eslint-config-next resolves transitively. ncu bumps them independently,
+          # which races ahead of the meta-package release and causes ERESOLVE.
+          # fix-all-vulnerabilities.js handles these when there is an actual vulnerability.
+          ncu --target minor --reject "@typescript-eslint/*" -u > ncu_output.txt 2>&1 || true
           cat ncu_output.txt
           
           if git diff --quiet package.json; then
@@ -238,7 +243,7 @@ jobs:
       - name: Create Pull Request
         if: steps.final_check.outputs.has_changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.IZGW_ALL_REPO_ACCESS_TOKEN }}
         run: |
           PR_BODY=$(cat pr_body.md)
           gh pr create \
