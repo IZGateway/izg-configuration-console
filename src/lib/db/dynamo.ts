@@ -884,19 +884,23 @@ class Dynamo implements DbClient {
         }
         logger.info('Updated AccessGroupRecord', {
           sortKey,
-          groupName: result.Attributes.groupName,
-          environment: getEnvironmentName(Number(result.Attributes.environment)),
-          oldValues,
-          newValues: {
-            description: result.Attributes.description,
-            roles: agr.roles,
-            users: agr.users,
-            groups: agr.groups,
-            updatedBy: result.Attributes.updatedBy,
-            updatedOn: result.Attributes.updatedOn,
+          accessGroup: {
+            entityType: 'AccessGroup',
+            groupName: result.Attributes.groupName,
+            environment: getEnvironmentName(
+              Number(result.Attributes.environment)
+            ),
+            oldValues,
+            newValues: {
+              description: result.Attributes.description,
+              roles: agr.roles,
+              users: agr.users,
+              groups: agr.groups,
+              updatedBy: result.Attributes.updatedBy,
+              updatedOn: result.Attributes.updatedOn,
+            },
           },
           operation: 'updateAccessGroup',
-          entityType: 'AccessGroup',
         })
         return agr
       }
@@ -978,7 +982,10 @@ class Dynamo implements DbClient {
 
       logger.info('Added AccessGroupRecord', {
         sortKey: sortKey,
-        accessGroup: item,
+        accessGroup: {
+          ...item,
+          environment: getEnvironmentName(Number(item.environment)),
+        },
         operation: 'addAccessGroup',
       })
 
@@ -1041,7 +1048,10 @@ class Dynamo implements DbClient {
       if (agr) {
         logger.info('Deleted AccessGroupRecord', {
           sortKey: sortKey,
-          accessGroup: agr,
+          accessGroup: {
+            ...agr,
+            environment: getEnvironmentName(Number(agr.environment)),
+          },
           operation: 'deleteAccessGroup',
         })
       }
