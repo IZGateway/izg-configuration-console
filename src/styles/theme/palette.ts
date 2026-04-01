@@ -1,5 +1,6 @@
 const palette = {
   active: '#66926d',
+  activeDark: '#2e7d32', // WCAG AA on white (4.69:1) — use for small/normal text
   background: '#F9F9F9',
   black: '#000',
   divider: '#c2c6ca',
@@ -8,6 +9,7 @@ const palette = {
   errorHighLight: '#FFC8CA40',
   errorDark: '#6D191D',
   grey: '#A7A7A7',
+  greyText: '#767676', // WCAG AA on white (4.54:1) — use for body/caption text
   greyLight: '#efefef',
   greyMain: '#afafaf',
   greyDarkTypography: '#212121',
@@ -19,7 +21,9 @@ const palette = {
   secondary: '#177b8f',
   secondaryDark: '#092c30',
   warningDark: '#5C3607',
-  warning: '#83380E',
+  warning: '#E65C00',
+  warningBright: '#E65C00',
+  warningAccessible: '#BF4900', // WCAG AA on white (5.07:1) — use for small/normal text
   warningLight: '#F2D0A7',
   white: '#FFFFFF',
   border: '#BFBFBF',
