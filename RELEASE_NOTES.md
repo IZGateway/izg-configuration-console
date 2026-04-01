@@ -1,5 +1,17 @@
 # Release Notes
 
+## Release v1.13.0
+
+- IGDD-2541 Evaluate displayed metrics and color code/highlight out of range values in status console page
+- IGDD-2548 Add manual refresh functionality to re send elastic query
+- IGDD-2549 Add Environment filtering along with destination filtering on console page
+- IGDD-2550 Configure dev Config Console so that you can configure endpoints for both the dev and test hub endpoints
+- IGDD-2582 System Resources widget changes
+- IGDD-2586 Update logging for Access Groups in CC
+- IGDD-2660 bind version bump in base image
+- IGDD-2661 libpng version bump in base image
+- IGDD-2678 Update scheduled nightly dependency update workflow
+
 ## Release v1.12.1
 
 - Dependency version updates
