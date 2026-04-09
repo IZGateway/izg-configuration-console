@@ -32,7 +32,9 @@ test('User should be able to reschedule submitted CR', async () => {
   await page.getByRole('button', { name: 'Reschedule' }).click()
   await page.getByText('Reschedule ASAP').click()
   await page.getByRole('button', { name: 'Schedule Now' }).click()
-  await expect(page.getByText('New scheduled Date Time is')).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText('New scheduled Date Time is')).toBeVisible({
+    timeout: 15000,
+  })
 })
 
 test('User should be able to cancel submitted CR', async () => {
@@ -43,5 +45,7 @@ test('User should be able to cancel submitted CR', async () => {
   await changeRequestButton.first().click()
   await page.getByRole('button', { name: 'CANCEL REQUEST' }).click()
   await page.getByRole('button', { name: 'Cancel Request' }).click()
-  await expect(page.getByText('Change request is cancelled')).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText('Change request is cancelled')).toBeVisible({
+    timeout: 15000,
+  })
 })
