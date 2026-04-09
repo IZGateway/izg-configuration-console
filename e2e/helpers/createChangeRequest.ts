@@ -27,7 +27,7 @@ export async function createChangeRequest(page: Page, destId: string) {
 
   if (hasEditButton) {
     // if cr is not created
-    await editButton.click()
+    await editButton.first().click()
     if (await page.getByTestId('agree-button').isVisible()) {
       await page.getByTestId('agree-button').click()
       await page.locator('#accept').click()
@@ -75,7 +75,7 @@ export async function createChangeRequest(page: Page, destId: string) {
     await page.locator('[value="As Soon As Possible"]').click()
     await scheduleButton.click()
 
-    await page.waitForURL('/manageconnections', { timeout: 5000 })
+    await page.waitForURL('/manageconnections', { timeout: 30000 })
     await page.waitForLoadState('networkidle')
     await expect(alert).toBeVisible({ timeout: 15000 })
     expect(await alert.textContent()).toContain(

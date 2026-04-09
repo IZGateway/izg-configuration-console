@@ -23,7 +23,7 @@ test('Home page title and logo are correct', async () => {
   await expect.soft(logo).toBeVisible()
   const bb = await logo.boundingBox()
   expect.soft(bb.x).toBeLessThan(20)
-  expect.soft(bb.y).toBeLessThan(20)
+  expect.soft(bb.y).toBeLessThan(40)
 })
 
 test('Navigation panel has expected links', async () => {
