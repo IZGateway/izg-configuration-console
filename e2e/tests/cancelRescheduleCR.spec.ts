@@ -30,7 +30,7 @@ test('User should be able to reschedule submitted CR', async () => {
   if ((await page.locator('button[aria-label="edit"]').count()) > 0) {
     await filterByDestinationId(page, destId)
   }
-  await changeRequestButton.click()
+  await changeRequestButton.first().click()
   await page.getByRole('button', { name: 'Reschedule' }).click()
   await page.getByText('Reschedule ASAP').click()
   await page.getByRole('button', { name: 'Schedule Now' }).click()
@@ -43,7 +43,7 @@ test('User should be able to cancel submitted CR', async () => {
   if ((await page.locator('button[aria-label="edit"]').count()) > 0) {
     await filterByDestinationId(page, destId)
   }
-  await changeRequestButton.click()
+  await changeRequestButton.first().click()
   await page.getByRole('button', { name: 'CANCEL REQUEST' }).click()
   await page.getByRole('button', { name: 'Cancel Request' }).click()
   await expect(page.getByText('Change request is cancelled')).toBeVisible()
