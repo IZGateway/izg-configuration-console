@@ -2,6 +2,10 @@
 
 ## Release v1.13.0
 
+- Update dependencies and base Docker image
+
+## Release v1.13.0
+
 - IGDD-2541 Evaluate displayed metrics and color code/highlight out of range values in status console page
 - IGDD-2548 Add manual refresh functionality to re send elastic query
 - IGDD-2549 Add Environment filtering along with destination filtering on console page
