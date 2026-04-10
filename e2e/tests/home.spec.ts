@@ -144,4 +144,7 @@ test('Expand Supporting Documentation each section -> check link', async () => {
     'href',
     'https://cdcpartners.sharepoint.com/:f:/r/sites/NCIRD/PAP/IIS/IZ%20Gateway/IZG%20Provider-to-IIS%20Data%20Exchange?csf=1&web=1&e=Wid5UA'
   )
+  // Close the dialog so it doesn't block subsequent interactions (e.g. logout)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).not.toBeVisible()
 })

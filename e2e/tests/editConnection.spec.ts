@@ -35,7 +35,7 @@ test.describe('Edit connection and deploy', () => {
       )
       await page.goto('/manageconnections')
       await filterByDestinationId(page, destId)
-      await changeRequestButton.click()
+      await changeRequestButton.first().click()
     })
 
     test('User can run health check component', async () => {
