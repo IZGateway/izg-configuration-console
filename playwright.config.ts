@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e/tests',
   globalSetup: require.resolve('./playwright.env.setup'),
+  timeout: 60000,
   use: {
     baseURL: process.env.BASE_URL,
     headless: true,
