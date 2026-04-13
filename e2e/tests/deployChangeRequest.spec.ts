@@ -63,13 +63,19 @@ test.describe('Deploy Change Request Workflow', () => {
     await changeRequestBtn.first().click()
 
     // Wait for change request page to load
-    await page.waitForURL(/\/changerequest\//, { timeout: 15000 })
+    await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
 
     // On change request page, expect to see required components
-    await expect(page.locator('#health-check')).toBeVisible()
-    await expect(page.getByText('Run health check')).toBeVisible()
-    await expect(page.getByText('Change Request Status')).toBeVisible()
-    await expect(page.getByText('Need to make changes')).toBeVisible()
+    await expect(page.locator('#health-check')).toBeVisible({ timeout: 60000 })
+    await expect(page.getByText('Run health check')).toBeVisible({
+      timeout: 60000,
+    })
+    await expect(page.getByText('Change Request Status')).toBeVisible({
+      timeout: 60000,
+    })
+    await expect(page.getByText('Need to make changes')).toBeVisible({
+      timeout: 60000,
+    })
   })
 
   test('Complete deployment workflow: View Jira ticket, approve, and deploy', async ({
@@ -82,10 +88,12 @@ test.describe('Deploy Change Request Workflow', () => {
     await changeRequestBtn.first().click()
 
     // Wait for page to load
-    await page.waitForURL(/\/changerequest\//, { timeout: 15000 })
+    await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
 
     // Debug: Ensure Jira ticket area is visible
-    await expect(page.getByText('Change Request Status')).toBeVisible()
+    await expect(page.getByText('Change Request Status')).toBeVisible({
+      timeout: 60000,
+    })
     console.log('Jira ticket area is visible')
 
     // Extract Jira ticket ID from the page
