@@ -28,17 +28,34 @@ export async function createChangeRequest(page: Page, destId: string) {
   if (hasEditButton) {
     // if cr is not created
     await editButton.first().click()
-    if (await page.getByTestId('agree-button').isVisible()) {
-      await page.getByTestId('agree-button').click()
-      await page.locator('#accept').click()
+    // Wait for navigation to the edit/CR page
+    await page.waitForURL(/\/(edit|changerequest)\//, { timeout: 15000 })
+
+    // Handle service agreement if present - wait properly for it to render
+    const agreeButton = page.getByRole('radio', { name: 'I Agree' })
+    try {
+      await agreeButton.waitFor({ state: 'visible', timeout: 5000 })
+      await agreeButton.click()
+      const acceptBtn = page.locator('#accept')
+      await expect(acceptBtn).toBeEnabled({ timeout: 5000 })
+      await acceptBtn.click()
+    } catch {
+      // Service agreement not shown (already accepted in this session)
     }
 
+    // Wait for #next to be visible after agreement (or if agreement was skipped)
+    await nextButton.waitFor({ state: 'visible', timeout: 15000 })
     await nextButton.click()
 
-    // close save draft alert if there
-    if (await alert.isVisible()) {
+    // close save draft alert if there (wait briefly for it to appear after the network request)
+    const alertAppeared = await alert
+      .waitFor({ state: 'visible', timeout: 3000 })
+      .then(() => true)
+      .catch(() => false)
+    if (alertAppeared) {
       const closeButton = page.locator('[title="Close"]')
       await closeButton.click()
+      await alert.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
     }
 
     //start editing

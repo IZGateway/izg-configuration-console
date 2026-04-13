@@ -9,8 +9,21 @@ export const loginToOkta = async (
   await page.goto('/', { waitUntil: 'load', timeout: 120000 })
 
   await page.getByRole('button', { name: 'Sign in with Okta' }).click()
+
+  // Wait for the Okta login form to fully load (past the intermediate redirect page)
+  await page
+    .locator('input[name="identifier"]')
+    .waitFor({ state: 'visible', timeout: 20000 })
   await page.locator('input[name="identifier"]').fill(username)
   await page.locator('[type="submit"]').click()
+
+  // Wait for Okta to transition away from identifier step
+  await page
+    .locator(
+      'input[name="credentials.passcode"], .button.select-factor.link-button'
+    )
+    .first()
+    .waitFor({ state: 'visible', timeout: 15000 })
 
   const body = page.locator('body')
   const selectFactorExists = await body
@@ -18,6 +31,9 @@ export const loginToOkta = async (
     .count()
   if (selectFactorExists > 0) {
     await body.locator('.button.select-factor.link-button').click()
+    await page
+      .locator('input[name="credentials.passcode"]')
+      .waitFor({ state: 'visible', timeout: 10000 })
   }
   await page.locator('input[name="credentials.passcode"]').fill(password)
   await page.locator('[type="submit"]').click()
