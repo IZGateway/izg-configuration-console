@@ -124,7 +124,8 @@ test('Verify Login then Logout', async ({ page }) => {
 
   await page.locator('#logout').click()
 
-  // Verify we're back on the Okta login page by checking for the username input
-  await page.waitForLoadState('networkidle')
-  await expect(page.locator('input[name="identifier"]')).toBeVisible()
+  // After logout, Okta redirects through /login/signout before settling on the login form
+  await expect(page.locator('input[name="identifier"]')).toBeVisible({
+    timeout: 20000,
+  })
 })
