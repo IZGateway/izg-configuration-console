@@ -16,9 +16,13 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-  await page.locator('#logout').click()
-  await page.close()
-  await context.close()
+  if (page)
+    await page
+      .locator('#logout')
+      .click()
+      .catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 test('Connection table should have correct columns', async () => {

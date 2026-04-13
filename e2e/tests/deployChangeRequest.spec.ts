@@ -33,8 +33,8 @@ test.describe('Deploy Change Request Workflow', () => {
   })
 
   test.afterAll(async () => {
-    await logout(page)
-    if (page) await page.close()
+    if (page) await logout(page).catch(() => {})
+    if (page && !page.isClosed()) await page.close()
     if (context) await context.close()
   })
 
@@ -173,8 +173,13 @@ test.describe('Deploy Change Request Workflow', () => {
         await page.waitForURL(/\/edit\//, { timeout: 15000 })
 
         // Accept service agreement if needed
-        if (await page.getByTestId('agree-button').isVisible()) {
-          await page.getByTestId('agree-button').click()
+        const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
+        const agreementVisible = await agreeRadio
+          .waitFor({ state: 'visible', timeout: 5000 })
+          .then(() => true)
+          .catch(() => false)
+        if (agreementVisible) {
+          await agreeRadio.click()
           const acceptBtn = page.locator('#accept')
           await expect(acceptBtn).toBeEnabled({ timeout: 5000 })
           await acceptBtn.click()
@@ -182,6 +187,7 @@ test.describe('Deploy Change Request Workflow', () => {
 
         // Navigate to Identify step to see the updated values
         const nextBtn = page.getByRole('button', { name: /^NEXT$/i })
+        await nextBtn.waitFor({ state: 'visible', timeout: 15000 })
         await nextBtn.click()
 
         // Verify the deployed values match what was submitted in the change request
