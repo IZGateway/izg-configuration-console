@@ -68,9 +68,9 @@ test.beforeEach(async () => {
 })
 
 test.afterAll(async () => {
-  await logout(page)
-  await page.close()
-  await context.close()
+  if (page) await logout(page).catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 async function getToEditScreen(page: Page, destId: string) {
