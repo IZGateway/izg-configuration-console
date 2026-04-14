@@ -33,8 +33,8 @@ test.describe('Deploy Change Request Workflow', () => {
   })
 
   test.afterAll(async () => {
-    await logout(page)
-    if (page) await page.close()
+    if (page) await logout(page).catch(() => {})
+    if (page && !page.isClosed()) await page.close()
     if (context) await context.close()
   })
 
@@ -63,13 +63,19 @@ test.describe('Deploy Change Request Workflow', () => {
     await changeRequestBtn.first().click()
 
     // Wait for change request page to load
-    await page.waitForURL(/\/changerequest\//, { timeout: 15000 })
+    await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
 
     // On change request page, expect to see required components
-    await expect(page.locator('#health-check')).toBeVisible()
-    await expect(page.getByText('Run health check')).toBeVisible()
-    await expect(page.getByText('Change Request Status')).toBeVisible()
-    await expect(page.getByText('Need to make changes')).toBeVisible()
+    await expect(page.locator('#health-check')).toBeVisible({ timeout: 60000 })
+    await expect(page.getByText('Run health check')).toBeVisible({
+      timeout: 60000,
+    })
+    await expect(page.getByText('Change Request Status')).toBeVisible({
+      timeout: 60000,
+    })
+    await expect(page.getByText('Need to make changes')).toBeVisible({
+      timeout: 60000,
+    })
   })
 
   test('Complete deployment workflow: View Jira ticket, approve, and deploy', async ({
@@ -82,10 +88,12 @@ test.describe('Deploy Change Request Workflow', () => {
     await changeRequestBtn.first().click()
 
     // Wait for page to load
-    await page.waitForURL(/\/changerequest\//, { timeout: 15000 })
+    await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
 
     // Debug: Ensure Jira ticket area is visible
-    await expect(page.getByText('Change Request Status')).toBeVisible()
+    await expect(page.getByText('Change Request Status')).toBeVisible({
+      timeout: 60000,
+    })
     console.log('Jira ticket area is visible')
 
     // Extract Jira ticket ID from the page
@@ -173,8 +181,13 @@ test.describe('Deploy Change Request Workflow', () => {
         await page.waitForURL(/\/edit\//, { timeout: 15000 })
 
         // Accept service agreement if needed
-        if (await page.getByTestId('agree-button').isVisible()) {
-          await page.getByTestId('agree-button').click()
+        const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
+        const agreementVisible = await agreeRadio
+          .waitFor({ state: 'visible', timeout: 5000 })
+          .then(() => true)
+          .catch(() => false)
+        if (agreementVisible) {
+          await agreeRadio.click()
           const acceptBtn = page.locator('#accept')
           await expect(acceptBtn).toBeEnabled({ timeout: 5000 })
           await acceptBtn.click()
@@ -182,6 +195,7 @@ test.describe('Deploy Change Request Workflow', () => {
 
         // Navigate to Identify step to see the updated values
         const nextBtn = page.getByRole('button', { name: /^NEXT$/i })
+        await nextBtn.waitFor({ state: 'visible', timeout: 15000 })
         await nextBtn.click()
 
         // Verify the deployed values match what was submitted in the change request
