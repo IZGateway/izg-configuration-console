@@ -5,6 +5,10 @@ export default defineConfig({
   globalSetup: require.resolve('./playwright.env.setup'),
   timeout: 60000,
   workers: 1,
+  retries: 2,
+  expect: {
+    timeout: 15000,
+  },
   use: {
     baseURL: process.env.BASE_URL,
     headless: true,

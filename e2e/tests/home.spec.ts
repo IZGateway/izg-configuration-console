@@ -12,9 +12,9 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-  await logout(page)
-  await page.close()
-  await context.close()
+  if (page) await logout(page).catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 test('Verify title', async () => {

@@ -16,9 +16,9 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-  await logout(page)
-  await page.close()
-  await context.close()
+  if (page) await logout(page).catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 const destId = 'dev2011'
@@ -29,6 +29,7 @@ test('User should be able to reschedule submitted CR', async () => {
   await filterByDestinationId(page, destId)
   const changeRequestButton = page.locator('button[aria-label="changerequest"]')
   await changeRequestButton.first().click()
+  await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
   await page.getByRole('button', { name: 'Reschedule' }).click()
   await page.getByText('Reschedule ASAP').click()
   await page.getByRole('button', { name: 'Schedule Now' }).click()
@@ -43,6 +44,7 @@ test('User should be able to cancel submitted CR', async () => {
   await filterByDestinationId(page, destId)
   const changeRequestButton = page.locator('button[aria-label="changerequest"]')
   await changeRequestButton.first().click()
+  await page.waitForURL(/\/changerequest\//, { timeout: 60000 })
   await page.getByRole('button', { name: 'CANCEL REQUEST' }).click()
   await page.getByRole('button', { name: 'Cancel Request' }).click()
   await expect(page.getByText('Change request is cancelled')).toBeVisible({
