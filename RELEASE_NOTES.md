@@ -1,5 +1,13 @@
 # Release Notes
 
+## Release v1.13.2
+
+- Update dependencies and base Docker image
+
+## Release v1.13.1
+
+- Update dependencies and base Docker image
+
 ## Release v1.13.0
 
 - IGDD-2541 Evaluate displayed metrics and color code/highlight out of range values in status console page
