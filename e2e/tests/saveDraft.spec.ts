@@ -1,12 +1,9 @@
 /**
  * E2E tests for save-draft functionality in the edit connection workflow.
  *
- * Test 1 dynamically finds a connection with an edit button and saves a draft.
- * Test 2 dynamically finds any connection with a draft button and verifies the info message.
- * Test 3 verifies that the edit vs draft icon distinction is visible in the table.
- *
- * All tests expand to 25 rows per page so that connections with edit/draft buttons
- * (which may not appear in the default 10-row view) are reachable.
+ * Tests 1 and 2 operate on the fixed destination 'il'.
+ * Test 1 requires 'il' to have no draft in progress — it errors if one is found.
+ * Test 3 scans visible rows to verify the pencil vs draft icon distinction.
  */
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
@@ -15,6 +12,8 @@ import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 let context
 let page: Page
+
+const DEST_ID = 'il'
 
 // A distinct username value used to verify the draft was persisted.
 const draftUsername = `DraftTest_${Date.now()}`
@@ -32,43 +31,20 @@ test.afterAll(async () => {
 })
 
 /**
- * Navigates to /manageconnections, expands the table to 25 rows, scans for the
- * first row whose action button matches buttonAriaLabel, clicks it, handles any
- * service agreement, then advances to the IDENTIFY step (step 2, the 3rd stepper).
- *
- * Returns the destId of the matched connection, or null if none was found.
+ * Navigates to /manageconnections, filters to destId, clicks the action button
+ * matching buttonAriaLabel, handles any service agreement, then advances to the
+ * IDENTIFY step (step 2, the 3rd stepper).
  */
-async function findAndGoToIdentifyStep(
+async function goToIdentifyStep(
   page: Page,
+  destId: string,
   buttonAriaLabel: 'edit' | 'draft'
-): Promise<string | null> {
+): Promise<void> {
   await page.goto('/manageconnections')
   await page.waitForLoadState('networkidle')
+  await filterByDestinationId(page, destId)
 
-  // Expand rows so connections beyond the first page are visible.
-  await page.getByRole('combobox', { name: 'Rows per page:' }).click()
-  await page.getByRole('option', { name: '25' }).click()
-  await page.waitForTimeout(500)
-
-  const rows = page.locator('div[role="row"][data-rowindex]')
-  const rowCount = await rows.count()
-
-  let foundDestId: string | null = null
-
-  for (let i = 0; i < rowCount; i++) {
-    const row = rows.nth(i)
-    const btn = row.locator(`button[aria-label="${buttonAriaLabel}"]`)
-    if ((await btn.count()) > 0) {
-      foundDestId =
-        (await row.locator('div[data-field="destId"]').textContent())?.trim() ||
-        null
-      await btn.click()
-      break
-    }
-  }
-
-  if (!foundDestId) return null
-
+  await page.locator(`button[aria-label="${buttonAriaLabel}"]`).first().click()
   await page.waitForURL(/\/(edit|changerequest)\//, { timeout: 15000 })
 
   // Accept the service agreement if shown (step 0).
@@ -88,8 +64,6 @@ async function findAndGoToIdentifyStep(
   const nextButton = page.locator('#next')
   await nextButton.waitFor({ state: 'visible', timeout: 15000 })
   await nextButton.click()
-
-  return foundDestId
 }
 
 test.describe('Save draft', () => {
@@ -97,11 +71,18 @@ test.describe('Save draft', () => {
     const saveButton = page.locator('button[aria-label="save"]')
     const usernameField = page.locator('#username')
 
-    const destId = await findAndGoToIdentifyStep(page, 'edit')
-    test.skip(
-      !destId,
-      'No connection with an edit button was found in the visible rows'
-    )
+    // Verify 'il' is in a clean state before proceeding.
+    await page.goto('/manageconnections')
+    await page.waitForLoadState('networkidle')
+    await filterByDestinationId(page, DEST_ID)
+
+    if ((await page.locator('button[aria-label="draft"]').count()) > 0) {
+      throw new Error(
+        `Destination '${DEST_ID}' is already in draft mode. Reset the draft before running this test.`
+      )
+    }
+
+    await goToIdentifyStep(page, DEST_ID, 'edit')
 
     // Save button should be disabled before any changes are made.
     await saveButton.waitFor({ state: 'visible', timeout: 10000 })
@@ -128,22 +109,13 @@ test.describe('Save draft', () => {
     await page.waitForLoadState('networkidle')
 
     // The connection should now show a draft icon instead of the pencil icon.
-    await filterByDestinationId(page, destId)
-    const draftButton = page.locator('button[aria-label="draft"]')
-    await expect(draftButton.first()).toBeVisible({ timeout: 10000 })
+    await filterByDestinationId(page, DEST_ID)
+    await expect(
+      page.locator('button[aria-label="draft"]').first()
+    ).toBeVisible({ timeout: 10000 })
 
-    // Re-open the exact connection we just saved (by filtering to its destId)
-    // and navigate to the IDENTIFY step via the draft button.
-    await page.goto('/manageconnections')
-    await page.waitForLoadState('networkidle')
-    await filterByDestinationId(page, destId)
-    await page.locator('button[aria-label="draft"]').first().click()
-    await page.waitForURL(/\/(edit|changerequest)\//, { timeout: 15000 })
-
-    // Service agreement is already accepted in this session — skip it.
-    const nextButton = page.locator('#next')
-    await nextButton.waitFor({ state: 'visible', timeout: 15000 })
-    await nextButton.click()
+    // Re-open the draft for 'il' and navigate to the IDENTIFY step.
+    await goToIdentifyStep(page, DEST_ID, 'draft')
 
     // The previously saved username should be pre-populated in the form.
     await expect(usernameField).toHaveValue(draftUsername)
@@ -152,12 +124,7 @@ test.describe('Save draft', () => {
 
 test.describe('Draft info message', () => {
   test('User sees a message while editing a previously saved draft', async () => {
-    // Find any connection that currently has a draft button.
-    const destId = await findAndGoToIdentifyStep(page, 'draft')
-    test.skip(
-      !destId,
-      'No connection with a draft button was found — run the save draft test first or ensure a draft exists in the environment'
-    )
+    await goToIdentifyStep(page, DEST_ID, 'draft')
 
     // The info alert is shown at the IDENTIFY step (step 2) when a draft exists.
     // It is triggered by clicking Next from the ORGANIZATION step (step 1): handleNext()
@@ -177,7 +144,7 @@ test.describe('Manage connections draft vs pencil icon', () => {
       .getByRole('columnheader', { name: 'DESTINATION ID' })
       .waitFor({ state: 'visible', timeout: 15000 })
 
-    // Expand to 25 rows so connections with edit/draft buttons are visible.
+    // Expand to 25 rows so connections with both button types are visible.
     await page.getByRole('combobox', { name: 'Rows per page:' }).click()
     await page.getByRole('option', { name: '25' }).click()
     await page.waitForTimeout(500)
