@@ -44,7 +44,9 @@ async function goToIdentifyStep(
   await page.waitForLoadState('networkidle')
   await filterByDestinationId(page, destId)
 
-  await page.locator(`button[aria-label="${buttonAriaLabel}"]`).first().click()
+  const actionButton = page.locator(`button[aria-label="${buttonAriaLabel}"]`)
+  await expect(actionButton).toHaveCount(1)
+  await actionButton.click()
   await page.waitForURL(/\/(edit|changerequest)\//, { timeout: 15000 })
 
   // Accept the service agreement if shown (step 0).
