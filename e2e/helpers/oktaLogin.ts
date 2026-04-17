@@ -35,7 +35,17 @@ export const loginToOkta = async (
       .locator('input[name="credentials.passcode"]')
       .waitFor({ state: 'visible', timeout: 10000 })
   }
-  await page.locator('input[name="credentials.passcode"]').fill(password)
+  await page
+    .locator('input[name="credentials.passcode"]')
+    .evaluate((el, val) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value'
+      )!.set!
+      setter.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }, password)
   await page.locator('[type="submit"]').click()
   await page.waitForSelector('#app-header', { timeout: 60000 })
   await expect(page.locator('#app-header')).toContainText(userFullName)
