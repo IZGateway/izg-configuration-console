@@ -1,8 +1,8 @@
 /**
  * E2E tests for save-draft functionality in the edit connection workflow.
  *
- * Tests 1 and 2 operate on the fixed destination 'il'.
- * Test 1 requires 'il' to have no draft in progress — it errors if one is found.
+ * Tests 1 and 2 operate on the fixed destination 'at_draft'.
+ * Test 1 requires 'at_draft' to have no draft in progress — it errors if one is found.
  * Test 3 scans visible rows to verify the pencil vs draft icon distinction.
  */
 import { Page, expect, test } from '@playwright/test'
@@ -13,7 +13,7 @@ import { filterByDestinationId } from '../helpers/filterByDestinationId'
 let context
 let page: Page
 
-const DEST_ID = 'il'
+const DEST_ID = 'at_draft'
 
 // A distinct username value used to verify the draft was persisted.
 const draftUsername = `DraftTest_${Date.now()}`
@@ -71,17 +71,10 @@ test.describe('Save draft', () => {
     const saveButton = page.locator('button[aria-label="save"]')
     const usernameField = page.locator('#username')
 
-    // Verify 'il' is in a clean state before proceeding.
+    // Verify destination is in a clean state before proceeding.
     await page.goto('/manageconnections')
     await page.waitForLoadState('networkidle')
     await filterByDestinationId(page, DEST_ID)
-
-    if ((await page.locator('button[aria-label="draft"]').count()) > 0) {
-      throw new Error(
-        `Destination '${DEST_ID}' is already in draft mode. Reset the draft before running this test.`
-      )
-    }
-
     await goToIdentifyStep(page, DEST_ID, 'edit')
 
     // Save button should be disabled before any changes are made.
@@ -114,7 +107,7 @@ test.describe('Save draft', () => {
       page.locator('button[aria-label="draft"]').first()
     ).toBeVisible({ timeout: 10000 })
 
-    // Re-open the draft for 'il' and navigate to the IDENTIFY step.
+    // Re-open the draft for the destination and navigate to the IDENTIFY step.
     await goToIdentifyStep(page, DEST_ID, 'draft')
 
     // The previously saved username should be pre-populated in the form.
