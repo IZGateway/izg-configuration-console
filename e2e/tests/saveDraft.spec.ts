@@ -49,15 +49,12 @@ async function goToIdentifyStep(
 
   // Accept the service agreement if shown (step 0).
   // Skipped automatically if already accepted in this browser session.
-  try {
-    const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
-    await agreeRadio.waitFor({ state: 'visible', timeout: 5000 })
+  const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
+  if (await agreeRadio.isVisible({ timeout: 5000 })) {
     await agreeRadio.click()
     const acceptBtn = page.locator('#accept')
     await expect(acceptBtn).toBeEnabled({ timeout: 5000 })
     await acceptBtn.click()
-  } catch {
-    // Agreement already accepted or not shown — continue.
   }
 
   // At step 1 (ORGANIZATION), click Next to advance to step 2 (IDENTIFY).
