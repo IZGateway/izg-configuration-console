@@ -14,7 +14,17 @@ export const loginToOkta = async (
   await page
     .locator('input[name="identifier"]')
     .waitFor({ state: 'visible', timeout: 20000 })
-  await page.locator('input[name="identifier"]').fill(username)
+  await page
+    .locator('input[name="identifier"]')
+    .evaluate((el, val) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value'
+      )!.set!
+      setter.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }, username)
   await page.locator('[type="submit"]').click()
 
   // Wait for Okta to transition away from identifier step
