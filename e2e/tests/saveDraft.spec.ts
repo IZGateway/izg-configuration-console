@@ -137,9 +137,10 @@ test.describe('Manage connections draft vs pencil icon', () => {
       .waitFor({ state: 'visible', timeout: 15000 })
 
     // Expand to 25 rows so connections with both button types are visible.
-    await page.getByRole('combobox', { name: 'Rows per page:' }).click()
+    const rowsPerPage = page.getByRole('combobox', { name: 'Rows per page:' })
+    await rowsPerPage.click()
     await page.getByRole('option', { name: '25' }).click()
-    await page.waitForTimeout(500)
+    await expect(rowsPerPage).toHaveText(/25/, { timeout: 10000 })
   })
 
   test('Connection without a draft shows pencil edit icon', async () => {
