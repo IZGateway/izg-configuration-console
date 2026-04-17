@@ -70,10 +70,7 @@ test.describe('Save draft', () => {
     const saveButton = page.locator('button[aria-label="save"]')
     const usernameField = page.locator('#username')
 
-    // Verify destination is in a clean state before proceeding.
-    await page.goto('/manageconnections')
-    await page.waitForLoadState('networkidle')
-    await filterByDestinationId(page, DEST_ID)
+    // Open the destination in the edit workflow and navigate to the IDENTIFY step.
     await goToIdentifyStep(page, DEST_ID, 'edit')
 
     // Save button should be disabled before any changes are made.
