@@ -10,6 +10,8 @@ import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
+const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
+
 let context
 let page: Page
 
@@ -19,9 +21,17 @@ const DEST_ID = 'at_draft'
 const draftUsername = `DraftTest_${Date.now()}`
 
 test.beforeAll(async ({ browser }) => {
+  const missing = requiredEnvs.filter((k) => !process.env[k])
+  if (missing.length)
+    test.skip(true, `Missing env vars: ${missing.join(', ')}`)
+
   context = await browser.newContext()
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginToOkta(
+    page,
+    process.env.OKTA_USERNAME as string,
+    process.env.OKTA_PASSWORD as string
+  )
 })
 
 test.afterAll(async () => {
