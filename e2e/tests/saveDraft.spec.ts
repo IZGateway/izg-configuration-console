@@ -11,6 +11,11 @@ import { logout } from '../helpers/logout'
 import { filterByDestinationId } from '../helpers/filterByDestinationId'
 
 const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
+const requiredUserTwoEnvs = [
+  'OKTA_NONADMIN_USERNAME',
+  'OKTA_NONADMIN_PASSWORD',
+  'OKTA_NONADMIN_EXPECTED_FULLNAME',
+] as const
 
 let context
 let page: Page
@@ -59,20 +64,50 @@ async function goToIdentifyStep(
   await actionButton.click()
   await page.waitForURL(/\/(edit|changerequest)\//, { timeout: 15000 })
 
-  // Accept the service agreement if shown (step 0).
-  // Skipped automatically if already accepted in this browser session.
-  const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
-  if (await agreeRadio.isVisible({ timeout: 5000 })) {
-    await agreeRadio.click()
-    const acceptBtn = page.locator('#accept')
+  // Depending on session state, user may land on service agreement (Accept)
+  // or organization step (Next). Handle both deterministically.
+  const nextButton = page.locator('#next')
+  const acceptBtn = page.locator('#accept')
+
+  await expect(async () => {
+    const nextVisible = await nextButton.isVisible()
+    const acceptVisible = await acceptBtn.isVisible()
+    expect(nextVisible || acceptVisible).toBeTruthy()
+  }).toPass({ timeout: 15000 })
+
+  if (await acceptBtn.isVisible()) {
+    const agreeRadio = page.getByRole('radio', { name: 'I Agree' })
+    if (await agreeRadio.isVisible()) {
+      await agreeRadio.click()
+    }
     await expect(acceptBtn).toBeEnabled({ timeout: 5000 })
     await acceptBtn.click()
   }
 
   // At step 1 (ORGANIZATION), click Next to advance to step 2 (IDENTIFY).
-  const nextButton = page.locator('#next')
   await nextButton.waitFor({ state: 'visible', timeout: 15000 })
   await nextButton.click()
+}
+
+/**
+ * Opens edit workflow using draft icon if available, else falls back to pencil.
+ */
+async function goToIdentifyStepUsingAvailableAction(
+  page: Page,
+  destId: string
+): Promise<'edit' | 'draft'> {
+  await page.goto('/manageconnections')
+  await page.waitForLoadState('networkidle')
+  await filterByDestinationId(page, destId)
+
+  const draftButton = page.locator('button[aria-label="draft"]')
+  if ((await draftButton.count()) === 1) {
+    await goToIdentifyStep(page, destId, 'draft')
+    return 'draft'
+  }
+
+  await goToIdentifyStep(page, destId, 'edit')
+  return 'edit'
 }
 
 test.describe('Save draft', () => {
@@ -188,5 +223,93 @@ test.describe('Manage connections draft vs pencil icon', () => {
     }
 
     test.skip(!found, 'No connection with a draft was visible in the table')
+  })
+})
+
+test.describe('Draft reset by another user', () => {
+  test('Any user can reset configuration values from a saved draft', async () => {
+    const missingUserTwo = requiredUserTwoEnvs.filter((k) => !process.env[k])
+    test.skip(
+      missingUserTwo.length > 0,
+      `Missing env vars for user 2: ${missingUserTwo.join(', ')}`
+    )
+
+    const usernameField = page.locator('#username')
+    const saveButton = page.locator('button[aria-label="save"]')
+    const resetButton = page.locator('button[aria-label="reset"]')
+    const userOneDraftUsername = `DraftResetByUser1_${Date.now()}`
+
+    // Precondition: user 1 must be able to act on target destination.
+    await page.goto('/manageconnections')
+    await page.waitForLoadState('networkidle')
+    await filterByDestinationId(page, DEST_ID)
+    const userOneVisibleActions =
+      (await page.locator('button[aria-label="edit"]').count()) +
+      (await page.locator('button[aria-label="draft"]').count()) +
+      (await page.locator('button[aria-label="changerequest"]').count())
+    test.skip(
+      userOneVisibleActions === 0,
+      `User 1 does not appear to have access to destination '${DEST_ID}' in this environment`
+    )
+
+    // User 1: create/update and save a draft value on the target destination.
+    await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
+    const originalUsername = await usernameField.inputValue()
+
+    await usernameField.clear()
+    await usernameField.fill(userOneDraftUsername)
+    await page.locator('body').click() // blur to trigger validation
+    await expect(saveButton).toBeEnabled()
+
+    await saveButton.click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: /Your draft was saved/i })
+    ).toBeVisible({ timeout: 10000 })
+
+    // User 2: login and reset the same draft.
+    await logout(page)
+    const expectedNonAdminFullName = (
+      process.env.OKTA_NONADMIN_EXPECTED_FULLNAME as string
+    ).replace(/^['\"]|['\"]$/g, '')
+
+    await loginToOkta(
+      page,
+      process.env.OKTA_NONADMIN_USERNAME as string,
+      process.env.OKTA_NONADMIN_PASSWORD as string,
+      expectedNonAdminFullName
+    )
+
+    // Precondition: user 2 must be able to see this destination in Manage Connections.
+    await page.goto('/manageconnections')
+    await page.waitForLoadState('networkidle')
+    await filterByDestinationId(page, DEST_ID)
+    const userTwoVisibleActions =
+      (await page.locator('button[aria-label="edit"]').count()) +
+      (await page.locator('button[aria-label="draft"]').count()) +
+      (await page.locator('button[aria-label="changerequest"]').count())
+    test.skip(
+      userTwoVisibleActions === 0,
+      `User 2 does not appear to have access to destination '${DEST_ID}' in this environment`
+    )
+
+    await goToIdentifyStep(page, DEST_ID, 'draft')
+
+    // Confirm user 2 sees user 1's saved draft value, then reset.
+    await expect(usernameField).toHaveValue(userOneDraftUsername)
+    await expect(resetButton).toBeEnabled()
+    await resetButton.click()
+    await page.locator('#yes').click()
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: /Your draft was reset/i })
+    ).toBeVisible({ timeout: 10000 })
+    await expect(usernameField).toHaveValue(originalUsername)
+
+    // Return to manage page and verify draft icon is cleared.
+    await page.locator('#close').click()
+    await page.waitForURL('**/manageconnections', { timeout: 15000 })
+    await filterByDestinationId(page, DEST_ID)
+    await expect(page.locator('button[aria-label="edit"]')).toHaveCount(1)
+    await expect(page.locator('button[aria-label="draft"]')).toHaveCount(0)
   })
 })
