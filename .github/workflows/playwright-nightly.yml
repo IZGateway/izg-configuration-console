@@ -101,6 +101,7 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report
+          retention-days: 1
 
       - name: Stop IZG Hub and IZG CC in AWS Dev
         env:
