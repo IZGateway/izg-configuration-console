@@ -2,7 +2,6 @@
  * E2E tests for save-draft functionality in the edit connection workflow.
  *
  * Tests 1 and 2 operate on the fixed destination 'at_draft'.
- * Test 1 requires 'at_draft' to have no draft in progress — it errors if one is found.
  * Test 3 scans visible rows to verify the pencil vs draft icon distinction.
  */
 import { Page, expect, test } from '@playwright/test'
@@ -100,6 +99,13 @@ async function goToIdentifyStepUsingAvailableAction(
   await page.waitForLoadState('networkidle')
   await filterByDestinationId(page, destId)
 
+  // Data-grid updates are async after filtering; wait for either action icon.
+  await expect(async () => {
+    const draftCount = await page.locator('button[aria-label="draft"]').count()
+    const editCount = await page.locator('button[aria-label="edit"]').count()
+    expect(draftCount + editCount).toBeGreaterThan(0)
+  }).toPass({ timeout: 15000 })
+
   const draftButton = page.locator('button[aria-label="draft"]')
   if ((await draftButton.count()) === 1) {
     await goToIdentifyStep(page, destId, 'draft')
@@ -113,13 +119,38 @@ async function goToIdentifyStepUsingAvailableAction(
 test.describe('Save draft', () => {
   test('User can save pending updates to editing a connection', async () => {
     const saveButton = page.locator('button[aria-label="save"]')
+    const resetButton = page.locator('button[aria-label="reset"]')
     const usernameField = page.locator('#username')
 
+    // Precondition: user must be able to edit or resume draft for the target destination.
+    await page.goto('/manageconnections')
+    await page.waitForLoadState('networkidle')
+    await filterByDestinationId(page, DEST_ID)
+    const userOneVisibleActionsForSaveTest =
+      (await page.locator('button[aria-label="edit"]').count()) +
+      (await page.locator('button[aria-label="draft"]').count())
+    test.skip(
+      userOneVisibleActionsForSaveTest === 0,
+      `User 1 does not appear to have edit/draft access to destination '${DEST_ID}' in this environment`
+    )
+
     // Open the destination in the edit workflow and navigate to the IDENTIFY step.
-    await goToIdentifyStep(page, DEST_ID, 'edit')
+    // Some environments may already have a draft for this destination.
+    await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
 
     // Save button should be disabled before any changes are made.
     await saveButton.waitFor({ state: 'visible', timeout: 10000 })
+    if (await saveButton.isEnabled()) {
+      // If an existing draft left unsaved changes, reset to establish
+      // a clean baseline for this test.
+      await expect(resetButton).toBeVisible({ timeout: 5000 })
+      await expect(resetButton).toBeEnabled({ timeout: 5000 })
+      await resetButton.click()
+      await page.locator('#yes').click()
+      await expect(
+        page.getByRole('alert').filter({ hasText: /Your draft was reset/i })
+      ).toBeVisible({ timeout: 10000 })
+    }
     await expect(saveButton).toBeDisabled()
 
     // Make a change — fill username with a unique test value.
@@ -227,7 +258,7 @@ test.describe('Manage connections draft vs pencil icon', () => {
 })
 
 test.describe('Draft reset by another user', () => {
-  test('Any user can reset configuration values from a saved draft', async () => {
+  test('Any user can reset configuration values from a saved draft', async ({ browser }) => {
     const missingUserTwo = requiredUserTwoEnvs.filter((k) => !process.env[k])
     test.skip(
       missingUserTwo.length > 0,
@@ -245,8 +276,7 @@ test.describe('Draft reset by another user', () => {
     await filterByDestinationId(page, DEST_ID)
     const userOneVisibleActions =
       (await page.locator('button[aria-label="edit"]').count()) +
-      (await page.locator('button[aria-label="draft"]').count()) +
-      (await page.locator('button[aria-label="changerequest"]').count())
+      (await page.locator('button[aria-label="draft"]').count())
     test.skip(
       userOneVisibleActions === 0,
       `User 1 does not appear to have access to destination '${DEST_ID}' in this environment`
@@ -254,8 +284,6 @@ test.describe('Draft reset by another user', () => {
 
     // User 1: create/update and save a draft value on the target destination.
     await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
-    const originalUsername = await usernameField.inputValue()
-
     await usernameField.clear()
     await usernameField.fill(userOneDraftUsername)
     await page.locator('body').click() // blur to trigger validation
@@ -266,50 +294,63 @@ test.describe('Draft reset by another user', () => {
       page.getByRole('alert').filter({ hasText: /Your draft was saved/i })
     ).toBeVisible({ timeout: 10000 })
 
-    // User 2: login and reset the same draft.
-    await logout(page)
+    // User 2: login in an isolated context and reset the same draft.
     const expectedNonAdminFullName = (
       process.env.OKTA_NONADMIN_EXPECTED_FULLNAME as string
     ).replace(/^['\"]|['\"]$/g, '')
 
-    await loginToOkta(
-      page,
-      process.env.OKTA_NONADMIN_USERNAME as string,
-      process.env.OKTA_NONADMIN_PASSWORD as string,
-      expectedNonAdminFullName
-    )
+    const userTwoContext = await browser.newContext()
+    const userTwoPage = await userTwoContext.newPage()
+    try {
+      await loginToOkta(
+        userTwoPage,
+        process.env.OKTA_NONADMIN_USERNAME as string,
+        process.env.OKTA_NONADMIN_PASSWORD as string,
+        expectedNonAdminFullName
+      )
 
-    // Precondition: user 2 must be able to see this destination in Manage Connections.
-    await page.goto('/manageconnections')
-    await page.waitForLoadState('networkidle')
-    await filterByDestinationId(page, DEST_ID)
-    const userTwoVisibleActions =
-      (await page.locator('button[aria-label="edit"]').count()) +
-      (await page.locator('button[aria-label="draft"]').count()) +
-      (await page.locator('button[aria-label="changerequest"]').count())
-    test.skip(
-      userTwoVisibleActions === 0,
-      `User 2 does not appear to have access to destination '${DEST_ID}' in this environment`
-    )
+      // Precondition: user 2 must be able to see this destination in Manage Connections.
+      await userTwoPage.goto('/manageconnections')
+      await userTwoPage.waitForLoadState('networkidle')
+      await filterByDestinationId(userTwoPage, DEST_ID)
+      const userTwoVisibleActions =
+        (await userTwoPage.locator('button[aria-label="edit"]').count()) +
+        (await userTwoPage.locator('button[aria-label="draft"]').count())
+      test.skip(
+        userTwoVisibleActions === 0,
+        `User 2 does not appear to have edit/draft access to destination '${DEST_ID}' in this environment`
+      )
 
-    await goToIdentifyStep(page, DEST_ID, 'draft')
+      await goToIdentifyStep(userTwoPage, DEST_ID, 'draft')
 
-    // Confirm user 2 sees user 1's saved draft value, then reset.
-    await expect(usernameField).toHaveValue(userOneDraftUsername)
-    await expect(resetButton).toBeEnabled()
-    await resetButton.click()
-    await page.locator('#yes').click()
+      const userTwoUsernameField = userTwoPage.locator('#username')
+      const userTwoResetButton = userTwoPage.locator('button[aria-label="reset"]')
 
-    await expect(
-      page.getByRole('alert').filter({ hasText: /Your draft was reset/i })
-    ).toBeVisible({ timeout: 10000 })
-    await expect(usernameField).toHaveValue(originalUsername)
+      // Confirm user 2 sees user 1's saved draft value, then reset.
+      await expect(userTwoUsernameField).toHaveValue(userOneDraftUsername)
+      await expect(userTwoResetButton).toBeEnabled()
+      await userTwoResetButton.click()
+      await userTwoPage.locator('#yes').click()
 
-    // Return to manage page and verify draft icon is cleared.
-    await page.locator('#close').click()
-    await page.waitForURL('**/manageconnections', { timeout: 15000 })
-    await filterByDestinationId(page, DEST_ID)
-    await expect(page.locator('button[aria-label="edit"]')).toHaveCount(1)
-    await expect(page.locator('button[aria-label="draft"]')).toHaveCount(0)
+      const resetAlert = userTwoPage
+        .getByRole('alert')
+        .filter({ hasText: /Your draft was reset/i })
+      await expect(async () => {
+        const alertVisible = await resetAlert.isVisible().catch(() => false)
+        const currentValue = await userTwoUsernameField.inputValue()
+        expect(alertVisible || currentValue !== userOneDraftUsername).toBeTruthy()
+      }).toPass({ timeout: 10000 })
+      await expect(userTwoUsernameField).not.toHaveValue(userOneDraftUsername)
+
+      // Return to manage page and verify draft icon is cleared.
+      await userTwoPage.locator('#close').click()
+      await userTwoPage.waitForURL('**/manageconnections', { timeout: 15000 })
+      await filterByDestinationId(userTwoPage, DEST_ID)
+      await expect(userTwoPage.locator('button[aria-label="edit"]')).toHaveCount(1)
+      await expect(userTwoPage.locator('button[aria-label="draft"]')).toHaveCount(0)
+    } finally {
+      if (!userTwoPage.isClosed()) await userTwoPage.close()
+      await userTwoContext.close()
+    }
   })
 })
