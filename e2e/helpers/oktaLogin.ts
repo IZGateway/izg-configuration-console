@@ -1,4 +1,16 @@
-import { Page, expect } from '@playwright/test'
+import { Page, Locator, expect } from '@playwright/test'
+
+const setInputValue = async (locator: Locator, value: string) => {
+  await locator.evaluate((el, val) => {
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )!.set!
+    setter.call(el, val)
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  }, value)
+}
 
 export const loginToOkta = async (
   page: Page,
@@ -6,6 +18,17 @@ export const loginToOkta = async (
   password: string,
   userFullName: string = 'Automation Testerson'
 ) => {
+  if (typeof username !== 'string' || username.length === 0) {
+    throw new Error(
+      'loginToOkta: username is missing or empty (check OKTA_USERNAME env var)'
+    )
+  }
+  if (typeof password !== 'string' || password.length === 0) {
+    throw new Error(
+      'loginToOkta: password is missing or empty (check OKTA_PASSWORD env var)'
+    )
+  }
+
   await page.goto('/', { waitUntil: 'load', timeout: 120000 })
 
   await page.getByRole('button', { name: 'Sign in with Okta' }).click()
@@ -14,7 +37,7 @@ export const loginToOkta = async (
   await page
     .locator('input[name="identifier"]')
     .waitFor({ state: 'visible', timeout: 20000 })
-  await page.locator('input[name="identifier"]').fill(username)
+  await setInputValue(page.locator('input[name="identifier"]'), username)
   await page.locator('[type="submit"]').click()
 
   // Wait for Okta to transition away from identifier step
@@ -35,7 +58,10 @@ export const loginToOkta = async (
       .locator('input[name="credentials.passcode"]')
       .waitFor({ state: 'visible', timeout: 10000 })
   }
-  await page.locator('input[name="credentials.passcode"]').fill(password)
+  await setInputValue(
+    page.locator('input[name="credentials.passcode"]'),
+    password
+  )
   await page.locator('[type="submit"]').click()
   await page.waitForSelector('#app-header', { timeout: 60000 })
   await expect(page.locator('#app-header')).toContainText(userFullName)
