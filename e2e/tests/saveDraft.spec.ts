@@ -41,7 +41,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => {
   if (page) await logout(page).catch(() => {})
   if (page && !page.isClosed()) await page.close()
-  if (context) await context.close()
+  if (context) await context.close().catch(() => {})
 })
 
 /**
