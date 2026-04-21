@@ -36,8 +36,8 @@ test.describe('Close edit connection page', () => {
     await page.waitForURL(/\/edit\//, { timeout: 15000 })
     await page.waitForLoadState('networkidle')
 
-    // Click the Close button at the top of the edit page
-    await page.locator('#close').click()
+    // Click the top Cancel button on the edit page (the Close component with buttonText="Cancel")
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
     // Expect to be navigated back to the manage connections page
     await page.waitForURL(/\/manageconnections/, { timeout: 15000 })
