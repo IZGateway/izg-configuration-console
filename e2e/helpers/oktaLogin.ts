@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test'
+import { logout } from './logout'
 
 const setInputValue = async (locator: Locator, value: string) => {
   await locator.evaluate((el, val) => {
@@ -31,22 +32,60 @@ export const loginToOkta = async (
 
   await page.goto('/', { waitUntil: 'load', timeout: 120000 })
 
-  await page.getByRole('button', { name: 'Sign in with Okta' }).click()
+  const appHeader = page.locator('#app-header')
+  const signInWithOktaButton = page.getByRole('button', {
+    name: /sign in with okta/i,
+  })
+  const identifierInput = page.locator(
+    'input[name="identifier"], input#okta-signin-username'
+  )
+  const passwordInput = page.locator(
+    'input[name="credentials.passcode"], input[name="password"], input#okta-signin-password'
+  )
+
+  // If the app landing page shows a "Sign in with Okta" button, click it
+  // before waiting for Okta form fields.
+  if (await signInWithOktaButton.isVisible().catch(() => false)) {
+    await signInWithOktaButton.click()
+  }
+
+  await expect(async () => {
+    const headerVisible = await appHeader.isVisible().catch(() => false)
+    const identifierVisible = await identifierInput.first().isVisible().catch(() => false)
+    const passwordVisible = await passwordInput.first().isVisible().catch(() => false)
+    expect(headerVisible || identifierVisible || passwordVisible).toBeTruthy()
+  }).toPass({ timeout: 45000 })
+
+  if (await appHeader.isVisible().catch(() => false)) {
+    const headerText = (await appHeader.innerText().catch(() => '')).trim()
+    if (headerText.toLowerCase().includes(userFullName.toLowerCase())) {
+      await page.goto('/')
+      await page.waitForLoadState('networkidle')
+      return
+    }
+
+    // Session is valid but for the wrong user; sign out first so we can
+    // authenticate with the requested account.
+    await logout(page)
+    if (await signInWithOktaButton.isVisible().catch(() => false)) {
+      await signInWithOktaButton.click()
+    }
+  }
 
   // Wait for the Okta login form to fully load (past the intermediate redirect page)
-  await page
-    .locator('input[name="identifier"]')
-    .waitFor({ state: 'visible', timeout: 20000 })
-  await setInputValue(page.locator('input[name="identifier"]'), username)
-  await page.locator('[type="submit"]').click()
+  if (await identifierInput.first().isVisible().catch(() => false)) {
+    await identifierInput.first().waitFor({ state: 'visible', timeout: 20000 })
+    await setInputValue(identifierInput.first(), username)
+    await page.locator('[type="submit"]').first().click()
+  }
 
   // Wait for Okta to transition away from identifier step
   await page
     .locator(
-      'input[name="credentials.passcode"], .button.select-factor.link-button'
+      'input[name="credentials.passcode"], input[name="password"], .button.select-factor.link-button'
     )
     .first()
-    .waitFor({ state: 'visible', timeout: 15000 })
+    .waitFor({ state: 'visible', timeout: 30000 })
 
   const body = page.locator('body')
   const selectFactorExists = await body
@@ -56,13 +95,10 @@ export const loginToOkta = async (
     await body.locator('.button.select-factor.link-button').click()
     await page
       .locator('input[name="credentials.passcode"]')
-      .waitFor({ state: 'visible', timeout: 10000 })
+      .waitFor({ state: 'visible', timeout: 15000 })
   }
-  await setInputValue(
-    page.locator('input[name="credentials.passcode"]'),
-    password
-  )
-  await page.locator('[type="submit"]').click()
+  await setInputValue(passwordInput.first(), password)
+  await page.locator('[type="submit"]').first().click()
   await page.waitForSelector('#app-header', { timeout: 60000 })
   await expect(page.locator('#app-header')).toContainText(userFullName)
   await page.goto('/')
