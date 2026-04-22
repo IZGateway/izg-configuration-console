@@ -41,7 +41,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => {
   if (page) await logout(page).catch(() => {})
   if (page && !page.isClosed()) await page.close()
-  if (context) await context.close()
+  if (context) await context.close().catch(() => {})
 })
 
 /**
@@ -254,6 +254,40 @@ test.describe('Manage connections draft vs pencil icon', () => {
     }
 
     test.skip(!found, 'No connection with a draft was visible in the table')
+  })
+})
+
+test.describe('Reset draft to production values', () => {
+  test('User can reset to production values from a saved draft', async () => {
+    const resetButton = page.locator('button[aria-label="reset"]')
+    const usernameField = page.locator('#username')
+
+    await goToIdentifyStep(page, DEST_ID, 'draft')
+
+    const draftValue = await usernameField.inputValue()
+
+    // Reset button should be enabled when a saved draft exists.
+    await expect(resetButton).toBeEnabled()
+
+    // Cancel path: dialog appears, clicking No closes it without reverting.
+    await resetButton.click()
+    const noButton = page.locator('#no')
+    const yesButton = page.locator('#yes')
+    await expect(noButton).toBeVisible()
+    await expect(yesButton).toBeVisible()
+    await noButton.click()
+    await expect(noButton).not.toBeVisible()
+    await expect(usernameField).toHaveValue(draftValue)
+
+    // Confirm path: clicking Yes reverts values and shows success feedback.
+    await resetButton.click()
+    await expect(yesButton).toBeVisible()
+    await yesButton.click()
+    const resetAlert = page
+      .getByRole('alert')
+      .filter({ hasText: /Your draft was reset/i })
+    await expect(resetAlert).toBeVisible({ timeout: 10000 })
+    await expect(usernameField).not.toHaveValue(draftValue)
   })
 })
 
