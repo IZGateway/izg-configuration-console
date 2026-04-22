@@ -6,8 +6,9 @@ import _ from 'lodash'
 import roles from '../../../lib/security/roles'
 
 const userInfoEndpoint = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/oauth2/v1/userinfo`
-const isDebugging =
-  (`${process.env.NEXTAUTH_DEBUG}` as unknown as boolean) || false
+const isProd =
+  new URL(process.env.NEXTAUTH_URL ?? 'http://localhost').hostname === 'prod.phiz-project.org'
+const isDebugging = !isProd && (process.env.NEXTAUTH_DEBUG == true)
 export const authOptions = {
   debug: isDebugging,
   providers: [
