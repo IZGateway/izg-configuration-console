@@ -26,8 +26,7 @@ const draftUsername = `DraftTest_${Date.now()}`
 
 test.beforeAll(async ({ browser }) => {
   const missing = requiredEnvs.filter((k) => !process.env[k])
-  if (missing.length)
-    test.skip(true, `Missing env vars: ${missing.join(', ')}`)
+  if (missing.length) test.skip(true, `Missing env vars: ${missing.join(', ')}`)
 
   context = await browser.newContext()
   page = await context.newPage()
@@ -187,6 +186,60 @@ test.describe('Save draft', () => {
   })
 })
 
+test.describe('3rd stepper floating action button states', () => {
+  test.beforeAll(async () => {
+    // Navigate to the IDENTIFY step and ensure a clean (no-draft) baseline so
+    // all three floating buttons start in the disabled state.
+    await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
+
+    const resetButton = page.locator('button[aria-label="reset"]')
+    await resetButton.waitFor({ state: 'visible', timeout: 10000 })
+    if (await resetButton.isEnabled()) {
+      await resetButton.click()
+      await page.locator('#yes').click()
+      await expect(
+        page.getByRole('alert').filter({ hasText: /Your draft was reset/i })
+      ).toBeVisible({ timeout: 10000 })
+    }
+  })
+
+  test('User should see Save, Test and Reset buttons disabled on 3rd stepper', async () => {
+    const saveButton = page.locator('button[aria-label="save"]')
+    const testButton = page.locator('button[aria-label="test"]')
+    const resetButton = page.locator('button[aria-label="reset"]')
+
+    await expect(saveButton).toBeVisible()
+    await expect(testButton).toBeVisible()
+    await expect(resetButton).toBeVisible()
+
+    await expect(saveButton).toBeDisabled()
+    await expect(testButton).toBeDisabled()
+    await expect(resetButton).toBeDisabled()
+  })
+
+  test('User should see Save and Test buttons enabled after changing a value', async () => {
+    await page.locator('[name="facilityId"]').fill('xyz')
+
+    const saveButton = page.locator('button[aria-label="save"]')
+    const testButton = page.locator('button[aria-label="test"]')
+
+    await expect(saveButton).toBeEnabled()
+    await expect(testButton).toBeEnabled()
+  })
+
+  test('User should see Reset button enabled after saving a draft', async () => {
+    const saveButton = page.locator('button[aria-label="save"]')
+    const resetButton = page.locator('button[aria-label="reset"]')
+
+    await saveButton.click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: /Your draft was saved/i })
+    ).toBeVisible({ timeout: 10000 })
+
+    await expect(resetButton).toBeEnabled({ timeout: 10000 })
+  })
+})
+
 test.describe('Draft info message', () => {
   test('User sees a message while editing a previously saved draft', async () => {
     await goToIdentifyStep(page, DEST_ID, 'draft')
@@ -259,12 +312,22 @@ test.describe('Manage connections draft vs pencil icon', () => {
 
 test.describe('Reset draft to production values', () => {
   test('User can reset to production values from a saved draft', async () => {
+    const saveButton = page.locator('button[aria-label="save"]')
     const resetButton = page.locator('button[aria-label="reset"]')
     const usernameField = page.locator('#username')
 
-    await goToIdentifyStep(page, DEST_ID, 'draft')
-
-    const draftValue = await usernameField.inputValue()
+    // Navigate and set a uniquely identifiable draft value so the draft is
+    // guaranteed to differ from the production value before testing reset.
+    await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
+    const uniqueDraftUsername = `ResetTest_${Date.now()}`
+    await usernameField.clear()
+    await usernameField.fill(uniqueDraftUsername)
+    await page.locator('body').click()
+    await expect(saveButton).toBeEnabled()
+    await saveButton.click()
+    await expect(
+      page.getByRole('alert').filter({ hasText: /Your draft was saved/i })
+    ).toBeVisible({ timeout: 10000 })
 
     // Reset button should be enabled when a saved draft exists.
     await expect(resetButton).toBeEnabled()
@@ -277,7 +340,7 @@ test.describe('Reset draft to production values', () => {
     await expect(yesButton).toBeVisible()
     await noButton.click()
     await expect(noButton).not.toBeVisible()
-    await expect(usernameField).toHaveValue(draftValue)
+    await expect(usernameField).toHaveValue(uniqueDraftUsername)
 
     // Confirm path: clicking Yes reverts values and shows success feedback.
     await resetButton.click()
@@ -287,12 +350,14 @@ test.describe('Reset draft to production values', () => {
       .getByRole('alert')
       .filter({ hasText: /Your draft was reset/i })
     await expect(resetAlert).toBeVisible({ timeout: 10000 })
-    await expect(usernameField).not.toHaveValue(draftValue)
+    await expect(usernameField).not.toHaveValue(uniqueDraftUsername)
   })
 })
 
 test.describe('Draft reset by another user', () => {
-  test('Any user can reset configuration values from a saved draft', async ({ browser }) => {
+  test('Any user can reset configuration values from a saved draft', async ({
+    browser,
+  }) => {
     const missingUserTwo = requiredUserTwoEnvs.filter((k) => !process.env[k])
     test.skip(
       missingUserTwo.length > 0,
@@ -358,7 +423,9 @@ test.describe('Draft reset by another user', () => {
       await goToIdentifyStep(userTwoPage, DEST_ID, 'draft')
 
       const userTwoUsernameField = userTwoPage.locator('#username')
-      const userTwoResetButton = userTwoPage.locator('button[aria-label="reset"]')
+      const userTwoResetButton = userTwoPage.locator(
+        'button[aria-label="reset"]'
+      )
 
       // Confirm user 2 sees user 1's saved draft value, then reset.
       await expect(userTwoUsernameField).toHaveValue(userOneDraftUsername)
@@ -372,7 +439,9 @@ test.describe('Draft reset by another user', () => {
       await expect(async () => {
         const alertVisible = await resetAlert.isVisible().catch(() => false)
         const currentValue = await userTwoUsernameField.inputValue()
-        expect(alertVisible || currentValue !== userOneDraftUsername).toBeTruthy()
+        expect(
+          alertVisible || currentValue !== userOneDraftUsername
+        ).toBeTruthy()
       }).toPass({ timeout: 10000 })
       await expect(userTwoUsernameField).not.toHaveValue(userOneDraftUsername)
 
@@ -380,8 +449,12 @@ test.describe('Draft reset by another user', () => {
       await userTwoPage.locator('#close').click()
       await userTwoPage.waitForURL('**/manageconnections', { timeout: 15000 })
       await filterByDestinationId(userTwoPage, DEST_ID)
-      await expect(userTwoPage.locator('button[aria-label="edit"]')).toHaveCount(1)
-      await expect(userTwoPage.locator('button[aria-label="draft"]')).toHaveCount(0)
+      await expect(
+        userTwoPage.locator('button[aria-label="edit"]')
+      ).toHaveCount(1)
+      await expect(
+        userTwoPage.locator('button[aria-label="draft"]')
+      ).toHaveCount(0)
     } finally {
       if (!userTwoPage.isClosed()) await userTwoPage.close()
       await userTwoContext.close()
