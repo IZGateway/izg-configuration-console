@@ -187,13 +187,15 @@ test.describe('Save draft', () => {
 })
 
 test.describe('3rd stepper floating action button states', () => {
-  test.beforeAll(async () => {
-    // Navigate to the IDENTIFY step and ensure a clean (no-draft) baseline so
+  test('User should see Save, Test and Reset buttons reflect state changes on 3rd stepper', async () => {
+    const saveButton = page.locator('button[aria-label="save"]')
+    const testButton = page.locator('button[aria-label="test"]')
+    const resetButton = page.locator('button[aria-label="reset"]')
+
+    // Navigate to the IDENTIFY step with a clean (no-draft) baseline so
     // all three floating buttons start in the disabled state.
     await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
-
-    const resetButton = page.locator('button[aria-label="reset"]')
-    await resetButton.waitFor({ state: 'visible', timeout: 10000 })
+    await saveButton.waitFor({ state: 'visible', timeout: 10000 })
     if (await resetButton.isEnabled()) {
       await resetButton.click()
       await page.locator('#yes').click()
@@ -201,41 +203,25 @@ test.describe('3rd stepper floating action button states', () => {
         page.getByRole('alert').filter({ hasText: /Your draft was reset/i })
       ).toBeVisible({ timeout: 10000 })
     }
-  })
 
-  test('User should see Save, Test and Reset buttons disabled on 3rd stepper', async () => {
-    const saveButton = page.locator('button[aria-label="save"]')
-    const testButton = page.locator('button[aria-label="test"]')
-    const resetButton = page.locator('button[aria-label="reset"]')
-
+    // All three buttons should be visible and disabled before any changes.
     await expect(saveButton).toBeVisible()
     await expect(testButton).toBeVisible()
     await expect(resetButton).toBeVisible()
-
     await expect(saveButton).toBeDisabled()
     await expect(testButton).toBeDisabled()
     await expect(resetButton).toBeDisabled()
-  })
 
-  test('User should see Save and Test buttons enabled after changing a value', async () => {
+    // After changing a value, Save and Test become enabled.
     await page.locator('[name="facilityId"]').fill('xyz')
-
-    const saveButton = page.locator('button[aria-label="save"]')
-    const testButton = page.locator('button[aria-label="test"]')
-
     await expect(saveButton).toBeEnabled()
     await expect(testButton).toBeEnabled()
-  })
 
-  test('User should see Reset button enabled after saving a draft', async () => {
-    const saveButton = page.locator('button[aria-label="save"]')
-    const resetButton = page.locator('button[aria-label="reset"]')
-
+    // After saving a draft, Reset becomes enabled.
     await saveButton.click()
     await expect(
       page.getByRole('alert').filter({ hasText: /Your draft was saved/i })
     ).toBeVisible({ timeout: 10000 })
-
     await expect(resetButton).toBeEnabled({ timeout: 10000 })
   })
 })
