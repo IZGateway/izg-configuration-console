@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1033.0",
-    "@aws-sdk/client-secrets-manager": "^3.1033.0",
-    "@aws-sdk/lib-dynamodb": "^3.1033.0",
+    "@aws-sdk/client-dynamodb": "^3.1035.0",
+    "@aws-sdk/client-secrets-manager": "^3.1035.0",
+    "@aws-sdk/lib-dynamodb": "^3.1035.0",
     "@axe-core/react": "^4.11.2",
     "@babel/types": "^7.29.0",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -41,7 +41,7 @@
     "@types/tcp-ping": "^0.1.6",
     "@types/xml2js": "^0.4.14",
     "@xmldom/xmldom": "^0.9.10",
-    "axios": "^1.15.1",
+    "axios": "^1.15.2",
     "follow-redirects": "^1.16.0",
     "http-status-codes": "^2.3.0",
     "js-cookie": "^3.0.5",
@@ -101,14 +101,31 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
+    "@aws-sdk/core": "^3.974.4",
+    "@aws-sdk/credential-provider-env": "^3.972.30",
+    "@aws-sdk/credential-provider-http": "^3.972.32",
+    "@aws-sdk/credential-provider-ini": "^3.972.34",
+    "@aws-sdk/credential-provider-login": "^3.972.34",
+    "@aws-sdk/credential-provider-node": "^3.972.35",
+    "@aws-sdk/credential-provider-process": "^3.972.30",
+    "@aws-sdk/credential-provider-sso": "^3.972.34",
+    "@aws-sdk/credential-provider-web-identity": "^3.972.34",
+    "@aws-sdk/dynamodb-codec": "^3.973.4",
+    "@aws-sdk/middleware-sdk-s3": "^3.972.33",
+    "@aws-sdk/middleware-user-agent": "^3.972.34",
+    "@aws-sdk/nested-clients": "^3.997.2",
+    "@aws-sdk/signature-v4-multi-region": "^3.996.21",
+    "@aws-sdk/token-providers": "^3.1035.0",
+    "@aws-sdk/util-user-agent-node": "^3.973.20",
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
     "ajv": "^8.18.0",
-    "dompurify": "^3.4.0",
+    "dompurify": "3.4.1",
     "eslint": {
       "ajv": "^6.14.0"
     },
+    "fast-xml-parser": "^5.7.1",
     "http-proxy-agent": "^7.0.2",
     "js-yaml": "^4.1.1",
     "jsdom": "^28.1.0",
