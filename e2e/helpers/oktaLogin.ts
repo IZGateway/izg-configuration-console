@@ -30,7 +30,11 @@ export const loginToOkta = async (
     )
   }
 
-  await page.goto('/', { waitUntil: 'load', timeout: 120000 })
+  // After a logout, the browser may still be mid-redirect on Okta's signout
+  // chain. Retry the navigation until it lands cleanly.
+  await expect(async () => {
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  }).toPass({ timeout: 60000, intervals: [2000] })
 
   const appHeader = page.locator('#app-header')
   const signInWithOktaButton = page.getByRole('button', {
@@ -79,7 +83,10 @@ export const loginToOkta = async (
     await page.locator('[type="submit"]').first().click()
   }
 
-  // Wait for Okta to transition away from identifier step
+  // Wait for Okta to transition away from identifier step - could land on:
+  // 1. Password input directly
+  // 2. Old factor selector (.button.select-factor.link-button)
+  // 3. New authenticator list screen (#form52 with Email/Password options)
   await page
     .locator(
       'input[name="credentials.passcode"], input[name="password"], .button.select-factor.link-button'
@@ -88,11 +95,12 @@ export const loginToOkta = async (
     .waitFor({ state: 'visible', timeout: 30000 })
 
   const body = page.locator('body')
-  const selectFactorExists = await body
-    .locator('.button.select-factor.link-button')
-    .count()
-  if (selectFactorExists > 0) {
-    await body.locator('.button.select-factor.link-button').click()
+
+  // Handle new authenticator selection screen (Email / Password list)
+  const authenticatorListExists = (await body.locator('#form52').count()) > 0
+  if (authenticatorListExists) {
+    // Click the "Select" link for the Password option using its data-se attribute
+    await page.locator('[data-se="okta_password"] a[data-se="button"]').click()
     await page
       .locator('input[name="credentials.passcode"]')
       .waitFor({ state: 'visible', timeout: 15000 })
