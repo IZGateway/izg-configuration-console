@@ -30,7 +30,11 @@ export const loginToOkta = async (
     )
   }
 
-  await page.goto('/', { waitUntil: 'load', timeout: 120000 })
+  // After a logout, the browser may still be mid-redirect on Okta's signout
+  // chain. Retry the navigation until it lands cleanly.
+  await expect(async () => {
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 })
+  }).toPass({ timeout: 60000, intervals: [2000] })
 
   const appHeader = page.locator('#app-header')
   const signInWithOktaButton = page.getByRole('button', {
