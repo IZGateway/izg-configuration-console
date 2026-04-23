@@ -240,6 +240,55 @@ test.describe('Draft info message', () => {
   })
 })
 
+test.describe('Edit workflow test results drawer', () => {
+  test('User can see test results while testing new updated connection in workflow', async () => {
+    // Precondition: user must be able to edit or resume draft for the target destination.
+    await page.goto('/manageconnections')
+    await page.waitForLoadState('networkidle')
+    await filterByDestinationId(page, DEST_ID)
+    const visibleActions =
+      (await page.locator('button[aria-label="edit"]').count()) +
+      (await page.locator('button[aria-label="draft"]').count())
+    test.skip(
+      visibleActions === 0,
+      `User does not appear to have edit/draft access to destination '${DEST_ID}' in this environment`
+    )
+
+    // Step 1: Navigate to edit workflow and go to 3rd stepper (IDENTIFY).
+    await goToIdentifyStepUsingAvailableAction(page, DEST_ID)
+
+    const usernameField = page.locator('#username')
+    const testButton = page.locator('button[aria-label="test"]')
+
+    // Ensure there is an update so the test button is enabled.
+    if (!(await testButton.isEnabled())) {
+      const updatedUsername = `UAT${Date.now()}`.slice(0, 50)
+      await usernameField.clear()
+      await usernameField.fill(updatedUsername)
+      await page.locator('body').click() // blur to trigger validation/state update
+      await expect(testButton).toBeEnabled()
+    }
+
+    // Step 2: Click on test button.
+    await testButton.click()
+
+    const testResultsWindow = page.locator('#test-connection-info')
+    const closeSideWindowButton = page.getByTestId('close')
+
+    // Step 3: Expect test results side window with close button.
+    await expect(page.locator('#test-connection')).toBeVisible({ timeout: 15000 })
+    await expect(testResultsWindow).toBeVisible({ timeout: 15000 })
+    await expect(closeSideWindowButton).toBeVisible({ timeout: 15000 })
+
+    // Step 4: Click close on the side window.
+    await closeSideWindowButton.click()
+
+    // Step 5: Expect side window is closed.
+    await expect(page.locator('#test-connection')).not.toBeVisible()
+    await expect(testResultsWindow).not.toBeVisible()
+  })
+})
+
 test.describe('Manage connections draft vs pencil icon', () => {
   test.beforeEach(async () => {
     await page.goto('/manageconnections')
