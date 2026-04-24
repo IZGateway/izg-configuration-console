@@ -14,7 +14,7 @@ http {
     add_header Strict-Transport-Security "max-age=63072000" always;
 
     map $http_referer $loggable_referer {
-        ~^(https?://[^?]*)(\?.*)?$  $1;
+        ~^([^?]*)(\?.*)?$            $1;
         default                      $http_referer;
     }
 
