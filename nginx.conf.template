@@ -10,9 +10,6 @@ events {}
 http {
     include /etc/nginx/mime.types;
 
-    # Add HSTS header globally
-    add_header Strict-Transport-Security "max-age=63072000" always;
-
     log_format main '$remote_addr - $remote_user [$time_local] "$request" '
                     '$status $body_bytes_sent "$http_referer" '
                     '"$http_user_agent" "$http_x_forwarded_for"';
@@ -22,9 +19,18 @@ http {
 
     sendfile on;
 
+    # Used to hide nginx version
+    server_tokens off;
+
     server {
         listen 443 ssl;
         server_name localhost;
+
+        # Add HSTS header - best practice is to place this in the server block
+        add_header Strict-Transport-Security "max-age=63072000" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
 
         # SSL configuration
         ssl_certificate /etc/nginx/ssl/cert.pem;
