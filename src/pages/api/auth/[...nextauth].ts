@@ -26,10 +26,7 @@ export const authOptions = {
     async session({ session, token, user }) {
       if (token) {
         session.user.id = token.id
-        session.accessToken = token.accessToken
-        session.user.groups = token.groups
         session.user.role = _.intersection(token.groups, roles)[0]
-        session.user.sub = token.sub
         session.user.isAdmin = token?.groups?.includes(
           process.env.OPERATIONS_GROUP
         )
