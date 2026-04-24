@@ -22,6 +22,9 @@ http {
 
     sendfile on;
 
+    # Used to hide nginx version
+    server_tokens off;
+
     server {
         listen 443 ssl;
         server_name localhost;
@@ -46,6 +49,10 @@ http {
         # OCSP Stapling (turning off, using self signed cert)
         ssl_stapling off;
         ssl_stapling_verify off;
+
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://izgateway1.oktapreview.com https://www.google-analytics.com; img-src 'self' data:;" always;
 
         location / {
             proxy_pass http://localhost:3000;
