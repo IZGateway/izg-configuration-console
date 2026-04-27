@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1036.0",
-    "@aws-sdk/client-secrets-manager": "^3.1036.0",
-    "@aws-sdk/lib-dynamodb": "^3.1036.0",
+    "@aws-sdk/client-dynamodb": "^3.1037.0",
+    "@aws-sdk/client-secrets-manager": "^3.1037.0",
+    "@aws-sdk/lib-dynamodb": "^3.1037.0",
     "@axe-core/react": "^4.11.2",
     "@babel/types": "^7.29.0",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -47,7 +47,7 @@
     "js-cookie": "^3.0.5",
     "lodash": "^4.18.1",
     "moment": "^2.30.1",
-    "moment-timezone": "^0.6.1",
+    "moment-timezone": "^0.6.2",
     "next": "^16.2.4",
     "next-api-middleware": "^3.0.0",
     "next-auth": "^4.24.14",
@@ -101,33 +101,19 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "@aws-sdk/core": "3.974.5",
-    "@aws-sdk/credential-provider-env": "3.972.31",
-    "@aws-sdk/credential-provider-http": "3.972.33",
-    "@aws-sdk/credential-provider-ini": "3.972.35",
-    "@aws-sdk/credential-provider-login": "3.972.35",
-    "@aws-sdk/credential-provider-node": "3.972.36",
-    "@aws-sdk/credential-provider-process": "3.972.31",
-    "@aws-sdk/credential-provider-sso": "3.972.35",
-    "@aws-sdk/credential-provider-web-identity": "3.972.35",
-    "@aws-sdk/dynamodb-codec": "3.973.5",
-    "@aws-sdk/middleware-sdk-s3": "3.972.34",
-    "@aws-sdk/middleware-user-agent": "3.972.35",
-    "@aws-sdk/nested-clients": "3.997.3",
-    "@aws-sdk/signature-v4-multi-region": "3.996.22",
-    "@aws-sdk/token-providers": "3.1036.0",
-    "@aws-sdk/util-user-agent-node": "3.973.21",
+    "@aws-sdk/token-providers": "3.1037.0",
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
-    "ajv": "^8.18.0",
+    "ajv": "8.20.0",
     "eslint": {
       "ajv": "^6.14.0"
     },
-    "fast-xml-parser": "^5.7.1",
+    "fast-xml-parser": "5.7.2",
     "http-proxy-agent": "^7.0.2",
     "js-yaml": "^4.1.1",
     "jsdom": "^28.1.0",
+    "postcss": "^8.5.12",
     "swagger-ui-react": {
       "immutable": "^4.3.8"
     },
