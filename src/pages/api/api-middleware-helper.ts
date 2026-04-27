@@ -1,6 +1,7 @@
 import { Middleware } from 'next-api-middleware'
 import { authOptions } from './auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
+import { getToken } from 'next-auth/jwt'
 import logger from '../../../logger'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
@@ -126,7 +127,8 @@ const withMiddleware = (...middlewareNames: string[]) => {
         (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
         req.socket?.remoteAddress ||
         'unknown'
-      const sub = session?.user?.sub || undefined
+      const jwtToken = await getToken({ req })
+      const sub = (jwtToken?.sub as string) || undefined
       const context: Context = { user, ipAddress, sub, session }
       await asyncRequestContext.run(context, async () => {
         const dispatch = async (i: number): Promise<void> => {
