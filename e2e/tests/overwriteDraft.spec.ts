@@ -114,6 +114,7 @@ test.describe('User can overwrite previously saved draft by any user', () => {
   })
 
   test('User 2 opens the draft and overwrites it with new changes', async () => {
+    await loginToOkta(page, user1.username, user1.password)
     // Navigate to a stable page before logging out so the nav drawer is accessible
     await page.goto('/manageconnections')
     await page.waitForLoadState('networkidle')
