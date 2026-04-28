@@ -99,7 +99,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             const hl7SuccessRatePercent =
               totalHL7 > 0
                 ? ((hl7Success / totalHL7) * 100).toFixed(1) + '%'
-                : '0%'
+                : '--'
 
             const prevHl7Success = prevBucket?.['3-bucket']?.doc_count || 0
             const prevHl7Errors = prevBucket?.['4-bucket']?.doc_count || 0
@@ -128,7 +128,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             const gatewayStatusPercent =
               ctTotal > 0
                 ? ((ctSuccess / ctTotal) * 100).toFixed(1) + '%'
-                : '0%'
+                : '--'
 
             const medianTime = bucket0['median-response-time']?.values?.['50.0']
             const percentile95Time =

@@ -186,14 +186,14 @@ const OutboundMessagesWidget = ({
           const successRate =
             totalMessages > 0
               ? ((hl7Success / totalMessages) * 100).toFixed(1) + '%'
-              : '0%'
+              : '--'
 
           // Get average response time (median - 50th percentile)
           const medianResponseTime =
             bucket['3-bucket']?.['3-metric']?.values?.['50.0']
 
           // Format response time: show ms for < 1000ms, else show seconds
-          let avgResponseTime = '0s'
+          let avgResponseTime = '--'
           if (medianResponseTime && medianResponseTime > 0) {
             if (medianResponseTime < 1000) {
               avgResponseTime = medianResponseTime.toFixed(0) + 'ms'
