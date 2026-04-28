@@ -22,6 +22,11 @@ const STATUS_CONFIG: Record<
   nodata: { icon: '\u2014', color: palette.greyText, label: 'No Data' },
 }
 
+/** Returns true when a StatusLevel has a defined threshold result (not nodata). */
+const showStatus = (
+  s: StatusLevel | undefined
+): s is Exclude<StatusLevel, 'nodata'> => s != null && s !== 'nodata'
+
 interface MetricCardProps {
   id: string
   title: string
@@ -64,7 +69,7 @@ const MetricCard = ({
           >
             {/* aria-hidden: direction text ('Faster'/'Slower') already conveys meaning */}
             <Box component="span" aria-hidden="true">
-              {change.isUp ? '↓' : '↑'}{' '}
+              {change.isUp ? '↑' : '↓'}{' '}
             </Box>
             {change.percent}
           </Box>{' '}
@@ -131,11 +136,13 @@ const MetricCard = ({
               component="span"
               sx={{
                 display: 'block',
-                color: status ? STATUS_CONFIG[status].color : palette.primary,
+                color: showStatus(status)
+                  ? STATUS_CONFIG[status].color
+                  : palette.primary,
                 fontWeight: 700,
               }}
             >
-              {status && (
+              {showStatus(status) && (
                 <Box
                   component="span"
                   aria-label={STATUS_CONFIG[status].label}

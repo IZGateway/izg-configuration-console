@@ -9,11 +9,7 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildOutboundCombinedQuery,
 } from './queries/outboundMessagesQuery'
-import {
-  getStatusLevel,
-  parseResponseTimeMs,
-  THRESHOLD_MAP,
-} from './config/statusThresholds'
+import { computeStatuses, OUTBOUND_METRICS } from './config/statusThresholds'
 
 interface Destination {
   destId: string
@@ -190,14 +186,14 @@ const OutboundMessagesWidget = ({
           const successRate =
             totalMessages > 0
               ? ((hl7Success / totalMessages) * 100).toFixed(1) + '%'
-              : '0%'
+              : '--'
 
           // Get average response time (median - 50th percentile)
           const medianResponseTime =
             bucket['3-bucket']?.['3-metric']?.values?.['50.0']
 
           // Format response time: show ms for < 1000ms, else show seconds
-          let avgResponseTime = '0s'
+          let avgResponseTime = '--'
           if (medianResponseTime && medianResponseTime > 0) {
             if (medianResponseTime < 1000) {
               avgResponseTime = medianResponseTime.toFixed(0) + 'ms'
@@ -288,7 +284,6 @@ const OutboundMessagesWidget = ({
 
     fetchMessageData()
     return () => controller.abort()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedConnection,
     principalNames ? [...principalNames].sort().join('|') : '',
@@ -299,24 +294,7 @@ const OutboundMessagesWidget = ({
   ])
 
   const metricStatuses = useMemo(
-    () => ({
-      totalMessages: getStatusLevel(
-        metrics.totalMessages,
-        THRESHOLD_MAP.outboundTotalMessages
-      ),
-      successRate: getStatusLevel(
-        parseFloat(metrics.successRate),
-        THRESHOLD_MAP.outboundSuccessRate
-      ),
-      avgResponse: getStatusLevel(
-        parseResponseTimeMs(metrics.avgResponseTime),
-        THRESHOLD_MAP.outboundAvgResponse
-      ),
-      totalFailures: getStatusLevel(
-        metrics.totalFailures,
-        THRESHOLD_MAP.outboundTotalFailures
-      ),
-    }),
+    () => computeStatuses(OUTBOUND_METRICS, metrics),
     [metrics]
   )
 
