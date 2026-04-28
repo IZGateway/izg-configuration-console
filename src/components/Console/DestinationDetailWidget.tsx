@@ -6,11 +6,7 @@ import {
   buildDestinationMetricsQuery,
   ELASTICSEARCH_API_ENDPOINT,
 } from './queries/destinationMetricsQuery'
-import {
-  getStatusLevel,
-  parseResponseTimeMs,
-  THRESHOLD_MAP,
-} from './config/statusThresholds'
+import { computeStatuses, DESTINATION_METRICS } from './config/statusThresholds'
 
 interface DestinationDetailWidgetProps {
   selectedConnection?: string
@@ -19,12 +15,12 @@ interface DestinationDetailWidgetProps {
 
 const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
   const { selectedConnection, envTag } = props
-  const [izgatewayStatus, setIzgatewayStatus] = useState<string>('0%')
-  const [totalMessages, setTotalMessages] = useState<string>('0')
+  const [izgatewayStatus, setIzgatewayStatus] = useState<string>('--')
+  const [totalMessages, setTotalMessages] = useState<string>('--')
   const [messageChange, setMessageChange] = useState<MetricChange>(
     DEFAULT_METRIC_CHANGE
   )
-  const [successRate, setSuccessRate] = useState<string>('0%')
+  const [successRate, setSuccessRate] = useState<string>('--')
   const [successRateChange, setSuccessRateChange] = useState<MetricChange>(
     DEFAULT_METRIC_CHANGE
   )
@@ -44,32 +40,15 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
   const [lastUpdateTime, setLastUpdateTime] = useState<string>('--')
 
   const metricStatuses = useMemo(
-    () => ({
-      izgatewayStatus: getStatusLevel(
-        parseFloat(izgatewayStatus),
-        THRESHOLD_MAP.izgatewayStatus
-      ),
-      totalMessages: getStatusLevel(
-        parseFloat(totalMessages.replace(/,/g, '')),
-        THRESHOLD_MAP.totalMessages
-      ),
-      successRate: getStatusLevel(
-        parseFloat(successRate),
-        THRESHOLD_MAP.successRate
-      ),
-      avgThroughput: getStatusLevel(
-        parseFloat(avgThroughput),
-        THRESHOLD_MAP.avgThroughput
-      ),
-      medianResponseTime: getStatusLevel(
-        parseResponseTimeMs(medianResponseTime),
-        THRESHOLD_MAP.medianResponseTime
-      ),
-      percentile95ResponseTime: getStatusLevel(
-        parseResponseTimeMs(percentile95ResponseTime),
-        THRESHOLD_MAP.percentile95ResponseTime
-      ),
-    }),
+    () =>
+      computeStatuses(DESTINATION_METRICS, {
+        izgatewayStatus,
+        totalMessages,
+        successRate,
+        avgThroughput,
+        medianResponseTime,
+        percentile95ResponseTime,
+      }),
     [
       izgatewayStatus,
       totalMessages,
@@ -202,7 +181,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             // messages per minute (1440 min/day)
             const throughputPerMin = totalHL7 / 1440
             const prevThroughputPerMin = prevTotalHL7 / 1440
-            setAvgThroughput(throughputPerMin.toFixed(2) + ' msg/min')
+            setAvgThroughput(throughputPerMin.toFixed(4) + ' msg/min')
 
             let throughputChangePercent = 0
             let isThroughputUp = true
