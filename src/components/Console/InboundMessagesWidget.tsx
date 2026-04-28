@@ -9,11 +9,7 @@ import {
   ELASTICSEARCH_API_ENDPOINT,
   buildInboundCombinedQuery,
 } from './queries/inboundMessagesQuery'
-import {
-  getStatusLevel,
-  parseResponseTimeMs,
-  THRESHOLD_MAP,
-} from './config/statusThresholds'
+import { computeStatuses, INBOUND_METRICS } from './config/statusThresholds'
 
 interface InboundMessagesWidgetProps {
   selectedConnection?: string
@@ -107,14 +103,14 @@ const InboundMessagesWidget = ({
           const successRate =
             totalMessages > 0
               ? ((hl7Success / totalMessages) * 100).toFixed(1) + '%'
-              : '0%'
+              : '--'
 
           // Get average response time (median - 50th percentile)
           const medianResponseTime =
             bucket['3-bucket']?.['3-metric']?.values?.['50.0']
 
           // Format response time: show ms for < 1000ms, else show seconds
-          let avgResponseTime = '0s'
+          let avgResponseTime = '--'
           if (medianResponseTime && medianResponseTime > 0) {
             if (medianResponseTime < 1000) {
               avgResponseTime = medianResponseTime.toFixed(0) + 'ms'
@@ -205,30 +201,12 @@ const InboundMessagesWidget = ({
 
     fetchMessageData()
     return () => controller.abort()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConnection, principalNamesKey, envTag])
   // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
   // principalNames is used inside the effect but we depend on principalNamesKey for stability
 
   const metricStatuses = useMemo(
-    () => ({
-      totalMessages: getStatusLevel(
-        metrics.totalMessages,
-        THRESHOLD_MAP.inboundTotalMessages
-      ),
-      successRate: getStatusLevel(
-        parseFloat(metrics.successRate),
-        THRESHOLD_MAP.inboundSuccessRate
-      ),
-      avgResponse: getStatusLevel(
-        parseResponseTimeMs(metrics.avgResponseTime),
-        THRESHOLD_MAP.inboundAvgResponse
-      ),
-      totalFailures: getStatusLevel(
-        metrics.totalFailures,
-        THRESHOLD_MAP.inboundTotalFailures
-      ),
-    }),
+    () => computeStatuses(INBOUND_METRICS, metrics),
     [metrics]
   )
 
