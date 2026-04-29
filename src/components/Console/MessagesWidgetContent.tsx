@@ -17,6 +17,7 @@ import AnimatedNumber from './components/AnimatedNumber'
 import palette from '../../styles/theme/palette'
 import { StatusLevel } from './types/destinationMetrics'
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
+import { showStatus } from './utils/statusUtils'
 
 const STATUS_CONFIG: Record<
   StatusLevel,
@@ -234,13 +235,13 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{
                       fontWeight: 700,
-                      color: metricStatuses?.totalMessages
+                      color: showStatus(metricStatuses?.totalMessages)
                         ? STATUS_CONFIG[metricStatuses.totalMessages].color
                         : palette.primary,
                       mb: 0.5,
                     }}
                   >
-                    {metricStatuses?.totalMessages && (
+                    {showStatus(metricStatuses?.totalMessages) && (
                       <Box
                         component="span"
                         aria-label={
@@ -278,13 +279,13 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{
                       fontWeight: 700,
-                      color: metricStatuses?.successRate
+                      color: showStatus(metricStatuses?.successRate)
                         ? STATUS_CONFIG[metricStatuses.successRate].color
                         : palette.primary,
                       mb: 0.5,
                     }}
                   >
-                    {metricStatuses?.successRate && (
+                    {showStatus(metricStatuses?.successRate) && (
                       <Box
                         component="span"
                         aria-label={
@@ -332,13 +333,13 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{
                       fontWeight: 700,
-                      color: metricStatuses?.avgResponse
+                      color: showStatus(metricStatuses?.avgResponse)
                         ? STATUS_CONFIG[metricStatuses.avgResponse].color
                         : palette.primary,
                       mb: 0.5,
                     }}
                   >
-                    {metricStatuses?.avgResponse && (
+                    {showStatus(metricStatuses?.avgResponse) && (
                       <Box
                         component="span"
                         aria-label={
@@ -373,13 +374,13 @@ const MessagesWidgetContent = ({
                     variant="h4"
                     sx={{
                       fontWeight: 700,
-                      color: metricStatuses?.totalFailures
+                      color: showStatus(metricStatuses?.totalFailures)
                         ? STATUS_CONFIG[metricStatuses.totalFailures].color
                         : palette.primary,
                       mb: 0.5,
                     }}
                   >
-                    {metricStatuses?.totalFailures && (
+                    {showStatus(metricStatuses?.totalFailures) && (
                       <Box
                         component="span"
                         aria-label={

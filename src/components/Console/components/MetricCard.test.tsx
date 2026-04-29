@@ -80,7 +80,7 @@ describe('MetricCard Component', () => {
   })
 
   describe('With fasterslower changeLabel', () => {
-    it('should show Faster with down arrow when isUp is true (lower response time is better)', () => {
+    it('should show Faster with up arrow when isUp is true (lower response time is better)', () => {
       const change: MetricChange = { percent: '15%', isUp: true }
       render(
         <MetricCard
@@ -93,10 +93,10 @@ describe('MetricCard Component', () => {
       expect(screen.getByText(/15%/)).toBeInTheDocument()
       expect(screen.getByText(/Faster/)).toBeInTheDocument()
       expect(screen.getByText(/Than Yesterday/)).toBeInTheDocument()
-      expect(screen.getByText('↓')).toBeInTheDocument()
+      expect(screen.getByText('↑')).toBeInTheDocument()
     })
 
-    it('should show Slower with up arrow when isUp is false', () => {
+    it('should show Slower with down arrow when isUp is false', () => {
       const change: MetricChange = { percent: '8%', isUp: false }
       render(
         <MetricCard
@@ -109,7 +109,7 @@ describe('MetricCard Component', () => {
       expect(screen.getByText(/8%/)).toBeInTheDocument()
       expect(screen.getByText(/Slower/)).toBeInTheDocument()
       expect(screen.getByText(/Than Yesterday/)).toBeInTheDocument()
-      expect(screen.getByText('↑')).toBeInTheDocument()
+      expect(screen.getByText('↓')).toBeInTheDocument()
     })
 
     it('should apply green color for Faster (isUp true)', () => {
@@ -122,7 +122,7 @@ describe('MetricCard Component', () => {
         />
       )
 
-      const arrow = screen.getByText('↓')
+      const arrow = screen.getByText('↑')
       expect(arrow).toHaveStyle({ color: '#4caf50' })
     })
 
@@ -136,7 +136,7 @@ describe('MetricCard Component', () => {
         />
       )
 
-      const arrow = screen.getByText('↑')
+      const arrow = screen.getByText('↓')
       expect(arrow).toHaveStyle({ color: '#B50E16' })
     })
   })
