@@ -7,7 +7,7 @@ import DestinationDetailWidget from './DestinationDetailWidget'
 jest.mock('./components/AnimatedNumber', () => ({
   __esModule: true,
   default: function AnimatedNumberMock({ value }: { value: string | number }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     const display =
       typeof value === 'number' ? value.toLocaleString() : String(value)
     return React.createElement('span', null, display)
@@ -89,10 +89,9 @@ describe('DestinationDetailWidget', () => {
     it('should display default values when no connection is selected', () => {
       render(<DestinationDetailWidget />)
 
-      // Default state values - multiple 0% elements exist (IZ Gateway Status and Success Rate)
-      const zeroPercentElements = screen.getAllByText('0%')
-      expect(zeroPercentElements.length).toBeGreaterThan(0)
-      expect(screen.getByText('0')).toBeInTheDocument()
+      // Default state values - all metrics show '--' when no connection is selected
+      const dashElements = screen.getAllByText('--')
+      expect(dashElements.length).toBeGreaterThan(0)
     })
 
     it('should not fetch data when selectedConnection is undefined', () => {
