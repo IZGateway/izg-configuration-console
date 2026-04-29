@@ -59,7 +59,6 @@
     "saml2-js": "^4.0.4",
     "swagger-ui-react": "^5.32.5",
     "swr": "^2.4.1",
-    "uuid": "^14.0.0",
     "waait": "^1.0.5",
     "winston": "^3.19.0",
     "xml-js": "^1.6.11",
@@ -133,6 +132,7 @@
       "immutable": "^4.3.8"
     },
     "underscore": "^1.13.8",
+    "uuid": "npm:@izgateway/uuid-cjs@^14.0.0",
     "xmlbuilder2": "^4.0.3"
   }
 }
