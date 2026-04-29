@@ -181,7 +181,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
             // messages per minute (1440 min/day)
             const throughputPerMin = totalHL7 / 1440
             const prevThroughputPerMin = prevTotalHL7 / 1440
-            setAvgThroughput(throughputPerMin.toFixed(4) + ' msg/min')
+            setAvgThroughput(throughputPerMin.toFixed(2) + ' msg/min')
 
             let throughputChangePercent = 0
             let isThroughputUp = true

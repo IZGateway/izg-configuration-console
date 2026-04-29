@@ -7,7 +7,7 @@ import OutboundMessagesWidget from './OutboundMessagesWidget'
 jest.mock('./components/AnimatedNumber', () => ({
   __esModule: true,
   default: function AnimatedNumberMock({ value }: { value: string | number }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     const display =
       typeof value === 'number' ? value.toLocaleString() : String(value)
     return React.createElement('span', null, display)
@@ -179,10 +179,9 @@ describe('OutboundMessagesWidget', () => {
         )
       })
 
-      // '0%' appears twice: successRate + failure-rate caption
+      // totalMessages and totalFailures default to 0; successRate and avgResponseTime default to '--'
       expect(screen.getAllByText('0').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('0%').length).toBeGreaterThan(0)
-      expect(screen.getByText('0s')).toBeInTheDocument()
+      expect(screen.getAllByText('--').length).toBeGreaterThan(0)
     })
 
     it('should show loading spinner initially', async () => {

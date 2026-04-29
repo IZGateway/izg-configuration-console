@@ -17,6 +17,7 @@ import AnimatedNumber from './components/AnimatedNumber'
 import palette from '../../styles/theme/palette'
 import { StatusLevel } from './types/destinationMetrics'
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
+import { showStatus } from './utils/statusUtils'
 
 const STATUS_CONFIG: Record<
   StatusLevel,
@@ -35,11 +36,6 @@ const STATUS_CONFIG: Record<
   critical: { icon: '\u2715', color: palette.error, label: 'Critical' },
   nodata: { icon: '\u2014', color: palette.greyText, label: 'No Data' },
 }
-
-/** Returns true when a StatusLevel has a defined threshold result (not nodata). */
-const showStatus = (
-  s: StatusLevel | undefined
-): s is Exclude<StatusLevel, 'nodata'> => s != null && s !== 'nodata'
 
 export interface Organization {
   organizationName: string

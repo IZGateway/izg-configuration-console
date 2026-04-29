@@ -3,6 +3,7 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
 import { MetricChange, StatusLevel } from '../types/destinationMetrics'
 import AnimatedNumber from './AnimatedNumber'
 import palette from '../../../styles/theme/palette'
+import { showStatus } from '../utils/statusUtils'
 
 const STATUS_CONFIG: Record<
   StatusLevel,
@@ -21,11 +22,6 @@ const STATUS_CONFIG: Record<
   critical: { icon: '\u2715', color: palette.error, label: 'Critical' },
   nodata: { icon: '\u2014', color: palette.greyText, label: 'No Data' },
 }
-
-/** Returns true when a StatusLevel has a defined threshold result (not nodata). */
-const showStatus = (
-  s: StatusLevel | undefined
-): s is Exclude<StatusLevel, 'nodata'> => s != null && s !== 'nodata'
 
 interface MetricCardProps {
   id: string
