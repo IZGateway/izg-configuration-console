@@ -56,7 +56,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-to-print": "^2.15.1",
-    "saml2-js": "^4.0.4",
     "swagger-ui-react": "^5.32.5",
     "swr": "^2.4.1",
     "waait": "^1.0.5",
