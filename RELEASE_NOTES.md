@@ -1,5 +1,19 @@
 # Release Notes
 
+## Release v1.14.0
+
+- IGDD-2233 Automation tests for save draft,. test, reset buttons
+- IGDD-2236 Automation test for overwriting draft of edit connection
+- IGDD-2237 Automation tests for test feature while editing connection
+- IGDD-2759 Fix UI inconsistencies with Console Colors in dashboard.
+- IGDD-2770 IZG CC - JWT tokens being logged, NEXTAUTH_DEBUG not being respected
+- IGDD-2773 Configuration Console and Transformation UI Access Log review
+- IGDD-2774 CC and XForm UI OAuth2 workflow in nextjs applications
+
+## Release v1.13.3
+
+- Update dependencies and base Docker image
+ 
 ## Release v1.13.2
 
 - Update dependencies and base Docker image
