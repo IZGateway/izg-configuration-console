@@ -1,6 +1,14 @@
 # Release Notes
 
-## Release v1.13.0
+## Release v1.13.3
+
+- Update dependencies and base Docker image
+ 
+## Release v1.13.2
+
+- Update dependencies and base Docker image
+
+## Release v1.13.1
 
 - Update dependencies and base Docker image
 
