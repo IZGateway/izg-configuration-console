@@ -6,8 +6,7 @@ import _ from 'lodash'
 import roles from '../../../lib/security/roles'
 
 const userInfoEndpoint = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/oauth2/v1/userinfo`
-const isDebugging =
-  (`${process.env.NEXTAUTH_DEBUG}` as unknown as boolean) || false
+const isDebugging = process.env.NEXTAUTH_DEBUG === 'true'
 export const authOptions = {
   debug: isDebugging,
   providers: [
@@ -27,10 +26,7 @@ export const authOptions = {
     async session({ session, token, user }) {
       if (token) {
         session.user.id = token.id
-        session.accessToken = token.accessToken
-        session.user.groups = token.groups
         session.user.role = _.intersection(token.groups, roles)[0]
-        session.user.sub = token.sub
         session.user.isAdmin = token?.groups?.includes(
           process.env.OPERATIONS_GROUP
         )

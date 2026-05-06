@@ -3,6 +3,7 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
 import { MetricChange, StatusLevel } from '../types/destinationMetrics'
 import AnimatedNumber from './AnimatedNumber'
 import palette from '../../../styles/theme/palette'
+import { showStatus } from '../utils/statusUtils'
 
 const STATUS_CONFIG: Record<
   StatusLevel,
@@ -64,7 +65,7 @@ const MetricCard = ({
           >
             {/* aria-hidden: direction text ('Faster'/'Slower') already conveys meaning */}
             <Box component="span" aria-hidden="true">
-              {change.isUp ? '↓' : '↑'}{' '}
+              {change.isUp ? '↑' : '↓'}{' '}
             </Box>
             {change.percent}
           </Box>{' '}
@@ -131,11 +132,13 @@ const MetricCard = ({
               component="span"
               sx={{
                 display: 'block',
-                color: status ? STATUS_CONFIG[status].color : palette.primary,
+                color: showStatus(status)
+                  ? STATUS_CONFIG[status].color
+                  : palette.primary,
                 fontWeight: 700,
               }}
             >
-              {status && (
+              {showStatus(status) && (
                 <Box
                   component="span"
                   aria-label={STATUS_CONFIG[status].label}

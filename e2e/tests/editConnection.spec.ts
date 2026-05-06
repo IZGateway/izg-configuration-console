@@ -16,9 +16,9 @@ test.beforeAll(async ({ browser }) => {
 })
 
 test.afterAll(async () => {
-  await logout(page)
-  await page.close()
-  await context.close()
+  if (page) await logout(page).catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 const destId = 'dev'
@@ -35,7 +35,7 @@ test.describe('Edit connection and deploy', () => {
       )
       await page.goto('/manageconnections')
       await filterByDestinationId(page, destId)
-      await changeRequestButton.click()
+      await changeRequestButton.first().click()
     })
 
     test('User can run health check component', async () => {

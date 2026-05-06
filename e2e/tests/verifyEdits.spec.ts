@@ -51,7 +51,7 @@ const badValues = {
     onlyOneSpecialChar: 'OnlyOneSpecial11AA!', // Only 1 special char - needs 2
     startsWithEquals: '==ValidPassword11!!AA', // Starts with == which is not allowed
     invalidSpecialChar: 'InvalidChar11AAzz*', // Contains * which is not in the allowed set
-  }
+  },
 }
 
 test.beforeAll(async ({ browser }) => {
@@ -68,9 +68,9 @@ test.beforeEach(async () => {
 })
 
 test.afterAll(async () => {
-  await logout(page)
-  await page.close()
-  await context.close()
+  if (page) await logout(page).catch(() => {})
+  if (page && !page.isClosed()) await page.close()
+  if (context) await context.close()
 })
 
 async function getToEditScreen(page: Page, destId: string) {
@@ -89,7 +89,7 @@ async function getToEditScreen(page: Page, destId: string) {
 
   // There is NOT a change request set for this destination already
   // Click edit and then accept the agreement if it appears
-  await editButton.click()
+  await editButton.first().click()
   try {
     await page.getByTestId('agree-button').waitFor({ timeout: 2000 })
     await page.getByTestId('agree-button').click()
@@ -173,27 +173,32 @@ test.describe('Field validation - invalid values', () => {
     },
   ]
 
-  fieldsToValidate.forEach(({ displayName, inputName, errorId, badValuesKey }) => {
-    test(`Invalid ${displayName} values not accepted`, async () => {
-      const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
-      test.skip(shouldSkip, 'Edit button is not available for this destination')
+  fieldsToValidate.forEach(
+    ({ displayName, inputName, errorId, badValuesKey }) => {
+      test(`Invalid ${displayName} values not accepted`, async () => {
+        const { shouldSkip, nextButton } = await getToEditScreen(page, destId)
+        test.skip(
+          shouldSkip,
+          'Edit button is not available for this destination'
+        )
 
-      const field = page.locator(`input[name="${inputName}"]`)
-      const errorMessage = page.locator(`#${errorId}`)
+        const field = page.locator(`input[name="${inputName}"]`)
+        const errorMessage = page.locator(`#${errorId}`)
 
-      // Test each invalid value
-      for (const [key, value] of Object.entries(badValues[badValuesKey])) {
-        await test.step(`Test invalid ${displayName}: ${key} ("${value}")`, async () => {
-          await field.clear()
-          await field.fill(value as string)
-          await page.locator('body').click()
+        // Test each invalid value
+        for (const [key, value] of Object.entries(badValues[badValuesKey])) {
+          await test.step(`Test invalid ${displayName}: ${key} ("${value}")`, async () => {
+            await field.clear()
+            await field.fill(value as string)
+            await page.locator('body').click()
 
-          await expect.soft(errorMessage).toBeVisible()
-          await expect.soft(nextButton).toBeDisabled()
-        })
-      }
-    })
-  })
+            await expect.soft(errorMessage).toBeVisible()
+            await expect.soft(nextButton).toBeDisabled()
+          })
+        }
+      })
+    }
+  )
 })
 
 test.describe('MSH field pair validation', () => {
@@ -296,7 +301,9 @@ test.describe('Password validation', () => {
 
     const newPasswordField = page.locator('input[name="newPassword"]')
     const confirmPasswordField = page.locator('input[name="confirmPassword"]')
-    const confirmPasswordError = page.locator('#confirm-new-password-helper-text')
+    const confirmPasswordError = page.locator(
+      '#confirm-new-password-helper-text'
+    )
 
     // Valid passwords but different values
     const validPassword1 = 'ValidPassword11!!'

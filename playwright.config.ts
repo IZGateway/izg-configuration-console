@@ -3,6 +3,12 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e/tests',
   globalSetup: require.resolve('./playwright.env.setup'),
+  timeout: 60000,
+  workers: 1,
+  retries: 2,
+  expect: {
+    timeout: 15000,
+  },
   use: {
     baseURL: process.env.BASE_URL,
     headless: true,
@@ -13,7 +19,7 @@ export default defineConfig({
       ignoreHTTPSErrors: true,
     },
     launchOptions: {
-      slowMo: 500, // 0.5 second delay between actions
+      slowMo: process.env.SLOWMO ? parseInt(process.env.SLOWMO) : 0,
     },
     screenshot: 'off',
   },

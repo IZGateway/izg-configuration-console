@@ -15,8 +15,8 @@ export interface FailureDetail {
 
 export const DEFAULT_MESSAGE_METRICS: MessageMetrics = {
   totalMessages: 0,
-  successRate: '0%',
-  avgResponseTime: '0s',
+  successRate: '--',
+  avgResponseTime: '--',
   totalFailures: 0,
   lastUpdateTime: '--',
 }
