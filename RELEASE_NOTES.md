@@ -10,6 +10,10 @@
 - IGDD-2773 Configuration Console and Transformation UI Access Log review
 - IGDD-2774 CC and XForm UI OAuth2 workflow in nextjs applications
 
+## Release v1.13.3
+
+- Update dependencies and base Docker image
+ 
 ## Release v1.13.2
 
 - Update dependencies and base Docker image
