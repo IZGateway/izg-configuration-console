@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1045.0",
-    "@aws-sdk/client-secrets-manager": "^3.1045.0",
-    "@aws-sdk/lib-dynamodb": "^3.1045.0",
+    "@aws-sdk/client-dynamodb": "^3.1046.0",
+    "@aws-sdk/client-secrets-manager": "^3.1046.0",
+    "@aws-sdk/lib-dynamodb": "^3.1046.0",
     "@axe-core/react": "^4.11.3",
     "@babel/types": "^7.29.0",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -41,7 +41,7 @@
     "@types/tcp-ping": "^0.1.6",
     "@types/xml2js": "^0.4.14",
     "@xmldom/xmldom": "^0.9.10",
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "follow-redirects": "^1.16.0",
     "http-status-codes": "^2.3.0",
     "js-cookie": "^3.0.5",
