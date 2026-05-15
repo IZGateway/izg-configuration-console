@@ -176,7 +176,7 @@ export async function encryptDb(dbClient: DbClient): Promise<void> {
         dest.destId,
         dest.destinationType.typeId
       )
-      if (typeof password === 'string' && password) {
+      if (typeof password === 'string' && password && !password.startsWith('==')) {
         const encrypted = encrypt(password)
         // Create a copy to avoid mutating the original
         const updated: Destination = { ...dest, password: encrypted }
