@@ -222,30 +222,47 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
             <CardContent sx={{ px: 4 }}>
               {isEncrypted === null ? (
                 <Loader open={true} />
-              ) : !isEncrypted ? (
-                <Button
-                  variant="contained"
-                  size="large"
-                  color="primary"
-                  sx={{ textTransform: 'uppercase' }}
-                  onClick={handleDialog}
-                  disabled={!hasKeyName}
-                  title={!hasKeyName ? "Encryption key is not set, the database cannot be encrypted." : "Click to encrypt destination passwords"}
-                >
-                  Initialize Password Encryption
-                </Button>
               ) : (
-                <Button
-                  variant="contained"
-                  size="large"
-                  color="primary"
-                  sx={{ textTransform: 'uppercase' }}
-                  onClick={handleRotate}
-                  disabled={!hasKeyName}
-                  title={!hasKeyName ? "Encryption key is not set but database is encrypted! Some functionality will be impaired." : "Click to rotate the password encryption key"}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: 2,
+                  }}
                 >
-                  Rotate Password Encryption Key
-                </Button>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    color="primary"
+                    sx={{ textTransform: 'uppercase' }}
+                    onClick={handleDialog}
+                    disabled={!hasKeyName}
+                    title={
+                      !hasKeyName
+                        ? 'Encryption key is not set, the database cannot be encrypted.'
+                        : 'Click to encrypt any unencrypted destination passwords'
+                    }
+                  >
+                    Encrypt Unencrypted Passwords
+                  </Button>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    color="primary"
+                    sx={{ textTransform: 'uppercase' }}
+                    onClick={handleRotate}
+                    disabled={!hasKeyName || !isEncrypted}
+                    title={
+                      !hasKeyName
+                        ? 'Encryption key is not set, key rotation is unavailable.'
+                        : !isEncrypted
+                        ? 'All passwords must be encrypted before rotating the key.'
+                        : 'Click to rotate the password encryption key'
+                    }
+                  >
+                    Rotate Password Encryption Key
+                  </Button>
+                </Box>
               )}
               <Loader open={loadingInit || loadingRotate} />
             </CardContent>
