@@ -91,6 +91,7 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
           level: 'success',
           message: `Password encryption key rotation is successful`,
         })
+        setIsEncrypted(false)
       } else {
         setShowSnackbar(true)
         setAlert({
@@ -236,10 +237,12 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
                     color="primary"
                     sx={{ textTransform: 'uppercase' }}
                     onClick={handleDialog}
-                    disabled={!hasKeyName}
+                    disabled={!hasKeyName || isEncrypted === true}
                     title={
                       !hasKeyName
                         ? 'Encryption key is not set, the database cannot be encrypted.'
+                        : isEncrypted === true
+                        ? 'All passwords are already encrypted.'
                         : 'Click to encrypt any unencrypted destination passwords'
                     }
                   >
