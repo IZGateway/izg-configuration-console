@@ -27,7 +27,11 @@ export async function isDatabaseEncrypted(
       const password = await dbClient
         .getRepository()
         .fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
-      if (typeof password === 'string' && !password.startsWith('==')) {
+      if (
+        typeof password === 'string' &&
+        password.trim() !== '' &&
+        !password.startsWith('==')
+      ) {
         logger.warn(
           `Destination ${dest.destId}/${dest.destinationType.typeId} is not encrypted: ${password}`
         )
@@ -57,7 +61,11 @@ export async function isDatabaseEncrypted(
         const crPassword = await dbClient
           .getRepository()
           .fetchChangeRequestPassword(cr.id)
-        if (typeof crPassword === 'string' && !crPassword.startsWith('==')) {
+        if (
+          typeof crPassword === 'string' &&
+          crPassword.trim() !== '' &&
+          !crPassword.startsWith('==')
+        ) {
           logger.warn(
             `Change request ${cr.id} for destination ${dest.destId}/${dest.destinationType.typeId} is not encrypted: ${crPassword}`
           )
