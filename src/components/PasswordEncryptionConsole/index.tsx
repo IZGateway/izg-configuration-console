@@ -91,7 +91,9 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
           level: 'success',
           message: `Password encryption key rotation is successful`,
         })
-        setIsEncrypted(false)
+        const statusRes = await fetch('/api/encryptionStatus')
+        const statusData = await statusRes.json()
+        setIsEncrypted(statusData.encrypted)
       } else {
         setShowSnackbar(true)
         setAlert({
