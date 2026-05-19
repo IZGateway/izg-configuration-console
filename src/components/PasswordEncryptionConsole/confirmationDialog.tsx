@@ -54,7 +54,7 @@ const ConfirmationDialog = (props) => {
                 sx={{ fontWeight: 'bold' }}
                 variant="h6"
               >
-                Confirm Encryption
+                Confirm Encrypt Unencrypted Passwords
               </Typography>
             </div>
           </DialogTitle>
@@ -63,7 +63,8 @@ const ConfirmationDialog = (props) => {
           <DialogContent>
             <div>
               <Typography variant="body1" color={palette.greyDarkTypography}>
-                You are about to encrypt all plaintext passwords. This action
+                You are about to encrypt all plaintext (unencrypted) passwords.
+                Already-encrypted passwords will not be affected. This action
                 cannot be undone.
               </Typography>
               <Typography variant="body1" color={palette.greyDarkTypography}>
