@@ -117,14 +117,14 @@ jobs:
           # Keep security override behavior while forcing a compatible version on that path.
           node <<'NODE'
           const fs = require('fs');
+          const semver = require('semver');
+          const COMPAT_BRACE_EXPANSION_VERSION = '^2.0.3';
           try {
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             const overrides = pkg.overrides || {};
             const brace = overrides['brace-expansion'];
             const major =
-              typeof brace === 'string' && brace.match(/[0-9]+/)
-                ? Number(brace.match(/[0-9]+/)[0])
-                : null;
+              typeof brace === 'string' ? semver.minVersion(brace)?.major ?? null : null;
 
             if (major !== null && major >= 5) {
               const configArrayOverride =
@@ -142,13 +142,13 @@ jobs:
 
               configArrayOverride.minimatch = {
                 ...minimatchOverride,
-                'brace-expansion': '^2.0.3'
+                'brace-expansion': COMPAT_BRACE_EXPANSION_VERSION
               };
               overrides['@eslint/config-array'] = configArrayOverride;
               pkg.overrides = overrides;
               fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
               console.log(
-                'Applied @eslint/config-array/minimatch brace-expansion compatibility override (^2.0.3)'
+                `Applied @eslint/config-array/minimatch brace-expansion compatibility override (${COMPAT_BRACE_EXPANSION_VERSION})`
               );
             }
           } catch (error) {
