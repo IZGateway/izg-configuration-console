@@ -112,6 +112,10 @@ jobs:
         run: |
           echo "Fixing all security vulnerabilities (updates direct deps + adds overrides)..."
           node node_modules/@izgateway/dependency-scripts/fix-all-vulnerabilities.js
+          # fix-all-vulnerabilities can add brace-expansion@^5.x, which breaks
+          # eslint via @eslint/config-array -> minimatch (TypeError: expand is not a function).
+          # Keep security override behavior while forcing a compatible version on that path.
+          node -e "const fs=require('fs');const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));const overrides=pkg.overrides||{};const brace=overrides['brace-expansion'];const major=typeof brace==='string'&&brace.match(/[0-9]+/)?Number(brace.match(/[0-9]+/)[0]):null;if(major!==null&&major>=5){const cfg='@eslint/config-array';const cfgOverride=(overrides[cfg]&&typeof overrides[cfg]==='object'&&!Array.isArray(overrides[cfg]))?overrides[cfg]:{};const minimatch=(cfgOverride.minimatch&&typeof cfgOverride.minimatch==='object'&&!Array.isArray(cfgOverride.minimatch))?cfgOverride.minimatch:{};cfgOverride.minimatch={...minimatch,'brace-expansion':'^2.0.3'};overrides[cfg]=cfgOverride;pkg.overrides=overrides;fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\\n');console.log('Applied @eslint/config-array/minimatch brace-expansion compatibility override (^2.0.3)');}"
           
           if git diff --quiet package.json; then
             echo "has_security_changes=false" >> $GITHUB_OUTPUT
