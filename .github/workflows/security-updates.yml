@@ -117,14 +117,32 @@ jobs:
           # Keep security override behavior while forcing a compatible version on that path.
           node <<'NODE'
           const fs = require('fs');
-          const semver = require('semver');
           const COMPAT_BRACE_EXPANSION_VERSION = '^2.0.3';
+
+          function getMinimumMajorVersion(range) {
+            if (typeof range !== 'string') {
+              return null;
+            }
+            const versions = [...range.matchAll(/(\d+(?:\.\d+){0,2})/g)].map(
+              (match) => Number(match[1].split('.')[0])
+            );
+            if (versions.length === 0) {
+              return null;
+            }
+            return Math.min(...versions);
+          }
+
           try {
             const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
             const overrides = pkg.overrides || {};
             const brace = overrides['brace-expansion'];
-            const major =
-              typeof brace === 'string' ? semver.minVersion(brace)?.major ?? null : null;
+            const major = getMinimumMajorVersion(brace);
+
+            if (typeof brace === 'string' && major === null) {
+              console.warn(
+                `Could not parse brace-expansion override version: ${brace}. Skipping compatibility guard.`
+              );
+            }
 
             if (major !== null && major >= 5) {
               const configArrayOverride =
