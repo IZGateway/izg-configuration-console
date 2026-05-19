@@ -29,33 +29,13 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
   const [loadingRotate, setLoadingRotate] = React.useState(false)
 
   useEffect(() => {
-    console.debug('[PasswordEncryptionConsole] hasKeyName:', hasKeyName)
-  }, [hasKeyName])
-
-  useEffect(() => {
-    console.debug('[PasswordEncryptionConsole] isEncrypted changed:', isEncrypted, {
-      encryptButtonDisabled: !hasKeyName || isEncrypted === true,
-      rotateButtonDisabled: !hasKeyName || !isEncrypted,
-      reason: !hasKeyName
-        ? 'no encryption key configured'
-        : isEncrypted === null
-        ? 'status still loading'
-        : isEncrypted
-        ? 'all passwords already encrypted'
-        : 'unencrypted passwords exist',
-    })
-  }, [isEncrypted, hasKeyName])
-
-  useEffect(() => {
     const fetchStatus = async () => {
       try {
-        console.debug('[PasswordEncryptionConsole] fetching encryption status...')
         const res = await fetch('/api/encryptionStatus')
         const data = await res.json()
-        console.debug('[PasswordEncryptionConsole] encryptionStatus response:', data)
         setIsEncrypted(data.encrypted)
       } catch (err) {
-        console.error('[PasswordEncryptionConsole] Error fetching DB status', err)
+        console.error('Error fetching DB status', err)
         setIsEncrypted(false)
       }
     }
@@ -80,7 +60,6 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
           level: 'success',
           message: `Passwords encrypted successfully`,
         })
-        console.debug('[PasswordEncryptionConsole] encrypt succeeded — setting isEncrypted=true, encrypt button will disable')
         setIsEncrypted(true)
       } else {
         setShowSnackbar(true)
@@ -112,7 +91,6 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
           level: 'success',
           message: `Password encryption key rotation is successful`,
         })
-        console.debug('[PasswordEncryptionConsole] rotate succeeded — setting isEncrypted=false, encrypt button will re-enable')
         setIsEncrypted(false)
       } else {
         setShowSnackbar(true)
