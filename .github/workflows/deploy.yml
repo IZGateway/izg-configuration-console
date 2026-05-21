@@ -34,9 +34,9 @@ jobs:
       application_version: ${{ steps.get-version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: '24.x'
       - name: Get current date
@@ -58,9 +58,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v6
         with:
           node-version: '24.x'
       - name: Configure npm authentication
@@ -84,7 +84,7 @@ jobs:
     needs: [code-quality-check, generate-release-timestamp]
     steps:
       - name: Create tag
-        uses: actions/github-script@v5
+        uses: actions/github-script@v9
         with:
           script: |
             github.rest.git.createRef({
@@ -105,22 +105,22 @@ jobs:
       repository-projects: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to the GitHub Container registry
         if: ${{ contains(github.ref, 'refs/heads/release/') }}
         id: login-ghcr
-        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.GITHUB_REGISTRY_PREFIX }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -128,11 +128,11 @@ jobs:
 
       - name: Login to the Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ env.GITHUB_REGISTRY_PREFIX }}/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console,enable=${{ contains(github.ref, 'refs/heads/release/') }}
@@ -146,7 +146,7 @@ jobs:
 
       - name: Build and push Docker Config Console image
         id: docker_build
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -173,13 +173,13 @@ jobs:
       repository-projects: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Cache Next.js build
-        uses: actions/cache@v3
+        uses: actions/cache@v5
         with:
           path: |
             .next/cache
@@ -189,7 +189,7 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Configure AWS credentials (APHL)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.APHL_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.APHL_AWS_SECRET_ACCESS_KEY }}
@@ -197,11 +197,11 @@ jobs:
 
       - name: Login to Amazon ECR (APHL)
         id: login_ecr_aphl
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Docker Metadata (APHL)
         id: docker_meta_aphl
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }},enable=${{ contains(github.ref, 'refs/heads/release/') }}
@@ -212,7 +212,7 @@ jobs:
 
       - name: Build and push Docker IZG Configuration Console image
         id: docker_build_aphl
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -236,7 +236,7 @@ jobs:
       (github.event_name == 'pull_request' && github.base_ref == 'develop')
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
