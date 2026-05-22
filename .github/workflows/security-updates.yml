@@ -69,13 +69,16 @@ jobs:
           fi
       
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm audit fix
 
       - name: Install security tooling
         run: |
           npm install -g npm-check-updates
           SCRIPTS_CHANNEL="${{ inputs.dependency_scripts_channel || 'latest' }}"
           npm install --no-save @izgateway/dependency-scripts@${SCRIPTS_CHANNEL}
+          npm audit fix
           DS_VERSION=$(node -p 'require("./node_modules/@izgateway/dependency-scripts/package.json").version')
           echo "Using @izgateway/dependency-scripts@${DS_VERSION}"
         env:
@@ -174,7 +177,8 @@ jobs:
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           # Ensure package-lock.json is updated with any override changes
-          npm install 
+          npm install
+          npm audit fix
           git add package.json package-lock.json
           git commit -m "chore(deps): security and dependency updates
 
