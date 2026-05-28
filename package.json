@@ -1,7 +1,7 @@
 {
   "name": "izg-configuration-console",
   "private": true,
-  "version": "1.14.1",
+  "version": "1.14.2",
   "scripts": {
     "dev": "next",
     "build": "next build",
@@ -19,11 +19,11 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1048.0",
-    "@aws-sdk/client-secrets-manager": "^3.1048.0",
-    "@aws-sdk/lib-dynamodb": "^3.1048.0",
+    "@aws-sdk/client-dynamodb": "^3.1054.0",
+    "@aws-sdk/client-secrets-manager": "^3.1054.0",
+    "@aws-sdk/lib-dynamodb": "^3.1054.0",
     "@axe-core/react": "^4.11.3",
-    "@babel/types": "^7.29.0",
+    "@babel/types": "^7.29.7",
     "@elastic/ecs-winston-format": "^1.5.3",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
@@ -64,10 +64,10 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@babel/preset-typescript": "^7.28.5",
+    "@babel/preset-typescript": "^7.29.7",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
-    "@izgateway/dependency-scripts": "^1.0.2",
+    "@izgateway/dependency-scripts": "^1.0.3",
     "@next/eslint-plugin-next": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -75,7 +75,7 @@
     "@types/gtag.js": "^0.0.20",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.24",
-    "@types/react": "^18.3.28",
+    "@types/react": "^18.3.29",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
@@ -92,13 +92,30 @@
     "prettier": "^2.8.8",
     "react-axe": "^3.5.4",
     "rimraf": "^5.0.10",
-    "semver": "^7.8.0",
-    "ts-jest": "^29.4.9",
+    "semver": "^7.8.1",
+    "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   },
   "overrides": {
+    "@aws-sdk/core": "3.974.14",
+    "@aws-sdk/credential-provider-env": "3.972.40",
+    "@aws-sdk/credential-provider-http": "3.972.42",
+    "@aws-sdk/credential-provider-ini": "3.972.44",
+    "@aws-sdk/credential-provider-login": "3.972.44",
+    "@aws-sdk/credential-provider-node": "3.972.45",
+    "@aws-sdk/credential-provider-process": "3.972.40",
+    "@aws-sdk/credential-provider-sso": "3.972.44",
+    "@aws-sdk/credential-provider-web-identity": "3.972.44",
+    "@aws-sdk/dynamodb-codec": "3.973.14",
+    "@aws-sdk/middleware-sdk-s3": "3.972.43",
+    "@aws-sdk/middleware-user-agent": "3.972.44",
+    "@aws-sdk/nested-clients": "3.997.12",
+    "@aws-sdk/signature-v4-multi-region": "3.996.29",
+    "@aws-sdk/token-providers": "3.1054.0",
+    "@aws-sdk/util-user-agent-node": "3.973.30",
+    "@cypress/request": "^4.0.0",
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
@@ -106,11 +123,12 @@
     "eslint": {
       "ajv": "^6.14.0"
     },
-    "fast-uri": "^3.1.2",
+    "fast-xml-parser": "5.8.0",
     "http-proxy-agent": "^7.0.2",
     "js-yaml": "^4.1.1",
     "jsdom": "^28.1.0",
-    "postcss": "^8.5.14",
+    "postcss": "8.5.15",
+    "qs": "^6.15.2",
     "swagger-ui-react": {
       "immutable": "^4.3.8"
     },
