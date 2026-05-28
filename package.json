@@ -19,11 +19,11 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1052.0",
-    "@aws-sdk/client-secrets-manager": "^3.1052.0",
-    "@aws-sdk/lib-dynamodb": "^3.1052.0",
+    "@aws-sdk/client-dynamodb": "^3.1055.0",
+    "@aws-sdk/client-secrets-manager": "^3.1055.0",
+    "@aws-sdk/lib-dynamodb": "^3.1055.0",
     "@axe-core/react": "^4.11.3",
-    "@babel/types": "^7.29.0",
+    "@babel/types": "^7.29.7",
     "@elastic/ecs-winston-format": "^1.5.3",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
@@ -64,10 +64,10 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@babel/preset-typescript": "^7.28.5",
+    "@babel/preset-typescript": "^7.29.7",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
-    "@izgateway/dependency-scripts": "^1.0.2",
+    "@izgateway/dependency-scripts": "^1.0.4",
     "@next/eslint-plugin-next": "^16.2.6",
     "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -99,6 +99,7 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
+    "@cypress/request": "^4.0.0",
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
@@ -110,7 +111,7 @@
     "http-proxy-agent": "^7.0.2",
     "js-yaml": "^4.1.1",
     "jsdom": "^28.1.0",
-    "postcss": "8.5.15",
+    "qs": "^6.15.2",
     "swagger-ui-react": {
       "immutable": "^4.3.8"
     },
