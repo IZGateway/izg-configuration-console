@@ -46,7 +46,7 @@ Watcher) are tracked separately and have been applied outside this CR.
 
 ### 4b — Testing
 
-- [ ] 4.6 Integration test: log in, confirm authenticated page loads work end-to-end
+- [x] 4.6 Integration test: log in, confirm authenticated page loads work end-to-end
       with the proof flow (check Network tab for `x-dpop-proof` header on requests)
 - [ ] 4.7 Verify `boundPublicKey` is present in the session after `bind-session` completes:
       the session cookie is a JWE (A256GCM) and cannot be decoded client-side.
@@ -55,7 +55,7 @@ Watcher) are tracked separately and have been applied outside this CR.
       to be present), and DPoP proofs on API calls succeed end-to-end.
 - [ ] 4.8 Attack simulation: capture `storageState` after login, attempt replay in a
       fresh Playwright instance — confirm all requests are redirected to sign-in
-- [ ] 4.9 Strict Mode verification: confirm DPoP initializes correctly in development
+- [x] 4.9 Strict Mode verification: confirm DPoP initializes correctly in development
       (React 18 Strict Mode double-mount — ref guard is reset in cleanup)
 - [ ] 4.10 Deploy to dev; repeat attack simulation against dev environment
 - [ ] 4.11 Update CVSS note in IGDD-2893 — WebCrypto binding eliminates attack for CC
