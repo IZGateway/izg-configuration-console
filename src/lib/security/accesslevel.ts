@@ -1,4 +1,5 @@
 import {
+  ApiKeyManagementPageAccessControl,
   ManageConnectionsPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
@@ -30,4 +31,6 @@ export type PageControls = {
   edit: EditPageAccessControl
   changerequest: ChangeRequestPageAccessControl
   history: HistoryPageAccessControl
+  // Key must match the route pathname: /apikeymanagement (see IGDD-2708)
+  apikeymanagement: ApiKeyManagementPageAccessControl
 }
