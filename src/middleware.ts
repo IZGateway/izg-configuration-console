@@ -76,6 +76,13 @@ export default withAuth(async function middleware(req: NextRequestWithAuth) {
   // Skip DPoP checks for auth callbacks and static assets.
   if (DPOP_SKIP.test(req.nextUrl.pathname)) return NextResponse.next()
 
+  // DPoP enforcement is limited to API routes. Browser page navigation (full
+  // page GET requests) does not go through window.fetch, so the client-side
+  // interceptor cannot attach a proof to those requests. Page access is gated
+  // by withAuth (session validity). Sensitive data is served exclusively via
+  // /api/* routes, all of which are covered by the fetch interceptor.
+  if (!req.nextUrl.pathname.startsWith('/api/')) return NextResponse.next()
+
   // `boundPublicKey` is set by bind-session after the browser generates its key pair.
   // If it is absent (e.g. the session predates this deployment), pass the request
   // through — DPoP enforcement is contingent on the key being bound. Sessions that
