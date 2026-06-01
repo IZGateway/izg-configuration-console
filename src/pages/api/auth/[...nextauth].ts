@@ -39,7 +39,6 @@ export const authOptions = {
         token.idToken = idToken
         token.id_token = account.id_token
         token.provider = account.provider
-        token.accessToken = account.access_token
         token.sub = account.providerAccountId
         token.id = profile.id
         token.groups = profile.groups
