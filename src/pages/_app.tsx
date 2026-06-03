@@ -90,17 +90,27 @@ function Auth({ children }) {
 
     ;(async () => {
       try {
-        let privateKey: CryptoKey
-        let publicKeyJwk: JsonWebKey
+        // Resolve the ECDSA key pair, serialized across tabs via Web Locks.
+        // Without a lock, two tabs opening simultaneously could both see an
+        // empty IndexedDB, generate different key pairs, and race to overwrite
+        // each other's boundPublicKey in the session — leaving the first tab
+        // with an unbound key whose proofs the middleware rejects.
+        //
+        // The lock ensures only one tab runs the load-or-generate block at a
+        // time. The second tab to acquire the lock re-checks IndexedDB and
+        // finds the first tab's key, so both tabs end up using the same pair.
+        //
+        // Web Locks API — MDN:
+        //   https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API
+        const resolveKeyPair = async (): Promise<{
+          privateKey: CryptoKey
+          publicKeyJwk: JsonWebKey
+        }> => {
+          // Re-check IndexedDB inside the lock — a concurrent tab may have
+          // stored a key pair between this tab's initial check and lock acquire.
+          const existing = await loadKeyPair()
+          if (existing) return existing
 
-        // Reuse an existing key pair from IndexedDB if one was stored during a
-        // previous page load. Reusing the pair avoids generating a new key and
-        // re-binding the session on every navigation within the same tab.
-        const existing = await loadKeyPair()
-        if (existing) {
-          privateKey = existing.privateKey
-          publicKeyJwk = existing.publicKeyJwk
-        } else {
           // Generate a non-exportable ECDSA P-256 key pair.
           // extractable=false (the second argument) is enforced by the browser's
           // cryptographic subsystem — the raw private key bytes can never be read
@@ -112,10 +122,18 @@ function Auth({ children }) {
           )
           // Export only the public key as JWK so it can be sent to the server.
           // The private key is never exported — it stays inside the crypto subsystem.
-          publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey)
+          const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey)
           await storeKeyPair(keyPair.privateKey, publicKeyJwk)
-          privateKey = keyPair.privateKey
+          return { privateKey: keyPair.privateKey, publicKeyJwk }
         }
+
+        // navigator.locks is available in all IZG-supported browsers
+        // (Chrome 69+, Edge 79+, Firefox 96+, Safari 15.4+). The fallback
+        // path is defensive — without locks, the rare same-instant multi-tab
+        // race is not prevented, but all other scenarios are unaffected.
+        const { privateKey, publicKeyJwk } = navigator.locks
+          ? await navigator.locks.request('dpop-key-init', resolveKeyPair)
+          : await resolveKeyPair()
 
         // Bind the session: POST the public key JWK to the server so it can be
         // stored in the NextAuth JWT. The server will re-issue the session cookie
