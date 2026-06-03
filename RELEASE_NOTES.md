@@ -1,5 +1,9 @@
 # Release Notes
 
+## Release v1.15.0
+
+- IGDD-2576 Allow a user to encrypt plain-text passwords using Config Console
+
 ## Release v1.14.2
 
 - IGDD-2233 Automation tests for save draft,. test, reset buttons
