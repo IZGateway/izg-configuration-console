@@ -27,7 +27,11 @@ export async function isDatabaseEncrypted(
       const password = await dbClient
         .getRepository()
         .fetchDestinationPassword(dest.destId, dest.destinationType.typeId)
-      if (typeof password === 'string' && !password.startsWith('==')) {
+      if (
+        typeof password === 'string' &&
+        password.trim() !== '' &&
+        !password.startsWith('==')
+      ) {
         logger.warn(
           `Destination ${dest.destId}/${dest.destinationType.typeId} is not encrypted: ${password}`
         )
@@ -57,7 +61,11 @@ export async function isDatabaseEncrypted(
         const crPassword = await dbClient
           .getRepository()
           .fetchChangeRequestPassword(cr.id)
-        if (typeof crPassword === 'string' && !crPassword.startsWith('==')) {
+        if (
+          typeof crPassword === 'string' &&
+          crPassword.trim() !== '' &&
+          !crPassword.startsWith('==')
+        ) {
           logger.warn(
             `Change request ${cr.id} for destination ${dest.destId}/${dest.destinationType.typeId} is not encrypted: ${crPassword}`
           )
@@ -176,7 +184,11 @@ export async function encryptDb(dbClient: DbClient): Promise<void> {
         dest.destId,
         dest.destinationType.typeId
       )
-      if (typeof password === 'string' && password) {
+      if (
+        typeof password === 'string' &&
+        password &&
+        !password.startsWith('==')
+      ) {
         const encrypted = encrypt(password)
         // Create a copy to avoid mutating the original
         const updated: Destination = { ...dest, password: encrypted }
@@ -268,7 +280,7 @@ async function encryptAllDestinationsWithKey(
       if (typeof password === 'string' && password) {
         const encrypted = newKey ? encryptWithKey(password, newKey) : password
         const updated: Destination = { ...dest, password: encrypted }
-        await dbClient.getRepository().updateDestination(updated) 
+        await dbClient.getRepository().updateDestination(updated)
       }
     } catch (error) {
       logger.error('Error rotating key for destination password', {
@@ -359,7 +371,7 @@ export async function resetDb(dbClient: DbClient): Promise<void> {
         facilityId: facilityId,
       }
       success =
-        success && (await dbClient.getRepository().updateDestination(updated)) 
+        success && (await dbClient.getRepository().updateDestination(updated))
     }
   }
 }

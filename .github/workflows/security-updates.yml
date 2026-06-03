@@ -4,7 +4,16 @@ on:
   schedule:
     # Run daily at 3 AM UTC (avoids conflict with E2E tests at 7 AM)
     - cron: '0 3 * * *'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      dependency_scripts_channel:
+        description: 'npm tag for @izgateway/dependency-scripts (use "dev" to test pre-release changes)'
+        required: false
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - dev
 
 permissions:
   contents: write
@@ -17,14 +26,14 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24.x'
           cache: 'npm'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@izgateway'
@@ -60,12 +69,18 @@ jobs:
           fi
       
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm audit fix || true
 
       - name: Install security tooling
         run: |
           npm install -g npm-check-updates
-          npm install -g @izgateway/dependency-scripts
+          SCRIPTS_CHANNEL="${{ inputs.dependency_scripts_channel || 'latest' }}"
+          npm install --no-save @izgateway/dependency-scripts@${SCRIPTS_CHANNEL}
+          npm audit fix || true
+          DS_VERSION=$(node -p 'require("./node_modules/@izgateway/dependency-scripts/package.json").version')
+          echo "Using @izgateway/dependency-scripts@${DS_VERSION}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -162,7 +177,8 @@ jobs:
         if: steps.final_check.outputs.has_changes == 'true'
         run: |
           # Ensure package-lock.json is updated with any override changes
-          npm install 
+          npm install
+          npm audit fix || true
           git add package.json package-lock.json
           git commit -m "chore(deps): security and dependency updates
 
@@ -261,7 +277,7 @@ jobs:
       
       - name: Upload npm logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-logs-${{ github.run_number }}
           path: /home/runner/.npm/_logs/
