@@ -31,6 +31,6 @@ export type PageControls = {
   edit: EditPageAccessControl
   changerequest: ChangeRequestPageAccessControl
   history: HistoryPageAccessControl
-  // Key must match the route pathname: /apikeymanagement (see IGDD-2708)
+  // Key must match the page key derived in useRoleAccess (router.pathname with dynamic segments removed): e.g. '/apikeymanagement' -> 'apikeymanagement' (IGDD-2708)
   apikeymanagement: ApiKeyManagementPageAccessControl
 }
