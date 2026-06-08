@@ -1,4 +1,5 @@
 import {
+  ApiKeyManagementPageAccessControl,
   ManageConnectionsPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
@@ -6,6 +7,7 @@ import {
   HistoryPageAccessControl,
 } from '../../type/PageAccessControls'
 import {
+  defaultApiKeyManagementPageAccessControl,
   defaultManageConnectionsPageAccessControl,
   defaultTestPageAccessControl,
   defaultEditPageAccessControl,
@@ -41,6 +43,9 @@ const IZGSupportAccess: PageControls = {
     canViewConnectionInfoDetails: true,
     canViewHubStatusHistory: true,
   } as HistoryPageAccessControl,
+  apikeymanagement: {
+    ...defaultApiKeyManagementPageAccessControl,
+  } as ApiKeyManagementPageAccessControl,
 }
 
 export default IZGSupportAccess

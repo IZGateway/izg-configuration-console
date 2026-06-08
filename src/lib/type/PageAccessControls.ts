@@ -35,7 +35,17 @@ type HistoryPageAccessControl = {
   canViewHubStatusHistory: boolean
   canViewChangeHistory: boolean
 }
+
+// Access key must match the page key derived in useRoleAccess (router.pathname with dynamic segments removed), e.g. '/apikeymanagement' -> 'apikeymanagement' (IGDD-2708)
+type ApiKeyManagementPageAccessControl = {
+  canListApiKeys: boolean
+  canCreateApiKey: boolean
+  canRevokeApiKey: boolean
+  canRenewApiKey: boolean
+}
+
 export type {
+  ApiKeyManagementPageAccessControl,
   ChangeRequestPageAccessControl,
   EditPageAccessControl,
   HistoryPageAccessControl,
