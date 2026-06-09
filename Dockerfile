@@ -38,6 +38,11 @@ RUN apk add --no-cache bash gettext tini curl libc6-compat \
     && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
+# nginx is no longer installed here (IGDD-3010) — it is provided by the base image.
+# Fail the build fast if a future base image stops shipping nginx, rather than
+# discovering it at container runtime when run_and_monitor.sh tries to start it.
+RUN command -v nginx >/dev/null || { echo "ERROR: nginx not found, should be installed in base image."; exit 1; }
+
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
