@@ -13,6 +13,9 @@ Next.js configuration console for IZ Gateway. AWS ECS (Fargate) + Docker.
   - Alpine 3.23 ships nodejs at 24.x via `apk add nodejs`
   - Local dev: v22.22.2 (lower than prod — test against 24.x for production fidelity)
   - `globalThis.crypto` available natively — no polyfill needed
+- **nginx is provided by the base image** — not installed in this repo's Dockerfile.
+  - Removed from the `apk add` line as of IGDD-3010; the base image ships nginx.
+  - This Dockerfile only supplies nginx *config* (`COPY nginx.conf.template`, `mkdir -p /etc/nginx/conf.d`) and `EXPOSE 443`. nginx terminates TLS on :443 and proxies to the Next.js app on :3000.
 
 ## Framework
 

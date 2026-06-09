@@ -33,7 +33,13 @@ COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
 ARG NPM_TOKEN
-RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+# nginx is no longer installed here (IGDD-3010) — it is provided by the base image.
+# Fail the build fast if a future base image stops shipping nginx (or the 'nginx' user), rather than
+# discovering it at container runtime when run_and_monitor.sh tries to start it.
+RUN command -v nginx >/dev/null \
+    && id -u nginx >/dev/null 2>&1 \
+    || { echo "ERROR: nginx (binary and 'nginx' user) must be provided by the base image."; exit 1; } \
+    && apk add --no-cache bash gettext tini curl libc6-compat \
     && npm config set @izgateway:registry https://npm.pkg.github.com/ \
     && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
