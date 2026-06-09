@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1061.0",
-    "@aws-sdk/client-secrets-manager": "^3.1061.0",
-    "@aws-sdk/lib-dynamodb": "^3.1061.0",
+    "@aws-sdk/client-dynamodb": "^3.1064.0",
+    "@aws-sdk/client-secrets-manager": "^3.1064.0",
+    "@aws-sdk/lib-dynamodb": "^3.1064.0",
     "@axe-core/react": "^4.11.3",
     "@babel/types": "^7.29.7",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -36,7 +36,7 @@
     "@mui/material": "^5.18.0",
     "@mui/x-data-grid": "7.29.13",
     "@mui/x-date-pickers": "^6.20.2",
-    "@types/node": "^20.19.41",
+    "@types/node": "^20.19.42",
     "@types/node-fetch": "^2.6.13",
     "@types/tcp-ping": "^0.1.6",
     "@types/xml2js": "^0.4.14",
@@ -67,7 +67,7 @@
     "@babel/preset-typescript": "^7.29.7",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
-    "@izgateway/dependency-scripts": "^1.0.5",
+    "@izgateway/dependency-scripts": "^1.0.6",
     "@next/eslint-plugin-next": "^16.2.7",
     "@playwright/test": "^1.60.0",
     "@testing-library/jest-dom": "^5.17.0",
@@ -75,7 +75,7 @@
     "@types/gtag.js": "^0.0.20",
     "@types/jest": "^29.5.14",
     "@types/lodash": "^4.17.24",
-    "@types/react": "^18.3.30",
+    "@types/react": "^18.3.31",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
@@ -92,7 +92,7 @@
     "prettier": "^2.8.8",
     "react-axe": "^3.5.4",
     "rimraf": "^5.0.10",
-    "semver": "^7.8.1",
+    "semver": "^7.8.3",
     "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
@@ -102,12 +102,9 @@
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
-    "ajv": "8.20.0",
     "eslint": {
       "ajv": "^6.14.0"
     },
-    "fast-uri": "^3.1.2",
-    "http-proxy-agent": "^7.0.2",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.15",
     "qs": "^6.15.2",
