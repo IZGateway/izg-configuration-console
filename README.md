@@ -123,7 +123,7 @@ docker compose -f ./local-docker/docker-compose.yml up -d && npm run dev && dock
 
 ### **Step 5: Run everything in Docker**
 
-This will run the Docker image for IZG CC (which has Nginx and the application) as well as a MySQL image loaded with dummy test data.
+This will run the Docker image for IZG CC (which has Nginx — provided by the `ghcr.io/izgateway/alpine-node-openssl-fips:latest` base image — and the application) as well as a MySQL image loaded with dummy test data.
 
 ```
 npm run start:local-docker
