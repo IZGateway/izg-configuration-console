@@ -1,4 +1,5 @@
 import {
+  ApiKeyManagementPageAccessControl,
   EditPageAccessControl,
   ManageConnectionsPageAccessControl,
   TestPageAccessControl,
@@ -45,7 +46,16 @@ const defaultHistoryPageAccessControl: HistoryPageAccessControl = {
   canViewChangeHistory: false,
 }
 
+const defaultApiKeyManagementPageAccessControl: ApiKeyManagementPageAccessControl =
+  {
+    canListApiKeys: false,
+    canCreateApiKey: false,
+    canRevokeApiKey: false,
+    canRenewApiKey: false,
+  }
+
 export {
+  defaultApiKeyManagementPageAccessControl,
   defaultChangeRequestPageAccessControl,
   defaultEditPageAccessControl,
   defaultHistoryPageAccessControl,
