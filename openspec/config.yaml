@@ -1,0 +1,44 @@
+schema: spec-driven
+
+context: |
+  Project: IZ Gateway Configuration Console — a Next.js web app for managing IZ Gateway
+    destinations, change requests, connection tests, and hub status (public repo).
+  Tech stack: TypeScript (target ES2017, strict:false), React 18, Next.js 16 (Pages
+    Router, src/pages/ — NOT App Router), MUI v5 (@mui/material, @mui/x-data-grid),
+    next-auth@4 (Okta), DynamoDB (@aws-sdk/lib-dynamodb) as the live datastore,
+    AWS Secrets Manager, winston logging. Node 24.x in container (Alpine 3.23 FIPS image);
+    local dev often Node 22.x.
+  Package manager / build: npm (package-lock.json). CI runs `npm ci`, then
+    `npm run code-quality-check` (lint + tsc --noEmit), `npm run test`, `npm run build`.
+  Testing: Jest (jest-environment-jsdom) with @testing-library/react for unit/component
+    tests, co-located as *.test.ts(x) under src/. Playwright e2e tests in e2e/tests/
+    (run against deployed envs, e.g. dev.console.izgateway.org).
+  Architecture: Layered Next.js monolith. Request flow: src/middleware.ts (next-auth) →
+    API routes wrapped with withMiddleware (src/pages/api/api-middleware-helper.ts) which
+    stores user/sub/ipAddress in AsyncLocalStorage (src/lib/Context.ts) read downstream by
+    DB/audit/logging. Data layer behind DbClientFactory.getDbClient() → Dynamo, optionally
+    wrapped by EncryptedRepository (the only place password fields are encrypted/decrypted).
+    Authorization: Okta-group roles (src/lib/security/roles.ts), per-page access matrices
+    (src/lib/security/accessdefinitions/), jurisdiction checks (src/lib/accesshelper.ts).
+    Connection tests dispatch via ConnectionTestFactory (src/lib/connectiontests/).
+  Conventions: Conventional Commits enforced by Husky + commitlint
+    (@commitlint/config-conventional). ESLint (next/core-web-vitals + @typescript-eslint
+    recommended); no-explicit-any and no-unused-vars are errors. Prettier: no semicolons,
+    single quotes, 2-space, es5 trailing commas. Run `npm run code-quality-check` before
+    pushing.
+  Constraints: Public repo (follow IZ Gateway Public Repo Policy). next-auth pinned at v4
+    (v5 needs Pages→App Router migration). uuid pinned via overrides to
+    @izgateway/uuid-cjs@^14. Don't add new MySQL coupling (legacy local-docker only).
+    Required env vars catalogued in CONFIGURATION.md.
+
+rules:
+  proposal:
+    - State the user-facing or operational problem and why it matters before the solution.
+    - Note impact on auth, jurisdiction scoping, or encrypted fields when relevant — these are security-sensitive.
+  specs:
+    - Use Given/When/Then for behavioral requirements.
+    - Reference existing patterns (withMiddleware, DbClientFactory, ConnectionTestFactory, access matrices) before inventing new ones.
+  design:
+    - Respect existing layer boundaries (middleware → API route → DbClient/EncryptedRepository); read context from AsyncLocalStorage rather than threading user through args.
+  tasks:
+    - Include lint + type-check + tests (`npm run code-quality-check` and `npm run test`) as verification steps.
