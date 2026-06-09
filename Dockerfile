@@ -33,7 +33,7 @@ COPY package.json package-lock.json ./
 
 # Install Dependencies and cleanup yarn.lock if present
 ARG NPM_TOKEN
-RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+RUN apk add --no-cache bash gettext tini curl libc6-compat \
     && npm config set @izgateway:registry https://npm.pkg.github.com/ \
     && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
