@@ -20,6 +20,22 @@ jest.mock('@aws-sdk/lib-dynamodb', () => {
   }
 })
 
+// Isolate the raw client so the Dynamo constructor's fire-and-forget
+// connection check (getConnectionInfo -> ListTablesCommand) never hits AWS.
+jest.mock('@aws-sdk/client-dynamodb', () => {
+  const actual = jest.requireActual('@aws-sdk/client-dynamodb')
+  return {
+    ...actual,
+    DynamoDBClient: jest.fn(() => ({
+      send: jest.fn().mockResolvedValue({ TableNames: [] }),
+      config: {
+        region: async () => 'us-east-1',
+        endpoint: async () => 'http://localhost:8000',
+      },
+    })),
+  }
+})
+
 jest.mock('../../../logger', () => ({
   __esModule: true,
   default: {
