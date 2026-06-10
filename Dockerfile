@@ -31,9 +31,17 @@ RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 COPY package.json package-lock.json ./
 
+# nginx is no longer installed here (IGDD-3010) — it is provided by the base image.
+# Fail the build fast if a future base image stops shipping the nginx binary or the
+# 'nginx' user that nginx.conf.template's `user nginx;` directive requires, rather than
+# discovering it at container runtime when run_and_monitor.sh tries to start nginx.
+RUN set -e; \
+    command -v nginx >/dev/null 2>&1 || { echo "ERROR: nginx binary not found; must be provided by the base image." >&2; exit 1; }; \
+    id -u nginx >/dev/null 2>&1 || { echo "ERROR: 'nginx' user not found; required by 'user nginx;' in nginx.conf.template." >&2; exit 1; }
+
 # Install Dependencies and cleanup yarn.lock if present
 ARG NPM_TOKEN
-RUN apk add --no-cache bash nginx gettext tini curl libc6-compat \
+RUN apk add --no-cache bash gettext tini curl libc6-compat \
     && npm config set @izgateway:registry https://npm.pkg.github.com/ \
     && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
