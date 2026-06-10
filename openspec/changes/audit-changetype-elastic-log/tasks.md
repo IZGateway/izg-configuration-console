@@ -1,25 +1,25 @@
 ## 1. Implement changeType in the data-layer upsert log
 
-- [ ] 1.1 In `src/lib/db/dynamo.ts`, within `upsertAllowedUser`, derive `changeType` from the existing `isUpdate` value (`isUpdate ? 'Update' : 'Create'`).
-- [ ] 1.2 Update the success `logger.info` call (currently `'Successfully upserted AllowedUser'`) to include `changeType` as a structured metadata field and to use a message that names the operation (created vs updated). Keep the existing `allowedUser: params.Item` metadata.
-- [ ] 1.3 Confirm the value casing is exactly `'Create'` / `'Update'` to match `AllowedUserAudit`, `DestinationAudit`, and the `/api/allowedusers` route log.
+- [x] 1.1 In `src/lib/db/dynamo.ts`, within `upsertAllowedUser`, derive `changeType` from the existing `isUpdate` value (`isUpdate ? 'Update' : 'Create'`).
+- [x] 1.2 Update the success `logger.info` call (currently `'Successfully upserted AllowedUser'`) to include `changeType` as a structured metadata field and to use a message that names the operation (created vs updated). Keep the existing `allowedUser: params.Item` metadata.
+- [x] 1.3 Confirm the value casing is exactly `'Create'` / `'Update'` to match `AllowedUserAudit`, `DestinationAudit`, and the `/api/allowedusers` route log.
 
 ## 2. Cross-layer consistency
 
-- [ ] 2.1 Update the `/api/allowedusers` route success log (`src/pages/api/allowedusers/index.ts:297`) message to name the operation (created vs updated), matching the DB-layer message style, so both events read consistently. It already carries the `changeType` field — keep it.
-- [ ] 2.2 Confirm no change is made to `createAllowedUserAudit` / `createAuditRecord` — the persisted `AllowedUserAudit` DynamoDB record must remain unchanged.
+- [x] 2.1 Update the `/api/allowedusers` route success log (`src/pages/api/allowedusers/index.ts:297`) message to name the operation (created vs updated), matching the DB-layer message style, so both events read consistently. It already carries the `changeType` field — keep it.
+- [x] 2.2 Confirm no change is made to `createAllowedUserAudit` / `createAuditRecord` — the persisted `AllowedUserAudit` DynamoDB record must remain unchanged.
 
 ## 3. Tests
 
-- [ ] 3.1 Add/extend a Jest unit test for `upsertAllowedUser` asserting the success log includes `changeType: 'Create'` when no existing record is found.
-- [ ] 3.2 Add/extend a Jest unit test asserting the success log includes `changeType: 'Update'` when an existing record is found.
-- [ ] 3.3 Assert the persisted audit write (`createAllowedUserAudit`) is unchanged by the new logging (record content/keys identical).
+- [x] 3.1 Add/extend a Jest unit test for `upsertAllowedUser` asserting the success log includes `changeType: 'Create'` when no existing record is found.
+- [x] 3.2 Add/extend a Jest unit test asserting the success log includes `changeType: 'Update'` when an existing record is found.
+- [x] 3.3 Assert the persisted audit write (`createAllowedUserAudit`) is unchanged by the new logging (record content/keys identical).
 
 ## 4. Verification
 
-- [ ] 4.1 Run `npm run code-quality-check` (lint + `tsc --noEmit`) and resolve any issues.
-- [ ] 4.2 Run `npm run test` and confirm all tests pass.
-- [ ] 4.3 Manually confirm in a running/dev environment (or via captured log output) that a create and an update each emit a log event with the correct `changeType` field as it would appear in Elastic (ECS format).
+- [x] 4.1 Run `npm run code-quality-check` (lint + `tsc --noEmit`) and resolve any issues.
+- [x] 4.2 Run `npm run test` and confirm all tests pass.
+- [x] 4.3 Manually confirm in a running/dev environment (or via captured log output) that a create and an update each emit a log event with the correct `changeType` field as it would appear in Elastic (ECS format).
 
 ## 5. Resolved decisions
 
