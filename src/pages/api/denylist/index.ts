@@ -57,7 +57,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         reason,
         deniedBy,
         createdBy: createdBy || deniedBy || 'System',
-      }) 
+      })
+
+      try {
+        await dbClient.createDenyListAudit(
+          'Create',
+          newRecord.id,
+          session.user.email || 'unknown',
+          null,
+          newRecord
+        )
+      } catch (auditError) {
+        logger.error('Failed to create deny list audit record', {
+          operation: 'createDenyListAudit',
+          recordId: newRecord.id,
+          errorMessage:
+            auditError instanceof Error ? auditError.message : 'Unknown error',
+        })
+        // Continue even if audit fails
+      }
 
       return res.status(201).json(newRecord)
     } catch (error) {

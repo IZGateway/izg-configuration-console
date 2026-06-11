@@ -5,7 +5,3 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - "443:443"
-  mysql:
-    build: ../database
-    ports:
-      - "3306:3306"

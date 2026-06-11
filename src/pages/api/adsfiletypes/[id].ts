@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'DELETE') {
@@ -14,12 +16,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
+      const session = await getServerSession(req, res, authOptions)
+      const userName = session?.user?.email || 'unknown'
+
       const dbClient = await DbClientFactory.getDbClient()
 
       // First, check if the record exists
-      const existingRecords = (await dbClient.fetchFileTypeList()) as Array<{
-        sortKey: string
-      }>
+      const existingRecords = await dbClient.fetchFileTypeList()
       const recordToDelete = existingRecords.find(
         (record) => record.sortKey === id
       )
@@ -31,6 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Delete the record
+      const deletionTimestamp = new Date()
       const success = await dbClient.deleteAdsFileTypeRecord(id)
 
       if (!success) {
@@ -42,6 +46,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(500).json({
           error: 'Failed to delete file type record',
         })
+      }
+
+      try {
+        await dbClient.createAdsFileTypeAudit(
+          'Delete',
+          id,
+          userName,
+          {
+            ...recordToDelete,
+            updatedOn: deletionTimestamp,
+            updatedBy: userName,
+          },
+          null
+        )
+      } catch (auditError) {
+        logger.error('Failed to create ADS file type audit record', {
+          operation: 'createAdsFileTypeAudit',
+          recordId: id,
+          errorMessage:
+            auditError instanceof Error ? auditError.message : 'Unknown error',
+        })
+        // Continue even if audit fails
       }
 
       logger.info('File type record deleted successfully', {
