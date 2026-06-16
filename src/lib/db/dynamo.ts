@@ -1721,11 +1721,16 @@ class Dynamo implements DbClient {
       },
     }
 
+    const changeType = isUpdate ? 'Update' : 'Create'
     try {
       await dynamodDbDocClient.send(new PutCommand(params))
-      logger.info('Successfully upserted AllowedUser', {
-        allowedUser: params.Item,
-      })
+      logger.info(
+        `Successfully ${isUpdate ? 'updated' : 'created'} AllowedUser`,
+        {
+          changeType,
+          allowedUser: params.Item,
+        }
+      )
       return {
         ...allowedUser,
         updatedOn: new Date(now),
