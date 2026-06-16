@@ -53,9 +53,25 @@ const handler = async (
         ...req.body,
         environment: String(req.body.environment),
         createdBy: session.user.email || 'System',
-      })  
+      })
 
       if (result) {
+        try {
+          await dbClient.createAccessGroupAudit(
+            'Create',
+            result.sortKey,
+            session.user.email || 'unknown',
+            null,
+            result
+          )
+        } catch (auditError) {
+          logger.error('Failed to create access group audit record', {
+            operation: 'createAccessGroupAudit',
+            sortKey: result.sortKey,
+            errorMessage: auditError?.message || 'Unknown error',
+          })
+          // Continue even if audit fails
+        }
         res.status(201).json(result)
       } else {
         logger.error('Database insert failed for access group', {

@@ -381,6 +381,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         body.principal
       )
 
+      const deletionTimestamp = new Date()
+
       const result = await dbClient.deleteAllowedUser(
         body.principal,
         body.environment,
@@ -405,7 +407,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             body.environment,
             body.destinationId,
             body.deletedBy || 'unknown',
-            existingUser,
+            {
+              ...existingUser,
+              updatedOn: deletionTimestamp,
+              updatedBy: body.deletedBy || 'unknown',
+            },
             null
           )
           logger.info(
