@@ -36,7 +36,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     try {
       const session = await getServerSession(req, res, authOptions)
-      const userName = session?.user?.email || 'unknown'
+      if (!session || !session.user) {
+        return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+      const userName = session.user.email || 'unknown'
 
       const dbClient = await DbClientFactory.getDbClient()
       const newRecord = await dbClient.addAdsFileTypeRecord({
@@ -48,16 +51,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       if (newRecord) {
         try {
-          const createdRecord = await dbClient
-            .fetchFileTypeList()
-            .then((records) => records.find((r) => r.sortKey === sortKey) || null)
-
           await dbClient.createAdsFileTypeAudit(
             'Create',
             sortKey,
             userName,
             null,
-            createdRecord
+            {
+              sortKey,
+              fileTypeName,
+              description,
+              createdBy: createdBy || userName,
+              createdOn: new Date(),
+            }
           )
         } catch (auditError) {
           logger.error('Failed to create ADS file type audit record', {

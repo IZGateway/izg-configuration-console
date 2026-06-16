@@ -17,7 +17,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const session = await getServerSession(req, res, authOptions)
-      const userName = session?.user?.email || 'unknown'
+      if (!session || !session.user) {
+        return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+      const userName = session.user.email || 'unknown'
 
       const dbClient = await DbClientFactory.getDbClient()
 

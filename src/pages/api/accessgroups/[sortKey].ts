@@ -118,27 +118,27 @@ const handler = async (
       const result = await dbClient.deleteAccessGroup(sortKey)
 
       if (result) {
-        if (existingGroup) {
-          try {
-            await dbClient.createAccessGroupAudit(
-              'Delete',
-              sortKey,
-              session.user.email || 'unknown',
-              {
-                ...existingGroup,
-                updatedOn: deletionTimestamp,
-                updatedBy: session.user.email || 'unknown',
-              },
-              null
-            )
-          } catch (auditError) {
-            logger.error('Failed to create access group audit record', {
-              operation: 'createAccessGroupAudit',
-              sortKey,
-              errorMessage: auditError?.message || 'Unknown error',
-            })
-            // Continue even if audit fails
-          }
+        try {
+          await dbClient.createAccessGroupAudit(
+            'Delete',
+            sortKey,
+            session.user.email || 'unknown',
+            existingGroup
+              ? {
+                  ...existingGroup,
+                  updatedOn: deletionTimestamp,
+                  updatedBy: session.user.email || 'unknown',
+                }
+              : null,
+            null
+          )
+        } catch (auditError) {
+          logger.error('Failed to create access group audit record', {
+            operation: 'createAccessGroupAudit',
+            sortKey,
+            errorMessage: auditError?.message || 'Unknown error',
+          })
+          // Continue even if audit fails
         }
         res.status(200).json({ message: 'Access group deleted successfully' })
       } else {
