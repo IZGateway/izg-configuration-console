@@ -50,9 +50,30 @@ const handler = async (
       })
 
       const dbClient = await DbClientFactory.getDbClient()
+
+      const existingGroups = await dbClient.fetchAccessGroups()
+      const existingGroup =
+        existingGroups.find((g) => g.sortKey === sortKey) || null
+
       const result = await dbClient.updateAccessGroup(sortKey, req.body)
 
       if (result) {
+        try {
+          await dbClient.createAccessGroupAudit(
+            'Update',
+            sortKey,
+            session.user.email || 'unknown',
+            existingGroup,
+            result
+          )
+        } catch (auditError) {
+          logger.error('Failed to create access group audit record', {
+            operation: 'createAccessGroupAudit',
+            sortKey,
+            errorMessage: auditError?.message || 'Unknown error',
+          })
+          // Continue even if audit fails
+        }
         res.json(result)
       } else {
         logger.error('Database update failed for access group', {
@@ -88,9 +109,37 @@ const handler = async (
       })
 
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.deleteAccessGroup(sortKey)  
+
+      const existingGroups = await dbClient.fetchAccessGroups()
+      const existingGroup =
+        existingGroups.find((g) => g.sortKey === sortKey) || null
+
+      const deletionTimestamp = new Date()
+      const result = await dbClient.deleteAccessGroup(sortKey)
 
       if (result) {
+        if (existingGroup) {
+          try {
+            await dbClient.createAccessGroupAudit(
+              'Delete',
+              sortKey,
+              session.user.email || 'unknown',
+              {
+                ...existingGroup,
+                updatedOn: deletionTimestamp,
+                updatedBy: session.user.email || 'unknown',
+              },
+              null
+            )
+          } catch (auditError) {
+            logger.error('Failed to create access group audit record', {
+              operation: 'createAccessGroupAudit',
+              sortKey,
+              errorMessage: auditError?.message || 'Unknown error',
+            })
+            // Continue even if audit fails
+          }
+        }
         res.status(200).json({ message: 'Access group deleted successfully' })
       } else {
         logger.error('Database delete failed for access group', {
