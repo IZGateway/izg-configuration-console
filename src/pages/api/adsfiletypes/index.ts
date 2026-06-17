@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../auth/[...nextauth]'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -33,13 +35,45 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const { description, fileTypeName, sortKey, createdBy } = req.body
 
     try {
+      const session = await getServerSession(req, res, authOptions)
+      if (!session || !session.user) {
+        return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+      const userName = session.user.email || 'unknown'
+
       const dbClient = await DbClientFactory.getDbClient()
       const newRecord = await dbClient.addAdsFileTypeRecord({
         description,
         fileTypeName,
         sortKey,
         createdBy,
-      })  
+      })
+
+      if (newRecord) {
+        try {
+          await dbClient.createAdsFileTypeAudit(
+            'Create',
+            sortKey,
+            userName,
+            null,
+            {
+              sortKey,
+              fileTypeName,
+              description,
+              createdBy: createdBy || userName,
+              createdOn: new Date(),
+            }
+          )
+        } catch (auditError) {
+          logger.error('Failed to create ADS file type audit record', {
+            operation: 'createAdsFileTypeAudit',
+            sortKey,
+            errorMessage:
+              auditError instanceof Error ? auditError.message : 'Unknown error',
+          })
+          // Continue even if audit fails
+        }
+      }
 
       return res.status(201).json(newRecord)
     } catch (error) {
