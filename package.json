@@ -1,7 +1,7 @@
 {
   "name": "izg-configuration-console",
   "private": true,
-  "version": "1.15.0",
+  "version": "1.15.1",
   "scripts": {
     "dev": "next",
     "build": "next build",
@@ -102,12 +102,27 @@
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
+    "@jest/core": "^30.4.2",
+    "@jest/expect": "^30.4.1",
+    "@jest/globals": "^30.4.1",
+    "@jest/reporters": "^30.4.1",
+    "@jest/transform": "^30.4.1",
     "ajv": "8.20.0",
+    "babel-jest": "^30.4.1",
     "eslint": {
       "ajv": "^6.14.0"
     },
     "fast-uri": "^3.1.2",
+    "form-data": "^4.0.6",
     "http-proxy-agent": "^7.0.2",
+    "jest-circus": "^30.4.2",
+    "jest-cli": "^30.4.2",
+    "jest-config": "^30.4.2",
+    "jest-resolve-dependencies": "^30.4.2",
+    "jest-runner": "^30.4.2",
+    "jest-runtime": "^30.4.2",
+    "jest-snapshot": "^30.4.1",
+    "js-yaml": "^4.2.0",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.15",
     "qs": "^6.15.2",
