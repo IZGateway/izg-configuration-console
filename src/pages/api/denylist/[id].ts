@@ -36,7 +36,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Delete the record
-      const success = await dbClient.deleteDenyListRecord(id) // log deleter info
+      const deletionTimestamp = new Date()
+      const success = await dbClient.deleteDenyListRecord(id)
 
       if (!success) {
         logger.error('Failed to delete deny list record', {
@@ -48,6 +49,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(500).json({
           error: 'Failed to delete deny list record',
         })
+      }
+
+      try {
+        await dbClient.createDenyListAudit(
+          'Delete',
+          id,
+          session.user.email || 'unknown',
+          {
+            ...recordToDelete,
+            updatedOn: deletionTimestamp,
+            updatedBy: session.user.email || 'unknown',
+          },
+          null
+        )
+      } catch (auditError) {
+        logger.error('Failed to create deny list audit record', {
+          operation: 'createDenyListAudit',
+          recordId: id,
+          errorMessage:
+            auditError instanceof Error ? auditError.message : 'Unknown error',
+        })
+        // Continue even if audit fails
       }
 
       logger.info('Deny list record deleted successfully', {

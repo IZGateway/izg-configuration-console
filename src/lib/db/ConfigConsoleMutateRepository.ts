@@ -2,6 +2,7 @@ import { Destination } from '../type/Destination'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
+import { AdsFileTypeItem } from '../type/AdsFileType'
 import { AllowedUser } from '../type/AllowedUser'
 
 export default interface ConfigConsoleMutateRepository {
@@ -36,6 +37,13 @@ export default interface ConfigConsoleMutateRepository {
     createdBy: string
   }): Promise<AccessGroupRecord>
   deleteAccessGroup(sortKey: string): Promise<boolean>
+  createAccessGroupAudit(
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AccessGroupRecord | null,
+    newValues: AccessGroupRecord | null
+  ): Promise<boolean>
   addAdsFileTypeRecord(fileTypeItem: {
     fileTypeName: string
     sortKey: string
@@ -43,6 +51,20 @@ export default interface ConfigConsoleMutateRepository {
     createdBy: string
   }): Promise<boolean>
   deleteAdsFileTypeRecord(sortKey: string): Promise<boolean>
+  createDenyListAudit(
+    changeType: string,
+    id: string,
+    userName: string,
+    oldValues: DenyListItem | null,
+    newValues: DenyListItem | null
+  ): Promise<boolean>
+  createAdsFileTypeAudit(
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AdsFileTypeItem | null,
+    newValues: AdsFileTypeItem | null
+  ): Promise<boolean>
   upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser>
   deleteAllowedUser(
     principal: string,
