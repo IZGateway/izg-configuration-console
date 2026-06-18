@@ -115,6 +115,27 @@ class EncryptedRepository implements DbClient {
     environment: number,
     destinationId: string
   ) => Promise<AllowedUserAudit[]>
+  createAccessGroupAudit!: (
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AccessGroupRecord | null,
+    newValues: AccessGroupRecord | null
+  ) => Promise<boolean>
+  createDenyListAudit!: (
+    changeType: string,
+    id: string,
+    userName: string,
+    oldValues: DenyListItem | null,
+    newValues: DenyListItem | null
+  ) => Promise<boolean>
+  createAdsFileTypeAudit!: (
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AdsFileTypeItem | null,
+    newValues: AdsFileTypeItem | null
+  ) => Promise<boolean>
 
   private repository: DbClient
 
@@ -142,6 +163,12 @@ class EncryptedRepository implements DbClient {
       repository.createAllowedUserAudit.bind(repository)
     this.fetchAllowedUserAuditHistory =
       repository.fetchAllowedUserAuditHistory.bind(repository)
+    this.createAccessGroupAudit =
+      repository.createAccessGroupAudit.bind(repository)
+    this.createDenyListAudit =
+      repository.createDenyListAudit.bind(repository)
+    this.createAdsFileTypeAudit =
+      repository.createAdsFileTypeAudit.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {

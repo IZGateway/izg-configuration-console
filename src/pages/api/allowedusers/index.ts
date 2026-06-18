@@ -294,15 +294,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         // Continue even if audit fails - don't block the main operation
       }
 
-      logger.info('Successfully upserted allowed user', {
-        principal: result.principal,
-        environment: result.environment,
-        destinationId: result.destinationId,
-        changeType,
-        operation: 'upsertAllowedUser',
-        httpMethod: req.method,
-        endpoint: req.url,
-      })
+      logger.info(
+        `Successfully ${changeType === 'Update' ? 'updated' : 'created'} allowed user`,
+        {
+          principal: result.principal,
+          environment: result.environment,
+          destinationId: result.destinationId,
+          changeType,
+          operation: 'upsertAllowedUser',
+          httpMethod: req.method,
+          endpoint: req.url,
+        }
+      )
 
       // Serialize dates to ISO strings for JSON response
       const serializedResult = {
@@ -378,6 +381,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         body.principal
       )
 
+      const deletionTimestamp = new Date()
+
       const result = await dbClient.deleteAllowedUser(
         body.principal,
         body.environment,
@@ -402,7 +407,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             body.environment,
             body.destinationId,
             body.deletedBy || 'unknown',
-            existingUser,
+            {
+              ...existingUser,
+              updatedOn: deletionTimestamp,
+              updatedBy: body.deletedBy || 'unknown',
+            },
             null
           )
           logger.info(

@@ -1721,11 +1721,16 @@ class Dynamo implements DbClient {
       },
     }
 
+    const changeType = isUpdate ? 'Update' : 'Create'
     try {
       await dynamodDbDocClient.send(new PutCommand(params))
-      logger.info('Successfully upserted AllowedUser', {
-        allowedUser: params.Item,
-      })
+      logger.info(
+        `Successfully ${isUpdate ? 'updated' : 'created'} AllowedUser`,
+        {
+          changeType,
+          allowedUser: params.Item,
+        }
+      )
       return {
         ...allowedUser,
         updatedOn: new Date(now),
@@ -1812,6 +1817,78 @@ class Dynamo implements DbClient {
       additionalData: { principal, environment, destinationId },
       serializeValues: (user) =>
         serializeDateFields(user, ['createdOn', 'updatedOn', 'validatedOn']),
+    })
+  }
+
+  async createAccessGroupAudit(
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AccessGroupRecord | null,
+    newValues: AccessGroupRecord | null
+  ): Promise<boolean> {
+    return createAuditRecord<AccessGroupRecord>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AccessGroupAudit',
+      tableName: 'access_groups',
+      sortKeyParts: [sortKey],
+      userName,
+      changeType,
+      oldValues,
+      newValues,
+      additionalData: { sortKey },
+      serializeValues: (record) =>
+        serializeDateFields(
+          record as unknown as Record<string, unknown> | null,
+          ['createdOn', 'updatedOn']
+        ),
+    })
+  }
+
+  async createDenyListAudit(
+    changeType: string,
+    id: string,
+    userName: string,
+    oldValues: DenyListItem | null,
+    newValues: DenyListItem | null
+  ): Promise<boolean> {
+    return createAuditRecord<DenyListItem>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'DenyListAudit',
+      tableName: 'deny_list',
+      sortKeyParts: [id],
+      userName,
+      changeType,
+      oldValues,
+      newValues,
+      additionalData: { id },
+      serializeValues: (record) =>
+        serializeDateFields(
+          record as unknown as Record<string, unknown> | null,
+          ['createdOn', 'updatedOn']
+        ),
+    })
+  }
+
+  async createAdsFileTypeAudit(
+    changeType: string,
+    sortKey: string,
+    userName: string,
+    oldValues: AdsFileTypeItem | null,
+    newValues: AdsFileTypeItem | null
+  ): Promise<boolean> {
+    return createAuditRecord<AdsFileTypeItem>(dynamodDbDocClient, TABLE_NAME, {
+      entityType: 'AdsFileTypeAudit',
+      tableName: 'ads_file_types',
+      sortKeyParts: [sortKey],
+      userName,
+      changeType,
+      oldValues,
+      newValues,
+      additionalData: { sortKey },
+      serializeValues: (record) =>
+        serializeDateFields(
+          record as unknown as Record<string, unknown> | null,
+          ['createdOn', 'updatedOn']
+        ),
     })
   }
 
