@@ -9,6 +9,7 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
+import { ApiKeyCredential } from '../type/ApiKeyCredential'
 import { asyncRequestContext } from '../Context'
 import os from 'os'
 import {
@@ -1128,6 +1129,42 @@ class Dynamo implements DbClient {
         ? Array.from(item.groups)
         : [],
     }))
+  }
+
+  async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'ApiKeyCredential',
+      },
+    }
+
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+    if (!result.Items || result.Items.length === 0) {
+      return []
+    }
+
+    return await Promise.all(
+      result.Items.map(async (item) => {
+        const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+        return {
+          jti: item.jti as string,
+          sortKey: item.sortKey as string,
+          jurisdictionId: item.jurisdictionId as string,
+          jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+          status: item.status as ApiKeyCredential['status'],
+          expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+          revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+          env: item.env as string,
+          createdOn: item.createdOn ? new Date(item.createdOn) : null,
+          createdBy: item.createdBy as string,
+          updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+          updatedBy: item.updatedBy as string,
+        }
+      })
+    )
   }
 
   async fetchOrganizationName(principal: string): Promise<string> {
