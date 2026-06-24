@@ -18,6 +18,7 @@ import {
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
+import { ApiKeyCredential } from '../type/ApiKeyCredential'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -372,5 +373,9 @@ class EncryptedRepository implements DbClient {
 
   async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
     return await this.repository.upsertAllowedUser(allowedUser)
+  }
+
+  async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
+    return await this.repository.fetchApiKeyCredentials()
   }
 }
