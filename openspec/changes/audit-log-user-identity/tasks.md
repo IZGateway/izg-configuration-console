@@ -1,17 +1,18 @@
-## 1. Capture session identifier at sign-in
+## 1. Capture session identifier and correlation data at sign-in
 
-- [ ] 1.0 **BLOCKED — confirm `sessionId` source with Keith** (Okta `sid` vs CC-owned opaque id; `jti` is ruled out — see design.md D2). Resolve before 1.1.
-- [ ] 1.1 In `src/pages/api/auth/[...nextauth].ts` `jwt` callback (inside the existing `if (account)` block), set `token.sessionId` from the confirmed source — either the decoded Okta `sid` claim (Candidate A) or a generated `crypto.randomUUID()` (Candidate B) — and set `token.authTime = payload.auth_time`, wrapped in try/catch so a failure never breaks sign-in
+- [ ] 1.1 In `src/pages/api/auth/[...nextauth].ts` `jwt` callback (inside the existing `if (account)` block), set `token.sessionId = crypto.randomUUID()` and `token.authTime` from the decoded Okta ID token `auth_time` claim, wrapped in try/catch so a failure never breaks sign-in
 - [ ] 1.2 Extend the next-auth type augmentation (JWT / Session types) so `sessionId` and `authTime` are typed (avoid `any` — `no-explicit-any` is an error)
+
+> Assumes indirect Okta correlation (confirming with team). If a direct Okta pivot is later required, source `token.sessionId` from the Okta `sid` claim instead (requires Okta SLO config) — no other task changes. `jti` is ruled out (see design.md D2).
 
 ## 2. Extend request context
 
-- [ ] 2.1 Add optional `userId`, `email`, and `sessionId` fields to the `Context` interface in `src/lib/Context.ts`
-- [ ] 2.2 In `withMiddleware` (`src/pages/api/api-middleware-helper.ts`), populate the new context fields from `session.user` and the decoded token (`userId` from `sub`, `email` from `session.user.email`, `sessionId` from `jwtToken.sessionId`)
+- [ ] 2.1 Add optional `userId`, `email`, `sessionId`, and `authTime` fields to the `Context` interface in `src/lib/Context.ts` (`ipAddress` already exists)
+- [ ] 2.2 In `withMiddleware` (`src/pages/api/api-middleware-helper.ts`), populate the new context fields from `session.user` and the decoded token (`userId` from `sub`, `email` from `session.user.email`, `sessionId` from `jwtToken.sessionId`, `authTime` from `jwtToken.authTime`)
 
 ## 3. Auto-inject identity into Winston logs
 
-- [ ] 3.1 Add a context-aware Winston format in `logger.ts` that reads `asyncRequestContext.getStore()` and, when present, sets a nested `user` block (`name`, `id`/`userId`, `email`, `sessionId`); place it in the `format.combine(...)` chain before `ecsFormat()`
+- [ ] 3.1 Add a context-aware Winston format in `logger.ts` that reads `asyncRequestContext.getStore()` and, when present, sets a nested `user` block (`name`, `id`/`userId`, `email`, `sessionId`) plus the correlation fields `auth_time` and source IP (e.g. ECS `client.ip` from `ipAddress`); place it in the `format.combine(...)` chain before `ecsFormat()`
 - [ ] 3.2 Ensure the format is a no-op (no `user` block, no throw) when the store is empty (startup, background, unauthenticated paths)
 - [ ] 3.3 Verify `ecsFormat` passes the nested `user` object through unchanged; if it reserves/transforms `user`, set ECS-native `user.id/name/email` keys and carry `sessionId` under a custom key (per design D5)
 
@@ -28,12 +29,12 @@
 ## 6. Tests
 
 - [ ] 6.1 Add a unit test for the Winston context format: asserts the serialized event contains the expected nested `user` block when a context is set, and omits it when the store is empty
-- [ ] 6.2 Add a unit test for the `jti`/`auth_time` extraction in the `jwt` callback (valid token populates `sessionId`/`authTime`; malformed token does not throw and leaves them unset)
-- [ ] 6.3 Add/extend a test confirming `withMiddleware` populates `userId`, `email`, and `sessionId` in the context
+- [ ] 6.2 Add a unit test for the `jwt` callback: sign-in generates a `sessionId` and captures `authTime` from `auth_time`; the same `sessionId` persists on subsequent (non-`account`) calls; a malformed/missing token does not throw
+- [ ] 6.3 Add/extend a test confirming `withMiddleware` populates `userId`, `email`, `sessionId`, and `authTime` in the context
 
 ## 7. Verification
 
 - [ ] 7.1 Run `npm run code-quality-check` (lint + `tsc --noEmit`) and resolve all findings
 - [ ] 7.2 Run `npm run test` and confirm the suite passes (note: the pre-existing jsdom `ERR_REQUIRE_ESM` failure is unrelated to this change)
-- [ ] 7.3 Run `npm run build && npm start`, sign in, exercise an API route and a page navigation, and confirm `logs/log.json` shows the `user` block (with `sessionId`) on API logs and the enriched `Route Request` line — and that startup logs have no `user` block
+- [ ] 7.3 Run `npm run build && npm start`, sign in, exercise an API route and a page navigation, and confirm `logs/log.json` shows the `user` block (with generated `sessionId`) plus `auth_time` and source IP on API logs and the enriched `Route Request` line — and that startup logs have no `user` block
 - [ ] 7.4 Confirm no raw JWT, access token, ID token, or session cookie value appears anywhere in the log output

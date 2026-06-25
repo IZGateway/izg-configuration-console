@@ -41,23 +41,28 @@ Add a Winston format to the `format.combine(...)` chain in `logger.ts` (alongsid
 
 Place the new format **before** `ecsFormat()` in the combine chain so the injected fields are present when ECS serialization runs. The existing `versionFormat` already proves custom fields (`ConfigConsoleVersion`) survive `ecsFormat` passthrough.
 
-### D2 — `sessionId` source: OPEN (pending reporter confirmation); `jti` ruled out
+### D2 — `sessionId` = CC-generated opaque id, with indirect Okta correlation (`jti` ruled out, `sid` deferred)
 
-Whatever the source, `sessionId` is **stored on the next-auth token** at sign-in (so it is available cheaply in both runtimes — via `getToken()` in `withMiddleware` and `req.nextauth.token` in the Edge middleware) and `auth_time` is captured alongside it for time-based correlation. The remaining decision is *which value* `sessionId` holds.
+**Chosen approach (indirect correlation).** Generate an opaque session id (`crypto.randomUUID()`) in the `jwt` callback's `if (account)` block and persist it as `token.sessionId`. It is fully in our control, stable for the lifetime of a login session, non-replayable, not a secret, and future-proof against token refresh. It honestly represents "one CC login session" rather than masquerading as an Okta-meaningful value.
 
-**Ruled out — Okta ID token `jti`.** Although `jti` is opaque, present, non-replayable, and (given CC requests no `offline_access` and never refreshes) incidentally stable for our 30-minute session, it fails the requirement the field exists for: **the Okta System Log cannot be pivoted on `jti`.** Okta correlates on `authenticationContext.externalSessionId` / `rootSessionId`, `transaction.id`, and event `uuid` — none of which is `jti`. It also semantically identifies the *token*, not the session, so it would silently fragment if refresh were ever enabled. It looks authoritative in logs while being useless for the investigation it is meant to support.
+Because a CC-generated id does not appear in Okta's logs, correlation back to Okta is **indirect** — done by joining on the user and login event. To make that join possible, every user-initiated log event also carries:
+- `userId` (= Okta `sub`) — already in the `user` block;
+- `auth_time` — the Okta login timestamp, captured from the ID token in the `jwt` callback and persisted as `token.authTime`;
+- **source IP** — already available in `Context.ipAddress`; ensured present on user-initiated log events.
 
-**Candidate A — Okta `sid` claim (the correct field).** Stable across refresh and directly correlatable to the Okta System Log session. **Absent from this tenant's tokens today** (verified: `sid: null`); emitting it requires an Okta-side configuration change (enabling logout / SLO), confirmed with the Okta administrator. Adds an external dependency before implementation.
+`sessionId` and `authTime` are **stored on the next-auth token** so they are available cheaply in both runtimes (via `getToken()` in `withMiddleware` and `req.nextauth.token` in the Edge middleware) without re-decoding the ID token per request.
 
-**Candidate B — CC-owned opaque session id (pragmatic).** Generate an opaque id (e.g. `crypto.randomUUID()`) in the `jwt` callback's `if (account)` block, persist as `token.sessionId`. Fully in our control, stable for the login session, non-replayable, and future-proof against refresh. Correlates to Okta indirectly via `userId` (`sub`) + `auth_time` + source IP — it honestly represents "one CC login session" rather than masquerading as an Okta-meaningful value.
+> **Pending team confirmation.** This approach assumes indirect correlation (user + `auth_time` + IP) is acceptable. The team is being asked whether a *direct* Okta-System-Log pivot is required. If it is, see the deferred `sid` option below — the field and all plumbing stay identical; only the source value changes, so adopting it later is a drop-in swap, not a redesign.
 
-**Gating question for the reporter (Keith):** is *direct* Okta-System-Log correlation a hard requirement (→ Candidate A, with the Okta config dependency) or "ideal but indirect-correlation-acceptable" (→ Candidate B, ships now)? Tracked in Open Questions; blocks task 1.1 only.
+**Ruled out — Okta ID token `jti`.** Although `jti` is opaque, present, non-replayable, and (given CC requests no `offline_access` and never refreshes) incidentally stable for our 30-minute session, it fails the requirement the field exists for: **the Okta System Log cannot be pivoted on `jti`.** Okta correlates on `authenticationContext.externalSessionId` / `rootSessionId`, `transaction.id`, and event `uuid` — none of which is `jti`. It also semantically identifies the *token*, not the session, so it would silently fragment if refresh were ever enabled.
+
+**Deferred — Okta `sid` claim (the only direct-correlation option).** `sid` is stable across refresh and directly correlatable to the Okta System Log session, but it is **absent from this tenant's tokens today** (verified: `sid: null`); emitting it requires an Okta-side configuration change (enabling logout / SLO). Deferred unless the team confirms a hard direct-pivot requirement. If adopted, `token.sessionId` simply sources from `sid` instead of a generated UUID.
 
 - **Alternative — `sub` (what the Hub design chose):** identifies the *user*, not the *login session*. We log `sub` as `userId` regardless, so it is present either way — but it is not a session identifier.
 
 ### D3 — Extend `Context` and populate it in `withMiddleware`
 
-Add `userId?`, `email?`, and `sessionId?` to the `Context` interface. In `withMiddleware`, where `getServerSession` and `getToken` are already called, populate the new fields from `session.user` and the decoded token (`jwtToken.sessionId`). `name` maps from the existing `user` value, `userId` from `sub`, `email` from `session.user.email`.
+Add `userId?`, `email?`, `sessionId?`, and `authTime?` to the `Context` interface (`ipAddress` already exists). In `withMiddleware`, where `getServerSession` and `getToken` are already called, populate the new fields from `session.user` and the decoded token (`jwtToken.sessionId`, `jwtToken.authTime`). `name` maps from the existing `user` value, `userId` from `sub`, `email` from `session.user.email`.
 
 ### D4 — Edge middleware enrichment from `req.nextauth.token`
 
@@ -74,8 +79,8 @@ Emit identity as a nested `user` object, matching the reporter's requested shape
 - **`ecsFormat` may special-case the `user` field** → Verify with a unit test asserting the serialized output contains the expected `user` block; if it transforms it, set ECS-native `user.id/name/email` keys and carry `sessionId` under a custom key.
 - **No request context on some paths** (`getServerSideProps`, startup, background tasks) → By design the `user` block is simply omitted; logging must never throw when the store is empty. Covered by spec scenarios.
 - **Edge vs. Node log shape divergence** (Edge `Route Request` is not ECS-serialized) → Hand-build the nested `user` object in middleware to match; accept that other ECS envelope fields differ on those lines (already true today).
-- **PII in logs** (email/name are personal data) → This is the intended audit behavior; the data already partially appears in logs today. No raw tokens/cookies are logged (only `jti`, which is a non-replayable identifier). Consistent with the public-repo policy since logs are runtime artifacts, not committed.
-- **Indirect Okta correlation (Candidate B)** → If a CC-owned session id is chosen, correlation to the Okta System Log is via `userId` (`sub`) + `auth_time` + source IP rather than a direct session pivot. Candidate A (`sid`) avoids this but adds an Okta config dependency. See D2 and Open Questions.
+- **PII in logs** (email/name are personal data) → This is the intended audit behavior; the data already partially appears in logs today. No raw tokens/cookies are logged — `sessionId` is a CC-generated opaque id, non-replayable and not a secret. Consistent with the public-repo policy since logs are runtime artifacts, not committed.
+- **Indirect Okta correlation** → A CC-generated `sessionId` does not appear in Okta logs, so correlation is via `userId` (`sub`) + `auth_time` + source IP rather than a direct session pivot. Mitigation: always emit those three fields on user-initiated events. The `sid` option (deferred) would give a direct pivot at the cost of an Okta config change. See D2 and Open Questions.
 - **Slight per-log overhead** from `asyncRequestContext.getStore()` on every event → negligible (a `Map` lookup); no measurable impact expected.
 
 ## Migration Plan
@@ -89,7 +94,45 @@ Purely additive and backward-compatible — no breaking changes.
 
 Deploy as a normal release. New `user.*` fields auto-discover in the Kibana/Logstash index on first event; no mapping template change. **Rollback:** revert the change; logs return to prior behavior with no data-migration needed.
 
+## Okta Correlation Recipe (indirect)
+
+Because `sessionId` is CC-generated, it does not appear in Okta's logs. To pivot from a CC log line to the originating Okta session, an investigator uses the three correlation fields we emit (`userId`, `auth_time`, source IP) against the Okta System Log (Admin Console → Reports → System Log, or the `/api/v1/logs` API).
+
+**Field mapping (CC log → Okta System Log):**
+
+| CC log field | Okta System Log field | Role in the join |
+|---|---|---|
+| `userId` (= Okta `sub`, e.g. `00u…`) | `actor.id` (or email → `actor.alternateId`) | primary key |
+| `auth_time` (Unix seconds) | bounds `since` / `until`; anchors the `user.session.start` event | time anchor |
+| source IP | `client.ipAddress` | corroboration only (see caveat) |
+
+**Step 1 — locate the sign-in event** using `sub` + an `auth_time` window:
+
+```
+GET /api/v1/logs
+  ?since=<auth_time − a few seconds, ISO8601>
+  &until=<auth_time + a few seconds, ISO8601>
+  &filter=actor.id eq "00ugmlnknoC9fc5Ul1d7" and eventType eq "user.session.start"
+```
+
+(optionally `and client.ipAddress eq "<ip>"`)
+
+**Step 2 — read `authenticationContext.externalSessionId` from that event, then expand to the full session:**
+
+```
+GET /api/v1/logs
+  ?filter=authenticationContext.externalSessionId eq "<externalSessionId from step 1>"
+```
+
+So: `sub` + `auth_time` (+ IP) → find the sign-in → recover Okta's `externalSessionId` → pull all session activity.
+
+**Caveats:**
+- `auth_time` is Unix *seconds*; Okta timestamps are millisecond ISO8601 — bracket a small window, do not match exactly. It still lands on the `user.session.start` event.
+- The IP CC logs is what the app sees (`x-forwarded-for` behind nginx/ALB); Okta logs the IP *it* saw at login. Usually the same public IP, but NAT/proxy/VPN can diverge — treat IP as corroboration, not a hard key.
+- `authenticationContext.*`, `transaction.id`, and `uuid` are **Okta-side System Log fields only** — they are not claims in the id_token and are never received by CC.
+- The direct alternative is the Okta `sid` claim (deferred, see D2): it equals `externalSessionId`, collapsing this two-step join into a single filter — at the cost of enabling Front-Channel SLO in Okta.
+
 ## Open Questions
 
-- **`sessionId` source (blocks task 1.1).** Is direct Okta-System-Log session correlation a hard requirement? If yes → Candidate A (`sid`), which needs an Okta config change (logout/SLO) confirmed with the Okta administrator. If indirect correlation (`sub` + `auth_time` + IP) is acceptable → Candidate B (CC-owned opaque session id), which ships with no external dependency. To confirm with the reporter (Keith). `jti` is ruled out (see D2).
+- **Is indirect correlation acceptable? (confirm with team).** The chosen design uses a CC-generated `sessionId` correlated to Okta via `sub` + `auth_time` + IP. If the team instead requires a *direct* Okta-System-Log pivot, switch `sessionId` to the Okta `sid` claim — which needs an Okta config change (logout/SLO) confirmed with the Okta administrator. This is a drop-in source swap, not a redesign (see D2). `jti` is ruled out.
 - Should any non-request-scoped logs (e.g., scheduled `izghubrefresh`) attempt to attribute a system identity, or remain identity-less? Current design leaves them identity-less.
