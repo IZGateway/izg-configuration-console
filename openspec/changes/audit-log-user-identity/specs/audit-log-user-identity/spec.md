@@ -22,7 +22,9 @@ Identity SHALL be sourced from the active request context (the `AsyncLocalStorag
 
 ### Requirement: Session identifier is non-replayable and session-scoped
 
-The `sessionId` field SHALL be derived from the Okta ID token `jti` claim captured at sign-in and SHALL remain stable for the lifetime of a login session. The system SHALL also capture the token `auth_time` to support correlation with the Okta System Log via `userId` (`sub`) + `auth_time` + source IP. The system SHALL NOT log any raw JWT, access token, ID token, or session cookie value.
+The `sessionId` field SHALL be captured at sign-in, persisted on the session token, and SHALL remain stable for the lifetime of a login session, with a new value on each new login. It SHALL be a non-secret identifier that cannot be replayed to gain access. The system SHALL also capture the token `auth_time` to support correlation with the Okta System Log. The system SHALL NOT log any raw JWT, access token, ID token, or session cookie value.
+
+> The concrete source of `sessionId` is an open decision pending reporter confirmation (see design.md D2): the Okta `sid` claim (direct Okta-log correlation, requires an Okta SLO config change) or a CC-owned opaque session id (indirect correlation via `userId` + `auth_time` + source IP). The Okta ID token `jti` is explicitly excluded — it is not pivotable in the Okta System Log and identifies the token, not the session.
 
 #### Scenario: Session identifier stable across a login session
 

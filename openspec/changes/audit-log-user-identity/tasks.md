@@ -1,6 +1,7 @@
 ## 1. Capture session identifier at sign-in
 
-- [ ] 1.1 In `src/pages/api/auth/[...nextauth].ts` `jwt` callback (inside the existing `if (account)` block), decode the Okta ID token payload and set `token.sessionId = payload.jti` and `token.authTime = payload.auth_time`, wrapped in try/catch so a decode failure never breaks sign-in
+- [ ] 1.0 **BLOCKED — confirm `sessionId` source with Keith** (Okta `sid` vs CC-owned opaque id; `jti` is ruled out — see design.md D2). Resolve before 1.1.
+- [ ] 1.1 In `src/pages/api/auth/[...nextauth].ts` `jwt` callback (inside the existing `if (account)` block), set `token.sessionId` from the confirmed source — either the decoded Okta `sid` claim (Candidate A) or a generated `crypto.randomUUID()` (Candidate B) — and set `token.authTime = payload.auth_time`, wrapped in try/catch so a failure never breaks sign-in
 - [ ] 1.2 Extend the next-auth type augmentation (JWT / Session types) so `sessionId` and `authTime` are typed (avoid `any` — `no-explicit-any` is an error)
 
 ## 2. Extend request context
