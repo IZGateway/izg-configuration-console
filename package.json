@@ -106,7 +106,7 @@
     "glob": "^13.0.6",
     "jsdom": "^28.1.0",
     "postcss": "^8.5.15",
-    "qs": "^6.15.2",
+    "qs": "6.15.3",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-react": {
       "immutable": "^4.3.8"
