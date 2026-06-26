@@ -45,8 +45,8 @@ export const authOptions = {
         token.groups = profile.groups
 
         // Generate an opaque, CC-owned session identifier (stable for the life
-        // of this login session) and capture the Okta login timestamp. These
-        // back the audit-log user identity (IGDD-2223). Decoding is best-effort:
+        // of this login session) and capture the Okta login timestamp + token
+        // id for the audit-log identity (IGDD-2223). Decoding is best-effort:
         // a failure here must never break sign-in.
         token.sessionId = randomUUID()
         try {
@@ -56,12 +56,29 @@ export const authOptions = {
               Buffer.from(idTokenJwt.split('.')[1], 'base64url').toString('utf8')
             )
             token.authTime = payload.auth_time
+            token.oktaJti = payload.jti
           }
         } catch (error) {
-          logger.warn('Failed to decode id_token for auth_time', {
+          logger.warn('Failed to decode id_token for audit fields', {
             errorMessage: error instanceof Error ? error.message : String(error),
           })
         }
+
+        // Emit a once-per-login authorization snapshot. Okta group membership
+        // is mutable, so this captures point-in-time authorization tied to the
+        // sessionId; ordinary log lines carry sessionUser but not groups (IGDD-2223).
+        logger.info('Session established', {
+          sessionUser: {
+            name: profile.name ?? token.name,
+            userId: token.sub,
+            email: profile.email ?? token.email,
+            sessionId: token.sessionId,
+            jti: token.oktaJti,
+            authTime: token.authTime,
+          },
+          groups: profile.groups,
+          role: _.intersection(profile.groups, roles)[0],
+        })
 
         try {
           const response = await fetch(userInfoEndpoint, {

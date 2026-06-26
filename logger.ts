@@ -21,10 +21,12 @@ const versionFormat = winston.format((info) => {
  * Enrich a log event with the authenticated user's identity for the current
  * request, read from the AsyncLocalStorage request context (IGDD-2223).
  *
- * Mirrors how the Hub's LogstashEncoder auto-includes SLF4J MDC: every
- * Node-runtime log event produced during an authenticated request gets a
- * standardized `user` block plus the correlation fields needed to pivot to the
- * Okta System Log (`auth_time` + source IP as ECS `client.ip`).
+ * Adds a single, additive `sessionUser` object — it never touches the existing
+ * `user`/`sub` (or any other) fields, so existing log shapes and Elastic
+ * queries are unaffected. Mirrors how the Hub's LogstashEncoder auto-includes
+ * SLF4J MDC: every Node-runtime log event during an authenticated request gets
+ * `sessionUser` (identity plus the correlation fields needed to pivot to the
+ * Okta System Log: `authTime` + `ip`).
  *
  * No-ops when there is no request context (startup, background tasks) or when
  * the request is unauthenticated — it never fabricates identity and never
@@ -37,16 +39,15 @@ export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
   if (!ctx) return info
   // Only attach identity when an authenticated user is present.
   if (ctx.userId || ctx.email || ctx.sessionId) {
-    info.user = {
+    info.sessionUser = {
       name: ctx.user,
-      id: ctx.userId,
+      userId: ctx.userId,
       email: ctx.email,
       sessionId: ctx.sessionId,
+      jti: ctx.jti,
+      authTime: ctx.authTime,
+      ip: ctx.ipAddress,
     }
-    if (ctx.authTime !== undefined) info.auth_time = ctx.authTime
-  }
-  if (ctx.ipAddress) {
-    info.client = { ...((info.client as object) || {}), ip: ctx.ipAddress }
   }
   return info
 }

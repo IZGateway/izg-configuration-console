@@ -66,26 +66,16 @@ function checkAndRecordJti(jti: string): boolean {
 const DPOP_SKIP = /^\/(api\/auth|_next|api\/healthcheck|api\/deephealthcheck)/
 
 export default withAuth(async function middleware(req: NextRequestWithAuth) {
-  // The Edge runtime cannot use Winston or the Node AsyncLocalStorage request
-  // context, so identity is sourced directly from the decoded next-auth token
-  // (populated by withAuth). Omit the block entirely for unauthenticated /
-  // pre-binding requests rather than emitting empty identity (IGDD-2223).
-  const token = req.nextauth?.token
-  const user = token?.sub
-    ? {
-        name: token.name ?? undefined,
-        id: token.sub,
-        email: token.email ?? undefined,
-        sessionId: token.sessionId,
-      }
-    : undefined
-
+  // NOTE (IGDD-2223): the Edge `Route Request` line is intentionally left
+  // anonymous. Edge middleware cannot use the Winston logger or the Node
+  // AsyncLocalStorage request context, and page-level data access is attributed
+  // via the structured `/api/*` logs (which carry `sessionUser`). Structured
+  // page-view attribution here would be a separate follow-up.
   console.info('Route Request', {
     path: req.nextUrl.pathname,
     method: req.method,
     ip: req.headers.get('x-forwarded-for') ?? 'unknown',
     userAgent: req.headers.get('user-agent') ?? 'unknown',
-    ...(user ? { user } : {}),
   })
 
   // Skip DPoP checks for auth callbacks and static assets.

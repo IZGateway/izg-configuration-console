@@ -9,6 +9,7 @@ export interface Context {
   userId?: string // Okta `sub` — stable user identifier for audit logging
   email?: string // Authenticated user's email
   sessionId?: string // CC-generated opaque login-session identifier
+  jti?: string // Okta ID-token `jti` (token reference) for audit logging
   authTime?: number // Okta `auth_time` (Unix seconds) for Okta log correlation
 }
 

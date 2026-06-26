@@ -11,39 +11,53 @@ const authedContext: Context = {
   userId: '00uABC',
   email: 'amoody@example.com',
   sessionId: 'sess-123',
+  jti: 'ID.abc',
   authTime: 1782408092,
 }
 
+const expectedSessionUser = {
+  name: 'Austin Moody',
+  userId: '00uABC',
+  email: 'amoody@example.com',
+  sessionId: 'sess-123',
+  jti: 'ID.abc',
+  authTime: 1782408092,
+  ip: '203.0.113.7',
+}
+
 describe('injectUserContext (logger request-context format)', () => {
-  it('omits the user block when there is no request context', () => {
+  it('omits sessionUser when there is no request context', () => {
     const out = injectUserContext(baseInfo())
-    expect(out.user).toBeUndefined()
-    expect(out.client).toBeUndefined()
+    expect(out.sessionUser).toBeUndefined()
   })
 
-  it('attaches the standardized user block + correlation fields when authenticated', () => {
+  it('attaches sessionUser (identity + correlation fields) when authenticated', () => {
     const out = asyncRequestContext.run(authedContext, () =>
       injectUserContext(baseInfo())
     )
-    expect(out.user).toEqual({
-      name: 'Austin Moody',
-      id: '00uABC',
-      email: 'amoody@example.com',
-      sessionId: 'sess-123',
-    })
-    expect(out.auth_time).toBe(1782408092)
-    expect(out.client).toEqual({ ip: '203.0.113.7' })
+    expect(out.sessionUser).toEqual(expectedSessionUser)
   })
 
   it('does not fabricate identity for an unauthenticated context', () => {
     const ctx: Context = { user: 'unknown', ipAddress: '203.0.113.7' }
     const out = asyncRequestContext.run(ctx, () => injectUserContext(baseInfo()))
-    expect(out.user).toBeUndefined()
-    // IP is request metadata, not identity — fine to include.
-    expect(out.client).toEqual({ ip: '203.0.113.7' })
+    expect(out.sessionUser).toBeUndefined()
   })
 
-  it('survives ECS serialization (ecsFormat passes the user block through)', () => {
+  it('leaves a pre-existing user string field untouched (additive)', () => {
+    const info = {
+      level: 'info',
+      message: 'test',
+      user: 'amoody@example.com',
+    } as never
+    const out = asyncRequestContext.run(authedContext, () =>
+      injectUserContext(info)
+    )
+    expect((out as Record<string, unknown>).user).toBe('amoody@example.com')
+    expect(out.sessionUser).toBeDefined()
+  })
+
+  it('survives ECS serialization (ecsFormat passes sessionUser through)', () => {
     const enriched = asyncRequestContext.run(authedContext, () =>
       injectUserContext(baseInfo())
     )
@@ -52,13 +66,6 @@ describe('injectUserContext (logger request-context format)', () => {
       string
     >
     const serialized = JSON.parse(transformed[Symbol.for('message')])
-    expect(serialized.user).toEqual({
-      name: 'Austin Moody',
-      id: '00uABC',
-      email: 'amoody@example.com',
-      sessionId: 'sess-123',
-    })
-    expect(serialized.client).toEqual({ ip: '203.0.113.7' })
-    expect(serialized.auth_time).toBe(1782408092)
+    expect(serialized.sessionUser).toEqual(expectedSessionUser)
   })
 })

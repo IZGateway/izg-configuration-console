@@ -91,6 +91,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     logger.info('Elasticsearch query requested', {
       operation: 'elasticsearch_query',
+      user: session.user.email,
       index,
       queryMetadata,
     })
@@ -113,6 +114,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Log successful query
     logger.info('Elasticsearch query successful', {
       operation: 'elasticsearch_query',
+      user: session.user.email,
       index,
       hitsCount: data.hits?.hits?.length || 0,
       totalHits: data.hits?.total?.value || 0,
@@ -126,6 +128,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.error('Elasticsearch query error', {
       operation: 'elasticsearch_query',
       error: error instanceof Error ? error.message : String(error),
+      user: session?.user?.email,
     })
 
     res.status(500).json({
