@@ -102,4 +102,4 @@ Log events emitted outside an authenticated user request — including applicati
 - **WHEN** a request without an authenticated session produces a log event
 - **THEN** the event does not report `sessionUser` identity values belonging to any user
 
-> Non-normative: the Edge-runtime `Route Request` log (`src/middleware.ts`, page navigations) is intentionally left unchanged by this capability and remains anonymous. Page-level data access is attributed via the structured `/api/*` logs; structured Edge attribution is a possible follow-up.
+> Non-normative: the Edge-runtime `Route Request` log (`src/middleware.ts`, page navigations) is intentionally left unchanged by this capability and remains anonymous. Page-level data access is attributed via the structured `/api/*` logs. Likewise, server-side code that runs outside `withMiddleware` (e.g. the connection-test page's server execution) does not receive `sessionUser`; those lines already carry operator identity via pre-existing fields (`userContext`/`userId`/`user`). Standardizing these paths onto `sessionUser` is a possible follow-up.

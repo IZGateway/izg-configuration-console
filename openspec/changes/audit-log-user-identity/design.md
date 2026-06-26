@@ -30,6 +30,7 @@ Constraint: next-auth is pinned at v4 (Pages Router). The Edge middleware (`src/
 **Non-Goals:**
 - Modifying, removing, or renaming any field logged today (explicitly additive).
 - Enriching the Edge `Route Request` log (left anonymous; see D4).
+- Attaching `sessionUser` to server-side code that runs outside `withMiddleware` — notably the connection-test page's server execution. Those logs already carry operator identity via pre-existing fields (`userContext` on per-test lines, `userId`/`user` on the start/summary lines), so they remain attributable; standardizing them onto `sessionUser` is a possible follow-up (see Risks).
 - Pursuing the Okta `sid` / Front-Channel-SLO direct-correlation path now (documented future option).
 - Hub / Transformation Console logging (separate CRs); persisting audit events to a database (the existing `auditHelper` DynamoDB records are a distinct concern).
 
@@ -83,6 +84,7 @@ Ordinary per-line events carry `sessionUser` but **not** `groups`/`role` — kee
 - **PII in logs** (email/name) → intended audit behavior; already partially present today. No raw tokens/cookies logged; `sessionId` is an opaque CC id.
 - **Indirect Okta correlation** → a CC-generated `sessionId` is not in Okta's logs, so correlation is a two-step join on `userId` + `authTime` + `ip` (see recipe). The `sid` option (not pursued) would make it one step at the cost of an Okta config change.
 - **Slight per-log overhead** from `asyncRequestContext.getStore()` → negligible (a `Map` lookup).
+- **Non-`withMiddleware` server paths lack `sessionUser`** → Verified at runtime: the connection-test flow executes outside `withMiddleware` (via the connection-test page's server-side path, not the `/api/tests` route), so its logs (`Starting connection tests`, the per-test `… PASS/FAIL` lines, `Connection Test Results`) carry no `sessionUser`. They already carry operator identity via pre-existing fields (`userContext`/`userId`/`user`), so they remain attributable. Same class of limitation as the Edge `Route Request`. Standardizing these onto `sessionUser` is a possible follow-up, out of scope here.
 
 ## Migration Plan
 
