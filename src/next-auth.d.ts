@@ -12,3 +12,12 @@ declare module 'next-auth' {
     isAdmin: boolean
   }
 }
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    /** Opaque, CC-generated identifier for the login session (audit logging, IGDD-2223). */
+    sessionId?: string
+    /** Okta `auth_time` claim (Unix seconds) captured at sign-in, for Okta log correlation. */
+    authTime?: number
+  }
+}

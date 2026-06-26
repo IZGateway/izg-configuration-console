@@ -28,11 +28,10 @@ const captureErrors: Middleware = async (req, res, next) => {
   }
 }
 
-// log the api requests and response code
+// log the api requests and response code. User identity is attached
+// automatically by the logger's request-context format (IGDD-2223), so it is
+// no longer passed explicitly here.
 const logApiRequest: Middleware = async (req, res, next) => {
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || null
-  const sub = context?.sub || null
   if (LOG_LEVEL.toLocaleLowerCase() === 'debug') {
     logger.warn(
       'WARNING: LOG_LEVEL is set to DEBUG, this will log sensitive information for every API request'
@@ -40,15 +39,11 @@ const logApiRequest: Middleware = async (req, res, next) => {
     logger.info('API Request ' + req.url, {
       req,
       res,
-      user,
-      sub,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
   } else {
     logger.info('API Request ' + req.url, {
-      user,
-      sub,
       'x-forwarded-for': req.headers['x-forwarded-for'] || null,
       'user-agent': req.headers['user-agent'] || null,
     })
@@ -129,7 +124,16 @@ const withMiddleware = (...middlewareNames: string[]) => {
         'unknown'
       const jwtToken = await getToken({ req })
       const sub = (jwtToken?.sub as string) || undefined
-      const context: Context = { user, ipAddress, sub, session }
+      const context: Context = {
+        user,
+        ipAddress,
+        sub,
+        session,
+        userId: sub,
+        email: session?.user?.email || undefined,
+        sessionId: jwtToken?.sessionId || undefined,
+        authTime: jwtToken?.authTime || undefined,
+      }
       await asyncRequestContext.run(context, async () => {
         const dispatch = async (i: number): Promise<void> => {
           if (i < stack.length) {

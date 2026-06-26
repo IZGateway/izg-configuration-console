@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import winston from 'winston'
 import ecsFormat from '@elastic/ecs-winston-format'
+import { asyncRequestContext } from './src/lib/Context'
 
 let appVersion = 'unknown'
 try {
@@ -16,12 +17,49 @@ const versionFormat = winston.format((info) => {
   return info
 })
 
+/**
+ * Enrich a log event with the authenticated user's identity for the current
+ * request, read from the AsyncLocalStorage request context (IGDD-2223).
+ *
+ * Mirrors how the Hub's LogstashEncoder auto-includes SLF4J MDC: every
+ * Node-runtime log event produced during an authenticated request gets a
+ * standardized `user` block plus the correlation fields needed to pivot to the
+ * Okta System Log (`auth_time` + source IP as ECS `client.ip`).
+ *
+ * No-ops when there is no request context (startup, background tasks) or when
+ * the request is unauthenticated — it never fabricates identity and never
+ * throws. `undefined` fields are dropped by JSON serialization.
+ *
+ * Exported for unit testing.
+ */
+export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
+  const ctx = asyncRequestContext.getStore()
+  if (!ctx) return info
+  // Only attach identity when an authenticated user is present.
+  if (ctx.userId || ctx.email || ctx.sessionId) {
+    info.user = {
+      name: ctx.user,
+      id: ctx.userId,
+      email: ctx.email,
+      sessionId: ctx.sessionId,
+    }
+    if (ctx.authTime !== undefined) info.auth_time = ctx.authTime
+  }
+  if (ctx.ipAddress) {
+    info.client = { ...((info.client as object) || {}), ip: ctx.ipAddress }
+  }
+  return info
+}
+
+const userContextFormat = winston.format(injectUserContext)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
     winston.format.uncolorize(),
     winston.format.errors({ stack: true }),
     versionFormat(),
+    userContextFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],

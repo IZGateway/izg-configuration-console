@@ -68,7 +68,7 @@ Add `userId?`, `email?`, `sessionId?`, and `authTime?` to the `Context` interfac
 
 In `src/middleware.ts`, build the same `user` block from `req.nextauth.token` (`sub` → `userId`, `email`, `name`, `sessionId`) and include it in the `Route Request` `console.info` call. When the token is absent (unauthenticated / pre-binding), omit the block rather than emit empty values.
 
-- Trade-off: Edge logs are plain `console.info` (not ECS-formatted by Winston), so their JSON shape is hand-built to match the nested `user` object. Documented as a known shape difference (see Risks).
+- Trade-off: Edge logs are plain `console.info`, not processed by the Winston/ECS pipeline. In practice the Edge runtime renders the whole argument object (path, method, `user`, …) into a single formatted string, so on `Route Request` lines the identity ends up **inside the `message` string rather than as structured top-level `user.*` fields**. The identity is present and human-readable, but is not independently queryable/aggregatable in Elastic for those lines (see Risks).
 
 ### D5 — Field shape aligns with ECS where possible
 
@@ -78,7 +78,7 @@ Emit identity as a nested `user` object, matching the reporter's requested shape
 
 - **`ecsFormat` may special-case the `user` field** → Verify with a unit test asserting the serialized output contains the expected `user` block; if it transforms it, set ECS-native `user.id/name/email` keys and carry `sessionId` under a custom key.
 - **No request context on some paths** (`getServerSideProps`, startup, background tasks) → By design the `user` block is simply omitted; logging must never throw when the store is empty. Covered by spec scenarios.
-- **Edge vs. Node log shape divergence** (Edge `Route Request` is not ECS-serialized) → Hand-build the nested `user` object in middleware to match; accept that other ECS envelope fields differ on those lines (already true today).
+- **Edge vs. Node log shape divergence** (Edge `Route Request` is not processed by the Winston/ECS pipeline) → Confirmed at runtime: the Edge runtime folds the argument object into the `message` string, so identity on `Route Request` lines is **text within `message`, not structured `user.*` fields** — present and readable, but not filterable/aggregatable in Kibana for those lines (Node API logs are fully structured). Accepted for this change. Making Route Request structured (e.g. emit a pre-serialized JSON line from middleware, or relocate that logging to the Node layer) is a possible follow-up, out of scope here.
 - **PII in logs** (email/name are personal data) → This is the intended audit behavior; the data already partially appears in logs today. No raw tokens/cookies are logged — `sessionId` is a CC-generated opaque id, non-replayable and not a secret. Consistent with the public-repo policy since logs are runtime artifacts, not committed.
 - **Indirect Okta correlation** → A CC-generated `sessionId` does not appear in Okta logs, so correlation is via `userId` (`sub`) + `auth_time` + source IP rather than a direct session pivot. Mitigation: always emit those three fields on user-initiated events. The `sid` option (deferred) would give a direct pivot at the cost of an Okta config change. See D2 and Open Questions.
 - **Slight per-log overhead** from `asyncRequestContext.getStore()` on every event → negligible (a `Map` lookup); no measurable impact expected.

@@ -78,6 +78,8 @@ Log events emitted outside an authenticated user request — including applicati
 
 The `Route Request` log emitted by the Edge middleware (`src/middleware.ts`) for authenticated page navigations SHALL include the user identity, sourced from the decoded next-auth token (`req.nextauth.token`) since the Edge runtime cannot access the Node request-context storage.
 
+> Note: because Edge logs bypass the Winston/ECS pipeline, this identity appears within the `Route Request` `message` text rather than as structured top-level `user.*` fields (unlike the Node API logs). It satisfies "the log event includes the identity" but is not independently queryable in Elastic for those lines; structuring it is a possible follow-up (see design.md).
+
 #### Scenario: Authenticated page navigation is attributed
 
 - **WHEN** an authenticated user navigates to a protected page

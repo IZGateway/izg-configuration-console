@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import NextAuth from 'next-auth'
 import OktaProvider from 'next-auth/providers/okta'
+import { randomUUID } from 'crypto'
 import logger from '../../../../logger'
 import _ from 'lodash'
 import roles from '../../../lib/security/roles'
@@ -42,6 +43,26 @@ export const authOptions = {
         token.sub = account.providerAccountId
         token.id = profile.id
         token.groups = profile.groups
+
+        // Generate an opaque, CC-owned session identifier (stable for the life
+        // of this login session) and capture the Okta login timestamp. These
+        // back the audit-log user identity (IGDD-2223). Decoding is best-effort:
+        // a failure here must never break sign-in.
+        token.sessionId = randomUUID()
+        try {
+          const idTokenJwt = account.id_token
+          if (idTokenJwt) {
+            const payload = JSON.parse(
+              Buffer.from(idTokenJwt.split('.')[1], 'base64url').toString('utf8')
+            )
+            token.authTime = payload.auth_time
+          }
+        } catch (error) {
+          logger.warn('Failed to decode id_token for auth_time', {
+            errorMessage: error instanceof Error ? error.message : String(error),
+          })
+        }
+
         try {
           const response = await fetch(userInfoEndpoint, {
             headers: {
