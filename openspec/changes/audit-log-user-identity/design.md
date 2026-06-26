@@ -2,120 +2,117 @@
 
 The Configuration Console logs through a single Winston instance (`logger.ts`) using `@elastic/ecs-winston-format`, with `console.*` monkey-patched to route through that logger. Shipped to Elasticsearch via the container's file logging in production.
 
-Today, user identity is attached to only two places, inconsistently:
-- `logApiRequest` in `src/pages/api/api-middleware-helper.ts` logs `user` as a display-name string plus `sub`.
-- `src/pages/api/elasticsearch/query.ts` logs `user` as an email string.
+Today, user identity is attached to only a few places, as **bare string fields**:
+- `logApiRequest` (`api-middleware-helper.ts`) logs `user` (display name) + `sub`.
+- `elasticsearch/query.ts` logs `user` (email).
+- Several access-group / denylist handlers log `user` (email).
 
-Every other event — the Edge `Route Request` line, the many `No encryption key configured` warnings, connection-test logs, unhandled errors — carries no identity. There is no way to reliably trace a log event back to the user who caused it.
+Most events — the Edge `Route Request` line, the many `No encryption key configured` warnings, connection-test logs, unhandled errors — carry no identity. There is no reliable way to trace a log event back to the user who caused it.
 
-Two pieces of infrastructure already exist that make this tractable:
-- **`asyncRequestContext`** (`src/lib/Context.ts`), an `AsyncLocalStorage<Context>` populated per API request inside `withMiddleware` with `{ user, ipAddress, sub, session }`. This is the Node-runtime analog of the Hub's SLF4J MDC.
-- The **next-auth JWT** already persists the Okta ID token (`token.id_token` / `token.idToken`, set in the `jwt` callback of `src/pages/api/auth/[...nextauth].ts`).
+Two pieces of infrastructure make this tractable:
+- **`asyncRequestContext`** (`src/lib/Context.ts`), an `AsyncLocalStorage<Context>` populated per API request inside `withMiddleware`. This is the Node-runtime analog of the Hub's SLF4J MDC.
+- The **next-auth JWT** already persists the Okta ID token (`token.id_token`/`token.idToken`, set in the `jwt` callback).
 
-Empirical finding (verified locally by decoding a live Okta ID token): the token carries `sub`, `email`, `name`, `preferred_username`, `groups`, `jti`, `auth_time`, `idp`, `amr` — but **no `sid` claim**. So a literal Okta session id is unavailable; `jti` is the closest session-scoped, non-replayable identifier.
+Empirical finding (verified by decoding a live Okta ID token): the token carries `sub`, `email`, `name`, `preferred_username`, `groups`, `jti`, `auth_time`, `idp`, `amr` — but **no `sid` claim**.
+
+**Backward-compatibility constraint (the key driver of this design):** `user` is already an established **string** field across many existing log statements, and there may be Kibana queries/views and an Elasticsearch index mapping that depend on it. We must **not** change how anything is logged today — a field cannot be both a string and an object, so we cannot repurpose `user` into an identity object without risking broken queries and a mapping conflict (likely the root of IGDD-2540). Therefore the new identity is carried under a **new** field, `sessionUser`, and nothing existing is touched.
 
 Constraint: next-auth is pinned at v4 (Pages Router). The Edge middleware (`src/middleware.ts`) runs in the Edge runtime, where neither Winston nor Node's `AsyncLocalStorage` is available.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Attach a standardized `user: { name, userId, email, sessionId }` block to every Node-runtime log event produced during an authenticated user interaction, automatically (no per-call-site changes).
-- Provide a `sessionId` that is stable within a login session, non-replayable, and not a secret.
-- Enrich the Edge `Route Request` log with the same identity from the decoded next-auth token.
-- Normalize the two existing ad hoc identity logs onto the standard block.
+- Attach a `sessionUser` object — `{ name, userId, email, sessionId, jti, authTime, ip }` — to every Node-runtime log event during an authenticated interaction, automatically, **without changing any existing logged field**.
+- Provide a `sessionId` that is stable within a login session, non-replayable, and not a secret; record the Okta `jti` alongside.
+- Support indirect Okta correlation (`userId` + `authTime` + `ip`).
+- Capture a point-in-time authorization snapshot (`groups` + resolved `role`) once per login.
 
 **Non-Goals:**
-- Hub (`izgw-core`/`izgw-hub`) and Transformation Console logging — separate CRs.
-- Persisting audit events to a database (the existing `allowed-user-audit-logging` / `auditHelper` DynamoDB records are a distinct concern, unchanged here).
-- Changing what is logged beyond adding identity context; no new log statements, no log-level changes.
-- Logging the credential under test in a connection test (that username is the `testResult` value, addressed by IGDD-2221). This change attaches the *operator's* identity, which it does automatically because connection tests run inside `withMiddleware`.
+- Modifying, removing, or renaming any field logged today (explicitly additive).
+- Enriching the Edge `Route Request` log (left anonymous; see D4).
+- Pursuing the Okta `sid` / Front-Channel-SLO direct-correlation path now (documented future option).
+- Hub / Transformation Console logging (separate CRs); persisting audit events to a database (the existing `auditHelper` DynamoDB records are a distinct concern).
 
 ## Decisions
 
-### D1 — Inject identity via a context-aware Winston format (not per-call-site, not child loggers)
+### D1 — Inject `sessionUser` via a context-aware Winston format (additive)
 
-Add a Winston format to the `format.combine(...)` chain in `logger.ts` (alongside the existing `versionFormat`) that calls `asyncRequestContext.getStore()` and, when a context is present, sets `info.user = { name, userId, email, sessionId }`. Because `console.*` is already monkey-patched to the logger, this covers both `logger.*` calls and legacy `console.*` calls with zero changes at the hundreds of call sites.
+Add a Winston format to the `format.combine(...)` chain in `logger.ts` (alongside `versionFormat`) that calls `asyncRequestContext.getStore()` and, when an authenticated context is present, sets `info.sessionUser = { name, userId, email, sessionId, jti, authTime, ip }`. Because `console.*` is already monkey-patched to the logger, this covers both `logger.*` and legacy `console.*` calls with zero per-call-site changes.
 
-- **Alternative — thread `user` through function arguments:** rejected; invasive, touches every call site, and violates the existing layering convention (downstream code reads context from `AsyncLocalStorage`, not args).
-- **Alternative — per-request child logger (`logger.child({ user })`):** rejected; child loggers must be created and passed down per request, which re-introduces the threading problem and doesn't capture `console.*`.
+It writes **only** to the new `sessionUser` key — it never touches `user`, `sub`, or any other field. Existing `user`/`sub` fields therefore remain on the lines that already emit them, now accompanied by `sessionUser`.
 
-Place the new format **before** `ecsFormat()` in the combine chain so the injected fields are present when ECS serialization runs. The existing `versionFormat` already proves custom fields (`ConfigConsoleVersion`) survive `ecsFormat` passthrough.
+Place the format **before** `ecsFormat()` so the field is present at serialization. `versionFormat` already proves custom fields (`ConfigConsoleVersion`) survive `ecsFormat` passthrough; `sessionUser` is a plain custom object and is expected to pass through likewise (verified by unit test, see Risks).
 
-### D2 — `sessionId` = CC-generated opaque id, with indirect Okta correlation (`jti` ruled out, `sid` deferred)
+- **Alternatives rejected:** threading identity through function args (invasive, violates the AsyncLocalStorage layering convention); per-request child loggers (re-introduces threading, doesn't capture `console.*`).
 
-**Chosen approach (indirect correlation).** Generate an opaque session id (`crypto.randomUUID()`) in the `jwt` callback's `if (account)` block and persist it as `token.sessionId`. It is fully in our control, stable for the lifetime of a login session, non-replayable, not a secret, and future-proof against token refresh. It honestly represents "one CC login session" rather than masquerading as an Okta-meaningful value.
+### D2 — `sessionId` (CC-generated) + `jti` (token reference); indirect correlation
 
-Because a CC-generated id does not appear in Okta's logs, correlation back to Okta is **indirect** — done by joining on the user and login event. To make that join possible, every user-initiated log event also carries:
-- `userId` (= Okta `sub`) — already in the `user` block;
-- `auth_time` — the Okta login timestamp, captured from the ID token in the `jwt` callback and persisted as `token.authTime`;
-- **source IP** — already available in `Context.ipAddress`; ensured present on user-initiated log events.
+In the `jwt` callback's `if (account)` block: generate `token.sessionId = crypto.randomUUID()`, and decode the Okta ID token to capture `token.authTime` (`auth_time`) and `token.jti` (`jti`). Persisting on the token makes all three available cheaply via `getToken()` without re-decoding per request.
 
-`sessionId` and `authTime` are **stored on the next-auth token** so they are available cheaply in both runtimes (via `getToken()` in `withMiddleware` and `req.nextauth.token` in the Edge middleware) without re-decoding the ID token per request.
+- **`sessionId`** (UUID) is the stable, CC-owned per-login correlator: non-replayable, not a secret, future-proof against token refresh.
+- **`jti`** is logged as a token reference (`sessionUser.jti`). It is *not* the session correlator — the Okta System Log cannot be pivoted on `jti`, and it identifies the token, not the session — but it is harmless to log and useful as a reference.
+- **Indirect Okta correlation** uses `userId` (`sub`) + `authTime` + `ip` (all in `sessionUser`); see the Correlation Recipe below.
 
-> **Pending team confirmation.** This approach assumes indirect correlation (user + `auth_time` + IP) is acceptable. The team is being asked whether a *direct* Okta-System-Log pivot is required. If it is, see the deferred `sid` option below — the field and all plumbing stay identical; only the source value changes, so adopting it later is a drop-in swap, not a redesign.
-
-**Ruled out — Okta ID token `jti`.** Although `jti` is opaque, present, non-replayable, and (given CC requests no `offline_access` and never refreshes) incidentally stable for our 30-minute session, it fails the requirement the field exists for: **the Okta System Log cannot be pivoted on `jti`.** Okta correlates on `authenticationContext.externalSessionId` / `rootSessionId`, `transaction.id`, and event `uuid` — none of which is `jti`. It also semantically identifies the *token*, not the session, so it would silently fragment if refresh were ever enabled.
-
-**Deferred — Okta `sid` claim (the only direct-correlation option).** `sid` is stable across refresh and directly correlatable to the Okta System Log session, but it is **absent from this tenant's tokens today** (verified: `sid: null`); emitting it requires an Okta-side configuration change (enabling logout / SLO). Deferred unless the team confirms a hard direct-pivot requirement. If adopted, `token.sessionId` simply sources from `sid` instead of a generated UUID.
-
-- **Alternative — `sub` (what the Hub design chose):** identifies the *user*, not the *login session*. We log `sub` as `userId` regardless, so it is present either way — but it is not a session identifier.
+**Not pursued — Okta `sid`.** `sid` is absent from this tenant's tokens (`sid: null`) and emitting it requires enabling Front-Channel SLO + "Include user session details" in Okta. The team chose **not** to pursue it now. If later required for a direct one-step pivot, `token.sessionId` simply sources from `sid` instead of a UUID — a drop-in source swap, no other change.
 
 ### D3 — Extend `Context` and populate it in `withMiddleware`
 
-Add `userId?`, `email?`, `sessionId?`, and `authTime?` to the `Context` interface (`ipAddress` already exists). In `withMiddleware`, where `getServerSession` and `getToken` are already called, populate the new fields from `session.user` and the decoded token (`jwtToken.sessionId`, `jwtToken.authTime`). `name` maps from the existing `user` value, `userId` from `sub`, `email` from `session.user.email`.
+Add `userId?`, `email?`, `sessionId?`, `jti?`, `authTime?` to `Context` (`ipAddress`, `user`, `sub`, `session` already exist). In `withMiddleware`, populate the new fields from `session.user` and the decoded token (`userId` from `sub`, `email`, `sessionId`, `jti`, `authTime`). The existing `user`/`sub`/`ipAddress`/`session` assignments are unchanged, and `logApiRequest` is **not** modified.
 
-### D4 — Edge middleware enrichment from `req.nextauth.token`
+### D4 — Edge `Route Request` is intentionally left unchanged
 
-In `src/middleware.ts`, build the same `user` block from `req.nextauth.token` (`sub` → `userId`, `email`, `name`, `sessionId`) and include it in the `Route Request` `console.info` call. When the token is absent (unauthenticated / pre-binding), omit the block rather than emit empty values.
+`src/middleware.ts` runs in the Edge runtime and cannot use Winston or `AsyncLocalStorage`. More importantly, the team decided page-navigation lines do not need separate attribution: every meaningful data access happens via `/api/*` routes, which are fully structured with `sessionUser`. So the `Route Request` line stays anonymous exactly as today — **no change to `middleware.ts`**.
 
-- Trade-off: Edge logs are plain `console.info`, not processed by the Winston/ECS pipeline. In practice the Edge runtime renders the whole argument object (path, method, `user`, …) into a single formatted string, so on `Route Request` lines the identity ends up **inside the `message` string rather than as structured top-level `user.*` fields**. The identity is present and human-readable, but is not independently queryable/aggregatable in Elastic for those lines (see Risks).
+This is a deliberate scoping choice, not an oversight. (If structured page-view attribution is wanted later, the middleware would need to hand-roll and emit a pre-serialized JSON line, since the Edge runtime otherwise folds console arguments into the `message` string rather than into structured fields — a possible follow-up.)
 
-### D5 — Field shape aligns with ECS where possible
+### D5 — Per-session authorization snapshot (`Session established`)
 
-Emit identity as a nested `user` object, matching the reporter's requested shape. `user.name`, `user.id`, `user.email` align with Elastic Common Schema's standard `user.*` fields (so map `userId → user.id`); `sessionId` is carried as `user.sessionId` (a custom sub-field). Confirm during implementation that `ecsFormat` passes the nested object through unchanged (as it does for `ConfigConsoleVersion`); if `ecsFormat` reserves/transforms `user`, fall back to setting ECS-native `user.*` keys directly.
+Okta group membership is mutable, so reconstructing "what was this user authorized to do at the time" from Okta later is impractical. To capture point-in-time authorization, emit a single `Session established` log record in the `jwt` callback's `if (account)` block (runs once per login). It contains the `sessionUser` identity (minus `ip`, which is per-request and unavailable in the callback) plus `groups` (the Okta memberships) and the resolved `role` (`_.intersection(groups, roles)[0]`, as the session callback computes).
+
+Ordinary per-line events carry `sessionUser` but **not** `groups`/`role` — keeping the large, more-sensitive group list to one record per session (data minimization, IGDD-2795) while still enabling recovery for any line via `sessionUser.sessionId`. This record is built explicitly (the auth route is not wrapped by `withMiddleware`, so the D1 format does not auto-inject there).
+
+### D6 — Field shape & naming
+
+`sessionUser` is a custom (non-ECS) field, deliberately chosen to avoid colliding with ECS's reserved `user` object **and** with the existing `user` string field. camelCase sub-fields: `name`, `userId`, `email`, `sessionId`, `jti`, `authTime`, `ip`.
 
 ## Risks / Trade-offs
 
-- **`ecsFormat` may special-case the `user` field** → Verify with a unit test asserting the serialized output contains the expected `user` block; if it transforms it, set ECS-native `user.id/name/email` keys and carry `sessionId` under a custom key.
-- **No request context on some paths** (`getServerSideProps`, startup, background tasks) → By design the `user` block is simply omitted; logging must never throw when the store is empty. Covered by spec scenarios.
-- **Edge vs. Node log shape divergence** (Edge `Route Request` is not processed by the Winston/ECS pipeline) → Confirmed at runtime: the Edge runtime folds the argument object into the `message` string, so identity on `Route Request` lines is **text within `message`, not structured `user.*` fields** — present and readable, but not filterable/aggregatable in Kibana for those lines (Node API logs are fully structured). Accepted for this change. Making Route Request structured (e.g. emit a pre-serialized JSON line from middleware, or relocate that logging to the Node layer) is a possible follow-up, out of scope here.
-- **PII in logs** (email/name are personal data) → This is the intended audit behavior; the data already partially appears in logs today. No raw tokens/cookies are logged — `sessionId` is a CC-generated opaque id, non-replayable and not a secret. Consistent with the public-repo policy since logs are runtime artifacts, not committed.
-- **Indirect Okta correlation** → A CC-generated `sessionId` does not appear in Okta logs, so correlation is via `userId` (`sub`) + `auth_time` + source IP rather than a direct session pivot. Mitigation: always emit those three fields on user-initiated events. The `sid` option (deferred) would give a direct pivot at the cost of an Okta config change. See D2 and Open Questions.
-- **Slight per-log overhead** from `asyncRequestContext.getStore()` on every event → negligible (a `Map` lookup); no measurable impact expected.
+- **`ecsFormat` could transform a known field** → `sessionUser` is a custom key (not ECS-reserved), so passthrough is expected; verified by a unit test asserting the serialized output contains the `sessionUser` object.
+- **No request context on some paths** (`getServerSideProps`, startup, background) → `sessionUser` is simply omitted; the format must never throw on an empty store. Covered by spec scenarios.
+- **`groups`/`role` are authorization metadata** → logged only once per session (not per line) and only in a record that should be access-controlled like any identity-bearing log. Not a credential; not replayable.
+- **PII in logs** (email/name) → intended audit behavior; already partially present today. No raw tokens/cookies logged; `sessionId` is an opaque CC id.
+- **Indirect Okta correlation** → a CC-generated `sessionId` is not in Okta's logs, so correlation is a two-step join on `userId` + `authTime` + `ip` (see recipe). The `sid` option (not pursued) would make it one step at the cost of an Okta config change.
+- **Slight per-log overhead** from `asyncRequestContext.getStore()` → negligible (a `Map` lookup).
 
 ## Migration Plan
 
-Purely additive and backward-compatible — no breaking changes.
-1. Add `sessionId`/`authTime` extraction in the `jwt` callback (takes effect on next sign-in; existing sessions simply lack `sessionId` until re-login).
-2. Extend `Context` and populate in `withMiddleware`.
-3. Add the context-aware Winston format.
-4. Enrich Edge `Route Request`.
-5. Normalize the `API Request` and Elasticsearch handler logs.
+Purely additive and backward-compatible — no breaking changes, no existing field altered.
+1. `jwt` callback: generate `sessionId`, capture `authTime`/`jti`, emit `Session established` (groups + role). Takes effect on next sign-in; existing sessions lack `sessionUser` until re-login.
+2. Extend `Context`; populate in `withMiddleware`.
+3. Add the context-aware Winston format writing `sessionUser`.
 
-Deploy as a normal release. New `user.*` fields auto-discover in the Kibana/Logstash index on first event; no mapping template change. **Rollback:** revert the change; logs return to prior behavior with no data-migration needed.
+New `sessionUser.*` fields auto-discover in the Kibana/Logstash index on first event; no mapping template change, and the existing `user` mapping is untouched. **Rollback:** revert the change; logs return to prior behavior with no data migration.
 
 ## Okta Correlation Recipe (indirect)
 
-Because `sessionId` is CC-generated, it does not appear in Okta's logs. To pivot from a CC log line to the originating Okta session, an investigator uses the three correlation fields we emit (`userId`, `auth_time`, source IP) against the Okta System Log (Admin Console → Reports → System Log, or the `/api/v1/logs` API).
+Because `sessionId` is CC-generated, it does not appear in Okta's logs. To pivot from a CC log line to the originating Okta session, use the three correlation fields in `sessionUser` against the Okta System Log (Admin Console → Reports → System Log, or `/api/v1/logs`).
 
-**Field mapping (CC log → Okta System Log):**
+**Field mapping (CC `sessionUser` → Okta System Log):**
 
-| CC log field | Okta System Log field | Role in the join |
+| CC field | Okta System Log field | Role in the join |
 |---|---|---|
-| `userId` (= Okta `sub`, e.g. `00u…`) | `actor.id` (or email → `actor.alternateId`) | primary key |
-| `auth_time` (Unix seconds) | bounds `since` / `until`; anchors the `user.session.start` event | time anchor |
-| source IP | `client.ipAddress` | corroboration only (see caveat) |
+| `sessionUser.userId` (= Okta `sub`, e.g. `00u…`) | `actor.id` (or email → `actor.alternateId`) | primary key |
+| `sessionUser.authTime` (Unix seconds) | bounds `since`/`until`; anchors `user.session.start` | time anchor |
+| `sessionUser.ip` | `client.ipAddress` | corroboration only (see caveat) |
 
-**Step 1 — locate the sign-in event** using `sub` + an `auth_time` window:
+**Step 1 — locate the sign-in event:**
 
 ```
 GET /api/v1/logs
-  ?since=<auth_time − a few seconds, ISO8601>
-  &until=<auth_time + a few seconds, ISO8601>
+  ?since=<authTime − a few seconds, ISO8601>
+  &until=<authTime + a few seconds, ISO8601>
   &filter=actor.id eq "00ugmlnknoC9fc5Ul1d7" and eventType eq "user.session.start"
 ```
-
-(optionally `and client.ipAddress eq "<ip>"`)
 
 **Step 2 — read `authenticationContext.externalSessionId` from that event, then expand to the full session:**
 
@@ -124,15 +121,12 @@ GET /api/v1/logs
   ?filter=authenticationContext.externalSessionId eq "<externalSessionId from step 1>"
 ```
 
-So: `sub` + `auth_time` (+ IP) → find the sign-in → recover Okta's `externalSessionId` → pull all session activity.
-
 **Caveats:**
-- `auth_time` is Unix *seconds*; Okta timestamps are millisecond ISO8601 — bracket a small window, do not match exactly. It still lands on the `user.session.start` event.
-- The IP CC logs is what the app sees (`x-forwarded-for` behind nginx/ALB); Okta logs the IP *it* saw at login. Usually the same public IP, but NAT/proxy/VPN can diverge — treat IP as corroboration, not a hard key.
-- `authenticationContext.*`, `transaction.id`, and `uuid` are **Okta-side System Log fields only** — they are not claims in the id_token and are never received by CC.
-- The direct alternative is the Okta `sid` claim (deferred, see D2): it equals `externalSessionId`, collapsing this two-step join into a single filter — at the cost of enabling Front-Channel SLO in Okta.
+- `authTime` is Unix *seconds*; Okta timestamps are millisecond ISO8601 — bracket a window, don't match exactly. It still lands on `user.session.start`.
+- `sessionUser.ip` is what the app sees (`x-forwarded-for` behind nginx/ALB); Okta logs the IP it saw at login. Usually the same public IP, but NAT/proxy/VPN can diverge — treat as corroboration, not a hard key.
+- `authenticationContext.*`, `transaction.id`, `uuid` are **Okta-side System Log fields only** — never present in the id_token or received by CC.
+- The direct alternative (`sid`, not pursued) equals `externalSessionId`, collapsing this to a single filter — at the cost of enabling Front-Channel SLO in Okta.
 
 ## Open Questions
 
-- **Is indirect correlation acceptable? (confirm with team).** The chosen design uses a CC-generated `sessionId` correlated to Okta via `sub` + `auth_time` + IP. If the team instead requires a *direct* Okta-System-Log pivot, switch `sessionId` to the Okta `sid` claim — which needs an Okta config change (logout/SLO) confirmed with the Okta administrator. This is a drop-in source swap, not a redesign (see D2). `jti` is ruled out.
-- Should any non-request-scoped logs (e.g., scheduled `izghubrefresh`) attempt to attribute a system identity, or remain identity-less? Current design leaves them identity-less.
+- None blocking. Future option: adopt Okta `sid` for a one-step Okta pivot (requires Front-Channel SLO config) — drop-in source swap for `sessionId`. Future option: structured `sessionUser` on Edge `Route Request` lines (requires hand-rolled JSON in middleware).
