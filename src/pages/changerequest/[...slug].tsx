@@ -37,6 +37,9 @@ export const getServerSideProps = async (context) => {
   const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
   const requestContext = await buildRequestContext(context.req, context.res)
   const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   const slug = context.params?.slug || {}
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
