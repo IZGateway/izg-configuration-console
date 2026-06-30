@@ -31,15 +31,21 @@ export async function buildRequestContext(
     (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
     req.socket?.remoteAddress ||
     'unknown'
+  // Only populate identity fields when there is a resolvable authenticated
+  // session. The token can sometimes be decoded even when the session is not
+  // valid; gating here ensures the logger never attaches a sessionUser block
+  // for unauthenticated/expired requests (no fabricated identity, IGDD-2223).
+  // `user` and `sub` are left as-is to preserve the existing logApiRequest fields.
+  const authenticated = Boolean(session?.user)
   return {
     user,
     ipAddress,
     sub,
     session,
-    userId: sub,
-    email: session?.user?.email || undefined,
-    sessionId: jwtToken?.sessionId || undefined,
-    jti: jwtToken?.oktaJti || undefined,
-    authTime: jwtToken?.authTime || undefined,
+    userId: authenticated ? sub : undefined,
+    email: authenticated ? session?.user?.email || undefined : undefined,
+    sessionId: authenticated ? jwtToken?.sessionId || undefined : undefined,
+    jti: authenticated ? jwtToken?.oktaJti || undefined : undefined,
+    authTime: authenticated ? jwtToken?.authTime || undefined : undefined,
   }
 }

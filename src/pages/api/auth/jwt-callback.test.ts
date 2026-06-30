@@ -67,10 +67,11 @@ describe('next-auth jwt callback — audit session identity (IGDD-2223)', () => 
 
   it('preserves an existing sessionId on subsequent calls without account', async () => {
     const token = await jwt({
-      token: { sessionId: 'existing-id', authTime: 123, jti: 'ID.k' },
+      token: { sessionId: 'existing-id', authTime: 123, oktaJti: 'ID.k' },
     })
     expect(token.sessionId).toBe('existing-id')
     expect(token.authTime).toBe(123)
+    expect(token.oktaJti).toBe('ID.k')
   })
 
   it('still sets sessionId and does not throw when id_token is malformed', async () => {

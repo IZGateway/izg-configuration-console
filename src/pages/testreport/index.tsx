@@ -30,6 +30,9 @@ export async function getServerSideProps(context) {
 
   const requestContext = await buildRequestContext(req, res)
   const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   const destArray = context.req.cookies['destination']
     ? JSON.parse(context.req.cookies['destination'])
     : []

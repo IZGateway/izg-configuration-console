@@ -58,6 +58,9 @@ export default Manage
 export const getServerSideProps = async (context) => {
   const requestContext = await buildRequestContext(context.req, context.res)
   const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   const endpoints = await asyncRequestContext.run(requestContext, async () => {
     const endpointStatuses = await fetchEndpointStatus(
       session.user.role,

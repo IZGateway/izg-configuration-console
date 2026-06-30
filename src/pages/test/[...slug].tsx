@@ -15,6 +15,9 @@ export async function getServerSideProps(context) {
   const destTypeId = _.toNumber(context.query.slug[0])
   const requestContext = await buildRequestContext(req, res)
   const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   // Run the read inside the request context so its logs (and the connection
   // test's logs) carry sessionUser, the same way API routes do (IGDD-2223).
   const { connectionTestResult, numberOfTests } = await asyncRequestContext.run(

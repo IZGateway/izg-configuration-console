@@ -37,9 +37,16 @@ describe('buildRequestContext (IGDD-2223 follow-up)', () => {
     expect(ctx.ipAddress).toBe('203.0.113.7')
   })
 
-  it('does not fabricate identity when there is no session', async () => {
+  it('does not fabricate identity when there is no session (even if a token decodes)', async () => {
+    // Session is unresolvable, but the token still decodes — identity must NOT
+    // be populated, so the logger never attaches a sessionUser block.
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
-    ;(getToken as jest.Mock).mockResolvedValue(null)
+    ;(getToken as jest.Mock).mockResolvedValue({
+      sub: '00uABC',
+      sessionId: 'sess-1',
+      oktaJti: 'ID.x',
+      authTime: 1782408092,
+    })
 
     const req: any = { headers: {}, socket: { remoteAddress: '10.0.0.1' } }
     const ctx = await buildRequestContext(req, {} as any)
