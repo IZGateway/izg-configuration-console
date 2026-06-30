@@ -42,7 +42,7 @@ export const authOptions = {
         token.provider = account.provider
         token.sub = account.providerAccountId
         token.id = profile.id
-        token.groups = profile.groups
+        token.groups = profile.groups ?? []
 
         // Generate an opaque, CC-owned session identifier (stable for the life
         // of this login session) and capture the Okta login timestamp + token
