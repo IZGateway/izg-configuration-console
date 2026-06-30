@@ -69,31 +69,31 @@ export const getServerSideProps = async (context) => {
 
     return Promise.all(
       endpointStatuses.map(async (endpoint) => {
-      const dbClient = await DbClientFactory.getDbClient()
-      const destination = await dbClient.fetchDestination(
-        endpoint.destId,
-        endpoint.destTypeId
-      )
-      const destinationChangeRequest =
-        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+        const dbClient = await DbClientFactory.getDbClient()
+        const destination = await dbClient.fetchDestination(
           endpoint.destId,
           endpoint.destTypeId
         )
+        const destinationChangeRequest =
+          await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+            endpoint.destId,
+            endpoint.destTypeId
+          )
 
-      return {
-        ...endpoint,
-        hasChangeRequest: !!destinationChangeRequest,
-        hasActiveDraft: destinationChangeRequest?.jiraId === null,
-        hasActiveMaintenance: hasActiveMaintenance(
-          destination?.maintStart,
-          destination?.maintEnd
-        ),
-        hasFutureMaintenance: hasFutureMaintenance(
-          destination?.maintStart,
-          destination?.maintEnd
-        ),
-        maintenanceValues: getMaintenanceValues(destination),
-      }
+        return {
+          ...endpoint,
+          hasChangeRequest: !!destinationChangeRequest,
+          hasActiveDraft: destinationChangeRequest?.jiraId === null,
+          hasActiveMaintenance: hasActiveMaintenance(
+            destination?.maintStart,
+            destination?.maintEnd
+          ),
+          hasFutureMaintenance: hasFutureMaintenance(
+            destination?.maintStart,
+            destination?.maintEnd
+          ),
+          maintenanceValues: getMaintenanceValues(destination),
+        }
       })
     )
   })
@@ -101,9 +101,7 @@ export const getServerSideProps = async (context) => {
   return { props: { data: endpoints } }
 }
 
-
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,
   maint_end: destination?.maintEnd?.toISOString() || null,
 })
-

@@ -55,9 +55,9 @@ describe('next-auth jwt callback — audit session identity (IGDD-2223)', () => 
     expect(token.oktaJti).toBe('ID.xyz')
 
     const calls = logSpy.mock.calls as unknown as Array<[string, any]>
-    const established = calls.find((c) => c[0] === 'Session established')
-    expect(established).toBeDefined()
-    const meta = established?.[1]
+    const established = calls.filter((c) => c[0] === 'Session established')
+    expect(established).toHaveLength(1)
+    const meta = established[0]?.[1]
     expect(meta.sessionUser.sessionId).toBe(token.sessionId)
     expect(meta.sessionUser.jti).toBe('ID.xyz')
     expect(meta.sessionUser.userId).toBe('00uABC')

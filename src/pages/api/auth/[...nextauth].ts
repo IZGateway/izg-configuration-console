@@ -67,6 +67,7 @@ export const authOptions = {
         // Emit a once-per-login authorization snapshot. Okta group membership
         // is mutable, so this captures point-in-time authorization tied to the
         // sessionId; ordinary log lines carry sessionUser but not groups (IGDD-2223).
+        const groups = profile.groups ?? []
         logger.info('Session established', {
           sessionUser: {
             name: profile.name ?? token.name,
@@ -76,8 +77,8 @@ export const authOptions = {
             jti: token.oktaJti,
             authTime: token.authTime,
           },
-          groups: profile.groups,
-          role: _.intersection(profile.groups, roles)[0],
+          groups,
+          role: _.intersection(groups, roles)[0],
         })
 
         try {
