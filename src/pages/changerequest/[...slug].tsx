@@ -7,9 +7,9 @@ import Close from '../../components/Close'
 import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../api/auth/[...nextauth]'
 import DbClientFactory from '../../lib/db/DbClientFactory'
+import { asyncRequestContext } from '../../lib/Context'
+import { buildRequestContext } from '../../lib/requestContext'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -35,16 +35,22 @@ export default Changerequest
 
 export const getServerSideProps = async (context) => {
   const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
-  const session = await getServerSession(context.req, context.res, authOptions)
+  const requestContext = await buildRequestContext(context.req, context.res)
+  const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   const slug = context.params?.slug || {}
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
   if (hasAccessToDestId(destId, session)) {
-    const dbClient = await DbClientFactory.getDbClient()
-    const result = await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
-      destId,
-      destTypeId
-    )
+    const result = await asyncRequestContext.run(requestContext, async () => {
+      const dbClient = await DbClientFactory.getDbClient()
+      return dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+        destId,
+        destTypeId
+      )
+    })
     return {
       props: {
         changeRequest: JSON.parse(JSON.stringify(result)),
