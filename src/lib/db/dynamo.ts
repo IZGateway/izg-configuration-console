@@ -218,6 +218,114 @@ class Dynamo implements DbClient {
     }
   }
 
+  async getApiKeyDomain(sortKey: string): Promise<any | null> {
+    try {
+      const result = await dynamodDbDocClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: { entityType: 'ApiKeyDomain', sortKey },
+        })
+      )
+      if (!result.Item) return null
+      const item = result.Item
+      return {
+        sortKey: item.sortKey,
+        domain: item.domain,
+        env: item.env,
+        status: item.status,
+        challengeUuid: item.challengeUuid,
+        challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
+        requestedBy: item.requestedBy,
+        validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
+        authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
+        createdBy: item.createdBy,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+      }
+    } catch (error) {
+      logger.error('Error fetching ApiKeyDomain', {
+        sortKey,
+        errorMessage: error.message,
+        operation: 'getApiKeyDomain',
+      })
+      throw error
+    }
+  }
+
+  async upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void> {
+    const item: Record<string, unknown> = {
+      entityType: 'ApiKeyDomain',
+      sortKey: params.sortKey,
+      domain: params.domain,
+      env: params.env,
+      status: params.status,
+      ...(params.challengeUuid !== undefined ? { challengeUuid: params.challengeUuid } : {}),
+      ...(params.challengeExpiresAt ? { challengeExpiresAt: params.challengeExpiresAt } : {}),
+      ...(params.requestedBy ? { requestedBy: params.requestedBy } : {}),
+      ...(params.validatedAt ? { validatedAt: params.validatedAt } : {}),
+      ...(params.authExpiresAt !== undefined ? { authExpiresAt: params.authExpiresAt } : {}),
+    }
+    try {
+      await dynamodDbDocClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }))
+      logger.info('ApiKeyDomain upserted', {
+        sortKey: params.sortKey,
+        status: params.status,
+        operation: 'upsertApiKeyDomain',
+      })
+    } catch (error) {
+      logger.error('Error upserting ApiKeyDomain', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        operation: 'upsertApiKeyDomain',
+      })
+      throw error
+    }
+  }
+
+  async fetchPendingApiKeyDomains(): Promise<any[]> {
+    const now = new Date().toISOString()
+    try {
+      const result = await dynamodDbDocClient.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: 'entityType = :et',
+          FilterExpression: '#s = :pending AND challengeExpiresAt > :now',
+          ExpressionAttributeNames: { '#s': 'status' },
+          ExpressionAttributeValues: {
+            ':et': 'ApiKeyDomain',
+            ':pending': 'pending_challenge',
+            ':now': now,
+          },
+        })
+      )
+      return (result.Items || []).map((item) => ({
+        sortKey: item.sortKey,
+        domain: item.domain,
+        env: item.env,
+        status: item.status,
+        challengeUuid: item.challengeUuid,
+        challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
+        requestedBy: item.requestedBy,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+      }))
+    } catch (error) {
+      logger.error('Error fetching pending ApiKeyDomains', {
+        errorMessage: error.message,
+        operation: 'fetchPendingApiKeyDomains',
+      })
+      throw error
+    }
+  }
+
   async fetchDestination(
     destId: string,
     destTypeId: number

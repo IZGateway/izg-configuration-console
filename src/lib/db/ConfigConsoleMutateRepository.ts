@@ -86,6 +86,17 @@ export default interface ConfigConsoleMutateRepository {
     revokedAt: string,
     reason?: string
   ): Promise<void>
+  upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void>
   supersedApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
