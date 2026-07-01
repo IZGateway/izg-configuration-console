@@ -9,6 +9,7 @@ import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { Jurisdiction } from '../type/Jurisdiction'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -56,4 +57,5 @@ export default interface ConfigConsoleFetchRepository {
     destinationId: string
   ): Promise<AllowedUserAudit[]>
   fetchApiKeyCredentials(): Promise<ApiKeyCredential[]>
+  fetchJurisdictions(): Promise<Jurisdiction[]>
 }

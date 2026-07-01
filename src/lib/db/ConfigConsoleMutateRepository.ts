@@ -80,4 +80,28 @@ export default interface ConfigConsoleMutateRepository {
     oldValues: AllowedUser | null,
     newValues: AllowedUser | null
   ): Promise<boolean>
+  revokeApiKeyCredential(
+    sortKey: string,
+    revokedBy: string,
+    revokedAt: string,
+    reason?: string
+  ): Promise<void>
+  supersedApiKeyCredential(params: {
+    sortKey: string
+    renewedBy: string
+    renewedAt: string
+    graceExpiresAt: string
+    supersededByJti: string
+  }): Promise<void>
+  createApiKeyCredential(params: {
+    jti: string
+    sortKey: string
+    jurisdictionId: string
+    env: string
+    status: string
+    createdOn: Date
+    expiresAt: Date
+    createdBy: string
+    description?: string
+  }): Promise<void>
 }
