@@ -41,6 +41,7 @@ import palette from '../../styles/theme/palette'
 import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
+import { ApiKeyDomain } from '../../lib/type/ApiKeyDomain'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 
@@ -93,9 +94,7 @@ function toRow(cred: ApiKeyCredential): ApiKey {
       return ENV_DISPLAY_NAMES[code] ?? code
     })(),
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
-    status: (cred.status === 'superseded'
-      ? 'Active'
-      : cred.status
+    status: (cred.status
       ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
       : cred.status) as ApiKey['status'],
     created: formatDate(cred.createdOn),
@@ -103,7 +102,11 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     createdBy: cred.createdBy ?? '—',
     revokedAt: cred.revokedAt ? formatDate(cred.revokedAt) : null,
     graceExpiresAt: cred.graceExpiresAt ? formatDate(cred.graceExpiresAt) : null,
-    expiresAtRaw: cred.expiresAt ? cred.expiresAt.toISOString() : null,
+    expiresAtRaw: (() => {
+      if (!cred.expiresAt) return null
+      const d = new Date(cred.expiresAt)
+      return isNaN(d.getTime()) ? null : d.toISOString()
+    })(),
   }
 }
 
@@ -678,6 +681,13 @@ function CreateKeyDialog({
   const [description, setDescription] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [challenge, setChallenge] = useState<{
+    txtRecord: string
+    txtValue: string
+    domain: string
+    envId: number
+  } | null>(null)
+  const [verifying, setVerifying] = useState(false)
 
   const handleSubmit = async () => {
     if (!jurisdictionId || !envId || !upn.trim()) {
@@ -692,20 +702,59 @@ function CreateKeyDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jurisdictionId, envId: Number(envId), upn: upn.trim(), description: description.trim() || undefined }),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Failed to create key')
+      const body = await res.json()
+      if (res.status === 202) {
+        // DNS challenge required
+        setChallenge({
+          txtRecord: body.txtRecord,
+          txtValue: body.txtValue,
+          domain: body.domain,
+          envId: body.envId,
+        })
+        mutate('/api/apikeys/pending-domains')
+        return
       }
-      const { token } = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Failed to create key')
       mutate('/api/apikeys')
-      setJurisdictionId('')
-      setEnvId('')
-      onClose()
-      onCreated(token)
+      handleClose()
+      onCreated(body.token)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create key')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleVerify = async () => {
+    if (!challenge) return
+    setVerifying(true)
+    setError(null)
+    try {
+      const verifyRes = await fetch('/api/apikeys/verify-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: challenge.domain, envId: challenge.envId }),
+      })
+      const verifyBody = await verifyRes.json()
+      if (!verifyRes.ok || !verifyBody.verified) {
+        setError(verifyBody.error || 'Domain not verified yet. Check that the TXT record has propagated.')
+        return
+      }
+      // Domain verified — now issue the JWT
+      const issueRes = await fetch('/api/apikeys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jurisdictionId, envId: Number(envId), upn: upn.trim(), description: description.trim() || undefined }),
+      })
+      const issueBody = await issueRes.json()
+      if (!issueRes.ok) throw new Error(issueBody.error || 'Failed to create key')
+      mutate('/api/apikeys')
+      handleClose()
+      onCreated(issueBody.token)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed')
+    } finally {
+      setVerifying(false)
     }
   }
 
@@ -714,105 +763,143 @@ function CreateKeyDialog({
     setEnvId('')
     setUpn('')
     setDescription('')
+    setChallenge(null)
     setError(null)
     onClose()
   }
+
+  const formContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2">
+        A signed JWT will be generated and stored. Copy it immediately — it
+        will not be shown again.
+      </Typography>
+      {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+      <FormControl fullWidth size="small">
+        <InputLabel id="create-key-jurisdiction-label">Jurisdiction</InputLabel>
+        <Select
+          labelId="create-key-jurisdiction-label"
+          value={jurisdictionId}
+          label="Jurisdiction"
+          onChange={(e) => setJurisdictionId(e.target.value)}
+          sx={{ borderRadius: '8px' }}
+        >
+          {Array.isArray(jurisdictions) &&
+            jurisdictions.map((j) => (
+              <MenuItem key={j.jurisdictionId} value={String(j.jurisdictionId)}>
+                {j.description || j.name || j.jurisdictionId}
+              </MenuItem>
+            ))}
+        </Select>
+      </FormControl>
+      <FormControl fullWidth size="small">
+        <InputLabel id="create-key-env-label">Environment</InputLabel>
+        <Select
+          labelId="create-key-env-label"
+          value={envId}
+          label="Environment"
+          onChange={(e) => setEnvId(e.target.value)}
+          sx={{ borderRadius: '8px' }}
+        >
+          {ENV_OPTIONS.map((opt) => (
+            <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+      <TextField
+        label="Description"
+        placeholder="e.g. Massachusetts IIS production key"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        fullWidth
+        size="small"
+        multiline
+        rows={2}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+      />
+      <TextField
+        label="Domain (upn)"
+        placeholder="e.g. immunize.ma.gov"
+        value={upn}
+        onChange={(e) => setUpn(e.target.value)}
+        fullWidth
+        size="small"
+        required
+        helperText="DNS domain validated at issuance — included in the JWT upn claim"
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+      />
+    </Box>
+  )
+
+  const challengeContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2">
+        Domain ownership must be verified before the key can be issued. Ask
+        your State IT team to add the following DNS TXT record:
+      </Typography>
+      {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+        <Typography variant="caption" sx={{ color: palette.greyText, display: 'block', mb: 0.5 }}>
+          Host
+        </Typography>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1.5 }}>
+          {challenge.txtRecord}
+        </Typography>
+        <Typography variant="caption" sx={{ color: palette.greyText, display: 'block', mb: 0.5 }}>
+          Value
+        </Typography>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtValue}
+        </Typography>
+      </Box>
+      <Alert severity="info" sx={{ borderRadius: '8px' }}>
+        DNS changes may take up to 48 hours to propagate. Return here and click
+        <strong> Verify Domain</strong> once the record is in place.
+      </Alert>
+    </Box>
+  )
 
   return (
     <CustomDialogBox
       open={open}
       onClose={handleClose}
       maxWidth="sm"
-      titleText="Create API Key"
-      content={
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography variant="body2">
-            A signed JWT will be generated and stored. Copy it immediately — it
-            will not be shown again.
-          </Typography>
-          {error && (
-            <Alert severity="error" sx={{ borderRadius: '8px' }}>
-              {error}
-            </Alert>
-          )}
-          <FormControl fullWidth size="small">
-            <InputLabel id="create-key-jurisdiction-label">
-              Jurisdiction
-            </InputLabel>
-            <Select
-              labelId="create-key-jurisdiction-label"
-              value={jurisdictionId}
-              label="Jurisdiction"
-              onChange={(e) => setJurisdictionId(e.target.value)}
-              sx={{ borderRadius: '8px' }}
-            >
-              {Array.isArray(jurisdictions) &&
-                jurisdictions.map((j) => (
-                  <MenuItem
-                    key={j.jurisdictionId}
-                    value={String(j.jurisdictionId)}
-                  >
-                    {j.description || j.name || j.jurisdictionId}
-                  </MenuItem>
-                ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth size="small">
-            <InputLabel id="create-key-env-label">Environment</InputLabel>
-            <Select
-              labelId="create-key-env-label"
-              value={envId}
-              label="Environment"
-              onChange={(e) => setEnvId(e.target.value)}
-              sx={{ borderRadius: '8px' }}
-            >
-              {ENV_OPTIONS.map((opt) => (
-                <MenuItem key={opt.id} value={String(opt.id)}>
-                  {opt.displayName}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            label="Description"
-            placeholder="e.g. Massachusetts IIS production key"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            fullWidth
-            size="small"
-            multiline
-            rows={2}
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-          />
-          <TextField
-            label="Domain (upn)"
-            placeholder="e.g. immunize.ma.gov"
-            value={upn}
-            onChange={(e) => setUpn(e.target.value)}
-            fullWidth
-            size="small"
-            required
-            helperText="DNS domain validated at issuance — included in the JWT upn claim"
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-          />
-        </Box>
-      }
+      titleText={challenge ? 'Verify Domain Ownership' : 'Create API Key'}
+      content={challenge ? challengeContent : formContent}
       actions={
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={submitting || !jurisdictionId || !envId || !upn.trim()}
-          sx={{
-            borderRadius: '50px',
-            backgroundColor: palette.primary,
-            fontWeight: 700,
-            py: 1.5,
-            '&:hover': { backgroundColor: palette.primaryDark },
-          }}
-        >
-          {submitting ? 'CREATING...' : 'CREATE KEY'}
-        </Button>
+        challenge ? (
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleVerify}
+            disabled={verifying}
+            sx={{
+              borderRadius: '50px',
+              backgroundColor: palette.primary,
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': { backgroundColor: palette.primaryDark },
+            }}
+          >
+            {verifying ? 'VERIFYING...' : 'VERIFY DOMAIN'}
+          </Button>
+        ) : (
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={submitting || !jurisdictionId || !envId || !upn.trim()}
+            sx={{
+              borderRadius: '50px',
+              backgroundColor: palette.primary,
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': { backgroundColor: palette.primaryDark },
+            }}
+          >
+            {submitting ? 'CHECKING...' : 'CREATE KEY'}
+          </Button>
+        )
       }
     />
   )
@@ -917,6 +1004,13 @@ export default function ApiKeyManagement() {
     { shouldRetryOnError: true, errorRetryCount: 3, errorRetryInterval: 1000 }
   )
 
+  const {
+    data: pendingDomains,
+    mutate: mutatePendingDomains,
+  } = useSWR<ApiKeyDomain[]>('/api/apikeys/pending-domains', fetcher, {
+    shouldRetryOnError: false,
+  })
+
   const apiKeys: ApiKey[] = useMemo(
     () => (Array.isArray(rawCredentials) ? rawCredentials.map(toRow) : []),
     [rawCredentials]
@@ -966,6 +1060,36 @@ export default function ApiKeyManagement() {
   const handleRenewCreated = useCallback((token: string) => {
     setCreatedToken(token)
   }, [])
+
+  const [verifyingDomain, setVerifyingDomain] = useState<string | null>(null)
+  const [verifyError, setVerifyError] = useState<Record<string, string>>({})
+
+  const handleVerifyDomain = useCallback(async (domain: ApiKeyDomain) => {
+    const key = domain.sortKey
+    setVerifyingDomain(key)
+    setVerifyError((prev) => ({ ...prev, [key]: '' }))
+    try {
+      const res = await fetch('/api/apikeys/verify-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: domain.domain, envId: domain.env }),
+      })
+      const body = await res.json()
+      if (!res.ok || body.verified === false) {
+        setVerifyError((prev) => ({
+          ...prev,
+          [key]: body.error || 'Verification failed',
+        }))
+      } else {
+        mutatePendingDomains()
+        mutate('/api/apikeys')
+      }
+    } catch {
+      setVerifyError((prev) => ({ ...prev, [key]: 'Network error' }))
+    } finally {
+      setVerifyingDomain(null)
+    }
+  }, [mutatePendingDomains])
 
   const handleCreateKey = useCallback(() => setCreateDialogOpen(true), [])
 
@@ -1131,6 +1255,74 @@ export default function ApiKeyManagement() {
           footer: footerProps as unknown as Record<string, unknown>,
         }}
       />
+
+      {Array.isArray(pendingDomains) && pendingDomains.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Card
+            sx={{
+              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+              mb: 0,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
+              <WarningAmberIcon sx={{ color: palette.warning ?? '#ed6c02' }} />
+              <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                Pending Domain Verifications ({pendingDomains.length})
+              </Typography>
+            </Box>
+          </Card>
+          <Box sx={{ border: '1px solid #e0e0e0', borderTop: 'none' }}>
+            {pendingDomains.map((d, idx) => {
+              const envCode = isNaN(Number(d.env))
+                ? String(d.env).toUpperCase()
+                : getEnvironmentName(Number(d.env))
+              const envLabel = ENV_DISPLAY_NAMES[envCode] ?? envCode
+              const txtRecord = `_izg-verify.${d.domain}`
+              const txtValue = `izg-challenge=${d.challengeUuid}`
+              const err = verifyError[d.sortKey]
+              return (
+                <Box
+                  key={d.sortKey}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    px: 2,
+                    py: 1.5,
+                    borderBottom: idx < pendingDomains.length - 1 ? '1px solid #e0e0e0' : 'none',
+                    backgroundColor: idx % 2 === 0 ? '#fafafa' : '#fff',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {d.domain}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: palette.greyText }}>
+                        {envLabel} · Requested by {d.requestedBy ?? '—'} · Expires {formatDate(d.challengeExpiresAt)}
+                      </Typography>
+                    </Box>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={verifyingDomain === d.sortKey}
+                      onClick={() => handleVerifyDomain(d)}
+                      startIcon={verifyingDomain === d.sortKey ? <CircularProgress size={14} /> : <CheckIcon />}
+                    >
+                      Verify Domain
+                    </Button>
+                  </Box>
+                  <Box sx={{ backgroundColor: '#f5f5f5', borderRadius: '6px', p: 1.5, fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                    <Box><strong>Host:</strong> {txtRecord}</Box>
+                    <Box><strong>Value:</strong> {txtValue}</Box>
+                  </Box>
+                  {err && <Alert severity="warning" sx={{ py: 0 }}>{err}</Alert>}
+                </Box>
+              )
+            })}
+          </Box>
+        </Box>
+      )}
 
       <RevokeDialog
         apiKey={revokeTarget}

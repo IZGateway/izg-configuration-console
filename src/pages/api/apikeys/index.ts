@@ -86,10 +86,63 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
       }
 
+      const dbClient = await DbClientFactory.getDbClient()
+      const domainSortKey = `${envIdNum}#${upn}`
+      const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
+      const now = new Date()
+
+      // Check if domain is currently authorized
+      const isAuthorized =
+        domainRecord?.status === 'authorized' &&
+        domainRecord?.authExpiresAt &&
+        new Date(domainRecord.authExpiresAt) > now
+
+      if (!isAuthorized) {
+        // Check if there's already a pending (non-expired) challenge
+        const hasPendingChallenge =
+          domainRecord?.status === 'pending_challenge' &&
+          domainRecord?.challengeExpiresAt &&
+          new Date(domainRecord.challengeExpiresAt) > now
+
+        const challengeUuid = hasPendingChallenge
+          ? domainRecord.challengeUuid
+          : crypto.randomUUID()
+
+        if (!hasPendingChallenge) {
+          // Create a new challenge — expires in 7 days
+          const challengeExpiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
+          await dbClient.upsertApiKeyDomain({
+            sortKey: domainSortKey,
+            domain: String(upn),
+            env: String(envIdNum),
+            status: 'pending_challenge',
+            challengeUuid,
+            challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+            requestedBy: session.user.email || 'unknown',
+            authExpiresAt: '',
+          })
+        }
+
+        logger.info('DNS challenge required for domain', {
+          domain: upn,
+          envId: envIdNum,
+          challengeUuid,
+          operation: 'createApiKeyCredential',
+        })
+
+        return res.status(202).json({
+          status: 'challenge_pending',
+          domain: upn,
+          envId: envIdNum,
+          challengeUuid,
+          txtRecord: `_izg-verify.${upn}`,
+          txtValue: `izg-challenge=${challengeUuid}`,
+        })
+      }
+
       const { secretString, kid } = await getJwtSigningSecret()
 
       const jti = crypto.randomUUID()
-      const now = new Date()
       const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
       const iss = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
@@ -109,7 +162,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const sortKey = `${envIdNum}#${jti}`
       const createdBy = session.user.email || 'unknown'
 
-      const dbClient = await DbClientFactory.getDbClient()
       await dbClient.createApiKeyCredential({
         jti,
         sortKey,

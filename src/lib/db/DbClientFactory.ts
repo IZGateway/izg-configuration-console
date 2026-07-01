@@ -20,6 +20,7 @@ import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { ApiKeyCredential } from '../type/ApiKeyCredential'
 import { Jurisdiction } from '../type/Jurisdiction'
+import { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -415,5 +416,27 @@ class EncryptedRepository implements DbClient {
 
   async fetchJurisdictions(): Promise<Jurisdiction[]> {
     return await this.repository.fetchJurisdictions()
+  }
+
+  async getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null> {
+    return await this.repository.getApiKeyDomain(sortKey)
+  }
+
+  async fetchPendingApiKeyDomains(): Promise<ApiKeyDomain[]> {
+    return await this.repository.fetchPendingApiKeyDomains()
+  }
+
+  async upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void> {
+    return await this.repository.upsertApiKeyDomain(params)
   }
 }
