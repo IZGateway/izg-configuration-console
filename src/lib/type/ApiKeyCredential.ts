@@ -5,8 +5,10 @@ export interface ApiKeyCredential extends DbAudit {
   sortKey: string
   jurisdictionId: string
   jurisdictionDescription: string
-  status: 'Active' | 'Grace Period' | 'Revoked'
+  status: string
   expiresAt: Date | null
   revokedAt: Date | null
   env: string
+  description?: string
+  graceExpiresAt?: Date | null
 }

@@ -1,13 +1,17 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import useSWR from 'swr'
+import useSWR, { mutate } from 'swr'
 import {
   Alert,
   Box,
   Button,
   Card,
   CircularProgress,
+  FormControl,
   IconButton,
   InputAdornment,
+  InputLabel,
+  MenuItem,
+  Select,
   Tab,
   Tabs,
   TextField,
@@ -34,22 +38,38 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import palette from '../../styles/theme/palette'
+import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
+import { Jurisdiction } from '../../lib/type/Jurisdiction'
+import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
+
+const ENV_DISPLAY_NAMES: Record<string, string> = {
+  PRODUCTION: 'Production',
+  TEST: 'Testing',
+  ONBOARD: 'Onboarding',
+  STAGE: 'Staging',
+  DEV: 'Development',
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ApiKey {
   id: string
   keyId: string
-  label: string
+  sortKey: string
+  description: string
   environment: string
   jurisdiction: string
+  jurisdictionId: string
+  envRaw: string
   status: 'Active' | 'Grace Period' | 'Revoked'
   created: string
   expires: string
   createdBy: string
   revokedAt: string | null
+  graceExpiresAt: string | null
+  expiresAtRaw: string | null
 }
 
 function formatDate(value: string | Date | null | undefined): string {
@@ -63,14 +83,27 @@ function toRow(cred: ApiKeyCredential): ApiKey {
   return {
     id: cred.jti,
     keyId: cred.jti,
-    label: cred.sortKey,
-    environment: cred.env ?? '—',
+    sortKey: cred.sortKey,
+    description: cred.description ?? '—',
+    jurisdictionId: cred.jurisdictionId,
+    envRaw: cred.env ?? '',
+    environment: (() => {
+      if (!cred.env) return '—'
+      const code = isNaN(Number(cred.env)) ? cred.env.toUpperCase() : getEnvironmentName(Number(cred.env))
+      return ENV_DISPLAY_NAMES[code] ?? code
+    })(),
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
-    status: cred.status,
+    status: (cred.status === 'superseded'
+      ? 'Active'
+      : cred.status
+      ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
+      : cred.status) as ApiKey['status'],
     created: formatDate(cred.createdOn),
     expires: formatDate(cred.expiresAt),
     createdBy: cred.createdBy ?? '—',
     revokedAt: cred.revokedAt ? formatDate(cred.revokedAt) : null,
+    graceExpiresAt: cred.graceExpiresAt ? formatDate(cred.graceExpiresAt) : null,
+    expiresAtRaw: cred.expiresAt ? cred.expiresAt.toISOString() : null,
   }
 }
 
@@ -198,6 +231,13 @@ function ActionCell({
   onRevoke: (key: ApiKey) => void
   onRenew: (key: ApiKey) => void
 }) {
+  if (row.graceExpiresAt) {
+    return (
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        Grace period expires on {row.graceExpiresAt}
+      </Typography>
+    )
+  }
   if (row.status === 'Revoked') {
     return (
       <Typography variant="body2" sx={{ color: palette.greyText }}>
@@ -397,13 +437,13 @@ function RevokeDialog({
 }: {
   apiKey: ApiKey | null
   onClose: () => void
-  onConfirm: () => void
+  onConfirm: (reason?: string) => void
 }) {
   const [reason, setReason] = useState('')
   if (!apiKey) return null
 
   const handleConfirm = () => {
-    onConfirm()
+    onConfirm(reason || undefined)
     setReason('')
   }
 
@@ -472,70 +512,306 @@ function RevokeDialog({
 function RenewDialog({
   apiKey,
   onClose,
-  onConfirm,
+  onCreated,
 }: {
   apiKey: ApiKey | null
   onClose: () => void
-  onConfirm: (key: ApiKey) => void
+  onCreated: (token: string) => void
 }) {
+  const [upn, setUpn] = useState('')
+  const [description, setDescription] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
   if (!apiKey) return null
+
+  const handleClose = () => {
+    setUpn('')
+    setDescription('')
+    setError(null)
+    onClose()
+  }
+
+  const handleConfirm = async () => {
+    if (!upn.trim()) {
+      setError('Domain (upn) is required.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      // Derive numeric envId from envRaw (may be numeric string "5" or legacy "DEV")
+      const envIdNum = isNaN(Number(apiKey.envRaw))
+        ? (() => {
+            const upper = apiKey.envRaw.toUpperCase()
+            const found = ENV_OPTIONS.find(
+              (o) => o.name === upper || o.displayName.toUpperCase() === upper
+            )
+            return found ? found.id : null
+          })()
+        : Number(apiKey.envRaw)
+
+      if (!envIdNum) {
+        throw new Error(`Cannot determine environment ID from: ${apiKey.envRaw}`)
+      }
+
+      const res = await fetch('/api/apikeys/renew', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldSortKey: apiKey.sortKey,
+          oldExpiresAt: apiKey.expiresAtRaw,
+          jurisdictionId: apiKey.jurisdictionId,
+          envId: envIdNum,
+          upn: upn.trim(),
+          description: description.trim() || undefined,
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to renew key')
+      }
+      const { token } = await res.json()
+      mutate('/api/apikeys')
+      handleClose()
+      onCreated(token)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to renew key')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <CustomDialogBox
       open={!!apiKey}
-      onClose={onClose}
+      onClose={handleClose}
       maxWidth="sm"
-      titleText="Renew API key"
+      titleText="Renew API Key"
       content={
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="body2">
-            A new key pair is generated. The old key stays valid during the
-            grace period.
+            A new key will be issued. The old key stays valid for{' '}
+            <strong>10 business days</strong> then expires automatically.
           </Typography>
-          <PolicyField
-            label="Grace period for old key"
-            value="10 business days"
-          />
-          <PolicyField label="New key expiry" value="1 year from issuance" />
-          <Box
-            sx={{
-              backgroundColor: palette.greyLight,
-              borderRadius: '8px',
-              p: 2,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Two audit events will fire:
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
-            >
-              API_KEY_CREATED and API_KEY_RENEWAL_SUPERSEDED
-            </Typography>
-            <Typography variant="body2">
-              with grace expiry timestamp.
-            </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <PolicyField label="Jurisdiction" value={apiKey.jurisdiction} />
+            <PolicyField label="Environment" value={apiKey.environment} />
           </Box>
+          {error && (
+            <Alert severity="error" sx={{ borderRadius: '8px' }}>
+              {error}
+            </Alert>
+          )}
+          <TextField
+            label="Description (optional)"
+            placeholder="e.g. Massachusetts IIS production key — renewal"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            size="small"
+            multiline
+            rows={2}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+          />
+          <TextField
+            label="Domain (upn)"
+            placeholder="e.g. immunize.ma.gov"
+            value={upn}
+            onChange={(e) => setUpn(e.target.value)}
+            fullWidth
+            size="small"
+            required
+            helperText="DNS domain for the new JWT upn claim"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+          />
         </Box>
       }
       actions={
         <Button
           fullWidth
           variant="outlined"
-          onClick={() => onConfirm(apiKey)}
+          onClick={handleConfirm}
+          disabled={submitting || !upn.trim()}
           sx={{
             borderRadius: '50px',
             borderColor: palette.primary,
             color: palette.primary,
             fontWeight: 700,
             py: 1.5,
-            '&:hover': {
-              backgroundColor: '#F0F6FF',
-              borderColor: palette.primary,
-            },
+            '&:hover': { backgroundColor: '#F0F6FF', borderColor: palette.primary },
           }}
         >
-          RENEW KEY
+          {submitting ? 'RENEWING...' : 'RENEW KEY'}
+        </Button>
+      }
+    />
+  )
+}
+
+const ENV_OPTIONS = DEST_TYPES.reduce(
+  (acc, name, id) => {
+    if (name && name !== 'UNKNOWN') acc.push({ id, name, displayName: ENV_DISPLAY_NAMES[name] ?? name })
+    return acc
+  },
+  [] as { id: number; name: string; displayName: string }[]
+)
+
+function CreateKeyDialog({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean
+  onClose: () => void
+  onCreated: (token: string) => void
+}) {
+  const { status: sessionStatus } = useSession()
+  const { data: jurisdictions } = useSWR<Jurisdiction[]>(
+    sessionStatus === 'authenticated' ? '/api/jurisdictions' : null,
+    fetcher
+  )
+
+  const [jurisdictionId, setJurisdictionId] = useState<string>('')
+  const [envId, setEnvId] = useState<string>('')
+  const [upn, setUpn] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async () => {
+    if (!jurisdictionId || !envId || !upn.trim()) {
+      setError('Please fill in all fields.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/apikeys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jurisdictionId, envId: Number(envId), upn: upn.trim(), description: description.trim() || undefined }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to create key')
+      }
+      const { token } = await res.json()
+      mutate('/api/apikeys')
+      setJurisdictionId('')
+      setEnvId('')
+      onClose()
+      onCreated(token)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create key')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleClose = () => {
+    setJurisdictionId('')
+    setEnvId('')
+    setUpn('')
+    setDescription('')
+    setError(null)
+    onClose()
+  }
+
+  return (
+    <CustomDialogBox
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      titleText="Create API Key"
+      content={
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2">
+            A signed JWT will be generated and stored. Copy it immediately — it
+            will not be shown again.
+          </Typography>
+          {error && (
+            <Alert severity="error" sx={{ borderRadius: '8px' }}>
+              {error}
+            </Alert>
+          )}
+          <FormControl fullWidth size="small">
+            <InputLabel id="create-key-jurisdiction-label">
+              Jurisdiction
+            </InputLabel>
+            <Select
+              labelId="create-key-jurisdiction-label"
+              value={jurisdictionId}
+              label="Jurisdiction"
+              onChange={(e) => setJurisdictionId(e.target.value)}
+              sx={{ borderRadius: '8px' }}
+            >
+              {Array.isArray(jurisdictions) &&
+                jurisdictions.map((j) => (
+                  <MenuItem
+                    key={j.jurisdictionId}
+                    value={String(j.jurisdictionId)}
+                  >
+                    {j.description || j.name || j.jurisdictionId}
+                  </MenuItem>
+                ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth size="small">
+            <InputLabel id="create-key-env-label">Environment</InputLabel>
+            <Select
+              labelId="create-key-env-label"
+              value={envId}
+              label="Environment"
+              onChange={(e) => setEnvId(e.target.value)}
+              sx={{ borderRadius: '8px' }}
+            >
+              {ENV_OPTIONS.map((opt) => (
+                <MenuItem key={opt.id} value={String(opt.id)}>
+                  {opt.displayName}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Description"
+            placeholder="e.g. Massachusetts IIS production key"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            size="small"
+            multiline
+            rows={2}
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+          />
+          <TextField
+            label="Domain (upn)"
+            placeholder="e.g. immunize.ma.gov"
+            value={upn}
+            onChange={(e) => setUpn(e.target.value)}
+            fullWidth
+            size="small"
+            required
+            helperText="DNS domain validated at issuance — included in the JWT upn claim"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+          />
+        </Box>
+      }
+      actions={
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={submitting || !jurisdictionId || !envId || !upn.trim()}
+          sx={{
+            borderRadius: '50px',
+            backgroundColor: palette.primary,
+            fontWeight: 700,
+            py: 1.5,
+            '&:hover': { backgroundColor: palette.primaryDark },
+          }}
+        >
+          {submitting ? 'CREATING...' : 'CREATE KEY'}
         </Button>
       }
     />
@@ -630,11 +906,16 @@ function KeyCreatedDialog({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ApiKeyManagement() {
+  const { status: sessionStatus } = useSession()
   const {
     data: rawCredentials,
     error: fetchError,
     isLoading,
-  } = useSWR<ApiKeyCredential[]>('/api/apikeys', fetcher)
+  } = useSWR<ApiKeyCredential[]>(
+    sessionStatus === 'authenticated' ? '/api/apikeys' : null,
+    fetcher,
+    { shouldRetryOnError: true, errorRetryCount: 3, errorRetryInterval: 1000 }
+  )
 
   const apiKeys: ApiKey[] = useMemo(
     () => (Array.isArray(rawCredentials) ? rawCredentials.map(toRow) : []),
@@ -645,6 +926,7 @@ export default function ApiKeyManagement() {
   const [search, setSearch] = useState('')
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null)
   const [renewTarget, setRenewTarget] = useState<ApiKey | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
 
   const filteredRows = useMemo(
@@ -653,7 +935,7 @@ export default function ApiKeyManagement() {
         const q = search.toLowerCase()
         return (
           k.keyId.toLowerCase().includes(q) ||
-          k.label.toLowerCase().includes(q) ||
+          k.description.toLowerCase().includes(q) ||
           k.jurisdiction.toLowerCase().includes(q) ||
           k.environment.toLowerCase().includes(q)
         )
@@ -664,26 +946,28 @@ export default function ApiKeyManagement() {
   const handleRevoke = useCallback((key: ApiKey) => setRevokeTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
 
-  const confirmRevoke = useCallback(() => {
+  const confirmRevoke = useCallback(async (reason?: string) => {
+    if (!revokeTarget) return
+    const sortKey = revokeTarget.sortKey
     setRevokeTarget(null)
+    try {
+      const res = await fetch('/api/apikeys', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sortKey, reason: reason || undefined }),
+      })
+      if (!res.ok) throw new Error('Failed to revoke key')
+      mutate('/api/apikeys')
+    } catch {
+      // silently fail; grid reflects real state on next SWR refresh
+    }
+  }, [revokeTarget])
+
+  const handleRenewCreated = useCallback((token: string) => {
+    setCreatedToken(token)
   }, [])
 
-  const confirmRenew = useCallback((key: ApiKey) => {
-    setRenewTarget(null)
-    const newToken = `${key.keyId}.${Math.random()
-      .toString(36)
-      .slice(2, 18)}${Math.random().toString(36).slice(2, 18)}`
-    setCreatedToken(newToken)
-  }, [])
-
-  const handleCreateKey = useCallback(() => {
-    const newToken = `izg_new${Math.random()
-      .toString(36)
-      .slice(2, 10)}.${Math.random().toString(36).slice(2, 18)}${Math.random()
-      .toString(36)
-      .slice(2, 18)}`
-    setCreatedToken(newToken)
-  }, [])
+  const handleCreateKey = useCallback(() => setCreateDialogOpen(true), [])
 
   const handleSearchChange = useCallback(
     (value: string) => setSearch(value),
@@ -707,7 +991,7 @@ export default function ApiKeyManagement() {
           </Typography>
         ),
       },
-      { field: 'label', headerName: 'LABEL', flex: 1.8, minWidth: 140 },
+      { field: 'description', headerName: 'DESCRIPTION', flex: 1.8, minWidth: 140 },
       {
         field: 'environment',
         headerName: 'ENVIRONMENT',
@@ -851,12 +1135,17 @@ export default function ApiKeyManagement() {
       <RevokeDialog
         apiKey={revokeTarget}
         onClose={() => setRevokeTarget(null)}
-        onConfirm={() => confirmRevoke()}
+        onConfirm={(reason) => confirmRevoke(reason)}
       />
       <RenewDialog
         apiKey={renewTarget}
         onClose={() => setRenewTarget(null)}
-        onConfirm={confirmRenew}
+        onCreated={handleRenewCreated}
+      />
+      <CreateKeyDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onCreated={(token) => setCreatedToken(token)}
       />
       <KeyCreatedDialog
         token={createdToken}
