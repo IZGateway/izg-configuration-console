@@ -19,6 +19,7 @@ import {
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { Jurisdiction } from '../type/Jurisdiction'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -377,5 +378,42 @@ class EncryptedRepository implements DbClient {
 
   async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
     return await this.repository.fetchApiKeyCredentials()
+  }
+
+  async revokeApiKeyCredential(
+    sortKey: string,
+    revokedBy: string,
+    revokedAt: string,
+    reason?: string
+  ): Promise<void> {
+    return await this.repository.revokeApiKeyCredential(sortKey, revokedBy, revokedAt, reason)
+  }
+
+  async supersedApiKeyCredential(params: {
+    sortKey: string
+    renewedBy: string
+    renewedAt: string
+    graceExpiresAt: string
+    supersededByJti: string
+  }): Promise<void> {
+    return await this.repository.supersedApiKeyCredential(params)
+  }
+
+  async createApiKeyCredential(params: {
+    jti: string
+    sortKey: string
+    jurisdictionId: string
+    env: string
+    status: string
+    createdOn: Date
+    expiresAt: Date
+    createdBy: string
+    description?: string
+  }): Promise<void> {
+    return await this.repository.createApiKeyCredential(params)
+  }
+
+  async fetchJurisdictions(): Promise<Jurisdiction[]> {
+    return await this.repository.fetchJurisdictions()
   }
 }
