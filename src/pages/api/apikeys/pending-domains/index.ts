@@ -1,0 +1,27 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
+import withMiddleware from '../../api-middleware-helper'
+import DbClientFactory from '../../../../lib/db/DbClientFactory'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '../../auth/[...nextauth]'
+
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET'])
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
+  }
+
+  const session = await getServerSession(req, res, authOptions)
+  if (!session || !session.user) {
+    return res.status(401).json({ error: 'Unauthorized - Please login' })
+  }
+
+  try {
+    const dbClient = await DbClientFactory.getDbClient()
+    const domains = await dbClient.fetchPendingApiKeyDomains()
+    return res.status(200).json(domains)
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export default withMiddleware()(handler)
