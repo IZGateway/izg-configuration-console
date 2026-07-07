@@ -1,5 +1,50 @@
 # Release Notes
 
+## Release v1.16.0
+
+- chore(deps): security and dependency updates
+([#584](https://github.com/IZGateway/izg-configuration-console/pull/584))
+- chore(deps): security and dependency updates
+([#583](https://github.com/IZGateway/izg-configuration-console/pull/583))
+- chore(deps): security and dependency updates
+([#578](https://github.com/IZGateway/izg-configuration-console/pull/578))
+- build(deps): bump actions/cache from 5 to 6
+([#575](https://github.com/IZGateway/izg-configuration-console/pull/575))
+- chore(deps): security and dependency updates
+([#576](https://github.com/IZGateway/izg-configuration-console/pull/576))
+- chore(deps): security and dependency updates
+([#574](https://github.com/IZGateway/izg-configuration-console/pull/574))
+- chore(deps): security and dependency updates
+([#571](https://github.com/IZGateway/izg-configuration-console/pull/571))
+- chore(deps): security and dependency updates
+([#570](https://github.com/IZGateway/izg-configuration-console/pull/570))
+- chore(deps): security and dependency updates
+([#569](https://github.com/IZGateway/izg-configuration-console/pull/569))
+- build(deps): bump actions/checkout from 6 to 7
+([#568](https://github.com/IZGateway/izg-configuration-console/pull/568))
+- chore(deps): security and dependency updates
+([#567](https://github.com/IZGateway/izg-configuration-console/pull/567))
+- chore(deps): security and dependency updates
+([#559](https://github.com/IZGateway/izg-configuration-console/pull/559))
+- chore(openspec): archive session-replay-remediation change
+([#558](https://github.com/IZGateway/izg-configuration-console/pull/558))
+- IGDD-2853 log changeType for AllowedUser create/update
+([#550](https://github.com/IZGateway/izg-configuration-console/pull/550))
+- chore(deps): security and dependency updates
+([#556](https://github.com/IZGateway/izg-configuration-console/pull/556))
+- chore(deps): security and dependency updates
+([#551](https://github.com/IZGateway/izg-configuration-console/pull/551))
+- Openspec update for GitHub Copilot & setup for Claude
+([#548](https://github.com/IZGateway/izg-configuration-console/pull/548))
+- chore(deps): security and dependency updates
+([#546](https://github.com/IZGateway/izg-configuration-console/pull/546))
+- chore(deps): security and dependency updates
+([#545](https://github.com/IZGateway/izg-configuration-console/pull/545))
+- chore(deps): security and dependency updates
+([#543](https://github.com/IZGateway/izg-configuration-console/pull/543))
+- chore(deps): security and dependency updates
+([#542](https://github.com/IZGateway/izg-configuration-console/pull/542))
+
 ## Release v1.15.0
 
 - IGDD-2576 Allow a user to encrypt plain-text passwords using Config Console
