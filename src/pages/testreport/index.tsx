@@ -1,12 +1,12 @@
 import { Container } from '@mui/material'
-import { getServerSession } from 'next-auth'
 import * as React from 'react'
-import { authOptions } from '../api/auth/[...nextauth]'
 import connectionTest from '../../lib/connectiontests'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
 import DbClientFactory from '../../lib/db/DbClientFactory'
+import { asyncRequestContext } from '../../lib/Context'
+import { buildRequestContext } from '../../lib/requestContext'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -28,7 +28,11 @@ export default TestReport
 export async function getServerSideProps(context) {
   const { req, res } = context
 
-  const session = await getServerSession(req, res, authOptions)
+  const requestContext = await buildRequestContext(req, res)
+  const session = requestContext.session
+  if (!session?.user) {
+    return { redirect: { destination: '/api/auth/signin', permanent: false } }
+  }
   const destArray = context.req.cookies['destination']
     ? JSON.parse(context.req.cookies['destination'])
     : []
@@ -46,25 +50,27 @@ export async function getServerSideProps(context) {
       destTypeId: isNaN(destTypeId) ? null : destTypeId,
     }
   })
-  const results = await Promise.all(
-    destinations.map(async (dest) => {
-      const dbClient = await DbClientFactory.getDbClient()
-      const destinationToTest = await dbClient.fetchDestination(
-        dest.destId,
-        dest.destTypeId
-      )
-      const testResult = await connectionTest(destinationToTest, {
-        name: session.user.name,
-        email: session.user.email,
-        id: session.user.id,
+  const results = await asyncRequestContext.run(requestContext, () =>
+    Promise.all(
+      destinations.map(async (dest) => {
+        const dbClient = await DbClientFactory.getDbClient()
+        const destinationToTest = await dbClient.fetchDestination(
+          dest.destId,
+          dest.destTypeId
+        )
+        const testResult = await connectionTest(destinationToTest, {
+          name: session.user.name,
+          email: session.user.email,
+          id: session.user.id,
+        })
+        return {
+          type: destinationToTest?.destinationType.type || 'N/A',
+          destId: destinationToTest?.destId || 'N/A',
+          jurisdiction: destinationToTest?.jurisdiction.description || 'N/A',
+          testResults: testResult?.connectionTestResult?.testResults || [],
+        }
       })
-      return {
-        type: destinationToTest?.destinationType.type || 'N/A',
-        destId: destinationToTest?.destId || 'N/A',
-        jurisdiction: destinationToTest?.jurisdiction.description || 'N/A',
-        testResults: testResult?.connectionTestResult?.testResults || [],
-      }
-    })
+    )
   )
 
   const connectionTestResults = results.map((result) => {
