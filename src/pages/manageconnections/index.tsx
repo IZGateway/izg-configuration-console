@@ -7,8 +7,7 @@ import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
 import { InferGetServerSidePropsType } from 'next'
-import { asyncRequestContext } from '../../lib/Context'
-import { buildRequestContext } from '../../lib/requestContext'
+import { withRequestContext } from '../../lib/requestContext'
 import AppHeaderBar from '../../components/AppHeader'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { Destination } from '../../lib/type/Destination'
@@ -55,19 +54,18 @@ const Manage = (
 
 export default Manage
 
-export const getServerSideProps = async (context) => {
-  const requestContext = await buildRequestContext(context.req, context.res)
-  const session = requestContext.session
-  if (!session?.user) {
-    return { redirect: { destination: '/api/auth/signin', permanent: false } }
-  }
-  const endpoints = await asyncRequestContext.run(requestContext, async () => {
+export const getServerSideProps = withRequestContext(
+  async (context, requestContext) => {
+    const session = requestContext.session
+    if (!session?.user) {
+      return { redirect: { destination: '/api/auth/signin', permanent: false } }
+    }
     const endpointStatuses = await fetchEndpointStatus(
       session.user.role,
       session.user.jurisdictions
     )
 
-    return Promise.all(
+    const endpoints = await Promise.all(
       endpointStatuses.map(async (endpoint) => {
         const dbClient = await DbClientFactory.getDbClient()
         const destination = await dbClient.fetchDestination(
@@ -96,10 +94,10 @@ export const getServerSideProps = async (context) => {
         }
       })
     )
-  })
 
-  return { props: { data: endpoints } }
-}
+    return { props: { data: endpoints } }
+  }
+)
 
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,

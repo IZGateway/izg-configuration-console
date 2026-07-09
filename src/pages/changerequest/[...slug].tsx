@@ -8,8 +8,7 @@ import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import hasAccessToDestId from '../../lib/accesshelper'
 import DbClientFactory from '../../lib/db/DbClientFactory'
-import { asyncRequestContext } from '../../lib/Context'
-import { buildRequestContext } from '../../lib/requestContext'
+import { withRequestContext } from '../../lib/requestContext'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -33,30 +32,30 @@ const Changerequest = (
 
 export default Changerequest
 
-export const getServerSideProps = async (context) => {
-  const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
-  const requestContext = await buildRequestContext(context.req, context.res)
-  const session = requestContext.session
-  if (!session?.user) {
-    return { redirect: { destination: '/api/auth/signin', permanent: false } }
-  }
-  const slug = context.params?.slug || {}
-  const destId = slug[1]
-  const destTypeId = _.toNumber(slug[0])
-  if (hasAccessToDestId(destId, session)) {
-    const result = await asyncRequestContext.run(requestContext, async () => {
-      const dbClient = await DbClientFactory.getDbClient()
-      return dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
-        destId,
-        destTypeId
-      )
-    })
-    return {
-      props: {
-        changeRequest: JSON.parse(JSON.stringify(result)),
-        jiraUrl: jiraUrl,
-      },
+export const getServerSideProps = withRequestContext(
+  async (context, requestContext) => {
+    const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
+    const session = requestContext.session
+    if (!session?.user) {
+      return { redirect: { destination: '/api/auth/signin', permanent: false } }
     }
+    const slug = (context.params?.slug as string[]) || []
+    const destId = slug[1]
+    const destTypeId = _.toNumber(slug[0])
+    if (hasAccessToDestId(destId, session)) {
+      const dbClient = await DbClientFactory.getDbClient()
+      const result =
+        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+          destId,
+          destTypeId
+        )
+      return {
+        props: {
+          changeRequest: JSON.parse(JSON.stringify(result)),
+          jiraUrl: jiraUrl,
+        },
+      }
+    }
+    return { notFound: true }
   }
-  return { notFound: true }
-}
+)

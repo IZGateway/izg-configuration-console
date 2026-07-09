@@ -13,19 +13,22 @@ Several pages, however, read data **directly from the database in `getServerSide
 | `onboarding` | fetch via `/api/allowedusers/bydestination` | Yes (attributed on the API line) — unchanged |
 | `passwordencryption` | none (session check only) | n/a — unchanged |
 
-Identity is already *known* in these `getServerSideProps` (each calls `getServerSession`); it just is not propagated to the logs. This change fixes that under-attribution.
+Identity is already *known* in these `getServerSideProps` (each resolves the session); it just is not propagated to the logs. This change fixes that under-attribution.
+
+Although only the four direct-DB pages have an under-attribution *gap* today, the change wraps **every** `getServerSideProps` uniformly (adding `onboarding` and `passwordencryption`) via a single shared wrapper. This is deliberate: it makes SSR attribution a property of the wrapper rather than of each author remembering to wrap, so new SSR pages are covered by construction and cannot silently drift out of coverage (the review question that motivated broadening the scope).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Attach `sessionUser` to the server-side data reads in `getServerSideProps` for the four direct-DB pages, reusing the existing automatic injection.
-- Extract a single shared context builder so `withMiddleware` and the page reads cannot drift.
+- Attach `sessionUser` to every authenticated `getServerSideProps` render, reusing the existing automatic injection.
+- Provide a single reusable wrap point (`withRequestContext`) so coverage is uniform and future SSR pages are attributed without per-page wiring.
+- Extract a single shared context builder so `withMiddleware` and the page renders cannot drift.
 - Stay additive (preserve `userContext` and all existing fields).
 
 **Non-Goals:**
 - Edge `Route Request` attribution (`src/middleware.ts`) — Edge runtime can't use the Node logger/ALS; separate follow-up.
 - Changing what the DB-layer logs contain (we only add `sessionUser` via context).
-- Pages already attributed via `/api/*` (`onboarding`) or with no server-side read (`passwordencryption`).
+- Pages with no `getServerSideProps` (client-side + `/api/*` only) — already attributed via the API path; nothing to wrap.
 
 ## Decisions
 
@@ -51,16 +54,26 @@ async function buildRequestContext(req, res): Promise<Context> {
 
 - Import note: the helper depends on `authOptions` (from `src/pages/api/auth/[...nextauth]`). A `lib` module importing from `pages` is acceptable here (`withMiddleware` already does), but watch for an import cycle; if one appears, the helper can take `authOptions` as a parameter.
 
-### D2 — Wrap the page data reads in `asyncRequestContext.run(...)`
+### D2 — A shared `withRequestContext(getServerSideProps)` wrapper applied to every SSR page
 
-In each in-scope `getServerSideProps`, build the context and run the data access inside it:
+Rather than hand-writing `buildRequestContext` + `asyncRequestContext.run(...)` inside each `getServerSideProps` (the copy-paste pattern the first cut used, which the reviewer flagged as easy to forget), introduce one higher-order wrapper in `src/lib/requestContext.ts`:
 
 ```text
-const context = await buildRequestContext(ctx.req, ctx.res)
-const result  = await asyncRequestContext.run(context, () => <existing data read>)
+export function withRequestContext(handler) {
+  return async (context) => {
+    const requestContext = await buildRequestContext(context.req, context.res)
+    return asyncRequestContext.run(requestContext, () => handler(context, requestContext))
+  }
+}
+
+// usage in a page:
+export const getServerSideProps = withRequestContext(async (context, requestContext) => {
+  const session = requestContext.session       // reuse — no second getServerSession
+  ... existing read ...
+})
 ```
 
-Everything logged during that read (the page's own logs plus DB-layer logs) then gets `sessionUser` via the existing format — no logger or DB changes. For `test/[...slug]` and `testreport`, the wrapped call is `connectionTest(...)`, which also brings the connection-test log lines into coverage while leaving the hand-built `userContext` intact (additive).
+The wrapper runs the **entire** handler inside the context, so the page's own logs (including auth-failure warnings, e.g. onboarding's) plus all downstream DB-layer logs get `sessionUser` via the existing Winston format — no logger or DB changes. It passes the built `Context` to the handler so pages reuse its resolved `session` for their auth check instead of calling `getServerSession` again (onboarding's standalone call is removed). For `test/[...slug]` and `testreport`, the connection-test call runs inside the context too, bringing those log lines into coverage while leaving the hand-built `userContext` intact (additive). Applying the wrapper to all six pages makes coverage a property of the wrapper, not of each author.
 
 ### D3 — Per-request scoping (no bleed)
 
@@ -74,7 +87,8 @@ If `getServerSideProps` runs without a resolvable session (it normally won't —
 
 - **Import cycle** (lib helper importing `authOptions` from a page) → If it surfaces, pass `authOptions` into the helper instead of importing it. Low risk; `withMiddleware` already imports it.
 - **Refactor regression in `withMiddleware`** → It is on the hot path for every API request. Mitigation: the extraction is behavior-preserving and covered by the existing `api-middleware-helper` context test; re-run it.
-- **More PII occurrences** (email/name/ip now on page-read logs) → same data already logged elsewhere; same audit intent and data-minimization posture as the parent change. No new data type or secret.
+- **More PII occurrences** (email/name/ip now on page-render logs, including onboarding + passwordencryption) → same data already logged elsewhere; same audit intent and data-minimization posture as the parent change. No new data type or secret. Increases volume, not category, of PII in the `izgw-config-console-*` indices.
+- **Wrapping a sensitive-feature page** (`passwordencryption`) → attaching identity is a net audit gain, but identity must not end up logged *next to* secret material. The block itself carries no secrets; the residual risk is pre-existing log statements in that page's downstream code (`encryptionStatus`/`rotatekey`/`encrypt`) that might log key material. Verified as part of task 4.4; the fix for any such line is to stop logging the secret, not to skip attribution.
 - **Pre-existing DB-layer log content** → unchanged; we only add `sessionUser`. If any of those lines already log sensitive payloads, that is a separate concern, untouched here.
 
 ## Migration Plan

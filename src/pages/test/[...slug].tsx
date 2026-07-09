@@ -6,39 +6,38 @@ import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
 import connectionTest from '../../lib/connectiontests'
 import DbClientFactory from '../../lib/db/DbClientFactory'
-import { asyncRequestContext } from '../../lib/Context'
-import { buildRequestContext } from '../../lib/requestContext'
+import { withRequestContext } from '../../lib/requestContext'
 
-export async function getServerSideProps(context) {
-  const { req, res } = context
-  const destId = context.query.slug[1]
-  const destTypeId = _.toNumber(context.query.slug[0])
-  const requestContext = await buildRequestContext(req, res)
-  const session = requestContext.session
-  if (!session?.user) {
-    return { redirect: { destination: '/api/auth/signin', permanent: false } }
-  }
-  // Run the read inside the request context so its logs (and the connection
-  // test's logs) carry sessionUser, the same way API routes do (IGDD-2223).
-  const { connectionTestResult, numberOfTests } = await asyncRequestContext.run(
-    requestContext,
-    async () => {
-      const dbClient = await DbClientFactory.getDbClient()
-      const destinationToTest = await dbClient.fetchDestination(
-        destId?.toString(),
-        destTypeId
-      )
-      return connectionTest(destinationToTest, {
+// The whole read runs inside the request context (via withRequestContext) so
+// its logs — and the connection test's logs — carry sessionUser, the same way
+// API routes do (IGDD-2223). The existing userContext block is preserved.
+export const getServerSideProps = withRequestContext(
+  async (context, requestContext) => {
+    const slug = (context.query.slug as string[]) || []
+    const destId = slug[1]
+    const destTypeId = _.toNumber(slug[0])
+    const session = requestContext.session
+    if (!session?.user) {
+      return { redirect: { destination: '/api/auth/signin', permanent: false } }
+    }
+    const dbClient = await DbClientFactory.getDbClient()
+    const destinationToTest = await dbClient.fetchDestination(
+      destId?.toString(),
+      destTypeId
+    )
+    const { connectionTestResult, numberOfTests } = await connectionTest(
+      destinationToTest,
+      {
         name: session.user.name,
         email: session.user.email,
         id: session.user.id,
-      })
+      }
+    )
+    return {
+      props: { connectionTestResult, numberOfTests },
     }
-  )
-  return {
-    props: { connectionTestResult, numberOfTests },
   }
-}
+)
 
 const Test = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
