@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import winston from 'winston'
 import ecsFormat from '@elastic/ecs-winston-format'
+import { asyncRequestContext } from './src/lib/Context'
 
 let appVersion = 'unknown'
 try {
@@ -16,12 +17,50 @@ const versionFormat = winston.format((info) => {
   return info
 })
 
+/**
+ * Enrich a log event with the authenticated user's identity for the current
+ * request, read from the AsyncLocalStorage request context (IGDD-2223).
+ *
+ * Adds a single, additive `sessionUser` object — it never touches the existing
+ * `user`/`sub` (or any other) fields, so existing log shapes and Elastic
+ * queries are unaffected. Mirrors how the Hub's LogstashEncoder auto-includes
+ * SLF4J MDC: every Node-runtime log event during an authenticated request gets
+ * `sessionUser` (identity plus the correlation fields needed to pivot to the
+ * Okta System Log: `authTime` + `ip`).
+ *
+ * No-ops when there is no request context (startup, background tasks) or when
+ * the request is unauthenticated — it never fabricates identity and never
+ * throws. `undefined` fields are dropped by JSON serialization.
+ *
+ * Exported for unit testing.
+ */
+export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
+  const ctx = asyncRequestContext.getStore()
+  if (!ctx) return info
+  // Only attach identity when an authenticated user is present.
+  if (ctx.userId || ctx.email || ctx.sessionId) {
+    info.sessionUser = {
+      name: ctx.user,
+      userId: ctx.userId,
+      email: ctx.email,
+      sessionId: ctx.sessionId,
+      jti: ctx.jti,
+      authTime: ctx.authTime,
+      ip: ctx.ipAddress,
+    }
+  }
+  return info
+}
+
+const userContextFormat = winston.format(injectUserContext)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
     winston.format.uncolorize(),
     winston.format.errors({ stack: true }),
     versionFormat(),
+    userContextFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],
