@@ -34,7 +34,7 @@ export default Changerequest
 
 export const getServerSideProps = withRequestContext(
   async (context, requestContext) => {
-    const jiraUrl = process.env.JIRA_BROWSER_URL.toString()
+    const jiraUrl = process.env.JIRA_BROWSER_URL ?? ''
     const session = requestContext.session
     if (!session?.user) {
       return { redirect: { destination: '/api/auth/signin', permanent: false } }
@@ -42,6 +42,9 @@ export const getServerSideProps = withRequestContext(
     const slug = (context.params?.slug as string[]) || []
     const destId = slug[1]
     const destTypeId = _.toNumber(slug[0])
+    if (!destId || Number.isNaN(destTypeId)) {
+      return { notFound: true }
+    }
     if (hasAccessToDestId(destId, session)) {
       const dbClient = await DbClientFactory.getDbClient()
       const result =

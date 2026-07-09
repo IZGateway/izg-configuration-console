@@ -20,6 +20,9 @@ export const getServerSideProps = withRequestContext(
     if (!session?.user) {
       return { redirect: { destination: '/api/auth/signin', permanent: false } }
     }
+    if (!destId || Number.isNaN(destTypeId)) {
+      return { notFound: true }
+    }
     const dbClient = await DbClientFactory.getDbClient()
     const destinationToTest = await dbClient.fetchDestination(
       destId?.toString(),
