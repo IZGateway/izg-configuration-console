@@ -4,7 +4,7 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import Container from '../../components/Container'
 import AppHeaderBar from '../../components/AppHeader'
 import PasswordEncryptionConsole from '../../components/PasswordEncryptionConsole'
-import { GetServerSideProps } from 'next'
+import { withRequestContext } from '../../lib/requestContext'
 
 const PasswordEncryption = ({ hasKeyName }) => {
   return (
@@ -17,11 +17,11 @@ const PasswordEncryption = ({ hasKeyName }) => {
   )
 }
 
-export const getServerSideProps: GetServerSideProps<{
+export const getServerSideProps = withRequestContext<{
   hasKeyName: boolean
-}> = async () => {
+}>(async () => {
   const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
   return { props: { hasKeyName } }
-}
+})
 
 export default PasswordEncryption

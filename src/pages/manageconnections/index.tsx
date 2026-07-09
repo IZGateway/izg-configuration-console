@@ -6,9 +6,8 @@ import Container from '../../components/Container'
 import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../api/auth/[...nextauth]'
 import { InferGetServerSidePropsType } from 'next'
+import { withRequestContext } from '../../lib/requestContext'
 import AppHeaderBar from '../../components/AppHeader'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { Destination } from '../../lib/type/Destination'
@@ -55,49 +54,52 @@ const Manage = (
 
 export default Manage
 
-export const getServerSideProps = async (context) => {
-  const session = await getServerSession(context.req, context.res, authOptions)
-  const endpointStatuses = await fetchEndpointStatus(
-    session.user.role,
-    session.user.jurisdictions
-  )
+export const getServerSideProps = withRequestContext(
+  async (context, requestContext) => {
+    const session = requestContext.session
+    if (!session?.user) {
+      return { redirect: { destination: '/api/auth/signin', permanent: false } }
+    }
+    const endpointStatuses = await fetchEndpointStatus(
+      session.user.role,
+      session.user.jurisdictions
+    )
 
-  const endpoints = await Promise.all(
-    endpointStatuses.map(async (endpoint) => {
-      const dbClient = await DbClientFactory.getDbClient()
-      const destination = await dbClient.fetchDestination(
-        endpoint.destId,
-        endpoint.destTypeId
-      )
-      const destinationChangeRequest =
-        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+    const endpoints = await Promise.all(
+      endpointStatuses.map(async (endpoint) => {
+        const dbClient = await DbClientFactory.getDbClient()
+        const destination = await dbClient.fetchDestination(
           endpoint.destId,
           endpoint.destTypeId
         )
+        const destinationChangeRequest =
+          await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
+            endpoint.destId,
+            endpoint.destTypeId
+          )
 
-      return {
-        ...endpoint,
-        hasChangeRequest: !!destinationChangeRequest,
-        hasActiveDraft: destinationChangeRequest?.jiraId === null,
-        hasActiveMaintenance: hasActiveMaintenance(
-          destination?.maintStart,
-          destination?.maintEnd
-        ),
-        hasFutureMaintenance: hasFutureMaintenance(
-          destination?.maintStart,
-          destination?.maintEnd
-        ),
-        maintenanceValues: getMaintenanceValues(destination),
-      }
-    })
-  )
+        return {
+          ...endpoint,
+          hasChangeRequest: !!destinationChangeRequest,
+          hasActiveDraft: destinationChangeRequest?.jiraId === null,
+          hasActiveMaintenance: hasActiveMaintenance(
+            destination?.maintStart,
+            destination?.maintEnd
+          ),
+          hasFutureMaintenance: hasFutureMaintenance(
+            destination?.maintStart,
+            destination?.maintEnd
+          ),
+          maintenanceValues: getMaintenanceValues(destination),
+        }
+      })
+    )
 
-  return { props: { data: endpoints } }
-}
-
+    return { props: { data: endpoints } }
+  }
+)
 
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,
   maint_end: destination?.maintEnd?.toISOString() || null,
 })
-
