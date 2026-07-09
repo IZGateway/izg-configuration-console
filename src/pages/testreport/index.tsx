@@ -30,9 +30,20 @@ export const getServerSideProps = withRequestContext(
     if (!session?.user) {
       return { redirect: { destination: '/api/auth/signin', permanent: false } }
     }
-    const destArray = context.req.cookies['destination']
-      ? JSON.parse(context.req.cookies['destination'])
-      : []
+    // Parse the `destination` selection cookie defensively: a malformed or
+    // user-tampered value must not crash the server render with a 500.
+    let destArray: unknown[] = []
+    const destCookie = context.req.cookies['destination']
+    if (destCookie) {
+      try {
+        const parsed = JSON.parse(destCookie)
+        if (Array.isArray(parsed)) {
+          destArray = parsed
+        }
+      } catch {
+        // Invalid JSON — fall back to no selected destinations.
+      }
+    }
     let destinations = []
     destinations = destArray.map((item) => {
       if (typeof item !== 'string' || item.length < 2) {
