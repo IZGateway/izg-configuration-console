@@ -3,10 +3,9 @@ import Container from '../../components/Container'
 import OnboardSender from '../../components/Onboarding'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import AppHeaderBar from '../../components/AppHeader'
-import { InferGetServerSidePropsType, GetServerSidePropsContext } from 'next'
+import { InferGetServerSidePropsType } from 'next'
 import { SerializedAllowedUser } from '../../lib/type/AllowedUser'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '../api/auth/[...nextauth]'
+import { withRequestContext } from '../../lib/requestContext'
 import logger from '../../../logger'
 
 const OnboardingPage = (
@@ -22,15 +21,12 @@ const OnboardingPage = (
   )
 }
 
-export const getServerSideProps = async (
-  context: GetServerSidePropsContext
-) => {
+export const getServerSideProps = withRequestContext<{
+  allowedUsers: SerializedAllowedUser[]
+  error?: string
+}>(async (context, requestContext) => {
   try {
-    const session = await getServerSession(
-      context.req,
-      context.res,
-      authOptions
-    )
+    const session = requestContext.session
 
     // Check if session exists before accessing user properties
     if (!session?.user) {
@@ -81,6 +77,6 @@ export const getServerSideProps = async (
       },
     }
   }
-}
+})
 
 export default OnboardingPage
