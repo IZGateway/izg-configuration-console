@@ -1,0 +1,135 @@
+# audit-log-user-identity Specification
+
+## Purpose
+
+Attach session-scoped user identity (`sessionUser`) to log events generated while handling authenticated user interactions, so events can be traced back to the initiating user and login session. This is additive only — it preserves all existing log fields and adds indirect Okta-correlation data plus a once-per-login authorization snapshot.
+
+## Requirements
+
+### Requirement: Session identity attached to user-initiated log events
+
+Every log event generated while handling an authenticated user interaction SHALL include a `sessionUser` object so the event can be traced back to the initiating user and login session. The object SHALL have the shape:
+
+```json
+"sessionUser": { "name": "...", "userId": "...", "email": "...", "sessionId": "...", "jti": "...", "authTime": 0, "ip": "..." }
+```
+
+`sessionUser` SHALL be sourced from the active request context (the `AsyncLocalStorage` in `src/lib/Context.ts`) and injected automatically by the logging layer, not by each individual call site. The request context SHALL be established both by `withMiddleware` (for `/api/*` routes) and by every authenticated `getServerSideProps` (page server-side render), wrapped uniformly via the shared `withRequestContext` helper, so server-side page renders are attributed the same way as API requests.
+
+#### Scenario: Authenticated API request log carries sessionUser
+
+- **WHEN** an authenticated user invokes an API route wrapped by `withMiddleware` and any code in that request logs a message
+- **THEN** the emitted log event includes a `sessionUser` object populated with `name`, `userId`, `email`, `sessionId`, `jti`, `authTime`, and `ip`
+
+#### Scenario: Injected without per-call-site changes
+
+- **WHEN** existing code logs via the shared logger or a monkey-patched `console.*` method during an authenticated request
+- **THEN** `sessionUser` is present on that event without the call site explicitly passing identity fields
+
+### Requirement: Server-side page-load renders carry sessionUser
+
+Every authenticated page render in `getServerSideProps` SHALL execute inside the request context so its log events — including downstream DB-layer logs — carry the `sessionUser` object, the same way `/api/*` requests do. This SHALL be applied uniformly via a shared `withRequestContext(getServerSideProps)` wrapper so that every page defining `getServerSideProps` is covered — current pages (`manageconnections`, `changerequest/[...slug]`, `testreport`, `test/[...slug]`, `onboarding`, `passwordencryption`) and any page added later — without per-page wiring. Existing identity fields on those lines (for example the connection test's `userContext`) SHALL be preserved (additive).
+
+#### Scenario: Page-load read is attributed
+
+- **WHEN** an authenticated user loads a page whose `getServerSideProps` reads data server-side (e.g. Manage Connections reading destinations / change requests)
+- **THEN** the resulting log events include the `sessionUser` object
+
+#### Scenario: New SSR page is attributed by construction
+
+- **WHEN** a new page is added that defines `getServerSideProps` wrapped with the shared `withRequestContext` helper
+- **THEN** its authenticated server-side render logs include `sessionUser` without any additional per-page context wiring
+
+#### Scenario: Connection test is attributed while preserving existing fields
+
+- **WHEN** an authenticated user runs a connection test (the `test/[...slug]` page's `getServerSideProps`)
+- **THEN** the connection-test log lines include `sessionUser` and still include the existing `userContext` block
+
+#### Scenario: No session on a page read does not fabricate identity
+
+- **WHEN** `getServerSideProps` runs without a resolvable authenticated session
+- **THEN** no `sessionUser` identity values are emitted (the injector no-ops), consistent with the API path
+
+### Requirement: Existing log fields are preserved (no breaking changes)
+
+This capability SHALL be additive only. It SHALL NOT modify, rename, retype, or remove any field that is logged today — in particular the existing `user` (string) and `sub` fields emitted by `logApiRequest`, the Elasticsearch query handler, and other handlers. The new identity is carried exclusively under the new `sessionUser` key so existing Elasticsearch mappings and Kibana queries/views continue to work unchanged.
+
+#### Scenario: Existing user/sub fields remain on the API Request line
+
+- **WHEN** the `API Request` log line is emitted for an authenticated request
+- **THEN** it still contains its existing `user` (string) and `sub` fields, and additionally contains the `sessionUser` object
+
+#### Scenario: Existing Elasticsearch query log field is unchanged
+
+- **WHEN** the Elasticsearch query handler logs a query event
+- **THEN** its existing `user` (email string) field is still present, with `sessionUser` added alongside it
+
+### Requirement: Session identifier and token reference
+
+`sessionUser.sessionId` SHALL be an opaque identifier generated by the Configuration Console at sign-in (a UUID), persisted on the session token. It SHALL remain stable for the lifetime of a login session and take a new value on each new login. It SHALL NOT be a secret and SHALL NOT be replayable to gain access. The Okta ID-token `jti` SHALL also be recorded as `sessionUser.jti` (a token reference). The system SHALL NOT log any raw JWT, access token, ID token, or session cookie value.
+
+> The Okta `sid` claim (the only value that would enable a direct Okta-log session pivot) is not used; it requires an Okta Front-Channel SLO config change. If later adopted it becomes the source of `sessionId` with no other change (see design.md D2).
+
+#### Scenario: sessionId is generated, jti is recorded
+
+- **WHEN** a user signs in
+- **THEN** `sessionUser.sessionId` is a Configuration-Console-generated opaque value (not a token claim) and `sessionUser.jti` holds the Okta ID-token `jti`
+
+#### Scenario: sessionId stable across a login session
+
+- **WHEN** an authenticated user performs multiple actions within a single login session
+- **THEN** every resulting log event reports the same `sessionUser.sessionId`
+
+#### Scenario: New login produces a new sessionId
+
+- **WHEN** a user signs out and signs back in
+- **THEN** log events for the new session report a different `sessionUser.sessionId` than the prior session
+
+#### Scenario: No secret material is logged
+
+- **WHEN** any log event carrying `sessionUser` is emitted
+- **THEN** it contains no raw JWT, access token, ID token, or session cookie value
+
+### Requirement: Indirect Okta correlation fields
+
+Because the generated `sessionId` does not appear in Okta's logs, `sessionUser` SHALL carry the fields needed to correlate a log event back to the originating Okta login event: `userId` (the Okta `sub`), `authTime` (the Okta login timestamp captured at sign-in), and `ip` (the source IP of the request).
+
+#### Scenario: Correlation fields present
+
+- **WHEN** an authenticated user interaction produces a log event
+- **THEN** `sessionUser` includes `userId`, `authTime`, and `ip`, enabling correlation to the Okta System Log via user + login time + IP
+
+#### Scenario: authTime captured at sign-in
+
+- **WHEN** a user signs in
+- **THEN** the Okta ID-token `auth_time` is captured and persisted on the session token so it is available to later log events without re-decoding the ID token
+
+### Requirement: Per-session authorization snapshot
+
+Once per login, the system SHALL log a single `Session established` record capturing point-in-time authorization for the session. The record SHALL include the `sessionUser` identity plus the user's `groups` (the Okta group memberships) and resolved `role`. Ordinary per-line log events SHALL NOT repeat `groups`/`role`; they are recoverable for any line by joining on `sessionUser.sessionId`.
+
+#### Scenario: Session established logged once at sign-in
+
+- **WHEN** a user completes sign-in
+- **THEN** exactly one `Session established` record is logged for that login, containing `sessionId`, `userId`, `groups`, and the resolved `role`
+
+#### Scenario: Ordinary logs do not repeat groups
+
+- **WHEN** an authenticated user interaction produces an ordinary (non–session-established) log event
+- **THEN** the event carries `sessionUser` but does not include the `groups` array
+
+### Requirement: Behavior when no authenticated context is present
+
+Log events emitted outside an authenticated user request — including application startup, background tasks, and unauthenticated requests — SHALL be emitted without a populated `sessionUser` object rather than failing or emitting placeholder identity values.
+
+#### Scenario: Startup log has no sessionUser
+
+- **WHEN** the application logs during startup before any request is handled
+- **THEN** the log event is emitted successfully and omits `sessionUser`
+
+#### Scenario: Unauthenticated request does not fabricate identity
+
+- **WHEN** a request without an authenticated session produces a log event
+- **THEN** the event does not report `sessionUser` identity values belonging to any user
+
+> Non-normative: the Edge-runtime `Route Request` log (`src/middleware.ts`, page navigations) remains anonymous and is **out of scope** — the Edge runtime cannot use the Node logger or `AsyncLocalStorage`; structuring it is a separate follow-up. Server-side page renders in `getServerSideProps` **are** attributed (see "Server-side page-load renders carry sessionUser"). Pages with no `getServerSideProps` (client-side + `/api/*` only) were already attributed via the API path.
