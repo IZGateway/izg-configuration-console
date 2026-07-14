@@ -4,39 +4,8 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import crypto from 'crypto'
-
-function base64url(buf: Buffer | string): string {
-  const b = typeof buf === 'string' ? Buffer.from(buf, 'utf8') : buf
-  return b.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
-function signJwt(
-  payload: Record<string, unknown>,
-  secret: string,
-  kid: string
-): string {
-  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT', kid }))
-  const body = base64url(JSON.stringify(payload))
-  const signingInput = `${header}.${body}`
-  const sig = crypto
-    .createHmac('sha256', Buffer.from(secret, 'utf8'))
-    .update(signingInput)
-    .digest()
-  return `${signingInput}.${base64url(sig)}`
-}
-
-async function getJwtSigningSecret(): Promise<{ secretString: string; kid: string }> {
-  const secretId = process.env.JWT_SIGNING_SECRET_ID
-  if (!secretId) throw new Error('JWT_SIGNING_SECRET_ID env var not set')
-  const client = new SecretsManagerClient({})
-  const response = await client.send(new GetSecretValueCommand({ SecretId: secretId }))
-  const secretString = response.SecretString
-  if (!secretString) throw new Error('Secret has no SecretString value')
-  const kid = response.VersionId || ''
-  return { secretString, kid }
-}
+import { getJwtSigningSecret, issueApiKeyJwt } from '../../../lib/apikeys/jwt'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -76,9 +45,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
 
-      const { jurisdictionId, envId, upn, description } = req.body
+      const { jurisdictionId, envId, upn, description, dnsChoice } = req.body
       if (!jurisdictionId || envId === undefined || envId === null || !upn) {
         return res.status(400).json({ error: 'jurisdictionId, envId, and upn are required' })
+      }
+      if (dnsChoice !== 'existing' && dnsChoice !== 'other') {
+        return res.status(400).json({ error: "dnsChoice must be 'existing' or 'other'" })
       }
 
       const envIdNum = Number(envId)
@@ -88,100 +60,121 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       const dbClient = await DbClientFactory.getDbClient()
       const domainSortKey = `${envIdNum}#${upn}`
-      const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
       const now = new Date()
+      const createdBy = session.user.email || 'unknown'
+      const iss = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
-      // Check if domain is currently authorized
-      const isAuthorized =
-        domainRecord?.status === 'authorized' &&
-        domainRecord?.authExpiresAt &&
-        new Date(domainRecord.authExpiresAt) > now
-
-      if (!isAuthorized) {
-        // Check if there's already a pending (non-expired) challenge
-        const hasPendingChallenge =
-          domainRecord?.status === 'pending_challenge' &&
-          domainRecord?.challengeExpiresAt &&
-          new Date(domainRecord.challengeExpiresAt) > now
-
-        const challengeUuid = hasPendingChallenge
-          ? domainRecord.challengeUuid
-          : crypto.randomUUID()
-
-        if (!hasPendingChallenge) {
-          // Create a new challenge — expires in 7 days
-          const challengeExpiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
-          await dbClient.upsertApiKeyDomain({
-            sortKey: domainSortKey,
-            domain: String(upn),
-            env: String(envIdNum),
-            status: 'pending_challenge',
-            challengeUuid,
-            challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
-            requestedBy: session.user.email || 'unknown',
-            authExpiresAt: '',
-          })
+      if (dnsChoice === 'existing') {
+        const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
+        const isAuthorized =
+          domainRecord?.status === 'authorized' &&
+          domainRecord?.authExpiresAt &&
+          new Date(domainRecord.authExpiresAt) > now
+        if (!isAuthorized) {
+          return res.status(400).json({ error: 'Selected DNS name is not currently authorized' })
         }
 
-        logger.info('DNS challenge required for domain', {
-          domain: upn,
+        const { secretString, kid } = await getJwtSigningSecret()
+        const jti = crypto.randomUUID()
+        const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
+        const token = issueApiKeyJwt({
+          jurisdictionId: String(jurisdictionId),
+          jti,
+          upn: String(upn),
           envId: envIdNum,
-          challengeUuid,
+          secretString,
+          kid,
+          issuedAt: now,
+          expiresAt,
+          iss,
+        })
+
+        const sortKey = `${envIdNum}#${jti}`
+        await dbClient.createApiKeyCredential({
+          jti,
+          sortKey,
+          jurisdictionId: String(jurisdictionId),
+          env: String(envIdNum),
+          status: 'active',
+          createdOn: now,
+          expiresAt,
+          createdBy,
+          description: description ? String(description) : undefined,
+          domain: String(upn),
+        })
+
+        logger.info('API key created for existing authorized domain', {
+          jti,
+          sortKey,
+          createdBy,
           operation: 'createApiKeyCredential',
         })
 
-        return res.status(202).json({
-          status: 'challenge_pending',
-          domain: upn,
-          envId: envIdNum,
-          challengeUuid,
-          txtRecord: `_izg-verify.${upn}`,
-          txtValue: `izg-challenge=${challengeUuid}`,
-        })
+        return res.status(201).json({ token, jti, sortKey })
       }
 
-      const { secretString, kid } = await getJwtSigningSecret()
-
+      // dnsChoice === 'other' — create the credential row up front as
+      // ready_for_validation; the JWT is issued once DNS ownership is verified.
       const jti = crypto.randomUUID()
-      const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-      const iss = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-
-      const payload: Record<string, unknown> = {
-        iss,
-        sub: String(jurisdictionId),
-        jti,
-        iat: Math.floor(now.getTime() / 1000),
-        exp: Math.floor(expiresAt.getTime() / 1000),
-        upn: String(upn),
-        roles: ['ads', 'soap'],
-        env: envIdNum,
-      }
-
-      const token = signJwt(payload, secretString, kid)
-
       const sortKey = `${envIdNum}#${jti}`
-      const createdBy = session.user.email || 'unknown'
+      const placeholderExpiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
 
       await dbClient.createApiKeyCredential({
         jti,
         sortKey,
         jurisdictionId: String(jurisdictionId),
         env: String(envIdNum),
-        status: 'active',
+        status: 'ready_for_validation',
         createdOn: now,
-        expiresAt,
+        expiresAt: placeholderExpiresAt,
         createdBy,
         description: description ? String(description) : undefined,
+        domain: String(upn),
       })
 
-      logger.info('API key created', {
+      const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
+      const hasPendingChallenge =
+        domainRecord?.status === 'pending_challenge' &&
+        domainRecord?.challengeExpiresAt &&
+        new Date(domainRecord.challengeExpiresAt) > now
+
+      const challengeUuid = hasPendingChallenge
+        ? domainRecord.challengeUuid
+        : crypto.randomUUID()
+
+      if (!hasPendingChallenge) {
+        const challengeExpiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
+        await dbClient.upsertApiKeyDomain({
+          sortKey: domainSortKey,
+          domain: String(upn),
+          env: String(envIdNum),
+          status: 'pending_challenge',
+          challengeUuid,
+          challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          requestedBy: createdBy,
+          authExpiresAt: '',
+        })
+      }
+
+      logger.info('DNS challenge required for new domain; credential created as ready_for_validation', {
+        domain: upn,
+        envId: envIdNum,
+        challengeUuid,
         jti,
         sortKey,
-        createdBy,
         operation: 'createApiKeyCredential',
       })
 
-      return res.status(201).json({ token, jti, sortKey })
+      return res.status(202).json({
+        status: 'ready_for_validation',
+        domain: upn,
+        envId: envIdNum,
+        challengeUuid,
+        jti,
+        sortKey,
+        txtRecord: `_izg-verify.${upn}`,
+        txtValue: `izg-challenge=${challengeUuid}`,
+      })
     } catch (error) {
       logger.error('Error creating API key credential', {
         operation: 'createApiKeyCredential',

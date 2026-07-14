@@ -11,4 +11,5 @@ export interface ApiKeyCredential extends DbAudit {
   env: string
   description?: string
   graceExpiresAt?: Date | null
+  domain?: string
 }
