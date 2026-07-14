@@ -291,18 +291,19 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchPendingApiKeyDomains(): Promise<any[]> {
+  async fetchAuthorizedApiKeyDomains(envId: string): Promise<any[]> {
     const now = new Date().toISOString()
     try {
       const result = await dynamodDbDocClient.send(
         new QueryCommand({
           TableName: TABLE_NAME,
           KeyConditionExpression: 'entityType = :et',
-          FilterExpression: '#s = :pending AND challengeExpiresAt > :now',
+          FilterExpression: '#s = :authorized AND env = :env AND authExpiresAt > :now',
           ExpressionAttributeNames: { '#s': 'status' },
           ExpressionAttributeValues: {
             ':et': 'ApiKeyDomain',
-            ':pending': 'pending_challenge',
+            ':authorized': 'authorized',
+            ':env': envId,
             ':now': now,
           },
         })
@@ -312,15 +313,14 @@ class Dynamo implements DbClient {
         domain: item.domain,
         env: item.env,
         status: item.status,
-        challengeUuid: item.challengeUuid,
-        challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
-        requestedBy: item.requestedBy,
-        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
+        authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
       }))
     } catch (error) {
-      logger.error('Error fetching pending ApiKeyDomains', {
+      logger.error('Error fetching authorized ApiKeyDomains', {
+        envId,
         errorMessage: error.message,
-        operation: 'fetchPendingApiKeyDomains',
+        operation: 'fetchAuthorizedApiKeyDomains',
       })
       throw error
     }
@@ -1296,6 +1296,7 @@ class Dynamo implements DbClient {
           revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
           env: item.env as string,
           description: item.description as string | undefined,
+          domain: item.domain as string | undefined,
           graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
           createdOn: item.createdOn ? new Date(item.createdOn) : null,
           createdBy: item.createdBy as string,
@@ -1304,6 +1305,44 @@ class Dynamo implements DbClient {
         }
       })
     )
+  }
+
+  async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
+    try {
+      const result = await dynamodDbDocClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: { entityType: 'ApiKeyCredential', sortKey },
+        })
+      )
+      if (!result.Item) return null
+      const item = result.Item
+      const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+      return {
+        jti: item.jti as string,
+        sortKey: item.sortKey as string,
+        jurisdictionId: item.jurisdictionId as string,
+        jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+        status: item.status as ApiKeyCredential['status'],
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        env: item.env as string,
+        description: item.description as string | undefined,
+        domain: item.domain as string | undefined,
+        graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        createdBy: item.createdBy as string,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        updatedBy: item.updatedBy as string,
+      }
+    } catch (error) {
+      logger.error('Error fetching ApiKeyCredential', {
+        sortKey,
+        errorMessage: error.message,
+        operation: 'getApiKeyCredential',
+      })
+      throw error
+    }
   }
 
   async revokeApiKeyCredential(
@@ -1425,6 +1464,7 @@ class Dynamo implements DbClient {
     expiresAt: Date
     createdBy: string
     description?: string
+    domain?: string
   }): Promise<void> {
     const item: Record<string, unknown> = {
       entityType: 'ApiKeyCredential',
@@ -1437,6 +1477,7 @@ class Dynamo implements DbClient {
       expiresAt: params.expiresAt.toISOString(),
       createdBy: params.createdBy,
       ...(params.description ? { description: params.description } : {}),
+      ...(params.domain ? { domain: params.domain } : {}),
     }
     const command = new PutCommand({
       TableName: TABLE_NAME,
@@ -1456,6 +1497,47 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'createApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  async updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
+  }): Promise<void> {
+    const updateParts = ['#status = :status']
+    const attrNames: Record<string, string> = { '#status': 'status' }
+    const attrValues: Record<string, unknown> = { ':status': params.status }
+    if (params.expiresAt) {
+      updateParts.push('#expiresAt = :expiresAt')
+      attrNames['#expiresAt'] = 'expiresAt'
+      attrValues[':expiresAt'] = params.expiresAt
+    }
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
+      UpdateExpression: `SET ${updateParts.join(', ')}`,
+      ExpressionAttributeNames: attrNames,
+      ExpressionAttributeValues: attrValues,
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential status updated', {
+        sortKey: params.sortKey,
+        status: params.status,
+        operation: 'updateApiKeyCredentialStatus',
+      })
+    } catch (error) {
+      logger.error('Error updating ApiKeyCredential status', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'updateApiKeyCredentialStatus',
       })
       throw error
     }
