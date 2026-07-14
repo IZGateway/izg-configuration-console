@@ -30,18 +30,21 @@ import {
 import AddIcon from '@mui/icons-material/Add'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import CheckIcon from '@mui/icons-material/Check'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import FlagIcon from '@mui/icons-material/Flag'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import TuneIcon from '@mui/icons-material/Tune'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
+import CustomSnackbar from '../SnackBar'
 import palette from '../../styles/theme/palette'
 import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
-import { ApiKeyDomain } from '../../lib/type/ApiKeyDomain'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 
@@ -64,7 +67,8 @@ interface ApiKey {
   jurisdiction: string
   jurisdictionId: string
   envRaw: string
-  status: 'Active' | 'Grace Period' | 'Revoked'
+  domain: string | null
+  status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | string
   created: string
   expires: string
   createdBy: string
@@ -88,15 +92,24 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     description: cred.description ?? '—',
     jurisdictionId: cred.jurisdictionId,
     envRaw: cred.env ?? '',
+    domain: cred.domain ?? null,
     environment: (() => {
       if (!cred.env) return '—'
       const code = isNaN(Number(cred.env)) ? cred.env.toUpperCase() : getEnvironmentName(Number(cred.env))
       return ENV_DISPLAY_NAMES[code] ?? code
     })(),
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
-    status: (cred.status
-      ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
-      : cred.status) as ApiKey['status'],
+    status: (() => {
+      const now = new Date()
+      const graceActive = cred.graceExpiresAt && new Date(cred.graceExpiresAt) > now
+      if (cred.status === 'revoked') return 'Revoked'
+      if (graceActive) return 'Grace Period'
+      if (cred.status === 'ready_for_validation') return 'Ready for Validation'
+      if (cred.status === 'active') return 'Active'
+      return cred.status
+        ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
+        : cred.status
+    })(),
     created: formatDate(cred.createdOn),
     expires: formatDate(cred.expiresAt),
     createdBy: cred.createdBy ?? '—',
@@ -185,7 +198,88 @@ const dataGridCustom = {
 
 // ─── Static sub-components (defined OUTSIDE main component to prevent infinite loops) ──
 
-function StatusCell({ status }: { status: ApiKey['status'] }) {
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <Box
+      sx={{
+        borderRadius: '12px',
+        backgroundColor: palette.greyLight,
+        p: 2,
+        minWidth: 140,
+      }}
+    >
+      <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+        {value}
+      </Typography>
+      <Typography
+        variant="caption"
+        sx={{ color: palette.greyText, fontWeight: 600, letterSpacing: '0.03em' }}
+      >
+        {label.toUpperCase()}
+      </Typography>
+    </Box>
+  )
+}
+
+function StatCards({ apiKeys }: { apiKeys: ApiKey[] }) {
+  const total = apiKeys.length
+  const active = apiKeys.filter((k) => k.status === 'Active').length
+  const revoked = apiKeys.filter((k) => k.status === 'Revoked').length
+  return (
+    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+      <StatCard label="Total Keys" value={total} />
+      <StatCard label="Active" value={active} />
+      <StatCard label="Revoked" value={revoked} />
+    </Box>
+  )
+}
+
+function ViewKeyDialog({
+  apiKey,
+  onClose,
+}: {
+  apiKey: ApiKey | null
+  onClose: () => void
+}) {
+  if (!apiKey) return null
+  return (
+    <CustomDialogBox
+      open={!!apiKey}
+      onClose={onClose}
+      maxWidth="sm"
+      titleText="View API Key"
+      content={
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <PolicyField label="Organization" value={apiKey.jurisdiction} />
+            <PolicyField label="Environment" value={apiKey.environment} />
+          </Box>
+          <PolicyField label="Description" value={apiKey.description} />
+          <PolicyField label="Status" value={apiKey.status} />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <PolicyField label="Created" value={apiKey.created} />
+            <PolicyField label="Expires" value={apiKey.expires} />
+          </Box>
+          <PolicyField label="Created By" value={apiKey.createdBy} />
+          <PolicyField label="Key ID" value={apiKey.keyId} />
+        </Box>
+      }
+      actions={
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={onClose}
+          sx={{ borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+        >
+          CLOSE
+        </Button>
+      }
+    />
+  )
+}
+
+function StatusCell({ row }: { row: ApiKey }) {
+  const { status } = row
   if (status === 'Active') {
     return (
       <Box
@@ -205,17 +299,21 @@ function StatusCell({ status }: { status: ApiKey['status'] }) {
   }
   if (status === 'Revoked') {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        <Typography variant="body2">{status}</Typography>
-        <Box
-          sx={{
-            width: 14,
-            height: 14,
-            borderRadius: '2px',
-            backgroundColor: palette.error,
-          }}
-        />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: palette.error }}>
+        <Typography variant="body2" sx={{ color: 'inherit', fontWeight: 500 }}>
+          Revoked
+        </Typography>
+        <FlagIcon sx={{ fontSize: 16 }} />
       </Box>
+    )
+  }
+  if (status === 'Grace Period') {
+    return (
+      <Typography variant="body2" sx={{ color: palette.warning ?? '#ed6c02' }}>
+        {row.graceExpiresAt
+          ? `Grace period expires on ${row.graceExpiresAt}`
+          : 'Grace Period'}
+      </Typography>
     )
   }
   return (
@@ -225,51 +323,26 @@ function StatusCell({ status }: { status: ApiKey['status'] }) {
   )
 }
 
-function ActionCell({
-  row,
-  onRevoke,
-  onRenew,
+function ActionIconButton({
+  title,
+  onClick,
+  disabled,
+  color,
+  children,
 }: {
-  row: ApiKey
-  onRevoke: (key: ApiKey) => void
-  onRenew: (key: ApiKey) => void
+  title: string
+  onClick: () => void
+  disabled?: boolean
+  color?: string
+  children: React.ReactNode
 }) {
-  if (row.graceExpiresAt) {
-    return (
-      <Typography variant="body2" sx={{ color: palette.greyText }}>
-        Grace period expires on {row.graceExpiresAt}
-      </Typography>
-    )
-  }
-  if (row.status === 'Revoked') {
-    return (
-      <Typography variant="body2" sx={{ color: palette.greyText }}>
-        {row.revokedAt ? `Revoked at ${row.revokedAt}` : 'Revoked'}
-      </Typography>
-    )
-  }
   return (
-    <Box sx={{ display: 'flex', gap: 0.5 }}>
-      {row.status === 'Active' && (
-        <Tooltip title="Renew key" arrow>
-          <IconButton
-            size="small"
-            onClick={() => onRenew(row)}
-            sx={{
-              border: `1px solid ${palette.border}`,
-              borderRadius: '50%',
-              width: 32,
-              height: 32,
-            }}
-          >
-            <AutorenewIcon sx={{ fontSize: 18, color: palette.greyText }} />
-          </IconButton>
-        </Tooltip>
-      )}
-      <Tooltip title="Revoke key" arrow>
+    <Tooltip title={title} arrow>
+      <span>
         <IconButton
           size="small"
-          onClick={() => onRevoke(row)}
+          onClick={onClick}
+          disabled={disabled}
           sx={{
             border: `1px solid ${palette.border}`,
             borderRadius: '50%',
@@ -277,11 +350,88 @@ function ActionCell({
             height: 32,
           }}
         >
-          <RemoveCircleOutlineIcon
-            sx={{ fontSize: 18, color: palette.error }}
-          />
+          <Box sx={{ display: 'flex', fontSize: 18, color: color ?? palette.greyText }}>
+            {children}
+          </Box>
         </IconButton>
-      </Tooltip>
+      </span>
+    </Tooltip>
+  )
+}
+
+function ActionCell({
+  row,
+  onView,
+  onRevoke,
+  onRenew,
+  onValidate,
+  validating,
+}: {
+  row: ApiKey
+  onView: (key: ApiKey) => void
+  onRevoke: (key: ApiKey) => void
+  onRenew: (key: ApiKey) => void
+  onValidate: (key: ApiKey) => void
+  validating: boolean
+}) {
+  if (row.status === 'Revoked') {
+    return (
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        {row.revokedAt ? `Revoked ${row.revokedAt}` : 'Revoked'}
+      </Typography>
+    )
+  }
+
+  if (row.status === 'Grace Period') {
+    return (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      </Box>
+    )
+  }
+
+  if (row.status === 'Ready for Validation') {
+    return (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <ActionIconButton
+          title="Validate domain"
+          onClick={() => onValidate(row)}
+          disabled={validating}
+          color={palette.primary}
+        >
+          <CheckIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+        <ActionIconButton title="Cancel key" onClick={() => onRevoke(row)} color={palette.error}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      </Box>
+    )
+  }
+
+  if (row.status === 'Validation') {
+    return (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <ActionIconButton title="View key" onClick={() => onView(row)} color={palette.primary}>
+          <VisibilityIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+        <ActionIconButton title="Cancel key" onClick={() => onRevoke(row)} color={palette.error}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      </Box>
+    )
+  }
+
+  // Active
+  return (
+    <Box sx={{ display: 'flex', gap: 0.5 }}>
+      <ActionIconButton title="Renew key" onClick={() => onRenew(row)}>
+        <AutorenewIcon sx={{ fontSize: 'inherit' }} />
+      </ActionIconButton>
+      <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+        <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+      </ActionIconButton>
     </Box>
   )
 }
@@ -314,7 +464,7 @@ function CustomToolbar({
       >
         <TextField
           size="small"
-          placeholder="Search..."
+          placeholder="Search by key ID or jurisdiction"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           sx={{
@@ -345,21 +495,34 @@ function CustomToolbar({
           value={tabValue}
           onChange={(_, v) => onTabChange(v)}
           aria-label="API key management tabs"
-          sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40, py: 0 } }}
+          TabIndicatorProps={{ style: { display: 'none' } }}
+          sx={{
+            minHeight: 40,
+            gap: 1,
+            '& .MuiTab-root': {
+              minHeight: 40,
+              py: 0,
+              borderRadius: '20px',
+              fontWeight: 700,
+              fontSize: '0.75rem',
+            },
+            '& .MuiTab-root.Mui-selected': {
+              backgroundColor: '#E8F0FE',
+              color: palette.primary,
+            },
+          }}
         >
           <Tab
             icon={<VpnKeyIcon sx={{ fontSize: 16 }} />}
             label="KEYS"
             iconPosition="start"
             id="apikeys-tab-0"
-            sx={{ fontWeight: 700, fontSize: '0.75rem' }}
           />
           <Tab
             icon={<ListAltIcon sx={{ fontSize: 16 }} />}
             label="AUDIT LOG"
             iconPosition="start"
             id="apikeys-tab-1"
-            sx={{ fontWeight: 700, fontSize: '0.75rem' }}
           />
         </Tabs>
       </Box>
@@ -413,6 +576,48 @@ function CustomFooter({ onCreateKey }: CustomFooterProps) {
 }
 
 // ─── Dialog helpers ───────────────────────────────────────────────────────────
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Typography
+        variant="body2"
+        sx={{ fontWeight: 500, color: palette.greyDarkTypography, whiteSpace: 'nowrap' }}
+      >
+        {label}
+        {required && (
+          <Box component="span" sx={{ color: palette.error }}>
+            {' '}*
+          </Box>
+        )}
+      </Typography>
+      <Box sx={{ flex: 1, borderTop: `1px solid ${palette.border}` }} />
+    </Box>
+  )
+}
+
+function LabeledField({
+  label,
+  required,
+  children,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+      <FieldLabel label={label} required={required} />
+      {children}
+    </Box>
+  )
+}
+
+const roundedFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '10px',
+  },
+}
 
 function PolicyField({ label, value }: { label: string; value: string }) {
   return (
@@ -660,6 +865,10 @@ const ENV_OPTIONS = DEST_TYPES.reduce(
   [] as { id: number; name: string; displayName: string }[]
 )
 
+const OTHER_DNS_VALUE = '__other__'
+
+type CreateKeyStep = 'form' | 'challenge' | 'success' | 'failure'
+
 function CreateKeyDialog({
   open,
   onClose,
@@ -677,20 +886,52 @@ function CreateKeyDialog({
 
   const [jurisdictionId, setJurisdictionId] = useState<string>('')
   const [envId, setEnvId] = useState<string>('')
-  const [upn, setUpn] = useState<string>('')
+  const [dnsSelection, setDnsSelection] = useState<string>('')
+  const [customDomain, setCustomDomain] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [step, setStep] = useState<CreateKeyStep>('form')
   const [challenge, setChallenge] = useState<{
+    sortKey: string
+    jti: string
     txtRecord: string
     txtValue: string
     domain: string
     envId: number
   } | null>(null)
-  const [verifying, setVerifying] = useState(false)
+  const [issuedToken, setIssuedToken] = useState<string | null>(null)
 
-  const handleSubmit = async () => {
-    if (!jurisdictionId || !envId || !upn.trim()) {
+  const { data: existingDomains } = useSWR<{ domain: string }[]>(
+    envId ? `/api/apikeys/domains?envId=${envId}` : null,
+    fetcher
+  )
+
+  const jurisdictionDescription =
+    (Array.isArray(jurisdictions) &&
+      jurisdictions.find((j) => String(j.jurisdictionId) === jurisdictionId)
+        ?.description) ||
+    ''
+
+  const isOther = dnsSelection === OTHER_DNS_VALUE
+
+  const handleClose = () => {
+    setJurisdictionId('')
+    setEnvId('')
+    setDnsSelection('')
+    setCustomDomain('')
+    setDescription('')
+    setChallenge(null)
+    setIssuedToken(null)
+    setError(null)
+    setStep('form')
+    onClose()
+  }
+
+  const handleNext = async () => {
+    const upn = isOther ? customDomain.trim() : dnsSelection
+    if (!jurisdictionId || !envId || !upn) {
       setError('Please fill in all fields.')
       return
     }
@@ -700,18 +941,26 @@ function CreateKeyDialog({
       const res = await fetch('/api/apikeys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jurisdictionId, envId: Number(envId), upn: upn.trim(), description: description.trim() || undefined }),
+        body: JSON.stringify({
+          jurisdictionId,
+          envId: Number(envId),
+          upn,
+          description: description.trim() || undefined,
+          dnsChoice: isOther ? 'other' : 'existing',
+        }),
       })
       const body = await res.json()
       if (res.status === 202) {
-        // DNS challenge required
         setChallenge({
+          sortKey: body.sortKey,
+          jti: body.jti,
           txtRecord: body.txtRecord,
           txtValue: body.txtValue,
           domain: body.domain,
           envId: body.envId,
         })
-        mutate('/api/apikeys/pending-domains')
+        mutate('/api/apikeys')
+        setStep('challenge')
         return
       }
       if (!res.ok) throw new Error(body.error || 'Failed to create key')
@@ -725,64 +974,62 @@ function CreateKeyDialog({
     }
   }
 
-  const handleVerify = async () => {
+  const handleValidate = async () => {
     if (!challenge) return
     setVerifying(true)
     setError(null)
     try {
-      const verifyRes = await fetch('/api/apikeys/verify-domain', {
+      const res = await fetch('/api/apikeys/verify-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: challenge.domain, envId: challenge.envId }),
+        body: JSON.stringify({
+          domain: challenge.domain,
+          envId: challenge.envId,
+          sortKey: challenge.sortKey,
+          jti: challenge.jti,
+          jurisdictionId,
+        }),
       })
-      const verifyBody = await verifyRes.json()
-      if (!verifyRes.ok || !verifyBody.verified) {
-        setError(verifyBody.error || 'Domain not verified yet. Check that the TXT record has propagated.')
+      const body = await res.json()
+      mutate('/api/apikeys')
+      if (!res.ok || !body.verified) {
+        setError(body.error || "We couldn't find the expected record.")
+        setStep('failure')
         return
       }
-      // Domain verified — now issue the JWT
-      const issueRes = await fetch('/api/apikeys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jurisdictionId, envId: Number(envId), upn: upn.trim(), description: description.trim() || undefined }),
-      })
-      const issueBody = await issueRes.json()
-      if (!issueRes.ok) throw new Error(issueBody.error || 'Failed to create key')
-      mutate('/api/apikeys')
-      handleClose()
-      onCreated(issueBody.token)
+      setIssuedToken(body.token)
+      setStep('success')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
+      setStep('failure')
     } finally {
       setVerifying(false)
     }
   }
 
-  const handleClose = () => {
-    setJurisdictionId('')
-    setEnvId('')
-    setUpn('')
-    setDescription('')
-    setChallenge(null)
-    setError(null)
-    onClose()
-  }
-
   const formContent = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="body2">
-        A signed JWT will be generated and stored. Copy it immediately — it
-        will not be shown again.
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        A new key pair will be generated for jurisdiction{' '}
+        {jurisdictionId || '—'}.
       </Typography>
       {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
-      <FormControl fullWidth size="small">
-        <InputLabel id="create-key-jurisdiction-label">Jurisdiction</InputLabel>
+      <LabeledField label="Organization" required>
         <Select
-          labelId="create-key-jurisdiction-label"
           value={jurisdictionId}
-          label="Jurisdiction"
           onChange={(e) => setJurisdictionId(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+          displayEmpty
+          fullWidth
+          sx={roundedFieldSx['& .MuiOutlinedInput-root']}
+          renderValue={(value) => {
+            if (!value) {
+              return <Box sx={{ color: palette.greyText }}>Select organization</Box>
+            }
+            const j = Array.isArray(jurisdictions)
+              ? jurisdictions.find((j) => String(j.jurisdictionId) === value)
+              : undefined
+            return j?.description || j?.name || value
+          }}
         >
           {Array.isArray(jurisdictions) &&
             jurisdictions.map((j) => (
@@ -791,115 +1038,252 @@ function CreateKeyDialog({
               </MenuItem>
             ))}
         </Select>
-      </FormControl>
-      <FormControl fullWidth size="small">
-        <InputLabel id="create-key-env-label">Environment</InputLabel>
+      </LabeledField>
+      <LabeledField label="Environment" required>
         <Select
-          labelId="create-key-env-label"
           value={envId}
-          label="Environment"
-          onChange={(e) => setEnvId(e.target.value)}
-          sx={{ borderRadius: '8px' }}
+          onChange={(e) => {
+            setEnvId(e.target.value)
+            setDnsSelection('')
+            setCustomDomain('')
+          }}
+          displayEmpty
+          fullWidth
+          sx={roundedFieldSx['& .MuiOutlinedInput-root']}
+          renderValue={(value) => {
+            if (!value) return <Box sx={{ color: palette.greyText }}>Select environment</Box>
+            return ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
+          }}
         >
           {ENV_OPTIONS.map((opt) => (
             <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
           ))}
         </Select>
-      </FormControl>
-      <TextField
-        label="Description"
-        placeholder="e.g. Massachusetts IIS production key"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        fullWidth
-        size="small"
-        multiline
-        rows={2}
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-      />
-      <TextField
-        label="Domain (upn)"
-        placeholder="e.g. immunize.ma.gov"
-        value={upn}
-        onChange={(e) => setUpn(e.target.value)}
-        fullWidth
-        size="small"
-        required
-        helperText="DNS domain validated at issuance — included in the JWT upn claim"
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
-      />
+      </LabeledField>
+      <LabeledField label="Description" required>
+        <TextField
+          placeholder="e.g AAMBAE"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          fullWidth
+          sx={roundedFieldSx}
+        />
+      </LabeledField>
+      <LabeledField label="DNS Name" required>
+        <Select
+          value={dnsSelection}
+          onChange={(e) => setDnsSelection(e.target.value)}
+          disabled={!envId}
+          displayEmpty
+          fullWidth
+          sx={roundedFieldSx['& .MuiOutlinedInput-root']}
+          renderValue={(value) => {
+            if (!value) {
+              return (
+                <Box sx={{ color: palette.greyText }}>
+                  Select from dropdown or create a new one
+                </Box>
+              )
+            }
+            return value === OTHER_DNS_VALUE ? 'Other' : value
+          }}
+        >
+          {Array.isArray(existingDomains) &&
+            existingDomains.map((d) => (
+              <MenuItem key={d.domain} value={d.domain}>{d.domain}</MenuItem>
+            ))}
+          <MenuItem value={OTHER_DNS_VALUE}>Other</MenuItem>
+        </Select>
+      </LabeledField>
+      {isOther && (
+        <LabeledField label="Custom DNS Name" required>
+          <TextField
+            placeholder="dev.iz.gateway.org"
+            value={customDomain}
+            onChange={(e) => setCustomDomain(e.target.value)}
+            fullWidth
+            sx={roundedFieldSx}
+          />
+        </LabeledField>
+      )}
     </Box>
   )
 
   const challengeContent = challenge && (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="body2">
-        Domain ownership must be verified before the key can be issued. Ask
-        your State IT team to add the following DNS TXT record:
+        Add the following DNS TXT record at your DNS provider to verify domain
+        ownership:
       </Typography>
-      {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
-      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
-        <Typography variant="caption" sx={{ color: palette.greyText, display: 'block', mb: 0.5 }}>
-          Host
-        </Typography>
-        <Typography variant="body2" sx={{ fontFamily: 'monospace', mb: 1.5 }}>
-          {challenge.txtRecord}
-        </Typography>
-        <Typography variant="caption" sx={{ color: palette.greyText, display: 'block', mb: 0.5 }}>
-          Value
-        </Typography>
+      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2, fontFamily: 'monospace' }}>
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-          {challenge.txtValue}
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
       </Box>
       <Alert severity="info" sx={{ borderRadius: '8px' }}>
-        DNS changes may take up to 48 hours to propagate. Return here and click
-        <strong> Verify Domain</strong> once the record is in place.
+        DNS changes may take up to 48 hours to propagate.
       </Alert>
     </Box>
   )
+
+  const successContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
+        Your validation for {jurisdictionDescription || challenge.envId} was
+        confirmed. You can now remove this record.
+      </Typography>
+      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
+        </Typography>
+      </Box>
+    </Box>
+  )
+
+  const failureContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
+        We couldn&apos;t find the expected record. Add this TXT record at your
+        DNS provider and try again:
+      </Typography>
+      <Box sx={{ backgroundColor: '#FDECEA', borderRadius: '8px', p: 2 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
+        </Typography>
+      </Box>
+      {error && <Alert severity="warning" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+    </Box>
+  )
+
+  const titleByStep: Record<CreateKeyStep, React.ReactNode> = {
+    form: 'Create API Key',
+    challenge: 'Verify Domain Ownership',
+    success: (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <CheckCircleIcon sx={{ fontSize: 28, color: palette.secondary }} />
+        <span>Validation Completed!</span>
+      </Box>
+    ),
+    failure: (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <WarningAmberIcon sx={{ fontSize: 28, color: palette.error }} />
+        <span>Validation Failed</span>
+      </Box>
+    ),
+  }
+
+  const contentByStep: Record<CreateKeyStep, React.ReactNode> = {
+    form: formContent,
+    challenge: challengeContent,
+    success: successContent,
+    failure: failureContent,
+  }
+
+  const actionsByStep: Record<CreateKeyStep, React.ReactNode> = {
+    form: (
+      <Button
+        variant="contained"
+        onClick={handleNext}
+        disabled={
+          submitting ||
+          !jurisdictionId ||
+          !envId ||
+          !dnsSelection ||
+          (isOther && !customDomain.trim())
+        }
+        sx={{
+          flex: 1,
+          borderRadius: '50px',
+          backgroundColor: palette.primary,
+          fontWeight: 700,
+          py: 1.5,
+          '&:hover': { backgroundColor: palette.primaryDark },
+        }}
+      >
+        {submitting ? 'CHECKING...' : 'NEXT'}
+      </Button>
+    ),
+    challenge: (
+      <Button
+        variant="contained"
+        onClick={handleValidate}
+        disabled={verifying}
+        sx={{
+          flex: 1,
+          borderRadius: '50px',
+          backgroundColor: palette.primary,
+          fontWeight: 700,
+          py: 1.5,
+          '&:hover': { backgroundColor: palette.primaryDark },
+        }}
+      >
+        {verifying ? 'VALIDATING...' : 'VALIDATE'}
+      </Button>
+    ),
+    success: (
+      <Button
+        variant="contained"
+        onClick={() => {
+          if (issuedToken) {
+            handleClose()
+            onCreated(issuedToken)
+          } else {
+            handleClose()
+          }
+        }}
+        sx={{
+          flex: 1,
+          borderRadius: '50px',
+          backgroundColor: palette.primary,
+          fontWeight: 700,
+          py: 1.5,
+          '&:hover': { backgroundColor: palette.primaryDark },
+        }}
+      >
+        VIEW KEY
+      </Button>
+    ),
+    failure: (
+      <Button
+        variant="contained"
+        onClick={handleValidate}
+        disabled={verifying}
+        sx={{
+          flex: 1,
+          borderRadius: '50px',
+          backgroundColor: palette.primary,
+          fontWeight: 700,
+          py: 1.5,
+          '&:hover': { backgroundColor: palette.primaryDark },
+        }}
+      >
+        {verifying ? 'RETRYING...' : 'TRY AGAIN'}
+      </Button>
+    ),
+  }
 
   return (
     <CustomDialogBox
       open={open}
       onClose={handleClose}
       maxWidth="sm"
-      titleText={challenge ? 'Verify Domain Ownership' : 'Create API Key'}
-      content={challenge ? challengeContent : formContent}
+      title={
+        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+          {titleByStep[step]}
+        </Typography>
+      }
+      content={contentByStep[step]}
       actions={
-        challenge ? (
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          {actionsByStep[step]}
           <Button
-            fullWidth
-            variant="contained"
-            onClick={handleVerify}
-            disabled={verifying}
-            sx={{
-              borderRadius: '50px',
-              backgroundColor: palette.primary,
-              fontWeight: 700,
-              py: 1.5,
-              '&:hover': { backgroundColor: palette.primaryDark },
-            }}
+            variant="outlined"
+            onClick={handleClose}
+            sx={{ flex: 1, borderRadius: '50px', fontWeight: 700, py: 1.5 }}
           >
-            {verifying ? 'VERIFYING...' : 'VERIFY DOMAIN'}
+            CLOSE
           </Button>
-        ) : (
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={submitting || !jurisdictionId || !envId || !upn.trim()}
-            sx={{
-              borderRadius: '50px',
-              backgroundColor: palette.primary,
-              fontWeight: 700,
-              py: 1.5,
-              '&:hover': { backgroundColor: palette.primaryDark },
-            }}
-          >
-            {submitting ? 'CHECKING...' : 'CREATE KEY'}
-          </Button>
-        )
+        </Box>
       }
     />
   )
@@ -926,11 +1310,12 @@ function KeyCreatedDialog({
       open={!!token}
       onClose={onClose}
       maxWidth="sm"
-      titleText="Key Created"
+      titleText="View API Key"
       content={
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="body2">
-            Copy this token now — it will not be shown again.
+            Validation Completed. Copy this token now — it will not be shown
+            again.
           </Typography>
           <Alert
             severity="warning"
@@ -1004,24 +1389,40 @@ export default function ApiKeyManagement() {
     { shouldRetryOnError: true, errorRetryCount: 3, errorRetryInterval: 1000 }
   )
 
-  const {
-    data: pendingDomains,
-    mutate: mutatePendingDomains,
-  } = useSWR<ApiKeyDomain[]>('/api/apikeys/pending-domains', fetcher, {
-    shouldRetryOnError: false,
-  })
+  const [validatingSortKey, setValidatingSortKey] = useState<string | null>(null)
 
   const apiKeys: ApiKey[] = useMemo(
-    () => (Array.isArray(rawCredentials) ? rawCredentials.map(toRow) : []),
-    [rawCredentials]
+    () =>
+      Array.isArray(rawCredentials)
+        ? rawCredentials.map((cred) => {
+            const row = toRow(cred)
+            return row.sortKey === validatingSortKey
+              ? { ...row, status: 'Validation' as const }
+              : row
+          })
+        : [],
+    [rawCredentials, validatingSortKey]
   )
 
   const [tabValue, setTabValue] = useState(0)
   const [search, setSearch] = useState('')
+  const [viewTarget, setViewTarget] = useState<ApiKey | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null)
   const [renewTarget, setRenewTarget] = useState<ApiKey | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
+  const [snackbar, setSnackbar] = useState<{
+    severity: 'success' | 'error' | 'warning' | 'info'
+    title: string
+    subtitle?: string
+  } | null>(null)
+
+  const showSnackbar = useCallback(
+    (severity: 'success' | 'error' | 'warning' | 'info', title: string, subtitle?: string) => {
+      setSnackbar({ severity, title, subtitle })
+    },
+    []
+  )
 
   const filteredRows = useMemo(
     () =>
@@ -1037,12 +1438,13 @@ export default function ApiKeyManagement() {
     [apiKeys, search]
   )
 
+  const handleView = useCallback((key: ApiKey) => setViewTarget(key), [])
   const handleRevoke = useCallback((key: ApiKey) => setRevokeTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
 
   const confirmRevoke = useCallback(async (reason?: string) => {
     if (!revokeTarget) return
-    const sortKey = revokeTarget.sortKey
+    const { sortKey, jurisdiction } = revokeTarget
     setRevokeTarget(null)
     try {
       const res = await fetch('/api/apikeys', {
@@ -1052,44 +1454,52 @@ export default function ApiKeyManagement() {
       })
       if (!res.ok) throw new Error('Failed to revoke key')
       mutate('/api/apikeys')
+      showSnackbar('success', `${jurisdiction} API Key revoked`, 'This key can no longer be used.')
     } catch {
-      // silently fail; grid reflects real state on next SWR refresh
+      showSnackbar('error', 'Failed to revoke key', 'Please try again.')
     }
-  }, [revokeTarget])
+  }, [revokeTarget, showSnackbar])
 
   const handleRenewCreated = useCallback((token: string) => {
     setCreatedToken(token)
   }, [])
 
-  const [verifyingDomain, setVerifyingDomain] = useState<string | null>(null)
-  const [verifyError, setVerifyError] = useState<Record<string, string>>({})
-
-  const handleVerifyDomain = useCallback(async (domain: ApiKeyDomain) => {
-    const key = domain.sortKey
-    setVerifyingDomain(key)
-    setVerifyError((prev) => ({ ...prev, [key]: '' }))
+  const handleValidateRow = useCallback(async (key: ApiKey) => {
+    if (!key.domain) {
+      showSnackbar('error', 'Unable to validate key', 'No DNS domain recorded for this key.')
+      return
+    }
+    setValidatingSortKey(key.sortKey)
     try {
       const res = await fetch('/api/apikeys/verify-domain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domain: domain.domain, envId: domain.env }),
+        body: JSON.stringify({
+          domain: key.domain,
+          envId: key.envRaw,
+          sortKey: key.sortKey,
+          jti: key.keyId,
+          jurisdictionId: key.jurisdictionId,
+        }),
       })
       const body = await res.json()
-      if (!res.ok || body.verified === false) {
-        setVerifyError((prev) => ({
-          ...prev,
-          [key]: body.error || 'Verification failed',
-        }))
-      } else {
-        mutatePendingDomains()
-        mutate('/api/apikeys')
+      mutate('/api/apikeys')
+      if (!res.ok || !body.verified) {
+        showSnackbar(
+          'error',
+          'DNS validation failed',
+          body.error || "We couldn't find the expected DNS record."
+        )
+        return
       }
+      showSnackbar('success', `${key.jurisdiction} API Key is active`, 'DNS domain successfully verified.')
+      if (body.token) setCreatedToken(body.token)
     } catch {
-      setVerifyError((prev) => ({ ...prev, [key]: 'Network error' }))
+      showSnackbar('error', 'DNS validation failed', 'Network error while validating domain.')
     } finally {
-      setVerifyingDomain(null)
+      setValidatingSortKey(null)
     }
-  }, [mutatePendingDomains])
+  }, [showSnackbar])
 
   const handleCreateKey = useCallback(() => setCreateDialogOpen(true), [])
 
@@ -1102,20 +1512,27 @@ export default function ApiKeyManagement() {
   const columns: GridColDef[] = useMemo(
     () => [
       {
-        field: 'keyId',
-        headerName: 'KEY ID',
-        flex: 1.5,
+        field: 'description',
+        headerName: 'DESCRIPTION',
+        flex: 1.8,
         minWidth: 140,
         renderCell: (params: GridRenderCellParams) => (
-          <Typography
-            variant="body2"
-            sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+          <Tooltip
+            title={
+              <>
+                ID
+                <br />
+                {(params.row as ApiKey).keyId}
+              </>
+            }
+            arrow
           >
-            {params.value}
-          </Typography>
+            <Typography variant="body2" noWrap>
+              {params.value}
+            </Typography>
+          </Tooltip>
         ),
       },
-      { field: 'description', headerName: 'DESCRIPTION', flex: 1.8, minWidth: 140 },
       {
         field: 'environment',
         headerName: 'ENVIRONMENT',
@@ -1124,17 +1541,17 @@ export default function ApiKeyManagement() {
       },
       {
         field: 'jurisdiction',
-        headerName: 'JURISDICTION',
+        headerName: 'ORGANIZATION',
         flex: 1.5,
         minWidth: 130,
       },
       {
         field: 'status',
         headerName: 'STATUS',
-        flex: 1.2,
-        minWidth: 120,
+        flex: 1.6,
+        minWidth: 160,
         renderCell: (params: GridRenderCellParams) => (
-          <StatusCell status={params.value as ApiKey['status']} />
+          <StatusCell row={params.row as ApiKey} />
         ),
       },
       { field: 'created', headerName: 'CREATED', flex: 1, minWidth: 100 },
@@ -1148,20 +1565,23 @@ export default function ApiKeyManagement() {
       {
         field: 'actions',
         headerName: 'ACTION',
-        flex: 1.5,
-        minWidth: 160,
+        flex: 1.8,
+        minWidth: 180,
         sortable: false,
         filterable: false,
         renderCell: (params: GridRenderCellParams) => (
           <ActionCell
             row={params.row as ApiKey}
+            onView={handleView}
             onRevoke={handleRevoke}
             onRenew={handleRenew}
+            onValidate={handleValidateRow}
+            validating={validatingSortKey === (params.row as ApiKey).sortKey}
           />
         ),
       },
     ],
-    [handleRevoke, handleRenew]
+    [handleView, handleRevoke, handleRenew, handleValidateRow, validatingSortKey]
   )
 
   const toolbarProps = useMemo(
@@ -1208,20 +1628,34 @@ export default function ApiKeyManagement() {
             marginBottom: '-16px',
           }}
         >
-          <Typography
-            sx={{ padding: 2, fontSize: '1.75rem', fontWeight: 700 }}
-            flexGrow={1}
-            display="flex"
-          >
-            API Key Management
-          </Typography>
+          <Box sx={{ padding: 2 }}>
+            <Typography sx={{ fontSize: '1.75rem', fontWeight: 700 }}>
+              API key management
+            </Typography>
+            <Typography variant="body2" sx={{ color: palette.greyText }}>
+              Monitor traffic, restrict permissions, and optimize your API
+              keys from a single dashboard.
+            </Typography>
+          </Box>
         </Card>
       </Box>
 
+      <Box sx={{ mt: 3 }}>
+        <StatCards apiKeys={apiKeys} />
+      </Box>
+
       <DataGrid
-        sx={dataGridCustom}
+        sx={{
+          ...dataGridCustom,
+          '& .MuiDataGrid-row.row-validation': {
+            backgroundColor: '#E8F0FE',
+          },
+        }}
         rows={tabValue === 0 ? filteredRows : []}
         columns={columns}
+        getRowClassName={(params) =>
+          (params.row as ApiKey).status === 'Validation' ? 'row-validation' : ''
+        }
         autoHeight
         pageSizeOptions={[5, 25, 50, 100]}
         initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
@@ -1256,74 +1690,24 @@ export default function ApiKeyManagement() {
         }}
       />
 
-      {Array.isArray(pendingDomains) && pendingDomains.length > 0 && (
-        <Box sx={{ mt: 4 }}>
-          <Card
-            sx={{
-              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-              mb: 0,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5 }}>
-              <WarningAmberIcon sx={{ color: palette.warning ?? '#ed6c02' }} />
-              <Typography sx={{ fontSize: '1.1rem', fontWeight: 700 }}>
-                Pending Domain Verifications ({pendingDomains.length})
-              </Typography>
+      <CustomSnackbar
+        open={!!snackbar}
+        severity={snackbar?.severity ?? 'info'}
+        message={
+          snackbar && (
+            <Box>
+              <Typography sx={{ fontWeight: 700 }}>{snackbar.title}</Typography>
+              {snackbar.subtitle && (
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {snackbar.subtitle}
+                </Typography>
+              )}
             </Box>
-          </Card>
-          <Box sx={{ border: '1px solid #e0e0e0', borderTop: 'none' }}>
-            {pendingDomains.map((d, idx) => {
-              const envCode = isNaN(Number(d.env))
-                ? String(d.env).toUpperCase()
-                : getEnvironmentName(Number(d.env))
-              const envLabel = ENV_DISPLAY_NAMES[envCode] ?? envCode
-              const txtRecord = `_izg-verify.${d.domain}`
-              const txtValue = `izg-challenge=${d.challengeUuid}`
-              const err = verifyError[d.sortKey]
-              return (
-                <Box
-                  key={d.sortKey}
-                  sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1,
-                    px: 2,
-                    py: 1.5,
-                    borderBottom: idx < pendingDomains.length - 1 ? '1px solid #e0e0e0' : 'none',
-                    backgroundColor: idx % 2 === 0 ? '#fafafa' : '#fff',
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        {d.domain}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: palette.greyText }}>
-                        {envLabel} · Requested by {d.requestedBy ?? '—'} · Expires {formatDate(d.challengeExpiresAt)}
-                      </Typography>
-                    </Box>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={verifyingDomain === d.sortKey}
-                      onClick={() => handleVerifyDomain(d)}
-                      startIcon={verifyingDomain === d.sortKey ? <CircularProgress size={14} /> : <CheckIcon />}
-                    >
-                      Verify Domain
-                    </Button>
-                  </Box>
-                  <Box sx={{ backgroundColor: '#f5f5f5', borderRadius: '6px', p: 1.5, fontFamily: 'monospace', fontSize: '0.78rem' }}>
-                    <Box><strong>Host:</strong> {txtRecord}</Box>
-                    <Box><strong>Value:</strong> {txtValue}</Box>
-                  </Box>
-                  {err && <Alert severity="warning" sx={{ py: 0 }}>{err}</Alert>}
-                </Box>
-              )
-            })}
-          </Box>
-        </Box>
-      )}
-
+          )
+        }
+        onClose={() => setSnackbar(null)}
+      />
+      <ViewKeyDialog apiKey={viewTarget} onClose={() => setViewTarget(null)} />
       <RevokeDialog
         apiKey={revokeTarget}
         onClose={() => setRevokeTarget(null)}
