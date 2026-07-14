@@ -114,5 +114,11 @@ export default interface ConfigConsoleMutateRepository {
     expiresAt: Date
     createdBy: string
     description?: string
+    domain?: string
+  }): Promise<void>
+  updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
   }): Promise<void>
 }

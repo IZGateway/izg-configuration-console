@@ -381,6 +381,10 @@ class EncryptedRepository implements DbClient {
     return await this.repository.fetchApiKeyCredentials()
   }
 
+  async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
+    return await this.repository.getApiKeyCredential(sortKey)
+  }
+
   async revokeApiKeyCredential(
     sortKey: string,
     revokedBy: string,
@@ -410,6 +414,7 @@ class EncryptedRepository implements DbClient {
     expiresAt: Date
     createdBy: string
     description?: string
+    domain?: string
   }): Promise<void> {
     return await this.repository.createApiKeyCredential(params)
   }
@@ -420,10 +425,6 @@ class EncryptedRepository implements DbClient {
 
   async getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null> {
     return await this.repository.getApiKeyDomain(sortKey)
-  }
-
-  async fetchPendingApiKeyDomains(): Promise<ApiKeyDomain[]> {
-    return await this.repository.fetchPendingApiKeyDomains()
   }
 
   async upsertApiKeyDomain(params: {
@@ -438,5 +439,17 @@ class EncryptedRepository implements DbClient {
     authExpiresAt?: string
   }): Promise<void> {
     return await this.repository.upsertApiKeyDomain(params)
+  }
+
+  async fetchAuthorizedApiKeyDomains(envId: string): Promise<ApiKeyDomain[]> {
+    return await this.repository.fetchAuthorizedApiKeyDomains(envId)
+  }
+
+  async updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
+  }): Promise<void> {
+    return await this.repository.updateApiKeyCredentialStatus(params)
   }
 }
