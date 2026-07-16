@@ -933,7 +933,9 @@ function CreateKeyDialog({
   } | null>(null)
 
   const { data: existingDomains } = useSWR<{ domain: string }[]>(
-    envId ? `/api/apikeys/domains?envId=${envId}` : null,
+    envId && jurisdictionId
+      ? `/api/apikeys/domains?envId=${envId}&jurisdictionId=${jurisdictionId}`
+      : null,
     fetcher
   )
 
@@ -1052,7 +1054,11 @@ function CreateKeyDialog({
       <LabeledField label="Organization" required>
         <Select
           value={jurisdictionId}
-          onChange={(e) => setJurisdictionId(e.target.value)}
+          onChange={(e) => {
+            setJurisdictionId(e.target.value)
+            setDnsSelection('')
+            setCustomDomain('')
+          }}
           displayEmpty
           fullWidth
           sx={roundedFieldSx['& .MuiOutlinedInput-root']}
@@ -1108,7 +1114,7 @@ function CreateKeyDialog({
         <Select
           value={dnsSelection}
           onChange={(e) => setDnsSelection(e.target.value)}
-          disabled={!envId}
+          disabled={!envId || !jurisdictionId}
           displayEmpty
           fullWidth
           sx={roundedFieldSx['& .MuiOutlinedInput-root']}

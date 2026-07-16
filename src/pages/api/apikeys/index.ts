@@ -58,7 +58,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const dbClient = await DbClientFactory.getDbClient()
-      const domainSortKey = `${envIdNum}#${upn}`
+      // DNS-name authorization is scoped per (env, jurisdiction) pair —
+      // a domain authorized for one jurisdiction must not be selectable
+      // as "existing" under a different jurisdiction.
+      const domainSortKey = `${envIdNum}#${jurisdictionId}#${upn}`
       const now = new Date()
       const createdBy = session.user.email || 'unknown'
 
@@ -133,6 +136,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           sortKey: domainSortKey,
           domain: String(upn),
           env: String(envIdNum),
+          jurisdictionId: String(jurisdictionId),
           status: 'pending_challenge',
           challengeUuid,
           challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),

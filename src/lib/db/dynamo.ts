@@ -232,6 +232,7 @@ class Dynamo implements DbClient {
         sortKey: item.sortKey,
         domain: item.domain,
         env: item.env,
+        jurisdictionId: item.jurisdictionId,
         status: item.status,
         challengeUuid: item.challengeUuid,
         challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
@@ -255,6 +256,7 @@ class Dynamo implements DbClient {
     sortKey: string
     domain: string
     env: string
+    jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string
     challengeExpiresAt?: string
@@ -267,6 +269,7 @@ class Dynamo implements DbClient {
       sortKey: params.sortKey,
       domain: params.domain,
       env: params.env,
+      jurisdictionId: params.jurisdictionId,
       status: params.status,
       ...(params.challengeUuid !== undefined ? { challengeUuid: params.challengeUuid } : {}),
       ...(params.challengeExpiresAt ? { challengeExpiresAt: params.challengeExpiresAt } : {}),
@@ -291,34 +294,51 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchAuthorizedApiKeyDomains(envId: string): Promise<any[]> {
-    const now = new Date().toISOString()
+  async fetchAuthorizedApiKeyDomains(
+    envId: string,
+    jurisdictionId: string
+  ): Promise<any[]> {
+    const nowMs = Date.now()
     try {
+      // Filtering by env/jurisdictionId/authExpiresAt is done in application
+      // code (with String() coercion) rather than in a DynamoDB
+      // FilterExpression, because DynamoDB comparisons are type-strict — if
+      // those attributes were ever hand-entered as Number instead of String,
+      // a `env = :env` expression would silently (and confusingly) exclude
+      // an otherwise-matching item instead of erroring.
       const result = await dynamodDbDocClient.send(
         new QueryCommand({
           TableName: TABLE_NAME,
           KeyConditionExpression: 'entityType = :et',
-          FilterExpression: '#s = :authorized AND env = :env AND authExpiresAt > :now',
-          ExpressionAttributeNames: { '#s': 'status' },
-          ExpressionAttributeValues: {
-            ':et': 'ApiKeyDomain',
-            ':authorized': 'authorized',
-            ':env': envId,
-            ':now': now,
-          },
+          ExpressionAttributeValues: { ':et': 'ApiKeyDomain' },
         })
       )
-      return (result.Items || []).map((item) => ({
-        sortKey: item.sortKey,
-        domain: item.domain,
-        env: item.env,
-        status: item.status,
-        validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
-        authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
-      }))
+      return (result.Items || [])
+        .filter((item) => {
+          const authExpiresAtMs = item.authExpiresAt
+            ? new Date(item.authExpiresAt).getTime()
+            : NaN
+          return (
+            String(item.status) === 'authorized' &&
+            String(item.env) === String(envId) &&
+            String(item.jurisdictionId) === String(jurisdictionId) &&
+            !isNaN(authExpiresAtMs) &&
+            authExpiresAtMs > nowMs
+          )
+        })
+        .map((item) => ({
+          sortKey: item.sortKey,
+          domain: item.domain,
+          env: item.env,
+          jurisdictionId: item.jurisdictionId,
+          status: item.status,
+          validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
+          authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
+        }))
     } catch (error) {
       logger.error('Error fetching authorized ApiKeyDomains', {
         envId,
+        jurisdictionId,
         errorMessage: error.message,
         operation: 'fetchAuthorizedApiKeyDomains',
       })
