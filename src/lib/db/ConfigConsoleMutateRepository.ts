@@ -90,6 +90,7 @@ export default interface ConfigConsoleMutateRepository {
     sortKey: string
     domain: string
     env: string
+    jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string
     challengeExpiresAt?: string

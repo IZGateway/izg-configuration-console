@@ -61,5 +61,8 @@ export default interface ConfigConsoleFetchRepository {
   getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null>
   fetchJurisdictions(): Promise<Jurisdiction[]>
   getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null>
-  fetchAuthorizedApiKeyDomains(envId: string): Promise<ApiKeyDomain[]>
+  fetchAuthorizedApiKeyDomains(
+    envId: string,
+    jurisdictionId: string
+  ): Promise<ApiKeyDomain[]>
 }

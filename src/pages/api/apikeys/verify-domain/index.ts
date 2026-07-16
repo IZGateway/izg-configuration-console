@@ -18,12 +18,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
 
-    const { domain, envId, sortKey: credentialSortKey } = req.body
-    if (!domain || envId === undefined || envId === null) {
-      return res.status(400).json({ error: 'domain and envId are required' })
+    const { domain, envId, jurisdictionId, sortKey: credentialSortKey } = req.body
+    if (!domain || envId === undefined || envId === null || !jurisdictionId) {
+      return res.status(400).json({ error: 'domain, envId, and jurisdictionId are required' })
     }
 
-    const sortKey = `${envId}#${domain}`
+    // DNS-name authorization is scoped per (env, jurisdiction) pair.
+    const sortKey = `${envId}#${jurisdictionId}#${domain}`
     const dbClient = await DbClientFactory.getDbClient()
     const domainRecord = await dbClient.getApiKeyDomain(sortKey)
 
@@ -103,6 +104,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       sortKey,
       domain,
       env: String(envId),
+      jurisdictionId: String(jurisdictionId),
       status: 'authorized',
       validatedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
       authExpiresAt: authExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
