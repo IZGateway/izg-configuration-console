@@ -17,13 +17,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
 
-    const { envId } = req.query
+    const { envId, jurisdictionId } = req.query
     if (!envId || typeof envId !== 'string') {
       return res.status(400).json({ error: 'envId is required' })
     }
+    if (!jurisdictionId || typeof jurisdictionId !== 'string') {
+      return res.status(400).json({ error: 'jurisdictionId is required' })
+    }
 
     const dbClient = await DbClientFactory.getDbClient()
-    const domains = await dbClient.fetchAuthorizedApiKeyDomains(envId)
+    const domains = await dbClient.fetchAuthorizedApiKeyDomains(envId, jurisdictionId)
 
     return res.status(200).json(domains)
   } catch (error) {

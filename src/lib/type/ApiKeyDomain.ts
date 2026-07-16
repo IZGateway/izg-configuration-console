@@ -4,6 +4,7 @@ export interface ApiKeyDomain extends DbAudit {
   sortKey: string
   domain: string
   env: string
+  jurisdictionId: string
   status: 'pending_challenge' | 'authorized'
   challengeUuid?: string
   challengeExpiresAt?: Date | null
