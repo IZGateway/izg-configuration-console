@@ -121,4 +121,5 @@ export default interface ConfigConsoleMutateRepository {
     status: string
     expiresAt?: string
   }): Promise<void>
+  markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void>
 }

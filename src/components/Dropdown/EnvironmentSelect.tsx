@@ -48,6 +48,29 @@ const EnvironmentSelect: React.FC<EnvironmentSelectProps> = ({
   )
 }
 
+// Map NEXT_PUBLIC_APP_ENV to the corresponding allowed environment values.
+// Single source of truth for which environments are selectable from a given
+// deploy environment — reused anywhere else in the app that needs the same
+// filtering (e.g. the API Key Management "Create Key" environment dropdown).
+const envMapping: Record<string, string[]> = {
+  production: ['1', '3'], // Production shows both Production and Onboarding
+  test: ['2'],
+  onboarding: ['3'],
+  preprod: ['4'],
+  development: ['5', '2'], // Development shows both Development and Test
+}
+
+/**
+ * Returns the list of environment values (ids) selectable from the app's
+ * current NEXT_PUBLIC_APP_ENV. Falls back to all environments if the current
+ * app env isn't in the mapping.
+ */
+export const getAllowedEnvironmentValues = (): string[] => {
+  const appEnv =
+    process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() || 'development'
+  return envMapping[appEnv] ?? allEnvironments.map((env) => env.value)
+}
+
 /**
  * Get available environments based on NEXT_PUBLIC_APP_ENV filtering
  */
@@ -55,25 +78,13 @@ const getAvailableEnvironments = (
   disabled = false,
   currentValue = ''
 ): Array<{ value: string; label: string }> => {
-  const appEnv =
-    process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase() || 'development'
   const stringValue = String(currentValue)
-
-  // Map NEXT_PUBLIC_APP_ENV to corresponding environment values
-  const envMapping: Record<string, string[]> = {
-    production: ['1', '3'], // Production shows both Production and Onboarding
-    test: ['2'],
-    onboarding: ['3'],
-    preprod: ['4'],
-    development: ['5', '2'], // Development shows both Development and Test
-  }
-
-  const allowedEnvValues = envMapping[appEnv]
+  const allowedEnvValues = getAllowedEnvironmentValues()
 
   // Get filtered environments based on NEXT_PUBLIC_APP_ENV
-  const filteredEnvironments = allowedEnvValues
-    ? allEnvironments.filter((env) => allowedEnvValues.includes(env.value))
-    : allEnvironments
+  const filteredEnvironments = allEnvironments.filter((env) =>
+    allowedEnvValues.includes(env.value)
+  )
 
   // If disabled (edit mode)
   if (disabled && stringValue) {
