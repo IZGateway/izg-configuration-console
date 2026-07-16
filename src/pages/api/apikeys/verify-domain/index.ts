@@ -61,7 +61,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const txtHost = `_izg-verify.${domain}`
     let records: string[][]
     try {
-      records = await dns.resolveTxt(txtHost)
+      if (process.env.NODE_ENV === 'development') {
+        // LOCAL DEV ONLY — bypasses the real DNS lookup so you can exercise
+        // the success path without owning/controlling the test domain.
+        // Artificial delay so the transient "Validation" row state is
+        // actually visible in the UI. REVERT BEFORE COMMITTING.
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+        records = [[`izg-challenge=${domainRecord.challengeUuid}`]]
+      } else {
+        records = await dns.resolveTxt(txtHost)
+      }
     } catch {
       return res.status(200).json({
         verified: false,
