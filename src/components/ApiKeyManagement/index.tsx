@@ -41,6 +41,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import CustomSnackbar from '../SnackBar'
+import { getAllowedEnvironmentValues } from '../Dropdown/EnvironmentSelect'
 import palette from '../../styles/theme/palette'
 import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
@@ -75,6 +76,7 @@ interface ApiKey {
   revokedAt: string | null
   graceExpiresAt: string | null
   expiresAtRaw: string | null
+  viewed: boolean
 }
 
 function formatDate(value: string | Date | null | undefined): string {
@@ -120,6 +122,7 @@ function toRow(cred: ApiKeyCredential): ApiKey {
       const d = new Date(cred.expiresAt)
       return isNaN(d.getTime()) ? null : d.toISOString()
     })(),
+    viewed: !!cred.viewedAt,
   }
 }
 
@@ -365,6 +368,7 @@ function ActionCell({
   onRevoke,
   onRenew,
   onValidate,
+  onRevealToken,
   validating,
 }: {
   row: ApiKey
@@ -372,6 +376,7 @@ function ActionCell({
   onRevoke: (key: ApiKey) => void
   onRenew: (key: ApiKey) => void
   onValidate: (key: ApiKey) => void
+  onRevealToken: (key: ApiKey) => void
   validating: boolean
 }) {
   if (row.status === 'Revoked') {
@@ -426,6 +431,11 @@ function ActionCell({
   // Active
   return (
     <Box sx={{ display: 'flex', gap: 0.5 }}>
+      {!row.viewed && (
+        <ActionIconButton title="View key" onClick={() => onRevealToken(row)} color={palette.primary}>
+          <VisibilityIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      )}
       <ActionIconButton title="Renew key" onClick={() => onRenew(row)}>
         <AutorenewIcon sx={{ fontSize: 'inherit' }} />
       </ActionIconButton>
@@ -720,11 +730,11 @@ function RevokeDialog({
 function RenewDialog({
   apiKey,
   onClose,
-  onCreated,
+  onRenewed,
 }: {
   apiKey: ApiKey | null
   onClose: () => void
-  onCreated: (token: string) => void
+  onRenewed: (sortKey: string) => void
 }) {
   const [upn, setUpn] = useState('')
   const [description, setDescription] = useState('')
@@ -779,10 +789,10 @@ function RenewDialog({
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || 'Failed to renew key')
       }
-      const { token } = await res.json()
+      const { sortKey } = await res.json()
       mutate('/api/apikeys')
       handleClose()
-      onCreated(token)
+      onRenewed(sortKey)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to renew key')
     } finally {
@@ -865,7 +875,27 @@ const ENV_OPTIONS = DEST_TYPES.reduce(
   [] as { id: number; name: string; displayName: string }[]
 )
 
+// Environments selectable when creating a new key — filtered down to what's
+// relevant for the app's own deploy environment (same single source of truth
+// EnvironmentSelect uses elsewhere in the app). ENV_OPTIONS itself stays
+// unfiltered since existing keys can carry any environment value regardless
+// of where this instance of the console is deployed.
+const ALLOWED_CREATE_ENV_IDS = getAllowedEnvironmentValues()
+const CREATE_ENV_OPTIONS = ENV_OPTIONS.filter((opt) =>
+  ALLOWED_CREATE_ENV_IDS.includes(String(opt.id))
+)
+
 const OTHER_DNS_VALUE = '__other__'
+
+// Validates a custom DNS name entered when "Other" is selected: requires a
+// real FQDN (at least one dot, e.g. dev.iz.gateway.org) — labels 1-63 chars,
+// letters/digits/hyphens only, no leading/trailing hyphen, 253 chars max.
+const DOMAIN_NAME_REGEX =
+  /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$/
+
+function isValidDomainName(value: string): boolean {
+  return DOMAIN_NAME_REGEX.test(value.trim())
+}
 
 type CreateKeyStep = 'form' | 'challenge' | 'success' | 'failure'
 
@@ -876,7 +906,7 @@ function CreateKeyDialog({
 }: {
   open: boolean
   onClose: () => void
-  onCreated: (token: string) => void
+  onCreated: (sortKey: string) => void
 }) {
   const { status: sessionStatus } = useSession()
   const { data: jurisdictions } = useSWR<Jurisdiction[]>(
@@ -901,7 +931,6 @@ function CreateKeyDialog({
     domain: string
     envId: number
   } | null>(null)
-  const [issuedToken, setIssuedToken] = useState<string | null>(null)
 
   const { data: existingDomains } = useSWR<{ domain: string }[]>(
     envId ? `/api/apikeys/domains?envId=${envId}` : null,
@@ -923,7 +952,6 @@ function CreateKeyDialog({
     setCustomDomain('')
     setDescription('')
     setChallenge(null)
-    setIssuedToken(null)
     setError(null)
     setStep('form')
     onClose()
@@ -933,6 +961,10 @@ function CreateKeyDialog({
     const upn = isOther ? customDomain.trim() : dnsSelection
     if (!jurisdictionId || !envId || !upn) {
       setError('Please fill in all fields.')
+      return
+    }
+    if (isOther && !isValidDomainName(upn)) {
+      setError('Enter a valid domain name, e.g. dev.iz.gateway.org')
       return
     }
     setSubmitting(true)
@@ -966,7 +998,7 @@ function CreateKeyDialog({
       if (!res.ok) throw new Error(body.error || 'Failed to create key')
       mutate('/api/apikeys')
       handleClose()
-      onCreated(body.token)
+      onCreated(body.sortKey)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create key')
     } finally {
@@ -997,7 +1029,6 @@ function CreateKeyDialog({
         setStep('failure')
         return
       }
-      setIssuedToken(body.token)
       setStep('success')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Verification failed')
@@ -1052,10 +1083,10 @@ function CreateKeyDialog({
           sx={roundedFieldSx['& .MuiOutlinedInput-root']}
           renderValue={(value) => {
             if (!value) return <Box sx={{ color: palette.greyText }}>Select environment</Box>
-            return ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
+            return CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
           }}
         >
-          {ENV_OPTIONS.map((opt) => (
+          {CREATE_ENV_OPTIONS.map((opt) => (
             <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
           ))}
         </Select>
@@ -1101,6 +1132,12 @@ function CreateKeyDialog({
             placeholder="dev.iz.gateway.org"
             value={customDomain}
             onChange={(e) => setCustomDomain(e.target.value)}
+            error={!!customDomain && !isValidDomainName(customDomain)}
+            helperText={
+              customDomain && !isValidDomainName(customDomain)
+                ? 'Enter a valid domain name, e.g. dev.iz.gateway.org'
+                : ' '
+            }
             fullWidth
             sx={roundedFieldSx}
           />
@@ -1189,7 +1226,7 @@ function CreateKeyDialog({
           !jurisdictionId ||
           !envId ||
           !dnsSelection ||
-          (isOther && !customDomain.trim())
+          (isOther && !isValidDomainName(customDomain))
         }
         sx={{
           flex: 1,
@@ -1224,12 +1261,9 @@ function CreateKeyDialog({
       <Button
         variant="contained"
         onClick={() => {
-          if (issuedToken) {
-            handleClose()
-            onCreated(issuedToken)
-          } else {
-            handleClose()
-          }
+          const sortKey = challenge?.sortKey
+          handleClose()
+          if (sortKey) onCreated(sortKey)
         }}
         sx={{
           flex: 1,
@@ -1460,9 +1494,34 @@ export default function ApiKeyManagement() {
     }
   }, [revokeTarget, showSnackbar])
 
-  const handleRenewCreated = useCallback((token: string) => {
-    setCreatedToken(token)
-  }, [])
+  // Centralized one-time token reveal — the JWT is never persisted; it's
+  // deterministically regenerated here from claims fixed at creation, and
+  // the credential is marked viewed atomically so it can never be retrieved
+  // again through this endpoint. Used by create/renew/validate success AND
+  // by the table's own View action for any Active key that hasn't been
+  // viewed yet (e.g. the create/validate modal was closed before viewing).
+  const revealToken = useCallback(async (sortKey: string) => {
+    try {
+      const res = await fetch('/api/apikeys/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sortKey }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        showSnackbar('error', 'Unable to retrieve key', body.error || 'Please try again.')
+        return
+      }
+      mutate('/api/apikeys')
+      setCreatedToken(body.token)
+    } catch {
+      showSnackbar('error', 'Unable to retrieve key', 'Network error.')
+    }
+  }, [showSnackbar])
+
+  const handleRevealToken = useCallback((key: ApiKey) => {
+    revealToken(key.sortKey)
+  }, [revealToken])
 
   const handleValidateRow = useCallback(async (key: ApiKey) => {
     if (!key.domain) {
@@ -1493,7 +1552,6 @@ export default function ApiKeyManagement() {
         return
       }
       showSnackbar('success', `${key.jurisdiction} API Key is active`, 'DNS domain successfully verified.')
-      if (body.token) setCreatedToken(body.token)
     } catch {
       showSnackbar('error', 'DNS validation failed', 'Network error while validating domain.')
     } finally {
@@ -1576,12 +1634,13 @@ export default function ApiKeyManagement() {
             onRevoke={handleRevoke}
             onRenew={handleRenew}
             onValidate={handleValidateRow}
+            onRevealToken={handleRevealToken}
             validating={validatingSortKey === (params.row as ApiKey).sortKey}
           />
         ),
       },
     ],
-    [handleView, handleRevoke, handleRenew, handleValidateRow, validatingSortKey]
+    [handleView, handleRevoke, handleRenew, handleValidateRow, handleRevealToken, validatingSortKey]
   )
 
   const toolbarProps = useMemo(
@@ -1716,12 +1775,12 @@ export default function ApiKeyManagement() {
       <RenewDialog
         apiKey={renewTarget}
         onClose={() => setRenewTarget(null)}
-        onCreated={handleRenewCreated}
+        onRenewed={revealToken}
       />
       <CreateKeyDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
-        onCreated={(token) => setCreatedToken(token)}
+        onCreated={revealToken}
       />
       <KeyCreatedDialog
         token={createdToken}

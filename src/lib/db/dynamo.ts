@@ -1297,6 +1297,7 @@ class Dynamo implements DbClient {
           env: item.env as string,
           description: item.description as string | undefined,
           domain: item.domain as string | undefined,
+          viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
           graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
           createdOn: item.createdOn ? new Date(item.createdOn) : null,
           createdBy: item.createdBy as string,
@@ -1329,6 +1330,7 @@ class Dynamo implements DbClient {
         env: item.env as string,
         description: item.description as string | undefined,
         domain: item.domain as string | undefined,
+        viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
         graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
         createdOn: item.createdOn ? new Date(item.createdOn) : null,
         createdBy: item.createdBy as string,
@@ -1538,6 +1540,35 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'updateApiKeyCredentialStatus',
+      })
+      throw error
+    }
+  }
+
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey },
+      UpdateExpression: 'SET #viewedAt = :viewedAt',
+      ExpressionAttributeNames: { '#viewedAt': 'viewedAt' },
+      ExpressionAttributeValues: { ':viewedAt': viewedAt },
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential marked viewed', {
+        sortKey,
+        viewedAt,
+        operation: 'markApiKeyCredentialViewed',
+      })
+    } catch (error) {
+      logger.error('Error marking ApiKeyCredential viewed', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'markApiKeyCredentialViewed',
       })
       throw error
     }

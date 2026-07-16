@@ -4,34 +4,7 @@ import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
 import crypto from 'crypto'
-
-function base64url(buf: Buffer | string): string {
-  const b = typeof buf === 'string' ? Buffer.from(buf, 'utf8') : buf
-  return b.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
-function signJwt(payload: Record<string, unknown>, secret: string, kid: string): string {
-  const header = base64url(JSON.stringify({ alg: 'HS256', typ: 'JWT', kid }))
-  const body = base64url(JSON.stringify(payload))
-  const signingInput = `${header}.${body}`
-  const sig = crypto
-    .createHmac('sha256', Buffer.from(secret, 'utf8'))
-    .update(signingInput)
-    .digest()
-  return `${signingInput}.${base64url(sig)}`
-}
-
-async function getJwtSigningSecret(): Promise<{ secretString: string; kid: string }> {
-  const secretId = process.env.JWT_SIGNING_SECRET_ID
-  if (!secretId) throw new Error('JWT_SIGNING_SECRET_ID env var not set')
-  const client = new SecretsManagerClient({})
-  const response = await client.send(new GetSecretValueCommand({ SecretId: secretId }))
-  const secretString = response.SecretString
-  if (!secretString) throw new Error('Secret has no SecretString value')
-  return { secretString, kid: response.VersionId || '' }
-}
 
 /** Add N business days (Mon–Fri) to a date, excluding the start date. */
 function addBusinessDays(date: Date, days: number): Date {
@@ -67,8 +40,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
     }
 
-    const { secretString, kid } = await getJwtSigningSecret()
-
     const newJti = crypto.randomUUID()
     const now = new Date()
     const ONE_YEAR_MS = 365 * 24 * 3600 * 1000
@@ -87,27 +58,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       expiresAt = new Date(now.getTime() + ONE_YEAR_MS)
     }
     const graceExpiresAt = addBusinessDays(now, 10)
-    const iss = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const renewedBy = session.user.email || 'unknown'
     const renewedAt = now.toISOString().replace(/\.\d{3}Z$/, 'Z')
-
-    const payload: Record<string, unknown> = {
-      iss,
-      sub: String(jurisdictionId),
-      jti: newJti,
-      iat: Math.floor(now.getTime() / 1000),
-      exp: Math.floor(expiresAt.getTime() / 1000),
-      upn: String(upn),
-      roles: ['ads', 'soap'],
-      env: envIdNum,
-    }
-
-    const token = signJwt(payload, secretString, kid)
     const newSortKey = `${envIdNum}#${newJti}`
 
     const dbClient = await DbClientFactory.getDbClient()
 
-    // Create the new key record
+    // Create the new key record. The JWT itself is never generated/persisted
+    // here — it's regenerated on demand, once, via POST /api/apikeys/token.
     await dbClient.createApiKeyCredential({
       jti: newJti,
       sortKey: newSortKey,
@@ -118,6 +76,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       expiresAt,
       createdBy: renewedBy,
       description: description ? String(description) : undefined,
+      domain: String(upn),
     })
 
     // Mark old key as superseded with grace period
@@ -138,7 +97,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       operation: 'renewApiKeyCredential',
     })
 
-    return res.status(201).json({ token, jti: newJti, sortKey: newSortKey })
+    return res.status(201).json({ jti: newJti, sortKey: newSortKey })
   } catch (error) {
     logger.error('Error renewing API key credential', {
       operation: 'renewApiKeyCredential',

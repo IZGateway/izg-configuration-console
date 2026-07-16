@@ -5,7 +5,6 @@ import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import dns from 'dns/promises'
-import { getJwtSigningSecret, issueApiKeyJwt } from '../../../../lib/apikeys/jwt'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -19,7 +18,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
 
-    const { domain, envId, sortKey: credentialSortKey, jti, jurisdictionId } = req.body
+    const { domain, envId, sortKey: credentialSortKey } = req.body
     if (!domain || envId === undefined || envId === null) {
       return res.status(400).json({ error: 'domain and envId are required' })
     }
@@ -32,37 +31,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(404).json({ error: 'No pending challenge found for this domain' })
     }
 
-    // The JWT is never persisted — its claims (jti, upn, env, iat, exp) are
-    // fixed at "Ready for Validation" creation time and stored on the
-    // credential row, so the exact same token can be deterministically
-    // re-signed here (HMAC-SHA256 is deterministic for identical input).
-    const activateCredential = async (): Promise<string | undefined> => {
-      if (!credentialSortKey || !jti || !jurisdictionId) return undefined
-      const credential = await dbClient.getApiKeyCredential(String(credentialSortKey))
-      if (!credential || !credential.createdOn || !credential.expiresAt) return undefined
-
-      const { secretString, kid } = await getJwtSigningSecret()
-      const token = issueApiKeyJwt({
-        jurisdictionId: String(jurisdictionId),
-        jti: String(jti),
-        upn: String(domain),
-        envId: Number(envId),
-        secretString,
-        kid,
-        issuedAt: credential.createdOn,
-        expiresAt: credential.expiresAt,
-        iss: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-      })
+    // Flips the credential to active. The JWT itself is never generated or
+    // persisted here — it's only ever regenerated on demand, once, via
+    // POST /api/apikeys/token (deterministically re-signed from claims fixed
+    // at creation time), the first time someone actually views it.
+    const activateCredential = async (): Promise<void> => {
+      if (!credentialSortKey) return
       await dbClient.updateApiKeyCredentialStatus({
         sortKey: String(credentialSortKey),
         status: 'active',
       })
-      return token
     }
 
     if (domainRecord.status === 'authorized') {
-      const token = await activateCredential()
-      return res.status(200).json({ verified: true, alreadyAuthorized: true, token })
+      await activateCredential()
+      return res.status(200).json({ verified: true, alreadyAuthorized: true })
     }
 
     if (!domainRecord.challengeUuid) {
@@ -116,8 +99,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       operation: 'verifyDomain',
     })
 
-    const token = await activateCredential()
-    return res.status(200).json({ verified: true, token })
+    await activateCredential()
+    return res.status(200).json({ verified: true })
   } catch (error) {
     logger.error('Error verifying domain', {
       operation: 'verifyDomain',
