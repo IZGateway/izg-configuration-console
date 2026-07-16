@@ -4,6 +4,7 @@ import LockIcon from '@mui/icons-material/Lock'
 import GroupIcon from '@mui/icons-material/Group'
 import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeMosaicIcon from '@mui/icons-material/AutoAwesomeMosaic'
+import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import React from 'react'
 const iconSx = {
   fontSize: '2rem',
@@ -50,6 +51,12 @@ export const menuItems: MenuItem[] = [
     label: 'Console',
     icon: <AutoAwesomeMosaicIcon sx={iconSx} />,
     path: '/console',
+    adminOnly: true,
+  },
+  {
+    label: 'API Key Management',
+    icon: <VpnKeyIcon sx={iconSx} />,
+    path: '/apikeys',
     adminOnly: true,
   },
 ]

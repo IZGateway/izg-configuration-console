@@ -8,6 +8,9 @@ import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
+import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { Jurisdiction } from '../type/Jurisdiction'
+import { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -54,4 +57,9 @@ export default interface ConfigConsoleFetchRepository {
     environment: number,
     destinationId: string
   ): Promise<AllowedUserAudit[]>
+  fetchApiKeyCredentials(): Promise<ApiKeyCredential[]>
+  getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null>
+  fetchJurisdictions(): Promise<Jurisdiction[]>
+  getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null>
+  fetchAuthorizedApiKeyDomains(envId: string): Promise<ApiKeyDomain[]>
 }

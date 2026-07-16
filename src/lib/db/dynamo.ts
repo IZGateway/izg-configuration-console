@@ -9,6 +9,7 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
+import { ApiKeyCredential } from '../type/ApiKeyCredential'
 import { asyncRequestContext } from '../Context'
 import os from 'os'
 import {
@@ -186,6 +187,143 @@ class Dynamo implements DbClient {
       }
     }
     return this.jurisdictionsCache.get(jurisdictionId)
+  }
+
+  async fetchJurisdictions(): Promise<any[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'Jurisdiction',
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new QueryCommand(params))
+      return (result.Items || []).map((item) => ({
+        jurisdictionId: item.jurisdictionId,
+        sortKey: item.sortKey,
+        name: item.name || item.sortKey,
+        description: item.description || item.name || item.sortKey,
+        createdBy: item.createdBy,
+        createdOn: item.createdOn,
+      }))
+    } catch (error) {
+      logger.error('Error fetching jurisdictions', {
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'fetchJurisdictions',
+      })
+      throw error
+    }
+  }
+
+  async getApiKeyDomain(sortKey: string): Promise<any | null> {
+    try {
+      const result = await dynamodDbDocClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: { entityType: 'ApiKeyDomain', sortKey },
+        })
+      )
+      if (!result.Item) return null
+      const item = result.Item
+      return {
+        sortKey: item.sortKey,
+        domain: item.domain,
+        env: item.env,
+        status: item.status,
+        challengeUuid: item.challengeUuid,
+        challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
+        requestedBy: item.requestedBy,
+        validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
+        authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
+        createdBy: item.createdBy,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+      }
+    } catch (error) {
+      logger.error('Error fetching ApiKeyDomain', {
+        sortKey,
+        errorMessage: error.message,
+        operation: 'getApiKeyDomain',
+      })
+      throw error
+    }
+  }
+
+  async upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void> {
+    const item: Record<string, unknown> = {
+      entityType: 'ApiKeyDomain',
+      sortKey: params.sortKey,
+      domain: params.domain,
+      env: params.env,
+      status: params.status,
+      ...(params.challengeUuid !== undefined ? { challengeUuid: params.challengeUuid } : {}),
+      ...(params.challengeExpiresAt ? { challengeExpiresAt: params.challengeExpiresAt } : {}),
+      ...(params.requestedBy ? { requestedBy: params.requestedBy } : {}),
+      ...(params.validatedAt ? { validatedAt: params.validatedAt } : {}),
+      ...(params.authExpiresAt !== undefined ? { authExpiresAt: params.authExpiresAt } : {}),
+    }
+    try {
+      await dynamodDbDocClient.send(new PutCommand({ TableName: TABLE_NAME, Item: item }))
+      logger.info('ApiKeyDomain upserted', {
+        sortKey: params.sortKey,
+        status: params.status,
+        operation: 'upsertApiKeyDomain',
+      })
+    } catch (error) {
+      logger.error('Error upserting ApiKeyDomain', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        operation: 'upsertApiKeyDomain',
+      })
+      throw error
+    }
+  }
+
+  async fetchAuthorizedApiKeyDomains(envId: string): Promise<any[]> {
+    const now = new Date().toISOString()
+    try {
+      const result = await dynamodDbDocClient.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: 'entityType = :et',
+          FilterExpression: '#s = :authorized AND env = :env AND authExpiresAt > :now',
+          ExpressionAttributeNames: { '#s': 'status' },
+          ExpressionAttributeValues: {
+            ':et': 'ApiKeyDomain',
+            ':authorized': 'authorized',
+            ':env': envId,
+            ':now': now,
+          },
+        })
+      )
+      return (result.Items || []).map((item) => ({
+        sortKey: item.sortKey,
+        domain: item.domain,
+        env: item.env,
+        status: item.status,
+        validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
+        authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
+      }))
+    } catch (error) {
+      logger.error('Error fetching authorized ApiKeyDomains', {
+        envId,
+        errorMessage: error.message,
+        operation: 'fetchAuthorizedApiKeyDomains',
+      })
+      throw error
+    }
   }
 
   async fetchDestination(
@@ -1128,6 +1266,312 @@ class Dynamo implements DbClient {
         ? Array.from(item.groups)
         : [],
     }))
+  }
+
+  async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
+    const params: QueryCommandInput = {
+      TableName: TABLE_NAME,
+      KeyConditionExpression: 'entityType = :entityType',
+      ExpressionAttributeValues: {
+        ':entityType': 'ApiKeyCredential',
+      },
+    }
+
+    const result = await dynamodDbDocClient.send(new QueryCommand(params))
+
+    if (!result.Items || result.Items.length === 0) {
+      return []
+    }
+
+    return await Promise.all(
+      result.Items.map(async (item) => {
+        const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+        return {
+          jti: item.jti as string,
+          sortKey: item.sortKey as string,
+          jurisdictionId: item.jurisdictionId as string,
+          jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+          status: item.status as ApiKeyCredential['status'],
+          expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+          revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+          env: item.env as string,
+          description: item.description as string | undefined,
+          domain: item.domain as string | undefined,
+          viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
+          graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+          createdOn: item.createdOn ? new Date(item.createdOn) : null,
+          createdBy: item.createdBy as string,
+          updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+          updatedBy: item.updatedBy as string,
+        }
+      })
+    )
+  }
+
+  async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
+    try {
+      const result = await dynamodDbDocClient.send(
+        new GetCommand({
+          TableName: TABLE_NAME,
+          Key: { entityType: 'ApiKeyCredential', sortKey },
+        })
+      )
+      if (!result.Item) return null
+      const item = result.Item
+      const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
+      return {
+        jti: item.jti as string,
+        sortKey: item.sortKey as string,
+        jurisdictionId: item.jurisdictionId as string,
+        jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+        status: item.status as ApiKeyCredential['status'],
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        env: item.env as string,
+        description: item.description as string | undefined,
+        domain: item.domain as string | undefined,
+        viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
+        graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        createdBy: item.createdBy as string,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        updatedBy: item.updatedBy as string,
+      }
+    } catch (error) {
+      logger.error('Error fetching ApiKeyCredential', {
+        sortKey,
+        errorMessage: error.message,
+        operation: 'getApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  async revokeApiKeyCredential(
+    sortKey: string,
+    revokedBy: string,
+    revokedAt: string,
+    reason?: string
+  ): Promise<void> {
+    const updateParts = [
+      '#status = :status',
+      '#revokedBy = :revokedBy',
+      '#revokedAt = :revokedAt',
+    ]
+    const attrNames: Record<string, string> = {
+      '#status': 'status',
+      '#revokedBy': 'revokedBy',
+      '#revokedAt': 'revokedAt',
+    }
+    const attrValues: Record<string, unknown> = {
+      ':status': 'revoked',
+      ':revokedBy': revokedBy,
+      ':revokedAt': revokedAt,
+    }
+    if (reason) {
+      updateParts.push('#reason = :reason')
+      attrNames['#reason'] = 'reason'
+      attrValues[':reason'] = reason
+    }
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'ApiKeyCredential',
+        sortKey,
+      },
+      UpdateExpression: `SET ${updateParts.join(', ')}`,
+      ExpressionAttributeNames: attrNames,
+      ExpressionAttributeValues: attrValues,
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    }
+    try {
+      await dynamodDbDocClient.send(new UpdateCommand(params))
+      logger.info('Revoked ApiKeyCredential', {
+        sortKey,
+        revokedBy,
+        revokedAt,
+        operation: 'revokeApiKeyCredential',
+      })
+    } catch (error) {
+      logger.error('Error revoking ApiKeyCredential', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'revokeApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  async supersedApiKeyCredential(params: {
+    sortKey: string
+    renewedBy: string
+    renewedAt: string
+    graceExpiresAt: string
+    supersededByJti: string
+  }): Promise<void> {
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
+      UpdateExpression:
+        'SET #status = :status, #renewedBy = :renewedBy, #renewedAt = :renewedAt, #graceExpiresAt = :graceExpiresAt, #supersededByJti = :supersededByJti, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+        '#renewedBy': 'renewedBy',
+        '#renewedAt': 'renewedAt',
+        '#graceExpiresAt': 'graceExpiresAt',
+        '#supersededByJti': 'supersededByJti',
+        '#updatedBy': 'updatedBy',
+        '#updatedOn': 'updatedOn',
+      },
+      ExpressionAttributeValues: {
+        ':status': 'superseded',
+        ':renewedBy': params.renewedBy,
+        ':renewedAt': params.renewedAt,
+        ':graceExpiresAt': params.graceExpiresAt,
+        ':supersededByJti': params.supersededByJti,
+        ':updatedBy': params.renewedBy,
+        ':updatedOn': params.renewedAt,
+      },
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential superseded', {
+        sortKey: params.sortKey,
+        supersededByJti: params.supersededByJti,
+        graceExpiresAt: params.graceExpiresAt,
+        operation: 'supersedApiKeyCredential',
+      })
+    } catch (error) {
+      logger.error('Error superseding ApiKeyCredential', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'supersedApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  async createApiKeyCredential(params: {
+    jti: string
+    sortKey: string
+    jurisdictionId: string
+    env: string
+    status: string
+    createdOn: Date
+    expiresAt: Date
+    createdBy: string
+    description?: string
+    domain?: string
+  }): Promise<void> {
+    const item: Record<string, unknown> = {
+      entityType: 'ApiKeyCredential',
+      sortKey: params.sortKey,
+      jti: params.jti,
+      jurisdictionId: params.jurisdictionId,
+      env: params.env,
+      status: params.status,
+      createdOn: params.createdOn.toISOString(),
+      expiresAt: params.expiresAt.toISOString(),
+      createdBy: params.createdBy,
+      ...(params.description ? { description: params.description } : {}),
+      ...(params.domain ? { domain: params.domain } : {}),
+    }
+    const command = new PutCommand({
+      TableName: TABLE_NAME,
+      Item: item,
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential created', {
+        jti: params.jti,
+        sortKey: params.sortKey,
+        operation: 'createApiKeyCredential',
+      })
+    } catch (error) {
+      logger.error('Error creating ApiKeyCredential', {
+        jti: params.jti,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'createApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  async updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
+  }): Promise<void> {
+    const updateParts = ['#status = :status']
+    const attrNames: Record<string, string> = { '#status': 'status' }
+    const attrValues: Record<string, unknown> = { ':status': params.status }
+    if (params.expiresAt) {
+      updateParts.push('#expiresAt = :expiresAt')
+      attrNames['#expiresAt'] = 'expiresAt'
+      attrValues[':expiresAt'] = params.expiresAt
+    }
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
+      UpdateExpression: `SET ${updateParts.join(', ')}`,
+      ExpressionAttributeNames: attrNames,
+      ExpressionAttributeValues: attrValues,
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential status updated', {
+        sortKey: params.sortKey,
+        status: params.status,
+        operation: 'updateApiKeyCredentialStatus',
+      })
+    } catch (error) {
+      logger.error('Error updating ApiKeyCredential status', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'updateApiKeyCredentialStatus',
+      })
+      throw error
+    }
+  }
+
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey },
+      UpdateExpression: 'SET #viewedAt = :viewedAt',
+      ExpressionAttributeNames: { '#viewedAt': 'viewedAt' },
+      ExpressionAttributeValues: { ':viewedAt': viewedAt },
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential marked viewed', {
+        sortKey,
+        viewedAt,
+        operation: 'markApiKeyCredentialViewed',
+      })
+    } catch (error) {
+      logger.error('Error marking ApiKeyCredential viewed', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'markApiKeyCredentialViewed',
+      })
+      throw error
+    }
   }
 
   async fetchOrganizationName(principal: string): Promise<string> {
