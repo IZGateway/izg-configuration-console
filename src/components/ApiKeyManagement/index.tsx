@@ -943,6 +943,9 @@ function CreateKeyDialog({
         ?.description) ||
     ''
 
+  const environmentDisplayName =
+    CREATE_ENV_OPTIONS.find((opt) => String(opt.id) === envId)?.displayName || ''
+
   const isOther = dnsSelection === OTHER_DNS_VALUE
 
   const handleClose = () => {
@@ -1041,8 +1044,9 @@ function CreateKeyDialog({
   const formContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <Typography variant="body2" sx={{ color: palette.greyText }}>
-        A new key pair will be generated for jurisdiction{' '}
-        {jurisdictionId || '—'}.
+        A new key pair will be generated for{' '}
+        {jurisdictionDescription || 'the selected jurisdiction'}
+        {environmentDisplayName ? ` (${environmentDisplayName})` : ''}.
       </Typography>
       {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
       <LabeledField label="Organization" required>
@@ -1390,20 +1394,29 @@ function KeyCreatedDialog({
         </Box>
       }
       actions={
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleCopy}
-          sx={{
-            borderRadius: '50px',
-            backgroundColor: palette.primary,
-            fontWeight: 700,
-            py: 1.5,
-            '&:hover': { backgroundColor: palette.primaryDark },
-          }}
-        >
-          {copied ? 'COPIED!' : 'COPY TOKEN'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          <Button
+            variant="contained"
+            onClick={handleCopy}
+            sx={{
+              flex: 1,
+              borderRadius: '50px',
+              backgroundColor: palette.primary,
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': { backgroundColor: palette.primaryDark },
+            }}
+          >
+            {copied ? 'COPIED!' : 'COPY TOKEN'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{ flex: 1, borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+          >
+            CLOSE
+          </Button>
+        </Box>
       }
     />
   )
