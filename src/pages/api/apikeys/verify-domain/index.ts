@@ -28,7 +28,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const domainRecord = await dbClient.getApiKeyDomain(sortKey)
 
     if (!domainRecord) {
-      return res.status(404).json({ error: 'No pending challenge found for this domain' })
+      return res
+        .status(404)
+        .json({ error: 'No pending challenge found for this domain' })
     }
 
     // Flips the credential to active. The JWT itself is never generated or
@@ -53,8 +55,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     // Check challenge hasn't expired
-    if (domainRecord.challengeExpiresAt && new Date() > domainRecord.challengeExpiresAt) {
-      return res.status(400).json({ error: 'Challenge has expired. Please start over.' })
+    if (
+      domainRecord.challengeExpiresAt &&
+      new Date() > domainRecord.challengeExpiresAt
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Challenge has expired. Please start over.' })
     }
 
     // DNS TXT lookup
