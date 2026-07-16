@@ -5,7 +5,6 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import crypto from 'crypto'
-import { getJwtSigningSecret, issueApiKeyJwt } from '../../../lib/apikeys/jwt'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -62,7 +61,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const domainSortKey = `${envIdNum}#${upn}`
       const now = new Date()
       const createdBy = session.user.email || 'unknown'
-      const iss = process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
       if (dnsChoice === 'existing') {
         const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
@@ -74,21 +72,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           return res.status(400).json({ error: 'Selected DNS name is not currently authorized' })
         }
 
-        const { secretString, kid } = await getJwtSigningSecret()
         const jti = crypto.randomUUID()
         const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-        const token = issueApiKeyJwt({
-          jurisdictionId: String(jurisdictionId),
-          jti,
-          upn: String(upn),
-          envId: envIdNum,
-          secretString,
-          kid,
-          issuedAt: now,
-          expiresAt,
-          iss,
-        })
-
         const sortKey = `${envIdNum}#${jti}`
         await dbClient.createApiKeyCredential({
           jti,
@@ -110,7 +95,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           operation: 'createApiKeyCredential',
         })
 
-        return res.status(201).json({ token, jti, sortKey })
+        return res.status(201).json({ jti, sortKey })
       }
 
       // dnsChoice === 'other' — create the credential row up front as

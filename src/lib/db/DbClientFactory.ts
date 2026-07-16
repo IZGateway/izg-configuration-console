@@ -452,4 +452,8 @@ class EncryptedRepository implements DbClient {
   }): Promise<void> {
     return await this.repository.updateApiKeyCredentialStatus(params)
   }
+
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
+    return await this.repository.markApiKeyCredentialViewed(sortKey, viewedAt)
+  }
 }
