@@ -5,6 +5,7 @@ import { render, fireEvent } from '@testing-library/react'
 import PopOverActionButtons from './popOverActionButtons'
 import CombinedContext from '../../contexts/app'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 
 jest.mock('next-auth/react', () => {
   const originalModule = jest.requireActual('next-auth/react')
@@ -38,6 +39,7 @@ jest.mock('../../lib/security/useRoleAccess', () => {
       canViewHistory: true,
       canEditConnection: true,
       canViewChangeRequest: true,
+      canResetCircuitBreaker: true,
     } as ManageConnectionsPageAccessControl
   })
 })
@@ -93,5 +95,77 @@ describe('PopOverActionButtons component', () => {
     )
     fireEvent.click(getByLabelText('moreactions'))
     expect(getByText('History')).toBeInTheDocument()
+  })
+
+  it('shows the Reset Circuit Breaker menu item when the circuit breaker is tripped and the role has the capability', async () => {
+    const { getByLabelText, getByText } = render(
+      <CombinedContext.Provider value={combinedContextValueMock}>
+        <PopOverActionButtons
+          destTypeId={1}
+          destId={'test'}
+          status="Circuit Breaker Thrown"
+          hasActiveMaintenance={false}
+          jurisdictionName="Test Jurisdiction"
+          destType="Test Type"
+          row={undefined}
+          updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          }}
+        />
+      </CombinedContext.Provider>
+    )
+    fireEvent.click(getByLabelText('moreactions'))
+    expect(getByText('Reset Circuit Breaker')).toBeInTheDocument()
+  })
+
+  it('does not show the Reset Circuit Breaker menu item when the circuit breaker is not tripped', async () => {
+    const { getByLabelText, queryByText } = render(
+      <CombinedContext.Provider value={combinedContextValueMock}>
+        <PopOverActionButtons
+          destTypeId={1}
+          destId={'test'}
+          status="active"
+          hasActiveMaintenance={false}
+          jurisdictionName="Test Jurisdiction"
+          destType="Test Type"
+          row={undefined}
+          updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          }}
+        />
+      </CombinedContext.Provider>
+    )
+    fireEvent.click(getByLabelText('moreactions'))
+    expect(queryByText('Reset Circuit Breaker')).not.toBeInTheDocument()
+  })
+
+  it('does not show the Reset Circuit Breaker menu item when the role lacks the capability', async () => {
+    ;(useRoleAccess as jest.Mock).mockReturnValueOnce({
+      canRunConnectionTest: true,
+      canScheduleMaintainance: false,
+      canViewHistory: true,
+      canEditConnection: false,
+      canViewChangeRequest: true,
+      canResetCircuitBreaker: false,
+    } as ManageConnectionsPageAccessControl)
+
+    const { getByLabelText, queryByText } = render(
+      <CombinedContext.Provider value={combinedContextValueMock}>
+        <PopOverActionButtons
+          destTypeId={1}
+          destId={'test'}
+          status="Circuit Breaker Thrown"
+          hasActiveMaintenance={false}
+          jurisdictionName="Test Jurisdiction"
+          destType="Test Type"
+          row={undefined}
+          updateRow={function (row: any): void {
+            throw new Error('Function not implemented.')
+          }}
+        />
+      </CombinedContext.Provider>
+    )
+    fireEvent.click(getByLabelText('moreactions'))
+    expect(queryByText('Reset Circuit Breaker')).not.toBeInTheDocument()
   })
 })
