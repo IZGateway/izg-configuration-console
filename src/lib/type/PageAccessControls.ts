@@ -13,6 +13,7 @@ type ManageConnectionsPageAccessControl = {
   canViewHistory: boolean
   canEditConnection: boolean
   canViewChangeRequest: boolean
+  canResetCircuitBreaker: boolean
 }
 
 type TestPageAccessControl = {
