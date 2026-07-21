@@ -24,6 +24,7 @@ const JurisdictionOperationsAccess: PageControls = {
     canViewHistory: true,
     canEditConnection: true,
     canViewChangeRequest: true,
+    canResetCircuitBreaker: true,
   } as ManageConnectionsPageAccessControl,
   test: {
     ...defaultTestPageAccessControl,

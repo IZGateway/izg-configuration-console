@@ -37,7 +37,8 @@ import { asyncRequestContext } from '../../../../lib/Context'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const context = asyncRequestContext.getStore()
-  if (context?.session?.user?.role !== 'IZG Operations') {
+  const allowedRoles = ['IZG Operations', 'Jurisdiction Operations']
+  if (!allowedRoles.includes(context?.session?.user?.role)) {
     return res.status(401).send('unauthorized')
   }
 

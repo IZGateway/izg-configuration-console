@@ -82,19 +82,16 @@ sure you want to reset the circuit breaker for {jurisdiction} — {endpoint}
 **Goals:**
 - Make a tripped circuit breaker visually distinct in the STATUS column, for
   any user who can see the destination.
-- Let `IZG Operations` clear a single destination's tripped breaker, with
-  confirmation, via the existing action-menu pattern — a narrower-blast-radius
-  alternative to the existing admin-wide "reset all" action.
+- Let `IZG Operations` and `Jurisdiction Operations` clear a single
+  destination's tripped breaker, with confirmation, via the existing
+  action-menu pattern — a narrower-blast-radius alternative to the existing
+  admin-wide "reset all" action, and a jurisdiction self-service path that
+  removes the need to file a ticket with IZ Gateway operations.
 - Log the action with existing attribution machinery — no new plumbing.
 - Reuse existing jurisdiction/role-gating and Hub-connectivity patterns
   exactly; add no new authorization primitive beyond a direct role check.
 
 **Non-Goals:**
-- Jurisdiction self-service reset. An earlier draft of this design scoped the
-  reset action to `Jurisdiction Operations` as well as `IZG Operations`
-  (mirroring `canScheduleMaintainance`). That was narrowed during
-  implementation to `IZG Operations` only — see Decision D3. Jurisdiction
-  users still get the status *visibility* goal above, not the reset action.
 - The admin-wide "reset all" action (separate, larger blast radius; tracked
   separately).
 - Any change to Hub-side circuit-breaker trip logic, or to cross-Hub-instance
@@ -146,32 +143,40 @@ Rejected — inconsistent with how every other row-mutating action in this
 table already lives in the "..." menu, and the mockups confirm the menu
 placement.
 
-### D3 — New capability flag `canResetCircuitBreaker`, granted to `IZG Operations` only, enforced server-side too
+### D3 — New capability flag `canResetCircuitBreaker`, granted to `IZG Operations` and `Jurisdiction Operations`, enforced server-side too
 Add `canResetCircuitBreaker: boolean` to `ManageConnectionsPageAccessControl`
 (`src/lib/type/PageAccessControls.ts`), default `false`
-(`defaultaccesslevels.ts`), set to `true` only in `_IZGOperationsAccess.ts`.
-`useRoleAccess()` (`src/lib/security/useRoleAccess.ts`) resolves this the same
-way as every other per-role capability flag — no new access-control
-mechanism.
+(`defaultaccesslevels.ts`), set to `true` in both `_IZGOperationsAccess.ts`
+and `_JurisdictionOperationsAccess.ts` — mirroring exactly how
+`canScheduleMaintainance` is already scoped to those same two role files, and
+matching the original user story's "Jurisdiction Operations Staff" framing.
+`_JurisdictionSupportAccess.ts` and `_IZGSupportAccess.ts` are unmodified and
+inherit the `false` default. `useRoleAccess()`
+(`src/lib/security/useRoleAccess.ts`) resolves this the same way as every
+other per-role capability flag — no new access-control mechanism.
 
-**Revised from an earlier draft:** this was initially scoped like
-`canScheduleMaintainance` — `true` for both `_JurisdictionOperationsAccess.ts`
-and `_IZGOperationsAccess.ts`, matching the original user story's
-"Jurisdiction Operations Staff" framing. That was narrowed to `IZG
-Operations` only; `_JurisdictionOperationsAccess.ts` is unmodified and
-inherits the `false` default.
+**Revision history:** mid-implementation, this was temporarily narrowed to
+`IZG Operations` only, while the Hub-side `POST /rest/reset/{id}` endpoint
+was still unmerged and unverified — a smaller blast radius for the initial
+rollout. Now that Hub PR #170 is merged and the end-to-end flow has been
+verified against a real tripped destination (see Context), the scope has
+been restored to both role files, per the original ask.
 
-Because the capability check now differs from the jurisdiction-ownership
-check `checkAccessToDestIdSlug` already enforces (a `Jurisdiction Operations`
-user can legitimately own a destination and would pass jurisdiction scoping),
-the UI-only gate is not sufficient on its own — a direct API call would still
-succeed for such a user. The API route
+Because the capability check is independent of the jurisdiction-ownership
+check `checkAccessToDestIdSlug` already enforces, the UI-only gate is not
+sufficient on its own — a direct API call would still succeed for any
+authenticated session regardless of role. The API route
 (`src/pages/api/status/reset/[...slug].ts`) therefore also checks the
-session's role directly: `context.session.user.role !== 'IZG Operations'` →
-`401`, read from the server-validated session via `asyncRequestContext`
-(the same context `buildRequestContext`/`getServerSession` already populate
-for every API route), layered on top of `checkAccessToDestIdSlug` rather than
-replacing it.
+session's role directly, rejecting with `401` unless
+`context.session.user.role` is `'IZG Operations'` or
+`'Jurisdiction Operations'`, read from the server-validated session via
+`asyncRequestContext` (the same context `buildRequestContext`/
+`getServerSession` already populate for every API route), layered on top of
+`checkAccessToDestIdSlug` rather than replacing it. `checkAccessToDestIdSlug`
+still separately enforces that a `Jurisdiction Operations` user's request
+targets a destination within their own jurisdiction(s) — `IZG Operations` is
+exempt from that check, same as everywhere else in the app
+(`src/lib/accesshelper.ts`'s `hasAccessToDestId`).
 
 ### D4 — New API route reuses `withMiddleware('checkAccessToDestIdSlug')` and the statushistory URL-derivation pattern
 New route `src/pages/api/status/reset/[...slug].ts`, route shape
@@ -270,20 +275,16 @@ next scheduled refresh, are enforcing — see Risks/Trade-offs.
   a persisted audit table** → **Mitigation:** explicitly accepted trade-off
   per user direction; the existing logs already ship to Elastic with full
   user attribution, which is enough to trace who reset what and when.
-- **[Accepted trade-off] Narrower than the original user story.** The
-  original ask was jurisdiction self-service; the shipped scope is `IZG
-  Operations`-only (see D3, Non-Goals). Jurisdictions still see the status
-  indicator but must go through operations staff to clear a trip, same as
-  today. Accepted as the final scope for this change.
 
 ## Migration Plan
 
 Purely additive: new route, new menu item, new capability flag (defaulted
-`false` everywhere except `_IZGOperationsAccess.ts`). No data migration,
-no breaking change to any existing API or component prop. **Rollback:** revert
-the change — the STATUS column and action menu return to their current
-behavior; no destination's on-disk state is affected either way, since the
-"reset" itself is a Hub-side write CC never owns.
+`false` everywhere except `_IZGOperationsAccess.ts` and
+`_JurisdictionOperationsAccess.ts`). No data migration, no breaking change to
+any existing API or component prop. **Rollback:** revert the change — the
+STATUS column and action menu return to their current behavior; no
+destination's on-disk state is affected either way, since the "reset" itself
+is a Hub-side write CC never owns.
 
 ## Open Questions
 

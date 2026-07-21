@@ -25,16 +25,20 @@ destination row's action menu only when that destination's circuit breaker is
 currently tripped, only to users whose role has the `canResetCircuitBreaker`
 capability, and SHALL only allow the underlying reset call to succeed for a
 destination within the acting user's assigned jurisdiction(s) (or for
-operations-level roles that are exempt from jurisdiction scoping, consistent
-with existing jurisdiction checks elsewhere in the app).
+`IZG Operations`/`IZG Support`, which are exempt from jurisdiction scoping,
+consistent with existing jurisdiction checks elsewhere in the app).
 
-Currently, only the `IZG Operations` role has the `canResetCircuitBreaker`
-capability. `Jurisdiction Operations` does not have it, despite owning
-destinations and passing jurisdiction scoping — capability and jurisdiction
-scoping are independent checks, and both must pass for a reset to succeed.
-This is enforced in two places: the UI gate (`useRoleAccess()`) and,
-independently, a direct role check inside the API route itself, so the
-restriction holds even for a request that bypasses the UI entirely.
+Currently, both the `IZG Operations` and `Jurisdiction Operations` roles have
+the `canResetCircuitBreaker` capability; `Jurisdiction Support` and `IZG
+Support` do not. Capability and jurisdiction scoping are independent checks,
+and both must pass for a reset to succeed: a `Jurisdiction Operations` user
+has the capability but may only exercise it for a destination within their
+own assigned jurisdiction(s), while `IZG Operations` is exempt from
+jurisdiction scoping entirely (consistent with `hasAccessToDestId` elsewhere
+in the app). This is enforced in two places: the UI gate (`useRoleAccess()`)
+and, independently, a direct role check inside the API route itself, so the
+capability restriction holds even for a request that bypasses the UI
+entirely.
 
 #### Scenario: Reset action appears only when tripped
 - **WHEN** a permitted user opens the "..." action menu for a destination
@@ -48,24 +52,23 @@ restriction holds even for a request that bypasses the UI entirely.
 
 #### Scenario: Reset action is hidden for roles without the capability
 - **WHEN** a user whose role does not have `canResetCircuitBreaker` (e.g.
-  `Jurisdiction Operations`, `Jurisdiction Support`, or `IZG Support`) opens
-  the action menu for a tripped destination
+  `Jurisdiction Support` or `IZG Support`) opens the action menu for a
+  tripped destination
 - **THEN** the menu does not include a "Reset Circuit Breaker" item
 
 #### Scenario: Reset is rejected server-side even if requested directly, for a role without the capability
 - **WHEN** a `POST` request to reset a destination's circuit breaker is made
   by a user whose role does not have `canResetCircuitBreaker` (e.g.
-  `Jurisdiction Operations`), regardless of whether that destination is in
-  their own jurisdiction
+  `Jurisdiction Support`)
 - **THEN** the API rejects the request as unauthorized and no reset is
   performed
 
 #### Scenario: Reset is rejected for a destination outside the user's jurisdiction
-- **WHEN** a request to reset a destination's circuit breaker is made for a
-  destination not in the requesting user's assigned jurisdiction(s), and the
-  requester is not an operations-level role
+- **WHEN** a `Jurisdiction Operations` user requests a reset for a
+  destination not in their assigned jurisdiction(s)
 - **THEN** the API rejects the request as unauthorized and no reset is
-  performed
+  performed, even though their role has the `canResetCircuitBreaker`
+  capability
 
 ### Requirement: Reset requires explicit confirmation
 Clicking "Reset Circuit Breaker" SHALL show a confirmation dialog before any

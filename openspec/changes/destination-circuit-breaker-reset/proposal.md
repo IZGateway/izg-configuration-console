@@ -1,21 +1,27 @@
 ## Why
 
-IZ Gateway operations staff currently have no way to clear a tripped circuit
-breaker for a single destination from Configuration Console — the only
-existing lever is the admin-wide "reset all circuit breakers" action, a much
-larger blast radius than clearing the one destination that actually needs it.
-Anything narrower requires operations staff to go around Configuration
-Console entirely. The Hub already tracks a per-destination circuit-breaker
+Jurisdiction Operations staff and IZ Gateway operations staff currently have
+no way to clear a tripped circuit breaker for a single destination from
+Configuration Console — the only existing lever is the admin-wide "reset all
+circuit breakers" action, a much larger blast radius than clearing the one
+destination that actually needs it. Anything narrower requires jurisdiction
+staff to go around Configuration Console entirely and file a ticket with IZ
+Gateway operations. The Hub already tracks a per-destination circuit-breaker
 state; Configuration Console (CC) just doesn't surface it or expose a
 single-destination way to clear it.
 
-**Scope note:** an earlier draft of this proposal framed this as
-jurisdiction self-service (letting the destination's own jurisdiction clear
-its own tripped breaker). That framing was narrowed during implementation —
-`canResetCircuitBreaker` is granted to `IZG Operations` only, both in the UI
-gate and enforced server-side in the API route. Jurisdiction users still see
-the "circuit breaker tripped" status indicator, but do not get the reset
-action itself.
+**Scope note:** an earlier draft of this proposal (mid-implementation)
+temporarily narrowed the reset action to `IZG Operations` only, so that the
+initial rollout had a smaller blast radius while the Hub-side endpoint was
+still unverified. Now that the Hub's `POST /rest/reset/{id}` endpoint is
+merged and verified end-to-end (see `design.md`), the scope has been restored
+to the original ask: `canResetCircuitBreaker` is granted to both `IZG
+Operations` and `Jurisdiction Operations`, mirroring how
+`canScheduleMaintainance` is already scoped. A jurisdiction can self-serve a
+reset only for destinations within its own jurisdiction (enforced via the
+existing `hasAccessToDestId` jurisdiction check); `IZG Operations` remains
+exempt from jurisdiction scoping, as it already is everywhere else in the
+app.
 
 ## What Changes
 
@@ -34,12 +40,14 @@ action itself.
   row in place with the Hub's returned (cleared) status.
 - The reset action is logged via the existing structured request logger, which
   already auto-attributes every log line to the acting user.
-- New `canResetCircuitBreaker` access-control capability, granted to the
-  `IZG Operations` role only — not `Jurisdiction Operations`, and not
-  `Support` roles. Enforced both in the UI gate (`useRoleAccess()`) and
-  server-side in the API route itself (`session.user.role !== 'IZG
-  Operations'` → `401`), so the restriction cannot be bypassed by calling the
-  route directly.
+- New `canResetCircuitBreaker` access-control capability, granted to
+  `IZG Operations` and `Jurisdiction Operations` — not `Support` roles.
+  Enforced both in the UI gate (`useRoleAccess()`) and server-side in the API
+  route itself (rejecting any role other than those two with a `401`), so the
+  restriction cannot be bypassed by calling the route directly. Jurisdiction
+  scoping (which destinations a `Jurisdiction Operations` user may act on) is
+  enforced separately and additionally, via the existing
+  `checkAccessToDestIdSlug` middleware.
 
 **Explicitly out of scope for this change:**
 - The admin-wide "reset all circuit breakers" action (a separate, larger-blast-radius
@@ -79,15 +87,19 @@ action itself.
     confirmation dialog.
   - `src/lib/type/PageAccessControls.ts`,
     `src/lib/security/accessdefinitions/defaultaccesslevels.ts`,
-    `_IZGOperationsAccess.ts` — `canResetCircuitBreaker` capability, `true`
-    only for `IZG Operations` (default `false` everywhere else, including
-    `_JurisdictionOperationsAccess.ts`, which is unmodified).
+    `_IZGOperationsAccess.ts`, `_JurisdictionOperationsAccess.ts` —
+    `canResetCircuitBreaker` capability, `true` for `IZG Operations` and
+    `Jurisdiction Operations` (default `false` everywhere else, including
+    `_JurisdictionSupportAccess.ts` and `_IZGSupportAccess.ts`).
 - **Auth / jurisdiction scoping:** The new API route reuses the existing
   `checkAccessToDestIdSlug` middleware and `hasAccessToDestId` jurisdiction
-  check, plus an explicit role check inside the handler
-  (`session.user.role !== 'IZG Operations'` → `401`) so the `IZG
-  Operations`-only restriction is enforced server-side, not just hidden in
-  the UI. No change to encrypted fields.
+  check, plus an explicit role check inside the handler (rejecting any role
+  other than `IZG Operations`/`Jurisdiction Operations` with a `401`) so the
+  capability restriction is enforced server-side, not just hidden in the UI.
+  A `Jurisdiction Operations` user can still only reset destinations within
+  their own assigned jurisdiction(s) — that scoping is unchanged and comes
+  from `hasAccessToDestId`, independent of the capability check. No change to
+  encrypted fields.
 - **Cross-repo dependency — now resolved:** the Hub (`izgw-hub`) has merged
   `POST /rest/reset/{id}` (PR
   [#170](https://github.com/IZGateway/izgw-hub/pull/170), merged into
