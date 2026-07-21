@@ -5,9 +5,9 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/api/changerequest/{destTypeId}/{destId}": {
+    "/api/statushistory/{id}": {
       "get": {
-        "summary": "Get destination change request for destination type and destination id.",
+        "summary": "Get status of destination by ID.",
         "parameters": [
           {
             "name": "id",
@@ -17,15 +17,6 @@
               "type": "string"
             },
             "description": "The ID of the destination."
-          },
-          {
-            "name": "destType",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
           }
         ],
         "responses": {
@@ -35,64 +26,9 @@
         }
       }
     },
-    "/api/changerequest": {
-      "post": {
-        "summary": "Schedule change in destination information by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "example": {
-                "username": "string",
-                "facility_id": "string",
-                "MSH3": "string",
-                "MSH4": "string",
-                "MSH5": "string",
-                "MSH6": "string",
-                "MSH22": "string",
-                "RXA11": "string"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "destination successfully scheduled to change upon approval.",
-            "content": {
-              "application/json": null
-            }
-          },
-          "400": {
-            "description": "Bad request."
-          }
-        }
-      }
-    },
-    "/api/destinationaudit/{id}": {
+    "/api/healthcheck": {
       "get": {
-        "summary": "Get audit in change in destination by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          }
-        ],
+        "summary": "returns HTTP OK (200).",
         "responses": {
           "200": {
             "description": "OK."
@@ -102,7 +38,7 @@
     },
     "/api/destinations/{destTypeId}/{destId}": {
       "get": {
-        "summary": "Get destination information for a destination id for a given destination type (Development,Production,Staging,Onboarding,Testing,UNKNOWN).",
+        "summary": "Get destination information for a destination id for a given destination type id",
         "parameters": [
           {
             "name": "destTypeId",
@@ -130,9 +66,39 @@
         }
       }
     },
-    "/api/healthcheck": {
+    "/api/destinations": {
       "get": {
-        "summary": "returns HTTP OK (200).",
+        "summary": "Get all destinations accessible to the logged-in user",
+        "responses": {
+          "200": {
+            "description": "List of destinations"
+          }
+        }
+      }
+    },
+    "/api/destinationaudit/{destTypeId}/{destId}": {
+      "get": {
+        "summary": "Get connection test results for destination by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of destination type"
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK."
@@ -150,81 +116,9 @@
         }
       }
     },
-    "/api/jurisdictions/{id}": {
-      "get": {
-        "summary": "Get destination's juridiction data by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK."
-          }
-        }
-      }
-    },
-    "/api/statushistory/{id}": {
-      "get": {
-        "summary": "Get status of destination by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK."
-          }
-        }
-      }
-    },
-    "/api/edit/queryTest/{id}": {
-      "get": {
-        "summary": "Get query test result for destination by ID.",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The ID of the destination."
-          },
-          {
-            "name": "destType",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK."
-          }
-        }
-      }
-    },
-    "/api/update/destination/{id}": {
+    "/api/changerequest": {
       "post": {
-        "summary": "Update destination information by ID.",
+        "summary": "Schedule change in destination information by ID.",
         "parameters": [
           {
             "name": "id",
@@ -234,15 +128,6 @@
               "type": "string"
             },
             "description": "The ID of the destination."
-          },
-          {
-            "name": "destType",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "description": "The type of the destination. Accepted Values (Development,Production,Staging,Onboarding,Testing,UNKNOWN)"
           }
         ],
         "requestBody": {
@@ -251,7 +136,350 @@
             "application/json": {
               "example": {
                 "username": "string",
-                "facility_id": "string",
+                "facilityId": "string",
+                "MSH3": "string",
+                "MSH4": "string",
+                "MSH5": "string",
+                "MSH6": "string",
+                "MSH22": "string",
+                "RXA11": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "destination successfully scheduled to change upon approval.",
+            "content": {
+              "application/json": null
+            }
+          },
+          "400": {
+            "description": "Bad request."
+          }
+        }
+      }
+    },
+    "/api/allowedusersaudit/{environment}/{destinationId}/{principal}": {
+      "get": {
+        "summary": "Get audit history for an allowed user",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The environment ID"
+          },
+          {
+            "name": "destinationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The destination ID"
+          },
+          {
+            "name": "principal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The principal/user identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Returns audit history for the allowed user."
+          },
+          "400": {
+            "description": "Bad request - missing required parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/allowedusers": {
+      "get": {
+        "summary": "Get all allowed users",
+        "responses": {
+          "200": {
+            "description": "OK. Returns array of allowed users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "principal": {
+                        "type": "string",
+                        "description": "The principal/user identifier"
+                      },
+                      "environment": {
+                        "type": "number",
+                        "description": "The environment ID"
+                      },
+                      "destinationId": {
+                        "type": "string",
+                        "description": "The destination ID"
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Whether the user is enabled"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "description": "User who created this record"
+                      },
+                      "createdOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the record was created"
+                      },
+                      "updatedBy": {
+                        "type": "string",
+                        "description": "User who last updated this record"
+                      },
+                      "updatedOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the record was last updated"
+                      },
+                      "validatedOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the user was last validated"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or update an allowed user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "principal",
+                  "environment",
+                  "destinationId",
+                  "organization",
+                  "enabled",
+                  "createdBy",
+                  "updatedBy"
+                ],
+                "properties": {
+                  "principal": {
+                    "type": "string",
+                    "description": "The principal/user identifier"
+                  },
+                  "environment": {
+                    "type": "number",
+                    "description": "The environment ID"
+                  },
+                  "destinationId": {
+                    "type": "string",
+                    "description": "The destination ID"
+                  },
+                  "organization": {
+                    "type": "string",
+                    "description": "The organization name"
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether the user is enabled"
+                  },
+                  "createdBy": {
+                    "type": "string",
+                    "description": "User who created this record"
+                  },
+                  "updatedBy": {
+                    "type": "string",
+                    "description": "User who last updated this record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK. Returns the created/updated allowed user."
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an allowed user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "principal",
+                  "environment",
+                  "destinationId"
+                ],
+                "properties": {
+                  "principal": {
+                    "type": "string",
+                    "description": "The principal/user identifier"
+                  },
+                  "environment": {
+                    "type": "number",
+                    "description": "The environment ID"
+                  },
+                  "destinationId": {
+                    "type": "string",
+                    "description": "The destination ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK. User successfully deleted."
+          },
+          "400": {
+            "description": "Bad request - missing required fields"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/tests/connectiontest/{destTypeId}/{destId}": {
+      "post": {
+        "summary": "Get connection test results by the destination values posted in request body",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of destination type"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "values": "object",
+                "configuration": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "successfully received test results for the destination values posted in body.",
+            "content": {
+              "application/json": null
+            }
+          },
+          "400": {
+            "description": "Bad request."
+          }
+        }
+      }
+    },
+    "/api/status/reset": {
+      "post": {
+        "summary": "Reset all circuit breakers across all Hub environments.",
+        "description": "Signals every configured hub to reset all of its circuit breakers so connections recover without a service restart. Operations/admin users only.\n",
+        "responses": {
+          "200": {
+            "description": "OK."
+          },
+          "403": {
+            "description": "Forbidden (non-admin)."
+          }
+        }
+      }
+    },
+    "/api/status/refresh": {
+      "post": {
+        "summary": "Refresh all hubs' configuration from the database.",
+        "description": "Signals every configured hub to reload its configuration from the database across all Hub environments. Operations/admin users only.\n",
+        "responses": {
+          "200": {
+            "description": "OK."
+          },
+          "403": {
+            "description": "Forbidden (non-admin)."
+          }
+        }
+      }
+    },
+    "/api/changerequest/deploye/{id}": {
+      "post": {
+        "summary": "Get connection test results for destination by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          },
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of destination type"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "username": "string",
+                "facilityId": "string",
                 "MSH3": "string",
                 "MSH4": "string",
                 "MSH5": "string",
@@ -271,6 +499,74 @@
           },
           "400": {
             "description": "Bad request."
+          }
+        }
+      }
+    },
+    "/api/allowedusers/bydestination": {
+      "get": {
+        "summary": "Get allowed users filtered by destination",
+        "description": "Returns allowed users based on the authenticated user's permissions. Admin users see all allowed users, while non-admin users only see allowed users for their assigned destinations.",
+        "responses": {
+          "200": {
+            "description": "OK. Returns array of allowed users filtered by destination access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "principal": {
+                        "type": "string",
+                        "description": "The principal/user identifier"
+                      },
+                      "environment": {
+                        "type": "number",
+                        "description": "The environment ID"
+                      },
+                      "destinationId": {
+                        "type": "string",
+                        "description": "The destination ID"
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Whether the user is enabled"
+                      },
+                      "createdBy": {
+                        "type": "string",
+                        "description": "User who created this record"
+                      },
+                      "createdOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the record was created"
+                      },
+                      "updatedBy": {
+                        "type": "string",
+                        "description": "User who last updated this record"
+                      },
+                      "updatedOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the record was last updated"
+                      },
+                      "validatedOn": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the user was last validated"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - user not authenticated"
+          },
+          "500": {
+            "description": "Internal server error"
           }
         }
       }
