@@ -28,6 +28,7 @@ import {
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
+import WarningIcon from '@mui/icons-material/Warning'
 import SessionContext from '../../contexts/app'
 import ChangeRequestActionButtons from './ChangeRequestActionButtons'
 import palette from '../../styles/theme/palette'
@@ -505,6 +506,8 @@ const ConnectionsTable = (props) => {
         renderCell: (params) => {
           const isConnected =
             params.row.status?.toLowerCase() === 'connected' ? true : false
+          const isCircuitBreakerTripped =
+            params.row.status?.toLowerCase() === 'circuit breaker thrown'
           const asOfDate = params.row.statusAt
             ? new Date(params.row.statusAt).toLocaleString()
             : 'Unknown'
@@ -620,7 +623,31 @@ const ConnectionsTable = (props) => {
                       />
                     </Box>
                   )}
+                {isCircuitBreakerTripped &&
+                  !params.row.hasActiveMaintenance &&
+                  !params.row.hasFutureMaintenance && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mt: isMobile ? 0 : '1.5rem',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: palette.errorDark }}
+                      >
+                        Circuit Breaker Thrown
+                      </Typography>
+                      <WarningIcon
+                        fontSize="small"
+                        htmlColor={palette.errorDark}
+                        sx={{ marginLeft: 0.5 }}
+                      />
+                    </Box>
+                  )}
                 {!isConnected &&
+                  !isCircuitBreakerTripped &&
                   !params.row.hasActiveMaintenance &&
                   !params.row.hasFutureMaintenance && (
                     <Box
