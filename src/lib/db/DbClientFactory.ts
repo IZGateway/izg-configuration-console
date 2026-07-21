@@ -18,6 +18,9 @@ import {
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
+import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { Jurisdiction } from '../type/Jurisdiction'
+import { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -372,5 +375,89 @@ class EncryptedRepository implements DbClient {
 
   async upsertAllowedUser(allowedUser: AllowedUser): Promise<AllowedUser> {
     return await this.repository.upsertAllowedUser(allowedUser)
+  }
+
+  async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
+    return await this.repository.fetchApiKeyCredentials()
+  }
+
+  async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
+    return await this.repository.getApiKeyCredential(sortKey)
+  }
+
+  async revokeApiKeyCredential(
+    sortKey: string,
+    revokedBy: string,
+    revokedAt: string,
+    reason?: string
+  ): Promise<void> {
+    return await this.repository.revokeApiKeyCredential(sortKey, revokedBy, revokedAt, reason)
+  }
+
+  async supersedApiKeyCredential(params: {
+    sortKey: string
+    renewedBy: string
+    renewedAt: string
+    graceExpiresAt: string
+    supersededByJti: string
+  }): Promise<void> {
+    return await this.repository.supersedApiKeyCredential(params)
+  }
+
+  async createApiKeyCredential(params: {
+    jti: string
+    sortKey: string
+    jurisdictionId: string
+    env: string
+    status: string
+    createdOn: Date
+    expiresAt: Date
+    createdBy: string
+    description?: string
+    domain?: string
+  }): Promise<void> {
+    return await this.repository.createApiKeyCredential(params)
+  }
+
+  async fetchJurisdictions(): Promise<Jurisdiction[]> {
+    return await this.repository.fetchJurisdictions()
+  }
+
+  async getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null> {
+    return await this.repository.getApiKeyDomain(sortKey)
+  }
+
+  async upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    jurisdictionId: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void> {
+    return await this.repository.upsertApiKeyDomain(params)
+  }
+
+  async fetchAuthorizedApiKeyDomains(
+    envId: string,
+    jurisdictionId: string
+  ): Promise<ApiKeyDomain[]> {
+    return await this.repository.fetchAuthorizedApiKeyDomains(envId, jurisdictionId)
+  }
+
+  async updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
+  }): Promise<void> {
+    return await this.repository.updateApiKeyCredentialStatus(params)
+  }
+
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
+    return await this.repository.markApiKeyCredentialViewed(sortKey, viewedAt)
   }
 }
