@@ -12,8 +12,10 @@ import palette from '../../styles/theme/palette'
 import WarningIcon from '@mui/icons-material/Warning'
 import HistoryIcon from '@mui/icons-material/History'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import React, { useState } from 'react'
 import MaintenanceDialog from './maintenanceDialog'
+import ResetCircuitBreakerDialog from './resetCircuitBreakerDialog'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
 import useRoleAccess from '../../lib/security/useRoleAccess'
@@ -40,6 +42,8 @@ const PopOverActionButtons = (props: {
   const { setAlert } = useContext(CombinedContext)
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
+  const isCircuitBreakerTripped =
+    props.status?.toLowerCase() === 'circuit breaker thrown'
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget)
@@ -103,6 +107,16 @@ const PopOverActionButtons = (props: {
   }
   const closeMaintenanceDialog = () => {
     setOpenMaintenance(false)
+  }
+
+  const [openResetCircuitBreaker, setOpenResetCircuitBreaker] =
+    useState(false)
+  const openResetCircuitBreakerDialog = () => {
+    setOpenResetCircuitBreaker(true)
+    setAnchorEl(null)
+  }
+  const closeResetCircuitBreakerDialog = () => {
+    setOpenResetCircuitBreaker(false)
   }
 
   return (
@@ -181,10 +195,31 @@ const PopOverActionButtons = (props: {
             )}
           </Box>
         )}
+        {accessLevels.canResetCircuitBreaker && isCircuitBreakerTripped && (
+          <MenuItem
+            id={'reset_circuit_breaker_' + props.destTypeId + '_' + props.destId}
+            onClick={openResetCircuitBreakerDialog}
+          >
+            <ListItemIcon>
+              <RestartAltIcon htmlColor={palette.error} fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Reset Circuit Breaker</ListItemText>
+          </MenuItem>
+        )}
       </Menu>
       <MaintenanceDialog
         open={openMaintenance}
         handleClose={closeMaintenanceDialog}
+        destId={props.destId}
+        destTypeId={props.destTypeId}
+        jurisdictionName={props.jurisdictionName}
+        destType={props.destType}
+        updateRow={props.updateRow}
+        row={props.row}
+      />
+      <ResetCircuitBreakerDialog
+        open={openResetCircuitBreaker}
+        handleClose={closeResetCircuitBreakerDialog}
         destId={props.destId}
         destTypeId={props.destTypeId}
         jurisdictionName={props.jurisdictionName}
