@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react'
+import { render, fireEvent, waitFor } from '@testing-library/react'
 import PopOverActionButtons from './popOverActionButtons'
 import CombinedContext from '../../contexts/app'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
@@ -67,9 +67,7 @@ describe('PopOverActionButtons component', () => {
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
           row={undefined}
-          updateRow={function (row: any): void {
-            throw new Error('Function not implemented.')
-          }}
+          updateRow={jest.fn()}
         />
       </CombinedContext.Provider>
     )
@@ -87,9 +85,7 @@ describe('PopOverActionButtons component', () => {
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
           row={undefined}
-          updateRow={function (row: any): void {
-            throw new Error('Function not implemented.')
-          }}
+          updateRow={jest.fn()}
         />
       </CombinedContext.Provider>
     )
@@ -108,14 +104,49 @@ describe('PopOverActionButtons component', () => {
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
           row={undefined}
-          updateRow={function (row: any): void {
-            throw new Error('Function not implemented.')
-          }}
+          updateRow={jest.fn()}
         />
       </CombinedContext.Provider>
     )
     fireEvent.click(getByLabelText('moreactions'))
     expect(getByText('Reset Circuit Breaker')).toBeInTheDocument()
+  })
+
+  it('clicking Reset Circuit Breaker opens the confirmation dialog', async () => {
+    const { getByLabelText, getByText, getByRole, queryByRole, queryByText } =
+      render(
+        <CombinedContext.Provider value={combinedContextValueMock}>
+          <PopOverActionButtons
+            destTypeId={1}
+            destId={'test'}
+            status="Circuit Breaker Thrown"
+            hasActiveMaintenance={false}
+            jurisdictionName="Test Jurisdiction"
+            destType="Test Type"
+            row={{ destUri: 'https://mdexample.net/' }}
+            updateRow={jest.fn()}
+          />
+        </CombinedContext.Provider>
+      )
+    // The dialog uses `keepMounted`, so its content exists in the DOM (just
+    // visually hidden) before it's opened — assert on role visibility
+    // (which respects CSS `visibility: hidden`), not just text presence.
+    expect(queryByRole('dialog')).not.toBeInTheDocument()
+    fireEvent.click(getByLabelText('moreactions'))
+    fireEvent.click(getByText('Reset Circuit Breaker'))
+    expect(getByRole('dialog')).toBeInTheDocument()
+    expect(
+      getByText(
+        (_, node) =>
+          node?.textContent ===
+          'Are you sure you want to reset the circuit breaker for Test Jurisdiction — https://mdexample.net/ (Test Type)? This action will restore connectivity and log the reset.'
+      )
+    ).toBeInTheDocument()
+    // Wait for the menu popover's exit transition to fully finish (it isn't
+    // `keepMounted`, so "History" disappears only once it's actually gone)
+    // so its transition timer doesn't fire after this test unmounts and log
+    // an unmounted-component warning during a later test.
+    await waitFor(() => expect(queryByText('History')).not.toBeInTheDocument())
   })
 
   it('does not show the Reset Circuit Breaker menu item when the circuit breaker is not tripped', async () => {
@@ -129,9 +160,7 @@ describe('PopOverActionButtons component', () => {
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
           row={undefined}
-          updateRow={function (row: any): void {
-            throw new Error('Function not implemented.')
-          }}
+          updateRow={jest.fn()}
         />
       </CombinedContext.Provider>
     )
@@ -159,9 +188,7 @@ describe('PopOverActionButtons component', () => {
           jurisdictionName="Test Jurisdiction"
           destType="Test Type"
           row={undefined}
-          updateRow={function (row: any): void {
-            throw new Error('Function not implemented.')
-          }}
+          updateRow={jest.fn()}
         />
       </CombinedContext.Provider>
     )
