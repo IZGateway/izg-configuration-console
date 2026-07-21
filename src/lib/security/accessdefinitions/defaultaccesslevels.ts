@@ -23,6 +23,7 @@ const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessCont
     canViewHistory: false,
     canEditConnection: false,
     canViewChangeRequest: false,
+    canResetCircuitBreaker: false,
   }
 
 const defaultTestPageAccessControl: TestPageAccessControl = {
