@@ -66,11 +66,7 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
       } else {
         setAlert({
           level: 'error',
-          message: `Request to reset the circuit breaker for ${
-            props.jurisdictionName
-          } ${' '} ${
-            props.destType
-          } was not successful!. Please try again later!`,
+          message: `Request to reset the circuit breaker for ${props.jurisdictionName} ${props.destType} was not successful. Please try again later.`,
         })
       }
     } catch {
@@ -139,7 +135,7 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
             <Button
               id="confirm"
               fullWidth
-              type="submit"
+              type="button"
               color="primary"
               variant="contained"
               onClick={handleConfirm}

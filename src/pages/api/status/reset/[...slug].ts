@@ -112,9 +112,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     }
   } else {
-    throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`
-    )
+    res.setHeader('Allow', ['POST'])
+    return res
+      .status(405)
+      .json({ error: `The HTTP ${req.method} method is not supported at this route.` })
   }
 }
 
