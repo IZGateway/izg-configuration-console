@@ -146,4 +146,34 @@ describe('ResetCircuitBreakerDialog component', () => {
     expect(updateRow).not.toHaveBeenCalled()
     expect(handleClose).not.toHaveBeenCalled()
   })
+
+  it('shows an error alert and does not update the row when fetch rejects with a network error', async () => {
+    const handleClose = jest.fn()
+    const updateRow = jest.fn()
+    mockFetch.mockRejectedValueOnce(new Error('network error'))
+
+    const { getByRole } = render(
+      <CombinedContext.Provider value={combinedContextValueMock}>
+        <ResetCircuitBreakerDialog
+          open={true}
+          handleClose={handleClose}
+          destTypeId={1}
+          destId={'test'}
+          jurisdictionName="Maryland"
+          destType="Production"
+          row={{ destUri: 'https://mdexample.net/' }}
+          updateRow={updateRow}
+        />
+      </CombinedContext.Provider>
+    )
+    fireEvent.click(getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() =>
+      expect(setAlert).toHaveBeenCalledWith(
+        expect.objectContaining({ level: 'error' })
+      )
+    )
+    expect(updateRow).not.toHaveBeenCalled()
+    expect(handleClose).not.toHaveBeenCalled()
+  })
 })

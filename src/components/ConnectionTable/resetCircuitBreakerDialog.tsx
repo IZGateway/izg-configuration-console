@@ -73,8 +73,12 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
           } was not successful!. Please try again later!`,
         })
       }
-    } catch (error) {
-      throw new Error(error)
+    } catch {
+      setAlert({
+        level: 'error',
+        message:
+          'Failed to reset the circuit breaker due to a network error. Please try again later!',
+      })
     }
   }
 
