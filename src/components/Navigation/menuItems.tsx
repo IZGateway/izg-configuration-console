@@ -1,6 +1,6 @@
 import { MenuItem } from '.'
 import CallMergeIcon from '@mui/icons-material/CallMerge'
-import LockIcon from '@mui/icons-material/Lock'
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import GroupIcon from '@mui/icons-material/Group'
 import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeMosaicIcon from '@mui/icons-material/AutoAwesomeMosaic'
@@ -29,9 +29,9 @@ export const menuItems: MenuItem[] = [
     adminOnly: false,
   },
   {
-    label: 'Password Encryption',
-    icon: <LockIcon sx={iconSx} />,
-    path: '/passwordencryption',
+    label: 'Admin Operations',
+    icon: <AdminPanelSettingsIcon sx={iconSx} />,
+    path: '/adminoperations',
     adminOnly: true,
   },
   {
