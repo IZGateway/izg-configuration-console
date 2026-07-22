@@ -1,11 +1,9 @@
 import { Middleware } from 'next-api-middleware'
-import { authOptions } from './auth/[...nextauth]'
-import { getServerSession } from 'next-auth'
-import { getToken } from 'next-auth/jwt'
 import logger from '../../../logger'
 import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
-import { asyncRequestContext, Context } from '../../lib/Context'
+import { asyncRequestContext } from '../../lib/Context'
+import { buildRequestContext } from '../../lib/requestContext'
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -107,6 +105,27 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
   }
 }
 
+// check the caller is an operations/admin user (Okta OPERATIONS_GROUP).
+// Guards destructive admin-only operations server-side; the nav/AdminGuard only
+// gate the UI.
+const checkAdmin: Middleware = async (req, res, next) => {
+  const context = asyncRequestContext.getStore()
+  const user = context?.user || 'unknown'
+  const sub = context?.sub || null
+  const isAdmin = context?.session?.user?.isAdmin
+  if (isAdmin) {
+    await next()
+  } else {
+    logger.warn('Forbidden: non-admin attempted an admin-only operation', {
+      url: req.url,
+      method: req.method,
+      user,
+      sub,
+    })
+    res.status(403).send('forbidden')
+  }
+}
+
 const withMiddleware = (...middlewareNames: string[]) => {
   const defaultMiddleware = ['logApiRequest']
   const names = Array.from(new Set([...defaultMiddleware, ...middlewareNames]))
@@ -115,21 +134,14 @@ const withMiddleware = (...middlewareNames: string[]) => {
     captureErrors,
     checkAccessToDestId,
     checkAccessToDestIdSlug,
+    checkAdmin,
   }
   const stack = names.map((name) => middlewareMap[name])
 
   return (handler: NextApiHandler) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
-      // Setup DbRequestContext for this request
-      const session = await getServerSession(req, res, authOptions)
-      const user = session?.user?.name || session?.user?.email || 'unknown'
-      const ipAddress =
-        (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
-        req.socket?.remoteAddress ||
-        'unknown'
-      const jwtToken = await getToken({ req })
-      const sub = (jwtToken?.sub as string) || undefined
-      const context: Context = { user, ipAddress, sub, session }
+      // Setup the per-request audit context (shared with getServerSideProps reads).
+      const context = await buildRequestContext(req, res)
       await asyncRequestContext.run(context, async () => {
         const dispatch = async (i: number): Promise<void> => {
           if (i < stack.length) {

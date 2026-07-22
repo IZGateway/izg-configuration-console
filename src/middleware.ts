@@ -66,6 +66,11 @@ function checkAndRecordJti(jti: string): boolean {
 const DPOP_SKIP = /^\/(api\/auth|_next|api\/healthcheck|api\/deephealthcheck)/
 
 export default withAuth(async function middleware(req: NextRequestWithAuth) {
+  // NOTE (IGDD-2223): the Edge `Route Request` line is intentionally left
+  // anonymous. Edge middleware cannot use the Winston logger or the Node
+  // AsyncLocalStorage request context, and page-level data access is attributed
+  // via the structured `/api/*` logs (which carry `sessionUser`). Structured
+  // page-view attribution here would be a separate follow-up.
   console.info('Route Request', {
     path: req.nextUrl.pathname,
     method: req.method,
