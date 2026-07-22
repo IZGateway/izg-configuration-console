@@ -1,5 +1,10 @@
 # Release Notes
 
+## Release v1.16.1
+
+- Dependency updates
+- Base docker image update
+
 ## Release v1.16.0
 
 - chore(deps): security and dependency updates
