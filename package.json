@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1090.0",
-    "@aws-sdk/client-secrets-manager": "^3.1090.0",
-    "@aws-sdk/lib-dynamodb": "^3.1090.0",
+    "@aws-sdk/client-dynamodb": "^3.1092.0",
+    "@aws-sdk/client-secrets-manager": "^3.1092.0",
+    "@aws-sdk/lib-dynamodb": "^3.1092.0",
     "@axe-core/react": "^4.12.1",
     "@babel/types": "^7.29.7",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -48,15 +48,15 @@
     "lodash": "^4.18.1",
     "moment": "^2.30.1",
     "moment-timezone": "^0.6.3",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "next-api-middleware": "^3.0.0",
-    "next-auth": "^4.24.14",
+    "next-auth": "^4.24.15",
     "next-swagger-doc": "^0.4.1",
     "node-forge": "^1.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-to-print": "^2.15.1",
-    "swagger-ui-react": "^5.32.9",
+    "swagger-ui-react": "^5.32.11",
     "swr": "^2.4.2",
     "waait": "^1.0.5",
     "winston": "^3.19.0",
@@ -68,7 +68,7 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@izgateway/dependency-scripts": "^1.0.7",
-    "@next/eslint-plugin-next": "^16.2.10",
+    "@next/eslint-plugin-next": "^16.2.11",
     "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^14.3.1",
@@ -83,7 +83,7 @@
     "cross-env": "^7.0.3",
     "cypress": "^14.5.4",
     "dotenv": "^16.6.1",
-    "eslint-config-next": "^16.2.10",
+    "eslint-config-next": "^16.2.11",
     "eslint-config-prettier": "^8.10.2",
     "husky": "^8.0.3",
     "jest": "^30.4.2",
@@ -92,7 +92,7 @@
     "prettier": "^2.8.8",
     "rimraf": "^6.1.3",
     "semver": "^7.8.5",
-    "ts-jest": "^29.4.11",
+    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   },
@@ -101,11 +101,12 @@
       "ajv": "^6.14.0"
     },
     "eslint": {
-      "ajv": "^6.14.0"
+      "ajv": "^6.14.0",
+      "brace-expansion": "^1.1.16"
     },
     "glob": "^13.0.6",
     "jsdom": "^28.1.0",
-    "postcss": "8.5.20",
+    "postcss": "8.5.22",
     "qs": "6.15.3",
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-react": {
