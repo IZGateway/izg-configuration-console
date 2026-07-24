@@ -5,23 +5,39 @@ import AppHeaderBar from '../../components/AppHeader'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import AdminOperations from '../../components/AdminOperations'
 import AdminGuard from '../../components/AdminGuard'
+import {
+  getCircuitBreakerResetEnvironments,
+  type CircuitBreakerResetEnvironment,
+} from '../../lib/utils/izghubcircuitbreakerreset'
 
-const AdminOperationsPage = ({ hasKeyName }: { hasKeyName: boolean }) => {
+interface AdminOperationsPageProps {
+  hasKeyName: boolean
+  circuitBreakerResetEnvironments: CircuitBreakerResetEnvironment[]
+}
+
+const AdminOperationsPage = ({
+  hasKeyName,
+  circuitBreakerResetEnvironments,
+}: AdminOperationsPageProps) => {
   return (
     <Container title="Admin Operations">
       <AppHeaderBar open />
       <ErrorBoundary>
-        <AdminOperations hasKeyName={hasKeyName} />
+        <AdminOperations
+          hasKeyName={hasKeyName}
+          circuitBreakerResetEnvironments={circuitBreakerResetEnvironments}
+        />
       </ErrorBoundary>
     </Container>
   )
 }
 
-export const getServerSideProps: GetServerSideProps<{
-  hasKeyName: boolean
-}> = async () => {
+export const getServerSideProps: GetServerSideProps<
+  AdminOperationsPageProps
+> = async () => {
   const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
-  return { props: { hasKeyName } }
+  const circuitBreakerResetEnvironments = getCircuitBreakerResetEnvironments()
+  return { props: { hasKeyName, circuitBreakerResetEnvironments } }
 }
 
 export default AdminGuard(AdminOperationsPage)

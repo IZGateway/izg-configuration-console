@@ -7,9 +7,11 @@ import PasswordEncryptionCard from './PasswordEncryptionCard'
 import CircuitBreakerCard from './CircuitBreakerCard'
 import DatabaseRefreshCard from './DatabaseRefreshCard'
 import InfoPanel from './InfoPanel'
+import type { CircuitBreakerResetEnvironment } from '../../lib/utils/izghubcircuitbreakerreset'
 
 interface AdminOperationsProps {
   hasKeyName: boolean
+  circuitBreakerResetEnvironments: CircuitBreakerResetEnvironment[]
 }
 
 // Two-column responsive grid: operation card on the left, info panel on the right.
@@ -20,7 +22,10 @@ const rowSx = {
   mb: 4,
 } as const
 
-const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
+const AdminOperations = ({
+  hasKeyName,
+  circuitBreakerResetEnvironments,
+}: AdminOperationsProps) => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
 
@@ -68,7 +73,10 @@ const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
 
       {/* Circuit Breaker Reset */}
       <Box sx={{ mb: 4 }}>
-        <CircuitBreakerCard onResult={handleResult} />
+        <CircuitBreakerCard
+          environments={circuitBreakerResetEnvironments}
+          onResult={handleResult}
+        />
       </Box>
 
       {/* Database Refresh */}
