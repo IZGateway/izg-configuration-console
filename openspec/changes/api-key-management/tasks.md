@@ -21,6 +21,17 @@ created:
     - IGDD-2709
   summary: Implementation tasks for api-key-management CR
 updated:
+  - date: '2026-07-24T13:06:48.722Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~86f7cb80-f68c-4275-90fc-a3dcefd3b6a7
+    summary: Remove ticket prescription from Hub group; one ticket covers hub+core
   - date: '2026-07-24T13:01:11.554Z'
     user: boonek
     agent:
@@ -289,10 +300,10 @@ ticket: IGDD-3140
 - [ ] 5.5 Smoke-test multi-env: create as IZG Operations with multiple envIds →
       confirm JWT `env` claim contains the list *(blocked: IGDD-3106)*
 
-## 6. Hub — useTypes Enforcement *(separate tickets — izgw-hub, izgw-core)*
+## 6. Hub — useTypes Enforcement *(separate ticket — izgw-hub + izgw-core)*
 
 > These tasks complete the system feature end-to-end but are implemented in `izgw-hub`
-> and `izgw-core`, not in CC. Separate IGDD tickets should be created once CC
+> and `izgw-core`, not in CC. A separate IGDD ticket should be created once CC
 > tasks 1.4–1.6 are merged and `useTypes` + `environments` are live in `ApiKeyCredential`.
 
 - [ ] 6.1 At message routing time, verify the sender's JWT signature and extract `jti`
@@ -301,8 +312,7 @@ ticket: IGDD-3140
       and `useTypes` — these are the authoritative server-side access control properties
 - [ ] 6.3 Enforce all three access control checks: `status = active`, target environment
       ∈ `credential.environments`, and `credential.useTypes ∩ destination.allowedUseTypes ≠ ∅`;
-      return an `izgw-core` `SecurityFault` to the sender if any check fails — update
-      `izgw-core` to define a fault code and reason phrase specific to this useTypes
-      access denial scenario *(izgw-core ticket required)*
+      return an `izgw-core` `SecurityFault` with a new fault code specific to useTypes
+      access denial
 - [ ] 6.4 Log the enforcement decision (allowed or denied) including `useTypes`,
       destination jurisdiction, and environment for audit and operations visibility
