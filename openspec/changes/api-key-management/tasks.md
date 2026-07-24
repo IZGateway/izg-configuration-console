@@ -21,6 +21,30 @@ created:
     - IGDD-2709
   summary: Implementation tasks for api-key-management CR
 updated:
+  - date: '2026-07-24T12:55:14.424Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~cc23e806-def5-452a-8178-2dac010686fa
+    summary: 'Fix task 1.7: useTypes claim always list of strings, never scalar'
+  - date: '2026-07-24T12:55:05.876Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~cc23e806-def5-452a-8178-2dac010686fa
+    summary: >-
+      Fix task 3.5: env claim always list of name strings, never scalar or
+      numeric
   - date: '2026-07-24T12:50:38.418Z'
     user: boonek
     agent:
@@ -153,7 +177,10 @@ ticket: IGDD-3140
       task 1.3); reject with 400 if any value is invalid; pass to `createApiKeyCredential`
       — note: enforcement of `Sender.useTypes ∩ Jurisdiction.allowedUseTypes` at routing
       time is Hub-side logic (see Hub Enforcement section below)
-- [ ] 1.7 Add `useTypes` to JWT claims in `POST /api/apikeys/token.ts`
+- [ ] 1.7 Add `useTypes` to JWT claims in `POST /api/apikeys/token.ts`: always emit
+      as a JSON array of strings (e.g., `["PUBLIC_HEALTH"]` or
+      `["PUBLIC_HEALTH", "PROVIDER", "PATIENT"]`), never as a scalar — consistent
+      form allows consumers to add use types over time without changing claim structure
 - [ ] 1.8 Add `useTypes` multi-select input (Patient / Provider / Public Health) to the
       credential creation form in the UI *(blocked: IGDD-3106)*
 
@@ -182,8 +209,11 @@ ticket: IGDD-3140
       for standard single-environment credentials
 - [ ] 3.4 Update `POST /api/apikeys/renew/index.ts` to copy `environments` from
       the old credential to the new one
-- [ ] 3.5 Update `POST /api/apikeys/token.ts` JWT `env` claim: emit single string
-      when `environments` has one entry; emit list when multiple
+- [ ] 3.5 Update `POST /api/apikeys/token.ts` JWT `env` claim: always emit as a JSON
+      array of environment name strings (e.g., `["production"]` or
+      `["onboarding", "staging", "production"]`), never as a scalar — consistent
+      form regardless of count; resolve each `envId` to its human-readable name at
+      token issuance time so claims are readable without a lookup table
 - [ ] 3.6 Add multi-env credential creation for admin/ops roles: accept
       `envIds: number[]` body param when caller has IZG Operations or Jurisdiction
       Operations role *(blocked: IGDD-3106)*
