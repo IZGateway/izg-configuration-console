@@ -49,6 +49,6 @@ export default class IZGHubStatusHistoryEndpoint {
   }
 
   getIZGHubEndpointMetadata() {
-    return this.statusHistoryURLs
+    return [...this.statusHistoryURLs]
   }
 }
