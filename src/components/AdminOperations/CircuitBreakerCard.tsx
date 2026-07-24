@@ -2,14 +2,14 @@ import * as React from 'react'
 import { Box, Typography, Button, Card, CardContent, Divider } from '@mui/material'
 import ResetCircuitBreakerDialog from './ResetCircuitBreakerDialog'
 import Loader from '../Loader'
-import type { CircuitBreakerResetEnvironment } from '../../lib/utils/izghubcircuitbreakerreset'
+import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
 
 interface CircuitBreakerCardProps {
-  environments: CircuitBreakerResetEnvironment[]
+  environments: HubEnvironment[]
   onResult: (result: { level: 'success' | 'error'; message: string }) => void
 }
 
-const getButtonId = (environment: CircuitBreakerResetEnvironment) =>
+const getButtonId = (environment: HubEnvironment) =>
   `reset-${environment.destinationType.toLowerCase()}-circuit-breakers`
 
 const CircuitBreakerCard = ({
@@ -18,7 +18,7 @@ const CircuitBreakerCard = ({
 }: CircuitBreakerCardProps) => {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [selectedEnvironment, setSelectedEnvironment] =
-    React.useState<CircuitBreakerResetEnvironment | null>(null)
+    React.useState<HubEnvironment | null>(null)
   const [loading, setLoading] = React.useState(false)
 
   const handleReset = async () => {
@@ -63,7 +63,7 @@ const CircuitBreakerCard = ({
     }
   }
 
-  const openConfirmDialog = (environment: CircuitBreakerResetEnvironment) => {
+  const openConfirmDialog = (environment: HubEnvironment) => {
     setSelectedEnvironment(environment)
     setConfirmOpen(true)
   }

@@ -7,11 +7,11 @@ import PasswordEncryptionCard from './PasswordEncryptionCard'
 import CircuitBreakerCard from './CircuitBreakerCard'
 import DatabaseRefreshCard from './DatabaseRefreshCard'
 import InfoPanel from './InfoPanel'
-import type { CircuitBreakerResetEnvironment } from '../../lib/utils/izghubcircuitbreakerreset'
+import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
 
 interface AdminOperationsProps {
   hasKeyName: boolean
-  circuitBreakerResetEnvironments: CircuitBreakerResetEnvironment[]
+  hubEnvironments: HubEnvironment[]
 }
 
 // Two-column responsive grid: operation card on the left, info panel on the right.
@@ -24,7 +24,7 @@ const rowSx = {
 
 const AdminOperations = ({
   hasKeyName,
-  circuitBreakerResetEnvironments,
+  hubEnvironments,
 }: AdminOperationsProps) => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
@@ -74,19 +74,22 @@ const AdminOperations = ({
       {/* Circuit Breaker Reset */}
       <Box sx={{ mb: 4 }}>
         <CircuitBreakerCard
-          environments={circuitBreakerResetEnvironments}
+          environments={hubEnvironments}
           onResult={handleResult}
         />
       </Box>
 
       {/* Database Refresh */}
       <Box sx={rowSx}>
-        <DatabaseRefreshCard onResult={handleResult} />
+        <DatabaseRefreshCard
+          environments={hubEnvironments}
+          onResult={handleResult}
+        />
         <InfoPanel
           title="Configuration Sync"
-          note="Reloads each hub's configuration from the database across all environments."
+          note="Reloads the selected hub environment's configuration from the database."
           rows={[
-            { label: 'Scope', value: 'All hub environments' },
+            { label: 'Scope', value: 'Selected hub environment' },
             { label: 'Requires restart', value: 'No' },
           ]}
         />

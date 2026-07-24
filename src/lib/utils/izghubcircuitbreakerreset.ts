@@ -15,24 +15,6 @@ import { getDestinationType } from '../desttypehelper'
 const CIRCUIT_BREAKER_RESET_PATH =
   process.env.IZG_CIRCUIT_BREAKER_RESET_PATH || 'reset'
 
-const ENVIRONMENT_LABELS: Record<string, string> = {
-  DEV: 'Development',
-  PRODUCTION: 'Production',
-  TEST: 'Testing',
-  ONBOARD: 'Onboarding',
-  STAGE: 'Staging',
-  UNKNOWN: 'Unknown',
-}
-
-const ENVIRONMENT_PRIORITY: Record<string, number> = {
-  PRODUCTION: 0,
-  ONBOARD: 1,
-  STAGE: 2,
-  DEV: 3,
-  TEST: 4,
-  UNKNOWN: 5,
-}
-
 const getHttpsAgentOptions = () => {
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || undefined
@@ -53,15 +35,6 @@ const deriveHubRestBaseUrl = (statusHistoryUrl: string) =>
 
 const getConfiguredHubURLs = () =>
   new IZGHubStatusHistoryEndpoint(process.env.IZG_STATUS_ENDPOINT_URL || '')
-
-const getEnvironmentLabel = (destinationTypeId: number, desc: string) => {
-  const destinationType = getDestinationType(destinationTypeId)
-  if (destinationType !== 'UNKNOWN') {
-    return ENVIRONMENT_LABELS[destinationType]
-  }
-
-  return desc || `Environment ${destinationTypeId}`
-}
 
 const resetCircuitBreakersForBaseUrls = async (
   baseUrls: string[],
@@ -107,40 +80,6 @@ export interface CircuitBreakerResetResult {
   succeeded: number
   failed: number
 }
-
-export interface CircuitBreakerResetEnvironment {
-  destinationTypeId: number
-  destinationType: string
-  label: string
-}
-
-export const getCircuitBreakerResetEnvironments =
-  (): CircuitBreakerResetEnvironment[] => {
-    const configuredHubURLs = getConfiguredHubURLs()
-    const environments = configuredHubURLs.getIZGHubEndpointMetadata().map(
-      ({ typeId, desc }) => {
-        const destinationType = getDestinationType(typeId)
-        return {
-          destinationTypeId: typeId,
-          destinationType,
-          label: getEnvironmentLabel(typeId, desc),
-        }
-      }
-    )
-
-    return Array.from(
-      new Map(
-        environments.map((environment) => [
-          environment.destinationTypeId,
-          environment,
-        ])
-      ).values()
-    ).sort(
-      (a, b) =>
-        (ENVIRONMENT_PRIORITY[a.destinationType] ?? 99) -
-        (ENVIRONMENT_PRIORITY[b.destinationType] ?? 99)
-    )
-  }
 
 /**
  * Signals every configured hub to reset all of its circuit breakers so
