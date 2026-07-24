@@ -21,6 +21,19 @@ created:
     - IGDD-2709
   summary: Implementation tasks for api-key-management CR
 updated:
+  - date: '2026-07-24T12:50:38.418Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~80cd0a88-ca9d-4bc0-a9ea-6eeeaf649eb5
+    summary: >-
+      Fix task 1.5: AllowedUseType[] throughout; enforce SS semantics on write
+      only
   - date: '2026-07-24T12:42:26.058Z'
     user: boonek
     agent:
@@ -127,11 +140,14 @@ ticket: IGDD-3140
       for this credential (e.g., PATIENT, PROVIDER, PUBLIC_HEALTH); it is set at
       issuance and embedded in the JWT; it is NOT scoped to a specific destination
 - [ ] 1.5 Update `createApiKeyCredential` in `dynamo.ts` to persist `useTypes` as a
-      DynamoDB `SS` (String Set), not `L` (List): use `docClient.createSet(useTypes)`
-      on write; on read, DocumentClient unmarshals `SS` → `string[]` — filter each
-      value through `isValidUseType()` to narrow to `AllowedUseType[]`; if `useTypes`
-      is absent or empty, omit the attribute entirely (DynamoDB rejects empty `SS`).
-      Apply the same SS pattern for `Jurisdiction.allowedUseTypes` in task 1.2.
+      DynamoDB `SS` (String Set) using `docClient.createSet(useTypes)` on write;
+      before writing, validate: no duplicate values (deduplicate with
+      `[...new Set(values)]` or reject), and at least one value present (DynamoDB
+      rejects empty `SS`); on read, DocumentClient unmarshals `SS` → `string[]` —
+      filter each value through `isValidUseType()` to narrow to `AllowedUseType[]`;
+      `AllowedUseType[]` remains the TypeScript type throughout (not `Set<AllowedUseType>`
+      — `Set` does not serialize to JSON). Apply the same pattern for
+      `Jurisdiction.allowedUseTypes` in task 1.2.
 - [ ] 1.6 Accept `useTypes: AllowedUseType[]` in the POST body of
       `POST /api/apikeys/index.ts`; validate each value with `isValidUseType()` (from
       task 1.3); reject with 400 if any value is invalid; pass to `createApiKeyCredential`
