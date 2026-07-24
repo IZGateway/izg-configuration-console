@@ -21,6 +21,19 @@ created:
     - IGDD-2709
   summary: Implementation tasks for api-key-management CR
 updated:
+  - date: '2026-07-24T12:15:12.693Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~ac687f26-2bc9-4b3f-8e2c-c092b0541402
+    summary: >-
+      Reword task 1.3: use TypeScript union type + runtime guard instead of
+      separate utility
   - date: '2026-07-24T04:33:49.638Z'
     user: boonek
     agent:
@@ -53,8 +66,11 @@ ticket: IGDD-3140
 
 - [ ] 1.1 Add `allowedUseTypes?: string[]` to `Jurisdiction` TypeScript type
 - [ ] 1.2 Update DynamoDB reads for `Jurisdiction` to include `allowedUseTypes`
-- [ ] 1.3 Add enum validation utility: reject any `allowedUseTypes` or credential
-      `useTypes` value not in `['PATIENT', 'PROVIDER', 'PUBLIC_HEALTH']`
+- [ ] 1.3 Define `AllowedUseType` as a TypeScript string union type
+      (`'PATIENT' | 'PROVIDER' | 'PUBLIC_HEALTH'`) in `src/lib/type/AllowedUseType.ts`;
+      use `AllowedUseType[]` for `allowedUseTypes` and `useTypes` fields (compile-time
+      enforcement); add a runtime type guard `isValidUseType(v: string): v is AllowedUseType`
+      for validating API request bodies and DynamoDB reads
 - [ ] 1.4 Add `useTypes?: string[]` to `ApiKeyCredential` TypeScript type in
       `src/lib/type/ApiKeyCredential.ts`
 - [ ] 1.5 Update `createApiKeyCredential` in `dynamo.ts` to persist `useTypes`
