@@ -67,20 +67,8 @@ const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
       </Box>
 
       {/* Circuit Breaker Reset */}
-      <Box sx={rowSx}>
+      <Box sx={{ mb: 4 }}>
         <CircuitBreakerCard onResult={handleResult} />
-        <InfoPanel
-          title="System Status"
-          note="Resetting signals every hub instance across all environments to restore connectivity."
-          rows={[
-            // TODO(IGDD-2272): Wire live hub status (active faults / regions /
-            // connection state) once a status source is available. AC #4's
-            // "redisplay shows the breaker was reset" will surface here.
-            { label: 'Active Faults', value: '—' },
-            { label: 'Regions', value: '—' },
-            { label: 'Status', value: '—' },
-          ]}
-        />
       </Box>
 
       {/* Database Refresh */}
@@ -95,9 +83,6 @@ const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
           ]}
         />
       </Box>
-
-      {/* TODO(IGDD-2272): "Recent Audit Events" panel from the mockup — needs an
-          audit-event query wired up before it can display real data. */}
 
       <CustomSnackbar
         open={showSnackbar}
