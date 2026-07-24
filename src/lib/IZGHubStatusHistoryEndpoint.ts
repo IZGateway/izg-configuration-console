@@ -3,7 +3,7 @@ import { StatusHistoryURLs } from './type/StatusHistoryURLs'
 import logger from '../../logger'
 
 export default class IZGHubStatusHistoryEndpoint {
-  statusHistoryURLs: StatusHistoryURLs
+  statusHistoryURLs: StatusHistoryURLs = []
 
   constructor(configuredStatusHistoryEndpoints: string) {
     try {
@@ -46,5 +46,9 @@ export default class IZGHubStatusHistoryEndpoint {
 
   getIZGHubURLs() {
     return this.statusHistoryURLs.map((endpoint) => endpoint.url)
+  }
+
+  getIZGHubEndpointMetadata() {
+    return this.statusHistoryURLs
   }
 }
