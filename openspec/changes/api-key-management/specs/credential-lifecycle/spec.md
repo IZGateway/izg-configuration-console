@@ -18,6 +18,69 @@ created:
     - openspec/changes/api-key-management-ui/specs/api-key-management/spec.md
   summary: Credential lifecycle spec for api-key-management CR
 updated:
+  - date: '2026-07-24T13:01:19.477Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~dc8dd9c9-1cc4-4fc2-8d56-a15cdd756eb3
+    summary: Reference izgw-core SecurityFault in Hub enforcement scenario
+  - date: '2026-07-24T13:00:02.940Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT carries identity only; environments and useTypes are server-side
+      DynamoDB lookup by jti
+  - date: '2026-07-24T12:59:43.330Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT carries identity only; environments and useTypes are server-side
+      DynamoDB lookup by jti
+  - date: '2026-07-24T12:59:32.994Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT carries identity only; environments and useTypes are server-side
+      DynamoDB lookup by jti
+  - date: '2026-07-24T12:59:21.568Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT carries identity only; environments and useTypes are server-side
+      DynamoDB lookup by jti
   - date: '2026-07-24T04:06:06.025Z'
     user: boonek
     agent:
@@ -120,9 +183,10 @@ SHALL be created immediately with `ready_for_validation` status. The JWT is not 
 until DNS validation succeeds and the credential is first viewed.
 
 For admin and operational staff (IZG Operations, Jurisdiction Operations), the credential
-MAY be issued spanning multiple environments. In this case `env` on the credential record
-stores a list of environment IDs rather than a single value, and the JWT payload reflects
-the full authorized environment set.
+MAY be issued spanning multiple environments. In this case `environments` on the credential
+record stores a list of environment identifiers. The Hub validates the target environment
+against this list at routing time — `environments` is a server-side access control property,
+not a JWT claim.
 
 #### Scenario: New domain creates credential in ready_for_validation status
 
@@ -141,9 +205,9 @@ the full authorized environment set.
 
 - **WHEN** `POST /api/apikeys` is called by a user with IZG Operations or Jurisdiction
   Operations role and multiple envIds are requested
-- **THEN** the `ApiKeyCredential` record is created with an `env` value that covers
+- **THEN** the `ApiKeyCredential` record is created with an `environments` list covering
   all requested environments
-- **AND** the resulting JWT is valid in each of those environments
+- **AND** the Hub validates the target environment against `environments` at routing time
 
 #### Scenario: Existing authorized domain creates credential in active status immediately
 
@@ -214,9 +278,10 @@ signing secret from AWS Secrets Manager.
   credential
 - **THEN** the JWT is signed with HS256 using the secret at
   `/izg/<env>/jwt/signing-secret` from AWS Secrets Manager
-- **AND** the JWT payload includes: `jti`, `sub` (jurisdictionId), `upn` (domain),
-  `env` (a single environment ID for standard credentials, or a list for multi-environment
-  admin credentials), `iat` (issuedAt), `exp` (expiresAt)
+- **AND** the JWT payload carries identity claims only: `jti`, `sub` (jurisdictionId),
+  `upn` (domain), `iat` (issuedAt), `exp` (expiresAt) — access control properties
+  (`environments`, `useTypes`) are NOT embedded in the JWT; the Hub reads them from
+  `ApiKeyCredential` by `jti` at routing time, so they can change without reissuance
 - **AND** `viewedAt` is recorded on the credential record
 - **AND** the JWT string is returned in the response body
 
@@ -355,25 +420,28 @@ NOT return the entire table for client-side filtering.
 ### Requirement: Credential declares its accepted use-type categories
 
 An `ApiKeyCredential` SHALL declare its `useTypes`, representing the categories of
-submitter the credential is valid for. This value MUST be a non-empty subset of the
-issuing jurisdiction's `allowedUseTypes`.
-
-#### Scenario: Credential useTypes must be a non-empty subset of jurisdiction allowedUseTypes
-
-- **WHEN** a credential is created
-- **THEN** each value in the credential's `useTypes` MUST appear in the issuing
-  jurisdiction's `allowedUseTypes`
-- **AND** the credential MUST be rejected if `useTypes` is empty or if the intersection
-  with `allowedUseTypes` is empty
+immunization data the sender is authorized to submit. `useTypes` is a server-side
+access control property stored in DynamoDB — it is NOT embedded in the JWT. The Hub
+reads `useTypes` by `jti` at routing time and enforces the intersection with the
+destination jurisdiction's `allowedUseTypes`. This design allows a sender's authorized
+use types to expand (e.g., eHealth Exchange adding `PROVIDER` and `PATIENT` to an
+existing `PUBLIC_HEALTH` credential) without reissuing the JWT.
 
 #### Scenario: useTypes values are restricted to the defined enum
 
 - **WHEN** a credential is created
 - **THEN** each entry in `useTypes` MUST be one of: `PATIENT`, `PROVIDER`, `PUBLIC_HEALTH`
-- **AND** any value outside this set MUST be rejected
+- **AND** `useTypes` MUST be non-empty
+- **AND** any value outside this set MUST be rejected with a 400 error
 
-#### Scenario: Credential useTypes are included in JWT claims
+#### Scenario: Hub enforces useTypes intersection at routing time
 
-- **WHEN** a JWT is generated for a credential that has `useTypes`
-- **THEN** the `useTypes` values are included in the JWT payload
-- **AND** the Hub uses these values for access enforcement at the destination
+- **WHEN** the Hub receives a message from a sender
+- **THEN** the Hub extracts `jti` from the sender's JWT
+- **AND** fetches `credential.useTypes` and `credential.environments` from `ApiKeyCredential`
+  by `jti`
+- **AND** fetches the destination `Jurisdiction.allowedUseTypes`
+- **AND** enforces that `credential.useTypes ∩ jurisdiction.allowedUseTypes ≠ ∅` and
+  that the target environment is in `credential.environments`
+- **AND** returns an `izgw-core` `SecurityFault` to the sender if either check fails
+      (a new fault code specific to useTypes access denial is required in `izgw-core`)

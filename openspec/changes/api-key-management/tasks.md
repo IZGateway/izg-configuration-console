@@ -21,6 +21,45 @@ created:
     - IGDD-2709
   summary: Implementation tasks for api-key-management CR
 updated:
+  - date: '2026-07-24T13:01:11.554Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~dc8dd9c9-1cc4-4fc2-8d56-a15cdd756eb3
+    summary: >-
+      Hub group: JWT identity only, DynamoDB lookup by jti, SecurityFault from
+      izgw-core
+  - date: '2026-07-24T13:00:28.106Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT identity only: useTypes and environments not in JWT, Hub reads from
+      DynamoDB by jti
+  - date: '2026-07-24T13:00:18.874Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.73
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~3f686dc4-ef93-4675-894f-c3a77de53097
+    summary: >-
+      JWT identity only: useTypes and environments not in JWT, Hub reads from
+      DynamoDB by jti
   - date: '2026-07-24T12:55:14.424Z'
     user: boonek
     agent:
@@ -177,10 +216,10 @@ ticket: IGDD-3140
       task 1.3); reject with 400 if any value is invalid; pass to `createApiKeyCredential`
       — note: enforcement of `Sender.useTypes ∩ Jurisdiction.allowedUseTypes` at routing
       time is Hub-side logic (see Hub Enforcement section below)
-- [ ] 1.7 Add `useTypes` to JWT claims in `POST /api/apikeys/token.ts`: always emit
-      as a JSON array of strings (e.g., `["PUBLIC_HEALTH"]` or
-      `["PUBLIC_HEALTH", "PROVIDER", "PATIENT"]`), never as a scalar — consistent
-      form allows consumers to add use types over time without changing claim structure
+- [ ] 1.7 Confirm `useTypes` is NOT added to the JWT payload — it is a server-side
+      access control property in `ApiKeyCredential`, read by the Hub via `jti` lookup;
+      storing it in the JWT would prevent mid-credential updates (e.g., eHealth Exchange
+      expanding from PUBLIC_HEALTH to PROVIDER/PATIENT) without reissuance
 - [ ] 1.8 Add `useTypes` multi-select input (Patient / Provider / Public Health) to the
       credential creation form in the UI *(blocked: IGDD-3106)*
 
@@ -209,11 +248,10 @@ ticket: IGDD-3140
       for standard single-environment credentials
 - [ ] 3.4 Update `POST /api/apikeys/renew/index.ts` to copy `environments` from
       the old credential to the new one
-- [ ] 3.5 Update `POST /api/apikeys/token.ts` JWT `env` claim: always emit as a JSON
-      array of environment name strings (e.g., `["production"]` or
-      `["onboarding", "staging", "production"]`), never as a scalar — consistent
-      form regardless of count; resolve each `envId` to its human-readable name at
-      token issuance time so claims are readable without a lookup table
+- [ ] 3.5 Remove `env` from the JWT payload in `POST /api/apikeys/token.ts`; JWT
+      carries identity claims only: `jti`, `sub`, `upn`, `iat`, `exp`; the Hub reads
+      `environments` from `ApiKeyCredential` by `jti` at routing time — keeping it
+      server-side allows environment scope changes without reissuance
 - [ ] 3.6 Add multi-env credential creation for admin/ops roles: accept
       `envIds: number[]` body param when caller has IZG Operations or Jurisdiction
       Operations role *(blocked: IGDD-3106)*
@@ -251,16 +289,20 @@ ticket: IGDD-3140
 - [ ] 5.5 Smoke-test multi-env: create as IZG Operations with multiple envIds →
       confirm JWT `env` claim contains the list *(blocked: IGDD-3106)*
 
-## 6. Hub — useTypes Enforcement *(separate ticket — izgw-hub)*
+## 6. Hub — useTypes Enforcement *(separate tickets — izgw-hub, izgw-core)*
 
-> These tasks complete the system feature end-to-end but are implemented in `izgw-hub`,
-> not in CC. A separate IGDD ticket should be created targeting `izgw-hub` once CC
-> tasks 1.4–1.7 are merged and `useTypes` is live in the JWT.
+> These tasks complete the system feature end-to-end but are implemented in `izgw-hub`
+> and `izgw-core`, not in CC. Separate IGDD tickets should be created once CC
+> tasks 1.4–1.6 are merged and `useTypes` + `environments` are live in `ApiKeyCredential`.
 
-- [ ] 6.1 At message routing time, extract the `useTypes` claim from the sender's JWT
-- [ ] 6.2 Fetch the destination `Jurisdiction.allowedUseTypes` from the shared DynamoDB
-      table (the same table CC writes to in tasks 1.1–1.2)
-- [ ] 6.3 Enforce `credential.useTypes ∩ jurisdiction.allowedUseTypes ≠ ∅`; return an
-      HL7 fault (`AccessDenied` or equivalent) to the sender if the intersection is empty
+- [ ] 6.1 At message routing time, verify the sender's JWT signature and extract `jti`
+      (authentication only — JWT carries no access control claims)
+- [ ] 6.2 Fetch `ApiKeyCredential` by `jti` from DynamoDB; read `status`, `environments`,
+      and `useTypes` — these are the authoritative server-side access control properties
+- [ ] 6.3 Enforce all three access control checks: `status = active`, target environment
+      ∈ `credential.environments`, and `credential.useTypes ∩ destination.allowedUseTypes ≠ ∅`;
+      return an `izgw-core` `SecurityFault` to the sender if any check fails — update
+      `izgw-core` to define a fault code and reason phrase specific to this useTypes
+      access denial scenario *(izgw-core ticket required)*
 - [ ] 6.4 Log the enforcement decision (allowed or denied) including `useTypes`,
       destination jurisdiction, and environment for audit and operations visibility
