@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios'
 import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
+import { getDestinationType } from '../desttypehelper'
 
 /**
  * Hub circuit-breaker reset REST path, relative to the hub's `/rest/` base.
@@ -33,6 +33,48 @@ const getHttpsAgentOptions = () => {
 const deriveHubRestBaseUrl = (statusHistoryUrl: string) =>
   statusHistoryUrl.substring(0, statusHistoryUrl.indexOf('/rest/') + 6)
 
+const getConfiguredHubURLs = () =>
+  new IZGHubStatusHistoryEndpoint(process.env.IZG_STATUS_ENDPOINT_URL || '')
+
+const resetCircuitBreakersForBaseUrls = async (
+  baseUrls: string[],
+  metadata?: { destinationTypeId?: number; destinationType?: string }
+): Promise<CircuitBreakerResetResult> => {
+  const httpsAgent = new https.Agent(getHttpsAgentOptions())
+
+  const outcomes = await Promise.allSettled(
+    baseUrls.map((baseUrl) => {
+      const url = `${baseUrl}${CIRCUIT_BREAKER_RESET_PATH}`
+      logger.info('Signaling hub to reset all circuit breakers', {
+        url,
+        operation: 'reset_circuit_breakers',
+        ...metadata,
+      })
+      return axios.post(url, null, { httpsAgent, timeout: 5000 })
+    })
+  )
+
+  const failed = outcomes.filter((o) => o.status === 'rejected')
+  failed.forEach((o) => {
+    if (o.status === 'rejected') {
+      logger.error('Hub circuit breaker reset failed', {
+        operation: 'reset_circuit_breakers',
+        ...metadata,
+        errorMessage: o.reason?.message,
+        statusCode: axios.isAxiosError(o.reason)
+          ? o.reason.response?.status
+          : undefined,
+      })
+    }
+  })
+
+  return {
+    attempted: outcomes.length,
+    succeeded: outcomes.length - failed.length,
+    failed: failed.length,
+  }
+}
+
 export interface CircuitBreakerResetResult {
   attempted: number
   succeeded: number
@@ -47,41 +89,23 @@ export interface CircuitBreakerResetResult {
  */
 export const resetAllCircuitBreakers =
   async (): Promise<CircuitBreakerResetResult> => {
-    const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
-      process.env.IZG_STATUS_ENDPOINT_URL || ''
-    )
+    const configuredHubURLs = getConfiguredHubURLs()
     const baseUrls = Array.from(
       new Set(configuredHubURLs.getIZGHubURLs().map(deriveHubRestBaseUrl))
     )
-    const httpsAgent = new https.Agent(getHttpsAgentOptions())
 
-    const outcomes = await Promise.allSettled(
-      baseUrls.map((baseUrl) => {
-        const url = `${baseUrl}${CIRCUIT_BREAKER_RESET_PATH}`
-        logger.info('Signaling hub to reset all circuit breakers', {
-          url,
-          operation: 'reset_circuit_breakers',
-        })
-        return axios.post(url, null, { httpsAgent, timeout: 5000 })
-      })
-    )
-
-    const failed = outcomes.filter((o) => o.status === 'rejected')
-    failed.forEach((o) => {
-      if (o.status === 'rejected') {
-        logger.error('Hub circuit breaker reset failed', {
-          operation: 'reset_circuit_breakers',
-          errorMessage: o.reason?.message,
-          statusCode: axios.isAxiosError(o.reason)
-            ? o.reason.response?.status
-            : undefined,
-        })
-      }
-    })
-
-    return {
-      attempted: outcomes.length,
-      succeeded: outcomes.length - failed.length,
-      failed: failed.length,
-    }
+    return resetCircuitBreakersForBaseUrls(baseUrls)
   }
+
+export const resetCircuitBreakersForEnvironment = async (
+  destinationTypeId: number
+): Promise<CircuitBreakerResetResult> => {
+  const configuredHubURLs = getConfiguredHubURLs()
+  const statusHistoryUrl = configuredHubURLs.getIZGHubURL(destinationTypeId)
+  const destinationType = getDestinationType(destinationTypeId)
+
+  return resetCircuitBreakersForBaseUrls([deriveHubRestBaseUrl(statusHistoryUrl)], {
+    destinationTypeId,
+    destinationType,
+  })
+}

@@ -7,9 +7,11 @@ import PasswordEncryptionCard from './PasswordEncryptionCard'
 import CircuitBreakerCard from './CircuitBreakerCard'
 import DatabaseRefreshCard from './DatabaseRefreshCard'
 import InfoPanel from './InfoPanel'
+import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
 
 interface AdminOperationsProps {
   hasKeyName: boolean
+  hubEnvironments: HubEnvironment[]
 }
 
 // Two-column responsive grid: operation card on the left, info panel on the right.
@@ -20,7 +22,10 @@ const rowSx = {
   mb: 4,
 } as const
 
-const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
+const AdminOperations = ({
+  hasKeyName,
+  hubEnvironments,
+}: AdminOperationsProps) => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
 
@@ -67,37 +72,28 @@ const AdminOperations = ({ hasKeyName }: AdminOperationsProps) => {
       </Box>
 
       {/* Circuit Breaker Reset */}
-      <Box sx={rowSx}>
-        <CircuitBreakerCard onResult={handleResult} />
-        <InfoPanel
-          title="System Status"
-          note="Resetting signals every hub instance across all environments to restore connectivity."
-          rows={[
-            // TODO(IGDD-2272): Wire live hub status (active faults / regions /
-            // connection state) once a status source is available. AC #4's
-            // "redisplay shows the breaker was reset" will surface here.
-            { label: 'Active Faults', value: '—' },
-            { label: 'Regions', value: '—' },
-            { label: 'Status', value: '—' },
-          ]}
+      <Box sx={{ mb: 4 }}>
+        <CircuitBreakerCard
+          environments={hubEnvironments}
+          onResult={handleResult}
         />
       </Box>
 
       {/* Database Refresh */}
       <Box sx={rowSx}>
-        <DatabaseRefreshCard onResult={handleResult} />
+        <DatabaseRefreshCard
+          environments={hubEnvironments}
+          onResult={handleResult}
+        />
         <InfoPanel
           title="Configuration Sync"
-          note="Reloads each hub's configuration from the database across all environments."
+          note="Reloads the selected hub environment's configuration from the database."
           rows={[
-            { label: 'Scope', value: 'All hub environments' },
+            { label: 'Scope', value: 'Selected hub environment' },
             { label: 'Requires restart', value: 'No' },
           ]}
         />
       </Box>
-
-      {/* TODO(IGDD-2272): "Recent Audit Events" panel from the mockup — needs an
-          audit-event query wired up before it can display real data. */}
 
       <CustomSnackbar
         open={showSnackbar}
