@@ -19,9 +19,9 @@
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1094.0",
-    "@aws-sdk/client-secrets-manager": "^3.1094.0",
-    "@aws-sdk/lib-dynamodb": "^3.1094.0",
+    "@aws-sdk/client-dynamodb": "^3.1095.0",
+    "@aws-sdk/client-secrets-manager": "^3.1095.0",
+    "@aws-sdk/lib-dynamodb": "^3.1095.0",
     "@axe-core/react": "^4.12.1",
     "@babel/types": "^7.29.7",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -48,7 +48,7 @@
     "lodash": "^4.18.1",
     "moment": "^2.30.1",
     "moment-timezone": "^0.6.3",
-    "next": "^16.2.11",
+    "next": "^16.2.12",
     "next-api-middleware": "^3.0.0",
     "next-auth": "^4.24.15",
     "next-swagger-doc": "^0.4.1",
@@ -68,8 +68,8 @@
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@izgateway/dependency-scripts": "^1.0.7",
-    "@next/eslint-plugin-next": "^16.2.11",
-    "@playwright/test": "^1.61.1",
+    "@next/eslint-plugin-next": "^16.2.12",
+    "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^14.3.1",
     "@types/gtag.js": "^0.0.20",
@@ -83,7 +83,7 @@
     "cross-env": "^7.0.3",
     "cypress": "^14.5.4",
     "dotenv": "^16.6.1",
-    "eslint-config-next": "^16.2.11",
+    "eslint-config-next": "^16.2.12",
     "eslint-config-prettier": "^8.10.2",
     "husky": "^8.0.3",
     "jest": "^30.4.2",
@@ -100,15 +100,10 @@
     "@eslint/eslintrc": {
       "ajv": "^6.14.0"
     },
-    "eslint": {
-      "ajv": "^6.14.0",
-      "brace-expansion": "^1.1.16"
-    },
     "fast-uri": "^4.1.1",
     "glob": "^13.0.6",
     "js-yaml": "^4.3.0",
     "jsdom": "^28.1.0",
-    "postcss": "8.5.22",
     "qs": "6.15.3",
     "sharp": "^0.35.3",
     "swagger-jsdoc": "^6.3.0",
