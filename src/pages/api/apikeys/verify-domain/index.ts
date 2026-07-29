@@ -6,6 +6,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import dns from 'dns/promises'
 
+// DNS-verification bypass for local dev / automated tests ONLY. Requires BOTH a
+// non-production NODE_ENV and an explicit opt-in flag, so it can never be turned
+// on in production even by accident. When enabled, the real DNS TXT lookup is
+// skipped and the challenge is treated as satisfied.
+const DNS_VERIFY_BYPASS_ENABLED =
+  process.env.NODE_ENV !== 'production' &&
+  process.env.ALLOW_DNS_VERIFY_BYPASS === 'true'
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
@@ -36,18 +44,65 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     // Flips the credential to active. The JWT itself is never generated or
     // persisted here — it's only ever regenerated on demand, once, via
-    // POST /api/apikeys/token (deterministically re-signed from claims fixed
-    // at creation time), the first time someone actually views it.
-    const activateCredential = async (): Promise<void> => {
-      if (!credentialSortKey) return
+    // POST /api/apikeys/token (deterministically re-signed from the claims
+    // fixed here), the first time someone actually views it.
+    //
+    // Expiry (and the issuance timestamp used as the JWT `iat`) are stamped
+    // NOW, at activation — a DNS-challenge credential is only "issued" once it
+    // becomes active, so exp is computed from issuance (1 year), not from when
+    // the request record was created.
+    //
+    // SECURITY: the credential referenced by `credentialSortKey` MUST be the
+    // pending credential that requested THIS verification. We require it to be
+    // bound to the (domain, jurisdiction, env) actually verified and to still be
+    // `ready_for_validation` — otherwise a verified/authorized domain could be
+    // used to activate an unrelated credential (bypassing that credential's own
+    // DNS-ownership requirement) or to resurrect a revoked/cancelled key. The
+    // status is re-checked atomically in the DB write (`expectedStatus`).
+    // Returns null on success, or an { status, error } to send to the client.
+    const activateCredential = async (): Promise<{
+      status: number
+      error: string
+    } | null> => {
+      if (!credentialSortKey) return null
+      const credential = await dbClient.getApiKeyCredential(String(credentialSortKey))
+      if (!credential) {
+        return { status: 404, error: 'Credential to activate was not found' }
+      }
+      const boundToVerifiedDomain =
+        credential.domain === String(domain) &&
+        credential.jurisdictionId === String(jurisdictionId) &&
+        String(credential.env) === String(envId)
+      if (!boundToVerifiedDomain) {
+        logger.warn('Refused to activate credential not bound to the verified domain', {
+          credentialSortKey,
+          domain,
+          jurisdictionId,
+          envId,
+          operation: 'verifyDomain',
+        })
+        return { status: 400, error: 'Credential does not match the verified domain' }
+      }
+      if (credential.status !== 'ready_for_validation') {
+        return { status: 409, error: 'Credential is not awaiting validation' }
+      }
+      const issuedAt = new Date()
+      const expiresAt = new Date(issuedAt.getTime() + 365 * 24 * 3600 * 1000)
       await dbClient.updateApiKeyCredentialStatus({
         sortKey: String(credentialSortKey),
         status: 'active',
+        issuedAt: issuedAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        expiresAt: expiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        expectedStatus: 'ready_for_validation',
       })
+      return null
     }
 
     if (domainRecord.status === 'authorized') {
-      await activateCredential()
+      const activationError = await activateCredential()
+      if (activationError) {
+        return res.status(activationError.status).json({ error: activationError.error })
+      }
       return res.status(200).json({ verified: true, alreadyAuthorized: true })
     }
 
@@ -69,11 +124,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const txtHost = `_izg-verify.${domain}`
     let records: string[][]
     try {
-      if (process.env.NODE_ENV === 'development') {
-        // LOCAL DEV ONLY — bypasses the real DNS lookup so you can exercise
-        // the success path without owning/controlling the test domain.
-        // Artificial delay so the transient "Validation" row state is
-        // actually visible in the UI. REVERT BEFORE COMMITTING.
+      if (DNS_VERIFY_BYPASS_ENABLED) {
+        // Dev/test only, explicitly opted in via ALLOW_DNS_VERIFY_BYPASS (and
+        // never in production — see DNS_VERIFY_BYPASS_ENABLED). Skips the real
+        // DNS lookup so the success path can be exercised without owning the
+        // domain. Logged as a warning so a skipped verification is auditable.
+        logger.warn('DNS verification bypass ENABLED — skipping real TXT lookup', {
+          domain,
+          txtHost,
+          validatedBy: session.user.email,
+          operation: 'verifyDomain',
+        })
+        // Brief delay so the transient "Validation" row state is visible in the UI.
         await new Promise((resolve) => setTimeout(resolve, 3000))
         records = [[`izg-challenge=${domainRecord.challengeUuid}`]]
       } else {
@@ -117,7 +179,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       operation: 'verifyDomain',
     })
 
-    await activateCredential()
+    const activationError = await activateCredential()
+    if (activationError) {
+      return res.status(activationError.status).json({ error: activationError.error })
+    }
     return res.status(200).json({ verified: true })
   } catch (error) {
     logger.error('Error verifying domain', {

@@ -12,21 +12,34 @@ before this ships.
 
 ## What Changes
 
-- **Filters button**: Wire the existing `CustomToolbar` "FILTERS" button to a real
-  filter menu (Environment, Status, Organization) that composes with the existing
-  search-by-key-ID-or-jurisdiction text filter.
-- **Revoke vs. Cancel differentiation**: Split the single `PATCH /api/apikeys`
-  transition into two distinct operations — `revoke` (active/grace key, destructive,
-  requires confirmation copy from the mockup) and `cancel` (pending
-  `Ready for Validation`/`Validation` key, deletes the record rather than marking it
-  Revoked) — so the dashboard stats reflect the correct semantics.
-- **DNS verification hardening**: Remove or properly gate the dev-only bypass in
-  `src/pages/api/apikeys/verify-domain/index.ts` (flagged inline as
-  "REVERT BEFORE COMMITTING") behind an explicit non-production environment check
-  rather than being reachable by default.
-- **Pagination/filtering**: Move `GET /api/apikeys` from "fetch entire table, filter
-  client-side" to accepting filter/pagination query params, so the dashboard scales
-  past the current small fixture data.
+Scope grew during implementation (and as the IGDD-3140 design landed) beyond the original
+four gap-closers. Delivered on this branch:
+
+- **Filters button**: real filter menu (Environment, Status, Organization) composing with
+  the search text filter. _(Interim: client-side.)_
+- **Revoke vs. Cancel differentiation**: split into two distinct operations — `revoke`
+  (`active`/`grace_period`, destructive, optional reason, sets `revoked`) and `cancel`
+  (pending `ready_for_validation`). **Cancel is a soft-cancel** (sets `cancelled` +
+  `cancelledBy`/`cancelledAt`, **retains** the record for audit, hidden from the default
+  view) — revised from the initial "hard delete" plan; see design D1.
+- **DNS verification hardening**: dev bypass gated behind `NODE_ENV !== 'production'`
+  **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active);
+  "REVERT BEFORE COMMITTING" removed.
+- **Use Types**: new `AllowedUseType` enum; required + enum-validated on create; stored as
+  a DynamoDB List; carried through renew; multi-select in the create dialog.
+- **Credential lifecycle**: expiry stamped at **issuance** (not record creation); a derived
+  **`Expired`** status and grace-ended **`Revoked`**; renewal domain is fixed
+  (prepopulated/read-only and server-authoritative).
+- **Hub contract alignment**: grace status value `grace_period` and successor attribute
+  `supersededBy`, matching the Hub's shared-table reads.
+- **RBAC (UI gating)**: fixed the access-matrix page key, added `canCancelApiKey`, and gated
+  Create/Revoke/Renew/Cancel via `useRoleAccess()` (deny-by-default; **UI only**).
+
+**Deferred (not in this change):** server-side pagination/filtering on `GET /api/apikeys`;
+server-side authorization + jurisdiction-ownership scoping; per-jurisdiction
+`Jurisdiction.allowedUseTypes`; multi-env credentials; apex-TXT + cross-jurisdiction domain
+exclusivity; Revoked → Renew; Hub-side useTypes/env enforcement and the sweeper
+Expired-vs-Revoked split.
 
 ## Capabilities
 
@@ -39,14 +52,19 @@ before this ships.
 ## Impact
 
 - **Affected code**: `src/components/ApiKeyManagement/index.tsx`,
-  `src/pages/api/apikeys/index.ts`, `src/pages/api/apikeys/verify-domain/index.ts`,
-  `src/lib/db/dynamo.ts`, `src/lib/db/DbClientFactory.ts`,
-  `src/lib/db/ConfigConsoleMutateRepository.ts`, `src/lib/type/ApiKeyCredential.ts`.
-- **New code**: a `cancel` code path distinct from `revoke`.
-- **Security**: Revoke/cancel reasons and DNS-verification bypass gating are
-  security-sensitive — the dev bypass must not be reachable in production, and
-  revoke/cancel actions must capture actor/timestamp via the existing
-  `AsyncLocalStorage` context (`getAuditUserString()`), consistent with the rest of the app.
-- **No breaking change** to the existing create/renew/view-token flows, which are
-  already implemented and out of scope here except where they call the now-split
-  revoke/cancel endpoint.
+  `src/pages/api/apikeys/{index,renew/index,verify-domain/index,token}.ts`,
+  `src/lib/db/{dynamo,DbClientFactory,ConfigConsoleMutateRepository}.ts`,
+  `src/lib/type/ApiKeyCredential.ts`, `src/lib/type/PageAccessControls.ts`,
+  `src/lib/security/{accesslevel,useRoleAccess}.ts` + `accessdefinitions/*`,
+  `src/.env.template`.
+- **New code**: `src/lib/type/AllowedUseType.ts`; `cancelApiKeyCredential` (soft cancel);
+  `issuedAt` on the credential; `canCancelApiKey` in the access matrix; node-env tests
+  (`pages/api/apikeys/lifecycle.test.ts`, `lib/db/dynamo.apikeyLifecycle.test.ts`).
+- **Shared-table contract**: the console and the Hub (`izgw-hub`) read/write the same
+  DynamoDB `ApiKeyCredential` rows. Status value `grace_period` and attribute
+  `supersededBy` are contractual — changing them requires a coordinated Hub change.
+- **Security**: DNS-verification bypass gating and the actor/timestamp captured on
+  revoke/cancel are security-sensitive. **Role gating here is UI-only** — server-side
+  authorization + jurisdiction-ownership scoping on the API routes remain to be done.
+- **No breaking change** to the create/renew/view-token flows beyond the now-split
+  revoke/cancel endpoints and the expiry-at-issuance stamping.
