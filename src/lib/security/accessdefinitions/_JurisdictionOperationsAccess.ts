@@ -54,12 +54,13 @@ const JurisdictionOperationsAccess: PageControls = {
     canViewHubStatusHistory: true,
     canViewChangeHistory: true,
   } as HistoryPageAccessControl,
-  apikeymanagement: {
+  apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
     canListApiKeys: true,
     canCreateApiKey: true,
     canRevokeApiKey: true,
     canRenewApiKey: true,
+    canCancelApiKey: true,
   } as ApiKeyManagementPageAccessControl,
 }
 

@@ -52,7 +52,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       envId: Number(credential.env),
       secretString,
       kid,
-      issuedAt: credential.createdOn,
+      // Prefer the activation-time issuance stamp; fall back to createdOn for
+      // keys issued at creation time (existing-authorized-domain / renewal).
+      issuedAt: credential.issuedAt ?? credential.createdOn,
       expiresAt: credential.expiresAt,
       iss: process.env.NEXTAUTH_URL || 'http://localhost:3000',
     })

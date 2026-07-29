@@ -4,6 +4,7 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
+import { isValidUseType } from '../../../lib/type/AllowedUseType'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -44,7 +45,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
 
-      const { jurisdictionId, envId, upn, description, dnsChoice } = req.body
+      const { jurisdictionId, envId, upn, description, dnsChoice, useTypes } = req.body
       if (!jurisdictionId || envId === undefined || envId === null || !upn) {
         return res.status(400).json({ error: 'jurisdictionId, envId, and upn are required' })
       }
@@ -55,6 +56,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const envIdNum = Number(envId)
       if (isNaN(envIdNum) || envIdNum < 1 || envIdNum > 5) {
         return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
+      }
+
+      // useTypes scopes the credential to submitter categories; it is required
+      // and every value must be a known enum. (Server-side property, not a JWT
+      // claim — the Hub reads it by jti at routing time.)
+      if (!Array.isArray(useTypes) || useTypes.length === 0) {
+        return res.status(400).json({ error: 'useTypes must be a non-empty array' })
+      }
+      if (!useTypes.every(isValidUseType)) {
+        return res.status(400).json({
+          error: 'useTypes may only contain PATIENT, PROVIDER, or PUBLIC_HEALTH',
+        })
       }
 
       const dbClient = await DbClientFactory.getDbClient()
@@ -89,6 +102,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           createdBy,
           description: description ? String(description) : undefined,
           domain: String(upn),
+          useTypes,
         })
 
         logger.info('API key created for existing authorized domain', {
@@ -102,10 +116,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // dnsChoice === 'other' — create the credential row up front as
-      // ready_for_validation; the JWT is issued once DNS ownership is verified.
+      // ready_for_validation. No expiry is set yet: the key is not "issued"
+      // until DNS ownership is verified, and exp is stamped at activation
+      // (verify-domain) so it is computed from issuance.
       const jti = crypto.randomUUID()
       const sortKey = `${envIdNum}#${jti}`
-      const placeholderExpiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
 
       await dbClient.createApiKeyCredential({
         jti,
@@ -114,10 +129,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         env: String(envIdNum),
         status: 'ready_for_validation',
         createdOn: now,
-        expiresAt: placeholderExpiresAt,
         createdBy,
         description: description ? String(description) : undefined,
         domain: String(upn),
+        useTypes,
       })
 
       const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
@@ -187,10 +202,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({ error: 'sortKey is required' })
       }
 
+      const dbClient = await DbClientFactory.getDbClient()
+
+      // Revoke is valid only from active or grace (per the credential state
+      // machine). Pending (ready_for_validation) keys are cancelled, not
+      // revoked; a revoked key is terminal. `grace_period` is the current grace
+      // status (Hub-aligned, IGDD-2711); `grace`/`superseded` are older values
+      // tolerated for backward compatibility with pre-existing records.
+      const credential = await dbClient.getApiKeyCredential(String(sortKey))
+      if (!credential) {
+        return res.status(404).json({ error: 'API key not found' })
+      }
+      const revocableStatuses = ['active', 'grace_period', 'grace', 'superseded']
+      if (!revocableStatuses.includes(credential.status)) {
+        return res.status(409).json({
+          error:
+            'Only active or grace-period credentials can be revoked. Pending credentials should be cancelled instead.',
+        })
+      }
+
       const revokedBy = session.user.email || 'unknown'
       const revokedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 
-      const dbClient = await DbClientFactory.getDbClient()
       await dbClient.revokeApiKeyCredential(sortKey, revokedBy, revokedAt, reason || undefined)
 
       logger.info('API key revoked', {
@@ -212,7 +245,60 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
-  res.setHeader('Allow', ['GET', 'POST', 'PATCH'])
+  if (req.method === 'DELETE') {
+    try {
+      const session = await getServerSession(req, res, authOptions)
+      if (!session || !session.user) {
+        return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+
+      const { sortKey } = req.body
+      if (!sortKey) {
+        return res.status(400).json({ error: 'sortKey is required' })
+      }
+
+      const dbClient = await DbClientFactory.getDbClient()
+
+      // Cancel = soft-cancel, permitted only while the credential is still
+      // pending DNS validation. The record is RETAINED (status 'cancelled')
+      // for audit rather than deleted. Active/grace credentials must be
+      // revoked instead.
+      const credential = await dbClient.getApiKeyCredential(String(sortKey))
+      if (!credential) {
+        return res.status(404).json({ error: 'API key not found' })
+      }
+      if (credential.status !== 'ready_for_validation') {
+        return res.status(409).json({
+          error:
+            'Only pending (ready for validation) credentials can be cancelled. Active or grace-period credentials must be revoked instead.',
+        })
+      }
+
+      const cancelledBy = session.user.email || 'unknown'
+      const cancelledAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+      await dbClient.cancelApiKeyCredential(String(sortKey), cancelledBy, cancelledAt)
+
+      logger.info('API key cancelled (soft; record retained for audit)', {
+        sortKey,
+        cancelledBy,
+        cancelledAt,
+        operation: 'cancelApiKeyCredential',
+      })
+
+      return res.status(200).json({ sortKey, cancelled: true })
+    } catch (error) {
+      logger.error('Error cancelling API key credential', {
+        operation: 'cancelApiKeyCredential',
+        httpMethod: req.method,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE'])
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
