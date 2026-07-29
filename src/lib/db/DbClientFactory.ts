@@ -19,6 +19,7 @@ import {
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { AllowedUseType } from '../type/AllowedUseType'
 import { Jurisdiction } from '../type/Jurisdiction'
 import { ApiKeyDomain } from '../type/ApiKeyDomain'
 
@@ -385,6 +386,18 @@ class EncryptedRepository implements DbClient {
     return await this.repository.getApiKeyCredential(sortKey)
   }
 
+  async cancelApiKeyCredential(
+    sortKey: string,
+    cancelledBy: string,
+    cancelledAt: string
+  ): Promise<void> {
+    return await this.repository.cancelApiKeyCredential(
+      sortKey,
+      cancelledBy,
+      cancelledAt
+    )
+  }
+
   async revokeApiKeyCredential(
     sortKey: string,
     revokedBy: string,
@@ -399,7 +412,7 @@ class EncryptedRepository implements DbClient {
     renewedBy: string
     renewedAt: string
     graceExpiresAt: string
-    supersededByJti: string
+    supersededBy: string
   }): Promise<void> {
     return await this.repository.supersedApiKeyCredential(params)
   }
@@ -407,11 +420,12 @@ class EncryptedRepository implements DbClient {
   async createApiKeyCredential(params: {
     jti: string
     sortKey: string
+    useTypes?: AllowedUseType[]
     jurisdictionId: string
     env: string
     status: string
     createdOn: Date
-    expiresAt: Date
+    expiresAt?: Date | null
     createdBy: string
     description?: string
     domain?: string
@@ -453,6 +467,8 @@ class EncryptedRepository implements DbClient {
     sortKey: string
     status: string
     expiresAt?: string
+    issuedAt?: string
+    expectedStatus?: string
   }): Promise<void> {
     return await this.repository.updateApiKeyCredentialStatus(params)
   }

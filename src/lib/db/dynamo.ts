@@ -10,6 +10,7 @@ import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import { ApiKeyCredential } from '../type/ApiKeyCredential'
+import { AllowedUseType, isValidUseType } from '../type/AllowedUseType'
 import { asyncRequestContext } from '../Context'
 import os from 'os'
 import {
@@ -1313,12 +1314,18 @@ class Dynamo implements DbClient {
           jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
           status: item.status as ApiKeyCredential['status'],
           expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+          issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
           revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+          cancelledBy: item.cancelledBy as string | undefined,
+          cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
           env: item.env as string,
           description: item.description as string | undefined,
           domain: item.domain as string | undefined,
           viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
           graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+          useTypes: item.useTypes
+            ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+            : undefined,
           createdOn: item.createdOn ? new Date(item.createdOn) : null,
           createdBy: item.createdBy as string,
           updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
@@ -1346,12 +1353,18 @@ class Dynamo implements DbClient {
         jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
         status: item.status as ApiKeyCredential['status'],
         expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
         revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        cancelledBy: item.cancelledBy as string | undefined,
+        cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
         env: item.env as string,
         description: item.description as string | undefined,
         domain: item.domain as string | undefined,
         viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
         graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        useTypes: item.useTypes
+          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
         createdOn: item.createdOn ? new Date(item.createdOn) : null,
         createdBy: item.createdBy as string,
         updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
@@ -1425,33 +1438,90 @@ class Dynamo implements DbClient {
     }
   }
 
+  async cancelApiKeyCredential(
+    sortKey: string,
+    cancelledBy: string,
+    cancelledAt: string
+  ): Promise<void> {
+    // Soft-cancel: the record is RETAINED with status 'cancelled' (plus who/when)
+    // for audit history rather than hard-deleted. Permitted only while the
+    // credential is still in ready_for_validation; any other status must go
+    // through revoke. The ConditionExpression makes this atomic against a
+    // concurrent status change.
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'ApiKeyCredential',
+        sortKey,
+      },
+      UpdateExpression:
+        'SET #status = :cancelled, #cancelledBy = :cancelledBy, #cancelledAt = :cancelledAt',
+      ExpressionAttributeNames: {
+        '#status': 'status',
+        '#cancelledBy': 'cancelledBy',
+        '#cancelledAt': 'cancelledAt',
+      },
+      ExpressionAttributeValues: {
+        ':cancelled': 'cancelled',
+        ':cancelledBy': cancelledBy,
+        ':cancelledAt': cancelledAt,
+        ':readyForValidation': 'ready_for_validation',
+      },
+      ConditionExpression:
+        'attribute_exists(sortKey) AND #status = :readyForValidation',
+    }
+    try {
+      await dynamodDbDocClient.send(new UpdateCommand(params))
+      logger.info('Cancelled ApiKeyCredential (soft)', {
+        sortKey,
+        cancelledBy,
+        cancelledAt,
+        operation: 'cancelApiKeyCredential',
+      })
+    } catch (error) {
+      logger.error('Error cancelling ApiKeyCredential', {
+        sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'cancelApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
   async supersedApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
     renewedAt: string
     graceExpiresAt: string
-    supersededByJti: string
+    supersededBy: string
   }): Promise<void> {
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
       UpdateExpression:
-        'SET #status = :status, #renewedBy = :renewedBy, #renewedAt = :renewedAt, #graceExpiresAt = :graceExpiresAt, #supersededByJti = :supersededByJti, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
+        'SET #status = :status, #renewedBy = :renewedBy, #renewedAt = :renewedAt, #graceExpiresAt = :graceExpiresAt, #supersededBy = :supersededBy, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
       ExpressionAttributeNames: {
         '#status': 'status',
         '#renewedBy': 'renewedBy',
         '#renewedAt': 'renewedAt',
         '#graceExpiresAt': 'graceExpiresAt',
-        '#supersededByJti': 'supersededByJti',
+        '#supersededBy': 'supersededBy',
         '#updatedBy': 'updatedBy',
         '#updatedOn': 'updatedOn',
       },
       ExpressionAttributeValues: {
-        ':status': 'superseded',
+        // The renewed credential enters its grace window. Status value and the
+        // `supersededBy` (successor jti) attribute name MUST match the Hub's
+        // contract (izgw-hub ApiKeyCredential model + GracePeriodRevocationScheduler,
+        // IGDD-2711): status 'grace_period' is what the Hub treats as usable and
+        // what its grace-revocation sweep looks for.
+        ':status': 'grace_period',
         ':renewedBy': params.renewedBy,
         ':renewedAt': params.renewedAt,
         ':graceExpiresAt': params.graceExpiresAt,
-        ':supersededByJti': params.supersededByJti,
+        ':supersededBy': params.supersededBy,
         ':updatedBy': params.renewedBy,
         ':updatedOn': params.renewedAt,
       },
@@ -1460,7 +1530,7 @@ class Dynamo implements DbClient {
       await dynamodDbDocClient.send(command)
       logger.info('ApiKeyCredential superseded', {
         sortKey: params.sortKey,
-        supersededByJti: params.supersededByJti,
+        supersededBy: params.supersededBy,
         graceExpiresAt: params.graceExpiresAt,
         operation: 'supersedApiKeyCredential',
       })
@@ -1483,10 +1553,11 @@ class Dynamo implements DbClient {
     env: string
     status: string
     createdOn: Date
-    expiresAt: Date
+    expiresAt?: Date | null
     createdBy: string
     description?: string
     domain?: string
+    useTypes?: AllowedUseType[]
   }): Promise<void> {
     const item: Record<string, unknown> = {
       entityType: 'ApiKeyCredential',
@@ -1496,10 +1567,17 @@ class Dynamo implements DbClient {
       env: params.env,
       status: params.status,
       createdOn: params.createdOn.toISOString(),
-      expiresAt: params.expiresAt.toISOString(),
+      // Expiry is only stored once the key is issued. A ready_for_validation
+      // record has no expiry yet — it is stamped at activation.
+      ...(params.expiresAt ? { expiresAt: params.expiresAt.toISOString() } : {}),
       createdBy: params.createdBy,
       ...(params.description ? { description: params.description } : {}),
       ...(params.domain ? { domain: params.domain } : {}),
+      // Stored as a plain List (deduped). AllowedUseType[] is the app-side type;
+      // the Hub reads this by jti at routing time (it is NOT a JWT claim).
+      ...(params.useTypes && params.useTypes.length
+        ? { useTypes: [...new Set(params.useTypes)] }
+        : {}),
     }
     const command = new PutCommand({
       TableName: TABLE_NAME,
@@ -1528,6 +1606,8 @@ class Dynamo implements DbClient {
     sortKey: string
     status: string
     expiresAt?: string
+    issuedAt?: string
+    expectedStatus?: string
   }): Promise<void> {
     const updateParts = ['#status = :status']
     const attrNames: Record<string, string> = { '#status': 'status' }
@@ -1537,14 +1617,28 @@ class Dynamo implements DbClient {
       attrNames['#expiresAt'] = 'expiresAt'
       attrValues[':expiresAt'] = params.expiresAt
     }
+    if (params.issuedAt) {
+      updateParts.push('#issuedAt = :issuedAt')
+      attrNames['#issuedAt'] = 'issuedAt'
+      attrValues[':issuedAt'] = params.issuedAt
+    }
+    // Optional atomic precondition on the CURRENT status. Used by activation to
+    // require the credential still be `ready_for_validation`, so the write can
+    // never flip an unexpected state (e.g. resurrect a revoked/cancelled key)
+    // even under a concurrent change.
+    let conditionExpression =
+      'attribute_exists(entityType) AND attribute_exists(sortKey)'
+    if (params.expectedStatus) {
+      conditionExpression += ' AND #status = :expectedStatus'
+      attrValues[':expectedStatus'] = params.expectedStatus
+    }
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
       UpdateExpression: `SET ${updateParts.join(', ')}`,
       ExpressionAttributeNames: attrNames,
       ExpressionAttributeValues: attrValues,
-      ConditionExpression:
-        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+      ConditionExpression: conditionExpression,
     })
     try {
       await dynamodDbDocClient.send(command)

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react'
 import useSWR, { mutate } from 'swr'
 import {
   Alert,
+  Badge,
   Box,
   Button,
   Card,
@@ -11,6 +12,7 @@ import {
   InputAdornment,
   InputLabel,
   MenuItem,
+  Popover,
   Select,
   Tab,
   Tabs,
@@ -42,11 +44,19 @@ import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import CustomSnackbar from '../SnackBar'
 import { getAllowedEnvironmentValues } from '../Dropdown/EnvironmentSelect'
+import SearchableMultiSelect from '../Dropdown/SearchableMultiSelect'
 import palette from '../../styles/theme/palette'
 import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
+import {
+  ALLOWED_USE_TYPES,
+  USE_TYPE_LABELS,
+  AllowedUseType,
+} from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 
 const ENV_DISPLAY_NAMES: Record<string, string> = {
@@ -59,6 +69,26 @@ const ENV_DISPLAY_NAMES: Record<string, string> = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface ApiKeyFilters {
+  environment: string
+  status: string
+  organization: string
+}
+
+// A filter dropdown option. `value` is what gets stored in filter state and
+// matched against a row (a stable key, e.g. a jurisdictionId); `label` is the
+// human-readable text shown in the menu.
+interface FilterOption {
+  value: string
+  label: string
+}
+
+const EMPTY_FILTERS: ApiKeyFilters = {
+  environment: '',
+  status: '',
+  organization: '',
+}
+
 interface ApiKey {
   id: string
   keyId: string
@@ -69,11 +99,12 @@ interface ApiKey {
   jurisdictionId: string
   envRaw: string
   domain: string | null
-  status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | string
+  status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | 'Cancelled' | string
   created: string
   expires: string
   createdBy: string
   revokedAt: string | null
+  cancelledAt: string | null
   graceExpiresAt: string | null
   expiresAtRaw: string | null
   viewed: boolean
@@ -102,10 +133,34 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     })(),
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
     status: (() => {
-      const now = new Date()
-      const graceActive = cred.graceExpiresAt && new Date(cred.graceExpiresAt) > now
+      const now = Date.now()
+      const exp = cred.expiresAt ? new Date(cred.expiresAt).getTime() : null
+      const graceEnd = cred.graceExpiresAt
+        ? new Date(cred.graceExpiresAt).getTime()
+        : null
+
+      // Explicit terminal stored statuses always win — a user revoke/cancel or
+      // a grace-period sweeper that has already persisted the final status.
       if (cred.status === 'revoked') return 'Revoked'
-      if (graceActive) return 'Grace Period'
+      if (cred.status === 'cancelled') return 'Cancelled'
+      if (cred.status === 'expired') return 'Expired'
+
+      // Renewed key in/past its grace period. The JWT `exp` caps effective
+      // validity, so the effective grace end is min(graceExpiresAt, exp). We
+      // derive the same Expired/Revoked split the sweeper will persist so the
+      // UI is correct without waiting for it:
+      //   expiry first (exp <= graceEnd) → Expired
+      //   10-day window first            → Revoked
+      if (graceEnd !== null) {
+        const effectiveGraceEnd = exp !== null ? Math.min(graceEnd, exp) : graceEnd
+        if (now < effectiveGraceEnd) return 'Grace Period'
+        if (exp !== null && exp <= graceEnd) return 'Expired'
+        return 'Revoked'
+      }
+
+      // Non-renewed key past its hard expiry.
+      if (exp !== null && now >= exp) return 'Expired'
+
       if (cred.status === 'ready_for_validation') return 'Ready for Validation'
       if (cred.status === 'active') return 'Active'
       return cred.status
@@ -116,7 +171,15 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     expires: formatDate(cred.expiresAt),
     createdBy: cred.createdBy ?? '—',
     revokedAt: cred.revokedAt ? formatDate(cred.revokedAt) : null,
-    graceExpiresAt: cred.graceExpiresAt ? formatDate(cred.graceExpiresAt) : null,
+    cancelledAt: cred.cancelledAt ? formatDate(cred.cancelledAt) : null,
+    // Displayed grace end is capped at the hard expiry — a token can't outlive
+    // its `exp` claim regardless of the stored 10-business-day grace date.
+    graceExpiresAt: (() => {
+      if (!cred.graceExpiresAt) return null
+      const g = new Date(cred.graceExpiresAt)
+      const e = cred.expiresAt ? new Date(cred.expiresAt) : null
+      return formatDate(e && e < g ? e : g)
+    })(),
     expiresAtRaw: (() => {
       if (!cred.expiresAt) return null
       const d = new Date(cred.expiresAt)
@@ -366,18 +429,26 @@ function ActionCell({
   row,
   onView,
   onRevoke,
+  onCancel,
   onRenew,
   onValidate,
   onRevealToken,
   validating,
+  canRevoke,
+  canRenew,
+  canCancel,
 }: {
   row: ApiKey
   onView: (key: ApiKey) => void
   onRevoke: (key: ApiKey) => void
+  onCancel: (key: ApiKey) => void
   onRenew: (key: ApiKey) => void
   onValidate: (key: ApiKey) => void
   onRevealToken: (key: ApiKey) => void
   validating: boolean
+  canRevoke: boolean
+  canRenew: boolean
+  canCancel: boolean
 }) {
   if (row.status === 'Revoked') {
     return (
@@ -387,12 +458,30 @@ function ActionCell({
     )
   }
 
+  if (row.status === 'Cancelled') {
+    return (
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        {row.cancelledAt ? `Cancelled ${row.cancelledAt}` : 'Cancelled'}
+      </Typography>
+    )
+  }
+
+  if (row.status === 'Expired') {
+    return (
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        {row.expires ? `Expired ${row.expires}` : 'Expired'}
+      </Typography>
+    )
+  }
+
   if (row.status === 'Grace Period') {
     return (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
-          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
+        {canRevoke && (
+          <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+          </ActionIconButton>
+        )}
       </Box>
     )
   }
@@ -408,9 +497,11 @@ function ActionCell({
         >
           <CheckIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
-        <ActionIconButton title="Cancel key" onClick={() => onRevoke(row)} color={palette.error}>
-          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
+        {canCancel && (
+          <ActionIconButton title="Cancel key" onClick={() => onCancel(row)} color={palette.error}>
+            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+          </ActionIconButton>
+        )}
       </Box>
     )
   }
@@ -421,9 +512,11 @@ function ActionCell({
         <ActionIconButton title="View key" onClick={() => onView(row)} color={palette.primary}>
           <VisibilityIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
-        <ActionIconButton title="Cancel key" onClick={() => onRevoke(row)} color={palette.error}>
-          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
+        {canCancel && (
+          <ActionIconButton title="Cancel key" onClick={() => onCancel(row)} color={palette.error}>
+            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+          </ActionIconButton>
+        )}
       </Box>
     )
   }
@@ -436,12 +529,16 @@ function ActionCell({
           <VisibilityIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
       )}
-      <ActionIconButton title="Renew key" onClick={() => onRenew(row)}>
-        <AutorenewIcon sx={{ fontSize: 'inherit' }} />
-      </ActionIconButton>
-      <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
-        <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-      </ActionIconButton>
+      {canRenew && (
+        <ActionIconButton title="Renew key" onClick={() => onRenew(row)}>
+          <AutorenewIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      )}
+      {canRevoke && (
+        <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      )}
     </Box>
   )
 }
@@ -453,6 +550,11 @@ interface CustomToolbarProps extends GridToolbarProps {
   onSearchChange: (value: string) => void
   tabValue: number
   onTabChange: (value: number) => void
+  filters: ApiKeyFilters
+  onFiltersChange: (filters: ApiKeyFilters) => void
+  environmentOptions: FilterOption[]
+  statusOptions: FilterOption[]
+  organizationOptions: FilterOption[]
 }
 
 function CustomToolbar({
@@ -460,7 +562,55 @@ function CustomToolbar({
   onSearchChange,
   tabValue,
   onTabChange,
+  filters,
+  onFiltersChange,
+  environmentOptions,
+  statusOptions,
+  organizationOptions,
 }: CustomToolbarProps) {
+  const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null)
+  const activeFilterCount =
+    (filters.environment ? 1 : 0) +
+    (filters.status ? 1 : 0) +
+    (filters.organization ? 1 : 0)
+
+  const setFilter = (key: keyof ApiKeyFilters, value: string) =>
+    onFiltersChange({ ...filters, [key]: value })
+
+  const renderFilterSelect = (
+    label: string,
+    key: keyof ApiKeyFilters,
+    options: FilterOption[]
+  ) => (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <Typography
+        variant="caption"
+        sx={{ fontWeight: 600, color: palette.greyText }}
+      >
+        {label}
+      </Typography>
+      <Select
+        size="small"
+        value={filters[key]}
+        onChange={(e) => setFilter(key, e.target.value)}
+        displayEmpty
+        sx={{ borderRadius: '8px', minWidth: 220 }}
+        renderValue={(v) => {
+          if (!v) return <Box sx={{ color: palette.greyText }}>All</Box>
+          const selected = options.find((o) => o.value === v)
+          return selected ? selected.label : (v as string)
+        }}
+      >
+        <MenuItem value="">All</MenuItem>
+        {options.map((opt) => (
+          <MenuItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </Box>
+  )
+
   return (
     <GridToolbarContainer>
       <Box
@@ -484,21 +634,59 @@ function CustomToolbar({
           }}
         />
         <Box sx={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <Button
-            variant="text"
-            startIcon={<TuneIcon />}
-            sx={{
-              borderRadius: '24px',
-              padding: '8px 16px',
-              textTransform: 'none',
-              fontWeight: 500,
-              color: palette.greyDarkTypography,
-            }}
-          >
-            Filters
-          </Button>
+          <Badge badgeContent={activeFilterCount} color="primary">
+            <Button
+              variant="text"
+              startIcon={<TuneIcon />}
+              onClick={(e) => setFilterAnchor(e.currentTarget)}
+              sx={{
+                borderRadius: '24px',
+                padding: '8px 16px',
+                textTransform: 'none',
+                fontWeight: 500,
+                color: palette.greyDarkTypography,
+                backgroundColor: activeFilterCount ? '#E8F0FE' : 'transparent',
+              }}
+            >
+              Filters
+            </Button>
+          </Badge>
         </Box>
       </Box>
+
+      <Popover
+        open={Boolean(filterAnchor)}
+        anchorEl={filterAnchor}
+        onClose={() => setFilterAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: { sx: { borderRadius: '12px', p: 2, mt: 1, minWidth: 260 } },
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Typography sx={{ fontWeight: 700 }}>Filters</Typography>
+            <Button
+              size="small"
+              onClick={() => onFiltersChange(EMPTY_FILTERS)}
+              disabled={activeFilterCount === 0}
+              sx={{ textTransform: 'none' }}
+            >
+              Clear all
+            </Button>
+          </Box>
+          {renderFilterSelect('Environment', 'environment', environmentOptions)}
+          {renderFilterSelect('Status', 'status', statusOptions)}
+          {renderFilterSelect('Organization', 'organization', organizationOptions)}
+        </Box>
+      </Popover>
 
       <Box sx={{ width: '100%' }}>
         <Tabs
@@ -544,9 +732,10 @@ function CustomToolbar({
 
 interface CustomFooterProps {
   onCreateKey: () => void
+  canCreate: boolean
 }
 
-function CustomFooter({ onCreateKey }: CustomFooterProps) {
+function CustomFooter({ onCreateKey, canCreate }: CustomFooterProps) {
   return (
     <GridFooterContainer
       sx={{
@@ -557,20 +746,26 @@ function CustomFooter({ onCreateKey }: CustomFooterProps) {
         px: 2,
       }}
     >
-      <Button
-        color="secondary"
-        onClick={onCreateKey}
-        variant="outlined"
-        startIcon={<AddIcon />}
-        sx={{
-          borderRadius: '24px',
-          padding: '8px 16px',
-          textTransform: 'none',
-          fontWeight: 500,
-        }}
-      >
-        Create Key
-      </Button>
+      {canCreate ? (
+        <Button
+          color="secondary"
+          onClick={onCreateKey}
+          variant="outlined"
+          startIcon={<AddIcon />}
+          sx={{
+            borderRadius: '24px',
+            padding: '8px 16px',
+            textTransform: 'none',
+            fontWeight: 500,
+          }}
+        >
+          Create Key
+        </Button>
+      ) : (
+        // Keep the footer's space-between layout intact when the Create action
+        // is hidden for the current role.
+        <Box />
+      )}
       <Box
         sx={{
           borderRadius: '60px',
@@ -727,6 +922,51 @@ function RevokeDialog({
   )
 }
 
+function CancelDialog({
+  apiKey,
+  onClose,
+  onConfirm,
+}: {
+  apiKey: ApiKey | null
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  if (!apiKey) return null
+  return (
+    <CustomDialogBox
+      open={!!apiKey}
+      onClose={onClose}
+      maxWidth="sm"
+      titleText="Cancel API Key Request"
+      content={
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2">
+            Cancel the pending request for{' '}
+            <strong>
+              {apiKey.jurisdiction} | {apiKey.keyId}
+            </strong>
+            ?
+          </Typography>
+          <Typography variant="body2" sx={{ color: palette.greyText }}>
+            This key has not been activated yet, so nothing is using it. The
+            pending request will be removed.
+          </Typography>
+        </Box>
+      }
+      actions={
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={onConfirm}
+          sx={{ borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+        >
+          CONFIRM CANCELLATION
+        </Button>
+      }
+    />
+  )
+}
+
 function RenewDialog({
   apiKey,
   onClose,
@@ -734,25 +974,27 @@ function RenewDialog({
 }: {
   apiKey: ApiKey | null
   onClose: () => void
-  onRenewed: (sortKey: string) => void
+  onRenewed: (sortKey: string, jurisdiction: string) => void
 }) {
-  const [upn, setUpn] = useState('')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   if (!apiKey) return null
 
+  // The renewed key keeps the same DNS domain as the key being renewed, so it
+  // is carried over read-only rather than re-entered.
+  const domain = apiKey.domain?.trim() ?? ''
+
   const handleClose = () => {
-    setUpn('')
     setDescription('')
     setError(null)
     onClose()
   }
 
   const handleConfirm = async () => {
-    if (!upn.trim()) {
-      setError('Domain (upn) is required.')
+    if (!domain) {
+      setError('This key has no DNS domain on record and cannot be renewed.')
       return
     }
     setSubmitting(true)
@@ -781,7 +1023,7 @@ function RenewDialog({
           oldExpiresAt: apiKey.expiresAtRaw,
           jurisdictionId: apiKey.jurisdictionId,
           envId: envIdNum,
-          upn: upn.trim(),
+          upn: domain,
           description: description.trim() || undefined,
         }),
       })
@@ -790,9 +1032,10 @@ function RenewDialog({
         throw new Error(body.error || 'Failed to renew key')
       }
       const { sortKey } = await res.json()
+      const jurisdiction = apiKey.jurisdiction
       mutate('/api/apikeys')
       handleClose()
-      onRenewed(sortKey)
+      onRenewed(sortKey, jurisdiction)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to renew key')
     } finally {
@@ -834,14 +1077,18 @@ function RenewDialog({
           />
           <TextField
             label="Domain (upn)"
-            placeholder="e.g. immunize.ma.gov"
-            value={upn}
-            onChange={(e) => setUpn(e.target.value)}
+            value={domain}
             fullWidth
             size="small"
-            required
-            helperText="DNS domain for the new JWT upn claim"
-            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+            InputProps={{ readOnly: true }}
+            helperText="Carried over from the existing key — cannot be changed on renewal"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '8px',
+                backgroundColor: palette.greyLight,
+              },
+              '& .MuiInputBase-input': { color: palette.greyDarkTypography },
+            }}
           />
         </Box>
       }
@@ -850,7 +1097,7 @@ function RenewDialog({
           fullWidth
           variant="outlined"
           onClick={handleConfirm}
-          disabled={submitting || !upn.trim()}
+          disabled={submitting || !domain}
           sx={{
             borderRadius: '50px',
             borderColor: palette.primary,
@@ -884,6 +1131,37 @@ const ALLOWED_CREATE_ENV_IDS = getAllowedEnvironmentValues()
 const CREATE_ENV_OPTIONS = ENV_OPTIONS.filter((opt) =>
   ALLOWED_CREATE_ENV_IDS.includes(String(opt.id))
 )
+
+// Fixed option lists for the Keys filter panel. Environment and Status are
+// stable enumerations, so they come from the known sets rather than the loaded
+// rows — the options stay complete even when the data is empty or, later,
+// server-paginated. Environment is scoped to the current deploy via
+// CREATE_ENV_OPTIONS (getAllowedEnvironmentValues / NEXT_PUBLIC_APP_ENV), the
+// same single source of truth used by the Create Key dropdown and the other
+// env selectors in the app (operations console, onboarding senders).
+const ENVIRONMENT_FILTER_OPTIONS: FilterOption[] = CREATE_ENV_OPTIONS.map((o) => ({
+  value: o.displayName,
+  label: o.displayName,
+}))
+const STATUS_FILTER_OPTIONS: FilterOption[] = [
+  'Active',
+  'Ready for Validation',
+  'Grace Period',
+  'Expired',
+  'Revoked',
+  'Cancelled',
+].map((s) => ({ value: s, label: s }))
+
+// The Use Types picker shows human-readable labels ("Public Health") as the
+// visible option/chip text, while the credential is stored and validated by its
+// canonical enum value ("PUBLIC_HEALTH"). These maps convert between the two at
+// the SearchableMultiSelect boundary so component state stays in enum values.
+const USE_TYPE_OPTION_LABELS: string[] = ALLOWED_USE_TYPES.map(
+  (ut) => USE_TYPE_LABELS[ut]
+)
+const LABEL_TO_USE_TYPE = Object.fromEntries(
+  ALLOWED_USE_TYPES.map((ut) => [USE_TYPE_LABELS[ut], ut])
+) as Record<string, AllowedUseType>
 
 const OTHER_DNS_VALUE = '__other__'
 
@@ -919,6 +1197,7 @@ function CreateKeyDialog({
   const [dnsSelection, setDnsSelection] = useState<string>('')
   const [customDomain, setCustomDomain] = useState<string>('')
   const [description, setDescription] = useState<string>('')
+  const [useTypes, setUseTypes] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -956,6 +1235,7 @@ function CreateKeyDialog({
     setDnsSelection('')
     setCustomDomain('')
     setDescription('')
+    setUseTypes([])
     setChallenge(null)
     setError(null)
     setStep('form')
@@ -964,7 +1244,7 @@ function CreateKeyDialog({
 
   const handleNext = async () => {
     const upn = isOther ? customDomain.trim() : dnsSelection
-    if (!jurisdictionId || !envId || !upn) {
+    if (!jurisdictionId || !envId || !upn || useTypes.length === 0) {
       setError('Please fill in all fields.')
       return
     }
@@ -984,6 +1264,7 @@ function CreateKeyDialog({
           upn,
           description: description.trim() || undefined,
           dnsChoice: isOther ? 'other' : 'existing',
+          useTypes,
         }),
       })
       const body = await res.json()
@@ -1108,6 +1389,20 @@ function CreateKeyDialog({
           onChange={(e) => setDescription(e.target.value)}
           fullWidth
           sx={roundedFieldSx}
+        />
+      </LabeledField>
+      <LabeledField label="Use Types" required>
+        <SearchableMultiSelect
+          label=""
+          value={useTypes.map(
+            (v) => USE_TYPE_LABELS[v as AllowedUseType] ?? v
+          )}
+          options={USE_TYPE_OPTION_LABELS}
+          onChange={(labels) =>
+            setUseTypes(labels.map((l) => LABEL_TO_USE_TYPE[l] ?? l))
+          }
+          placeholder="Select one or more use types"
+          chipColor="primary"
         />
       </LabeledField>
       <LabeledField label="DNS Name" required>
@@ -1236,6 +1531,7 @@ function CreateKeyDialog({
           !jurisdictionId ||
           !envId ||
           !dnsSelection ||
+          useTypes.length === 0 ||
           (isOther && !isValidDomainName(customDomain))
         }
         sx={{
@@ -1428,10 +1724,86 @@ function KeyCreatedDialog({
   )
 }
 
+function RenewSuccessDialog({
+  info,
+  onViewKey,
+  onClose,
+}: {
+  info: { sortKey: string; jurisdiction: string } | null
+  onViewKey: () => void
+  onClose: () => void
+}) {
+  if (!info) return null
+  return (
+    <CustomDialogBox
+      open={!!info}
+      onClose={onClose}
+      maxWidth="sm"
+      title={
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircleIcon sx={{ fontSize: 28, color: palette.secondary }} />
+          <span>Renewal Complete</span>
+        </Box>
+      }
+      content={
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Typography variant="body2">
+            A new API key was created for <strong>{info.jurisdiction}</strong>.
+          </Typography>
+          <Typography variant="body2" sx={{ color: palette.greyText }}>
+            The previous key stays valid for 10 business days (grace period),
+            then expires automatically. You can view the new token now, or later
+            from the key&apos;s View action.
+          </Typography>
+        </Box>
+      }
+      actions={
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          <Button
+            variant="contained"
+            onClick={onViewKey}
+            sx={{
+              flex: 1,
+              borderRadius: '50px',
+              backgroundColor: palette.primary,
+              fontWeight: 700,
+              py: 1.5,
+              '&:hover': { backgroundColor: palette.primaryDark },
+            }}
+          >
+            VIEW KEY
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={onClose}
+            sx={{ flex: 1, borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+          >
+            CLOSE
+          </Button>
+        </Box>
+      }
+    />
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ApiKeyManagement() {
   const { status: sessionStatus } = useSession()
+
+  // Role-based UI gating (IGDD-2708). useRoleAccess returns the page-scoped
+  // access object for the current role, or undefined/{} when the role has no
+  // entry or the session is still loading — so every flag defaults to false
+  // (deny-by-default). NOTE: this gates the UI only; the API routes still need
+  // server-side authorization (separate RBAC decision).
+  const accessLevels = useRoleAccess() as
+    | ApiKeyManagementPageAccessControl
+    | undefined
+  const canCreate = !!accessLevels?.canCreateApiKey
+  const canRevoke = !!accessLevels?.canRevokeApiKey
+  const canRenew = !!accessLevels?.canRenewApiKey
+  const canCancel = !!accessLevels?.canCancelApiKey
+
   const {
     data: rawCredentials,
     error: fetchError,
@@ -1440,6 +1812,13 @@ export default function ApiKeyManagement() {
     sessionStatus === 'authenticated' ? '/api/apikeys' : null,
     fetcher,
     { shouldRetryOnError: true, errorRetryCount: 3, errorRetryInterval: 1000 }
+  )
+
+  // Organization filter options come from the jurisdictions list (not the
+  // loaded rows) so they're complete and page-independent.
+  const { data: jurisdictions } = useSWR<Jurisdiction[]>(
+    sessionStatus === 'authenticated' ? '/api/jurisdictions' : null,
+    fetcher
   )
 
   const [validatingSortKey, setValidatingSortKey] = useState<string | null>(null)
@@ -1457,10 +1836,28 @@ export default function ApiKeyManagement() {
     [rawCredentials, validatingSortKey]
   )
 
+  // Organization options are the jurisdictions themselves: value = jurisdictionId
+  // (matched against each row's jurisdictionId), label = the description. Sourced
+  // from /api/jurisdictions so the list is complete and page-independent.
+  const organizationOptions = useMemo<FilterOption[]>(
+    () =>
+      Array.isArray(jurisdictions)
+        ? jurisdictions
+            .map((j) => ({
+              value: String(j.jurisdictionId),
+              label: j.description || j.name || String(j.jurisdictionId),
+            }))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        : [],
+    [jurisdictions]
+  )
+
   const [tabValue, setTabValue] = useState(0)
   const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState<ApiKeyFilters>(EMPTY_FILTERS)
   const [viewTarget, setViewTarget] = useState<ApiKey | null>(null)
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<ApiKey | null>(null)
   const [renewTarget, setRenewTarget] = useState<ApiKey | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
@@ -1468,6 +1865,12 @@ export default function ApiKeyManagement() {
     severity: 'success' | 'error' | 'warning' | 'info'
     title: string
     subtitle?: string
+  } | null>(null)
+  // After a successful renewal we show a success dialog (mirroring the Create
+  // flow) that lets the user choose to view the new token now or later.
+  const [renewSuccess, setRenewSuccess] = useState<{
+    sortKey: string
+    jurisdiction: string
   } | null>(null)
 
   const showSnackbar = useCallback(
@@ -1481,18 +1884,29 @@ export default function ApiKeyManagement() {
     () =>
       apiKeys.filter((k) => {
         const q = search.toLowerCase()
-        return (
+        const matchesSearch =
           k.keyId.toLowerCase().includes(q) ||
           k.description.toLowerCase().includes(q) ||
           k.jurisdiction.toLowerCase().includes(q) ||
+          (k.domain ?? '').toLowerCase().includes(q) ||
           k.environment.toLowerCase().includes(q)
-        )
+        const matchesEnv =
+          !filters.environment || k.environment === filters.environment
+        // Cancelled records are retained for audit but kept off the default
+        // view (noise); they surface only when explicitly filtered to Cancelled.
+        const matchesStatus = filters.status
+          ? k.status === filters.status
+          : k.status !== 'Cancelled'
+        const matchesOrg =
+          !filters.organization || k.jurisdictionId === filters.organization
+        return matchesSearch && matchesEnv && matchesStatus && matchesOrg
       }),
-    [apiKeys, search]
+    [apiKeys, search, filters]
   )
 
   const handleView = useCallback((key: ApiKey) => setViewTarget(key), [])
   const handleRevoke = useCallback((key: ApiKey) => setRevokeTarget(key), [])
+  const handleCancel = useCallback((key: ApiKey) => setCancelTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
 
   const confirmRevoke = useCallback(async (reason?: string) => {
@@ -1505,13 +1919,37 @@ export default function ApiKeyManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sortKey, reason: reason || undefined }),
       })
-      if (!res.ok) throw new Error('Failed to revoke key')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to revoke key')
+      }
       mutate('/api/apikeys')
       showSnackbar('success', `${jurisdiction} API Key revoked`, 'This key can no longer be used.')
-    } catch {
-      showSnackbar('error', 'Failed to revoke key', 'Please try again.')
+    } catch (err) {
+      showSnackbar('error', 'Failed to revoke key', err instanceof Error ? err.message : 'Please try again.')
     }
   }, [revokeTarget, showSnackbar])
+
+  const confirmCancel = useCallback(async () => {
+    if (!cancelTarget) return
+    const { sortKey, jurisdiction } = cancelTarget
+    setCancelTarget(null)
+    try {
+      const res = await fetch('/api/apikeys', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sortKey }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Failed to cancel key')
+      }
+      mutate('/api/apikeys')
+      showSnackbar('success', `${jurisdiction} API Key request cancelled`, 'The pending request has been removed.')
+    } catch (err) {
+      showSnackbar('error', 'Failed to cancel key', err instanceof Error ? err.message : 'Please try again.')
+    }
+  }, [cancelTarget, showSnackbar])
 
   // Centralized one-time token reveal — the JWT is never persisted; it's
   // deterministically regenerated here from claims fixed at creation, and
@@ -1541,6 +1979,13 @@ export default function ApiKeyManagement() {
   const handleRevealToken = useCallback((key: ApiKey) => {
     revealToken(key.sortKey)
   }, [revealToken])
+
+  // Called after a successful renewal: do NOT auto-reveal the token. Show a
+  // success dialog that confirms the new key + grace window and lets the user
+  // choose to view the token now (or later via the row's View icon).
+  const handleRenewed = useCallback((sortKey: string, jurisdiction: string) => {
+    setRenewSuccess({ sortKey, jurisdiction })
+  }, [])
 
   const handleValidateRow = useCallback(async (key: ApiKey) => {
     if (!key.domain) {
@@ -1623,6 +2068,24 @@ export default function ApiKeyManagement() {
         minWidth: 130,
       },
       {
+        // An organization can have multiple credentials, so surface the DNS
+        // name (the JWT `upn`) that distinguishes them.
+        field: 'domain',
+        headerName: 'DNS',
+        flex: 1.5,
+        minWidth: 150,
+        renderCell: (params: GridRenderCellParams) => {
+          const upn = (params.row as ApiKey).domain
+          return (
+            <Tooltip title={upn ?? ''} arrow>
+              <Typography variant="body2" noWrap>
+                {upn ?? '—'}
+              </Typography>
+            </Tooltip>
+          )
+        },
+      },
+      {
         field: 'status',
         headerName: 'STATUS',
         flex: 1.6,
@@ -1651,15 +2114,30 @@ export default function ApiKeyManagement() {
             row={params.row as ApiKey}
             onView={handleView}
             onRevoke={handleRevoke}
+            onCancel={handleCancel}
             onRenew={handleRenew}
             onValidate={handleValidateRow}
             onRevealToken={handleRevealToken}
             validating={validatingSortKey === (params.row as ApiKey).sortKey}
+            canRevoke={canRevoke}
+            canRenew={canRenew}
+            canCancel={canCancel}
           />
         ),
       },
     ],
-    [handleView, handleRevoke, handleRenew, handleValidateRow, handleRevealToken, validatingSortKey]
+    [
+      handleView,
+      handleRevoke,
+      handleCancel,
+      handleRenew,
+      handleValidateRow,
+      handleRevealToken,
+      validatingSortKey,
+      canRevoke,
+      canRenew,
+      canCancel,
+    ]
   )
 
   const toolbarProps = useMemo(
@@ -1668,13 +2146,18 @@ export default function ApiKeyManagement() {
       onSearchChange: handleSearchChange,
       tabValue,
       onTabChange: handleTabChange,
+      filters,
+      onFiltersChange: setFilters,
+      environmentOptions: ENVIRONMENT_FILTER_OPTIONS,
+      statusOptions: STATUS_FILTER_OPTIONS,
+      organizationOptions,
     }),
-    [search, handleSearchChange, tabValue, handleTabChange]
+    [search, handleSearchChange, tabValue, handleTabChange, filters, organizationOptions]
   )
 
   const footerProps = useMemo(
-    () => ({ onCreateKey: handleCreateKey }),
-    [handleCreateKey]
+    () => ({ onCreateKey: handleCreateKey, canCreate }),
+    [handleCreateKey, canCreate]
   )
 
   if (isLoading) {
@@ -1791,15 +2274,29 @@ export default function ApiKeyManagement() {
         onClose={() => setRevokeTarget(null)}
         onConfirm={(reason) => confirmRevoke(reason)}
       />
+      <CancelDialog
+        apiKey={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={confirmCancel}
+      />
       <RenewDialog
         apiKey={renewTarget}
         onClose={() => setRenewTarget(null)}
-        onRenewed={revealToken}
+        onRenewed={handleRenewed}
       />
       <CreateKeyDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
         onCreated={revealToken}
+      />
+      <RenewSuccessDialog
+        info={renewSuccess}
+        onViewKey={() => {
+          const sk = renewSuccess?.sortKey
+          setRenewSuccess(null)
+          if (sk) revealToken(sk)
+        }}
+        onClose={() => setRenewSuccess(null)}
       />
       <KeyCreatedDialog
         token={createdToken}
