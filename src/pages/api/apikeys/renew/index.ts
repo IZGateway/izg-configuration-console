@@ -30,9 +30,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
 
-    const { oldSortKey, oldExpiresAt, jurisdictionId, envId, upn, description } = req.body
-    if (!oldSortKey || !jurisdictionId || envId === undefined || envId === null || !upn) {
-      return res.status(400).json({ error: 'oldSortKey, jurisdictionId, envId, and upn are required' })
+    // Note: `upn` (DNS domain) is intentionally NOT read from the request body.
+    // A renewal must keep the same domain as the credential being renewed, so
+    // the domain is sourced from the stored credential below — the client
+    // cannot redirect a renewal to a different domain.
+    const { oldSortKey, oldExpiresAt, jurisdictionId, envId, description } = req.body
+    if (!oldSortKey || !jurisdictionId || envId === undefined || envId === null) {
+      return res.status(400).json({ error: 'oldSortKey, jurisdictionId, and envId are required' })
     }
 
     const envIdNum = Number(envId)
@@ -40,16 +44,40 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
     }
 
+    const dbClient = await DbClientFactory.getDbClient()
+
+    // Renewal is valid only from an active credential (per the state machine).
+    const oldCredential = await dbClient.getApiKeyCredential(String(oldSortKey))
+    if (!oldCredential) {
+      return res.status(404).json({ error: 'Credential to renew was not found' })
+    }
+    if (oldCredential.status !== 'active') {
+      return res.status(409).json({ error: 'Only active credentials can be renewed' })
+    }
+
+    // The renewed key inherits the DNS domain (JWT upn) from the credential
+    // being renewed — the server, not the client, is authoritative here.
+    const domain = oldCredential.domain
+    if (!domain) {
+      return res.status(409).json({
+        error: 'The credential being renewed has no DNS domain on record and cannot be renewed',
+      })
+    }
+
     const newJti = crypto.randomUUID()
     const now = new Date()
     const ONE_YEAR_MS = 365 * 24 * 3600 * 1000
     const THIRTY_DAYS_MS = 30 * 24 * 3600 * 1000
 
-    // Within 30 days of old expiry → extend 1 year from old expiry date
-    // More than 30 days before old expiry → 1 year from today
+    // Base the new expiry on the credential's stored expiry (server-authoritative),
+    // falling back to the client-supplied value only if it is missing.
+    // Within 30 days of old expiry → extend 1 year from old expiry date;
+    // more than 30 days before → 1 year from today.
+    const oldExpirySource =
+      oldCredential.expiresAt ?? (oldExpiresAt ? new Date(oldExpiresAt) : null)
     let expiresAt: Date
-    if (oldExpiresAt) {
-      const oldExpiry = new Date(oldExpiresAt)
+    if (oldExpirySource) {
+      const oldExpiry = new Date(oldExpirySource)
       const withinGracePeriod = now >= new Date(oldExpiry.getTime() - THIRTY_DAYS_MS)
       expiresAt = withinGracePeriod
         ? new Date(oldExpiry.getTime() + ONE_YEAR_MS)
@@ -61,8 +89,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const renewedBy = session.user.email || 'unknown'
     const renewedAt = now.toISOString().replace(/\.\d{3}Z$/, 'Z')
     const newSortKey = `${envIdNum}#${newJti}`
-
-    const dbClient = await DbClientFactory.getDbClient()
 
     // Create the new key record. The JWT itself is never generated/persisted
     // here — it's regenerated on demand, once, via POST /api/apikeys/token.
@@ -76,16 +102,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       expiresAt,
       createdBy: renewedBy,
       description: description ? String(description) : undefined,
-      domain: String(upn),
+      domain,
+      // Carry the sender's use-type scope forward to the renewed credential.
+      useTypes: oldCredential.useTypes,
     })
 
-    // Mark old key as superseded with grace period
+    // Transition the old key to grace: both old and new remain valid until
+    // graceExpiresAt so dependent systems can roll over without disruption.
     await dbClient.supersedApiKeyCredential({
       sortKey: oldSortKey,
       renewedBy,
       renewedAt,
       graceExpiresAt: graceExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
-      supersededByJti: newJti,
+      supersededBy: newJti,
     })
 
     logger.info('API key renewed', {
