@@ -12,8 +12,8 @@ created:
   prompt_uri: >-
     prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~71e447a3-8083-4798-ae9a-1acbbb865c2c
   summary: >-
-    Create proposal for API key management (IGDD-3106) with domain
-    authorization, credential lifecycle, and org schema migration
+    Create proposal for API key management (IGDD-3106, IGDD-3140) with domain
+    authorization, credential lifecycle, and jurisdiction policy
 updated:
   - date: '2026-07-24T04:05:46.867Z'
     user: boonek
@@ -87,6 +87,7 @@ updated:
     summary: >-
       Revise proposal: no migration, Jurisdiction field extensions, useTypes on
       ApiKeyCredential, drop organization-schema-migration capability
+ticket: IGDD-3106, IGDD-3140
 ---
 ## Why
 
@@ -113,7 +114,7 @@ Senders connecting to IZ Gateway currently authenticate using mutual TLS certifi
 - Senders can renew an existing credential; both the old and renewed credential remain valid during a configurable grace period so dependent systems can be updated without disruption.
 - Senders can revoke a credential immediately; a revoked credential is rejected at the IZ Gateway boundary, preventing use by a compromised or decommissioned system.
 - Senders can hold multiple active credentials simultaneously, each independently identified, so that distinct systems are separately authorized and can be individually managed.
-- The `Jurisdiction` entity gains `allowedUseTypes` — the set of credential purposes the jurisdiction permits access to its IIS data. This is the jurisdiction's opt-in access policy: a jurisdiction with no `allowedUseTypes` set permits no API key access by default; one that sets all three is fully open. Policy changes are made by updating the jurisdiction record alone — no credential or sender records are affected.
+- The `Jurisdiction` entity gains `allowedUseTypes` — the set of credential purposes the jurisdiction permits access to its IIS data. This is the jurisdiction's opt-in access policy: an empty `allowedUseTypes` denies all API key access (the Hub use-type intersection is empty), and one that sets all three is fully open. Going forward a jurisdiction MUST declare at least one allowed use type; existing jurisdiction records are backfilled to a correct policy by the one-time ops migration script (see Impact) rather than left empty. Policy changes are made by updating the jurisdiction record alone — no credential or sender records are affected.
 - The `Sender` entity gains `useTypes` — the submitter categories the sender acts on behalf of (patients, providers, public health agencies) — and `lastActive`, recording when the sender last transmitted a message.
 - `ApiKeyCredential` gains a `useTypes` field scoping the credential to one or more submitter categories, allowing separation of concerns between credentials used for different populations of patient data.
 
@@ -132,8 +133,9 @@ Senders connecting to IZ Gateway currently authenticate using mutual TLS certifi
 ## Impact
 
 **DynamoDB:**
-- New entities: `ApiKeyDomain`, `ApiKeyCredential` (modeled in `doc/database-entities.md`). These entities have no production data; no migration is required.
-- Modified entities: `Jurisdiction` gains `allowedUseTypes` (opt-in access policy). `Sender` gains `useTypes` and `lastActive`. All existing records remain valid without update — new fields are optional.
+- New entities: `ApiKeyDomain`, `ApiKeyCredential` (modeled in `doc/database-entities.md`). These entities have no production data.
+- Modified entities: `Jurisdiction` gains `allowedUseTypes` (opt-in access policy). `Sender` gains `useTypes` and `lastActive`. New fields are optional at the schema level, so existing records remain readable without update.
+- **Migration/seeding (ops-run):** a one-time migration is required to (a) seed sender organizations (e.g., Docket, Mayo, VHA, DOW) into the `Jurisdiction` table with unique IDs and `useTypes`, and (b) backfill `allowedUseTypes` on existing jurisdictions so the Hub's use-type intersection does not deny all API-key traffic. This is delivered as a one-time AWS CLI script executed by operations — **not** as auto-startup code in the console. DynamoDB has no direct locking support for a safe multi-instance startup migration, a bad auto-migration could take down the whole system, and the one-time nature does not justify introducing a migration framework.
 
 **API routes (`src/pages/api/`):**
 - New routes for domain authorization workflow (register, verify, revoke domain).
@@ -149,6 +151,7 @@ Senders connecting to IZ Gateway currently authenticate using mutual TLS certifi
 - Must enforce `useTypes` scoping when validating credentials against a submission's submitter category.
 
 **Security-sensitive:**
-- Credential values are write-once and must be stored encrypted via `EncryptedRepository`.
+- The signed JWT is generated on demand, returned to the sender once, and **never persisted** by IZ Gateway. We retain no copy and cannot reconstruct the token issued to a sender — this deliberately prevents any break-glass impersonation of a sender by IZG staff. The token's authenticity is established by its HMAC signature, not by storage.
+- API endpoints that manage credentials MUST verify that the Okta-authenticated caller owns (or is otherwise authorized for) the target credential. A valid session alone MUST NOT grant access to another jurisdiction's credentials via revoke, renew, or token reveal.
 - Revocation must be enforced at read time in `izgw-hub`, not just at issuance time in the console.
 - Grace period windows are bounded; expired grace periods must not silently extend.

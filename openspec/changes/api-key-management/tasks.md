@@ -185,7 +185,7 @@ updated:
       Restructure by namespace; jurisdiction backend first; UI to separate CR;
       IGDD-3106 blockers
 change_request: api-key-management
-ticket: IGDD-3140
+ticket: IGDD-3106, IGDD-3140
 ---
 # Tasks: api-key-management
 
@@ -212,7 +212,8 @@ ticket: IGDD-3140
 - [ ] 1.4 Add `useTypes?: AllowedUseType[]` to `ApiKeyCredential` TypeScript type in
       `src/lib/type/ApiKeyCredential.ts` — `useTypes` is the sender's declared scope
       for this credential (e.g., PATIENT, PROVIDER, PUBLIC_HEALTH); it is set at
-      issuance and embedded in the JWT; it is NOT scoped to a specific destination
+      issuance and stored server-side in DynamoDB (NOT embedded in the JWT — see
+      task 1.7); it is NOT scoped to a specific destination
 - [ ] 1.5 Update `createApiKeyCredential` in `dynamo.ts` to persist `useTypes` as a
       DynamoDB `SS` (String Set) using `docClient.createSet(useTypes)` on write;
       before writing, validate: no duplicate values (deduplicate with
@@ -233,6 +234,12 @@ ticket: IGDD-3140
       expanding from PUBLIC_HEALTH to PROVIDER/PATIENT) without reissuance
 - [ ] 1.8 Add `useTypes` multi-select input (Patient / Provider / Public Health) to the
       credential creation form in the UI *(blocked: IGDD-3106)*
+- [ ] 1.9 Add non-persisted transient helper methods `isJurisdiction()` (true when
+      `allowedUseTypes` is present) and `isSender()` (true when `useTypes` is present)
+      to the entity type; annotate them so they are NOT serialized to DynamoDB. There is
+      no separate type-discriminator flag — the distinction is implied by field presence,
+      and a single record MAY be both. Use these helpers where the UI must distinguish
+      senders from jurisdictions (e.g., labeling the Organization dropdown)
 
 ## 2. ApiKey — Domain Authorization
 
@@ -244,17 +251,23 @@ ticket: IGDD-3140
 - [ ] 2.3 Remove the `// REVERT BEFORE COMMITTING` comment once bypass is gated *(Palak)*
 - [ ] 2.4 Add cross-jurisdiction domain exclusivity check in challenge initiation:
       scan for any existing `ApiKeyDomain` record with the same `domain` + `env`
-      under a different `jurisdictionId`; reject with a descriptive error if found
+      under a different `jurisdictionId` (the conceptual `senderId` is physically the
+      `jurisdictionId` field — see domain-authorization spec); reject with a descriptive
+      error if found
 - [ ] 2.5 Apply the same exclusivity check when an existing authorized domain is
       selected (`dnsChoice === 'existing'`)
 
 ## 3. ApiKey — Credential Lifecycle
 
-- [ ] 3.1 Rename `env: string` to `environments: string[]` on `ApiKeyCredential`
-      TypeScript type
+- [ ] 3.1 Rename `env: string` to `environments: number[]` on `ApiKeyCredential`
+      TypeScript type (numeric environment IDs 1–6 per the `Environment` enumeration,
+      matching the `envIdNum` passed in task 3.3)
 - [ ] 3.2 Update `createApiKeyCredential`, `revokeApiKeyCredential`,
       `supersedApiKeyCredential`, `markApiKeyCredentialViewed`, and all other
-      DynamoDB operations that read or write the env field
+      DynamoDB operations that read or write the env field; also change the
+      `ApiKeyCredential` sortKey from `{envId}#{jti}` to `{jti}` — store `environments`
+      as a record attribute, since the Hub reads a credential directly by `jti` (no
+      environment prefix, no secondary index required)
 - [ ] 3.3 Update `POST /api/apikeys/index.ts` to pass `environments: [envIdNum]`
       for standard single-environment credentials
 - [ ] 3.4 Update `POST /api/apikeys/renew/index.ts` to copy `environments` from
@@ -266,14 +279,26 @@ ticket: IGDD-3140
 - [ ] 3.6 Add multi-env credential creation for admin/ops roles: accept
       `envIds: number[]` body param when caller has IZG Operations or Jurisdiction
       Operations role *(blocked: IGDD-3106)*
-- [ ] 3.7 Add a distinct cancel code path (hard delete, `ready_for_validation` only)
-      separate from revoke *(Palak, blocked: IGDD-3106)*
+- [ ] 3.7 Add a distinct cancel code path (soft delete — set `status = 'cancelled'` and
+      retain the record; `ready_for_validation` only) separate from revoke. Cancelled
+      credentials are hidden from the default list and shown only when the list is
+      filtered by the `cancelled` status *(Palak, blocked: IGDD-3106)*
 - [ ] 3.8 Update `RevokeDialog` / cancel confirmation dialog submit handlers to call
       the correct endpoint per action *(Palak, blocked: IGDD-3106)*
 - [ ] 3.9 Hide cancel action for `active`/`grace` credentials; hide revoke action
       for `ready_for_validation` credentials *(Palak, blocked: IGDD-3106)*
 - [ ] 3.10 Verify stat cards (Total / Active / Revoked) update correctly for both
-      revoke and cancel paths *(Palak, blocked: IGDD-3106)*
+      revoke and cancel paths; confirm a cancelled credential is excluded from the
+      default view and reappears when filtered by `cancelled` *(Palak, blocked: IGDD-3106)*
+- [ ] 3.11 Enforce caller authorization on credential mutations (revoke, renew, cancel,
+      token reveal): verify the caller's jurisdiction owns the target credential
+      (identified by `jti`/`sortKey`); IZG Operations is exempt; reject cross-jurisdiction
+      access with 403/404 and unauthenticated requests with 401. Closes the IDOR gap
+      where these endpoints accept a bare `sortKey` without an ownership check
+- [ ] 3.12 In `POST /api/apikeys/renew`: reject when the old credential is not `active`,
+      and re-verify that the credential's `upn`/domain is an `authorized`, unexpired
+      `ApiKeyDomain` for the jurisdiction/env before minting the new `active` credential
+      (renewal MUST NOT accept an arbitrary, never-proven `upn`)
 
 ## 4. ApiKey — Filtering and Pagination
 
@@ -298,7 +323,8 @@ ticket: IGDD-3140
 - [ ] 5.4 Smoke-test cancel: create pending credential → cancel → confirm record
       deleted and stat card decrements
 - [ ] 5.5 Smoke-test multi-env: create as IZG Operations with multiple envIds →
-      confirm JWT `env` claim contains the list *(blocked: IGDD-3106)*
+      confirm the credential's `environments` list in DynamoDB contains all requested
+      IDs (the JWT carries no `env` claim) *(blocked: IGDD-3106)*
 
 ## 6. Hub — useTypes Enforcement *(separate ticket — izgw-hub + izgw-core)*
 
@@ -316,3 +342,25 @@ ticket: IGDD-3140
       access denial
 - [ ] 6.4 Log the enforcement decision (allowed or denied) including `useTypes`,
       destination jurisdiction, and environment for audit and operations visibility
+
+## 7. Seeding & Migration *(ops-run AWS CLI script — not console startup code)*
+
+> Delivered as a one-time AWS CLI script executed with operations (the "seeding task"
+> with Emiline), NOT as auto-startup code in the console. See design.md
+> "Migration & Seeding (ops-run)" for why (DynamoDB has no cross-instance startup lock;
+> a faulty auto-migration could take the system down; not worth a migration framework
+> for a one-time run). Seeding a row grants no access by itself — jurisdiction-scoped
+> RBAC is Okta group membership provisioned out-of-band; seed rows and Okta groups must
+> be kept in sync.
+
+- [ ] 7.1 Seed sender organizations (e.g., Docket, Mayo, VHA, DOW) into the
+      `Jurisdiction` table as records implementing the `Sender` interface, each with
+      `useTypes` set; assign each a new unique ID that does not already exist in the
+      table (IDs are never reused; `senderId` = `organizationId` = `jurisdictionId`)
+- [ ] 7.2 Backfill `allowedUseTypes` on existing `Jurisdiction` records so the Hub
+      use-type intersection does not deny all API-key traffic once enforcement ships
+      (an empty `allowedUseTypes` denies everything); validate each value against the
+      `AllowedUseType` enum
+- [ ] 7.3 Document the script and run it in an operations session; confirm seeded rows
+      resolve correctly in the shared `id → name` label-enrichment lookup and do not
+      collide with existing jurisdiction IDs

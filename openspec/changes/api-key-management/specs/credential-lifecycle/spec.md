@@ -148,7 +148,7 @@ updated:
       prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~7770ab33-efe7-4273-9afa-0cf49f0480ed
     summary: Multi-env credential scenario for admin/ops roles
 change_request: api-key-management
-ticket: IGDD-3140
+ticket: IGDD-3106, IGDD-3140
 ---
 # Spec: Credential Lifecycle — izg-configuration-console
 
@@ -178,8 +178,8 @@ ticket: IGDD-3140
 
 ### Requirement: Credential initiation creates a DynamoDB record before DNS validation
 
-When an organization requests an API key for a new domain, an `ApiKeyCredential` record
-SHALL be created immediately with `ready_for_validation` status. The JWT is not issued
+An `ApiKeyCredential` record SHALL be created immediately with `ready_for_validation`
+status when an organization requests an API key for a new domain. The JWT is not issued
 until DNS validation succeeds and the credential is first viewed.
 
 For admin and operational staff (IZG Operations, Jurisdiction Operations), the credential
@@ -192,7 +192,8 @@ not a JWT claim.
 
 - **WHEN** `POST /api/apikeys` is called with `dnsChoice === 'other'` (a new domain)
 - **THEN** an `ApiKeyCredential` record is created with:
-  - `sortKey = {envId}#{jti}` where `jti = crypto.randomUUID()`
+  - `sortKey = {jti}` where `jti = crypto.randomUUID()` (no environment prefix; the
+    Hub reads the credential directly by `jti`)
   - `status = 'ready_for_validation'`
   - `domain` set to the submitted UPN
   - `jurisdictionId` set to the caller's jurisdiction
@@ -230,14 +231,19 @@ not a JWT claim.
 
 ### Requirement: Credential status follows a defined state machine
 
-`ApiKeyCredential.status` transitions are defined as follows:
+`ApiKeyCredential.status` MUST follow the transitions defined below:
 
 - `ready_for_validation` → `active` (DNS verification succeeds)
+- `ready_for_validation` → `cancelled` (cancellation confirmed; soft delete)
 - `active` → `grace` (renewal requested)
 - `active` → `revoked` (revocation confirmed)
 - `grace` → `revoked` (revocation confirmed during grace period)
 
-Cancellation (hard delete) is available only from `ready_for_validation`.
+Cancellation is available only from `ready_for_validation` and is a **soft delete**: the
+record is retained with `status = 'cancelled'` and hidden from the default credential
+list, surfacing only when the list is explicitly filtered by the `cancelled` status.
+Retaining the record preserves an audit trail without the need for a separate history
+table.
 
 #### Scenario: DNS verification transitions credential from ready_for_validation to active
 
@@ -268,8 +274,8 @@ Cancellation (hard delete) is available only from `ready_for_validation`.
 
 ### Requirement: JWT is deterministically re-signed from stored claims and revealed on demand
 
-The JWT is never persisted. It is regenerated on each token request by re-signing the
-credential's stored claims (fixed at creation/activation) with HMAC-SHA256 and the
+The JWT MUST NOT be persisted; it MUST be regenerated on each token request by re-signing
+the credential's stored claims (fixed at creation/activation) with HMAC-SHA256 and the
 signing secret from AWS Secrets Manager.
 
 #### Scenario: JWT is generated and returned on token view request
@@ -303,16 +309,19 @@ signing secret from AWS Secrets Manager.
 
 ### Requirement: Revoke and Cancel are distinct operations
 
-Revoking an active or grace-period credential and cancelling a `ready_for_validation`
-credential are distinct actions with different effects.
+Revoke and Cancel MUST be treated as distinct operations: revoking an `active`/`grace`
+credential and cancelling a `ready_for_validation` credential have different effects.
 
 > **Source:** Palak Patel, `api-key-management-ui` CR, IGDD-2707.
 
-#### Scenario: Cancel performs a hard delete on a ready_for_validation credential
+#### Scenario: Cancel performs a soft delete on a ready_for_validation credential
 
 - **WHEN** a user confirms cancellation of a credential in `ready_for_validation` status
-- **THEN** the `ApiKeyCredential` record is deleted from DynamoDB (hard delete)
-- **AND** no `revokedAt` is recorded and no status change is persisted
+- **THEN** `ApiKeyCredential.status` is set to `cancelled` and the record is retained
+  (not hard-deleted from DynamoDB)
+- **AND** the credential is hidden from the default credential list and appears only
+  when the list is explicitly filtered by the `cancelled` status
+- **AND** no `revokedAt` is recorded
 
 #### Scenario: Revoke sets status and timestamp on an active or grace credential
 
@@ -368,11 +377,21 @@ credential to `grace` status with a computed `graceExpiresAt`. The new credentia
   `active` status
 - **THEN** the request MUST be rejected
 
+#### Scenario: Renewal re-verifies domain authorization for the credential's UPN
+
+- **WHEN** `POST /api/apikeys/:jti/renew` is called
+- **THEN** the `upn`/domain carried to the renewed credential MUST correspond to an
+  `ApiKeyDomain` that is `authorized` with `authExpiresAt` in the future for the
+  credential's jurisdiction and environment
+- **AND** renewal MUST NOT mint an `active` credential for a domain that is unauthorized
+  or whose authorization has expired (renewal MUST NOT accept an arbitrary `upn` that was
+  never proven)
+
 ---
 
 ### Requirement: Credential listing is filtered by the caller's RBAC role
 
-Access to the credential list is restricted based on the caller's Okta group role,
+Access to the credential list MUST be restricted based on the caller's Okta group role,
 as defined in the IZ Gateway access definitions.
 
 > **Source:** IGDD-2709 acceptance criteria.
@@ -392,6 +411,41 @@ as defined in the IZ Gateway access definitions.
 #### Scenario: Unauthenticated requests are rejected
 
 - **WHEN** `GET /api/apikeys` is called without a valid session
+- **THEN** the endpoint MUST return 401
+
+---
+
+### Requirement: Credential mutations enforce caller ownership and role
+
+Endpoints that mutate or reveal a credential (revoke, renew, cancel, token reveal) MUST
+verify that the Okta-authenticated caller is authorized for the target credential,
+identified by its `jti`/`sortKey`. A valid session alone MUST NOT grant access to another
+jurisdiction's credential. This closes an IDOR gap: these endpoints currently accept a
+bare `sortKey` without confirming that the caller owns the referenced credential. Note
+this is a distinct credential from the caller's own Okta session credential; the two must
+not be conflated.
+
+> **Source:** review of PR #610 (@akanuri9, comment #2), confirmed in the IGDD-3140
+> design review (2026-07-29).
+
+#### Scenario: Jurisdiction Operations caller may act only on its own jurisdiction's credentials
+
+- **WHEN** a user with the Jurisdiction Operations role calls revoke, renew, cancel, or
+  token reveal for a credential whose `jurisdictionId` is not the caller's jurisdiction
+- **THEN** the request MUST be rejected (403/404) and MUST NOT mutate or reveal the
+  credential
+
+#### Scenario: IZG Operations caller may act on any jurisdiction's credentials
+
+- **WHEN** a user with the IZG Operations role calls a credential mutation or token
+  reveal for any credential
+- **THEN** the ownership restriction does not apply; the action proceeds subject to the
+  status rules for that action
+
+#### Scenario: Unauthenticated mutation requests are rejected
+
+- **WHEN** any credential mutation or token-reveal endpoint is called without a valid
+  session
 - **THEN** the endpoint MUST return 401
 
 ---

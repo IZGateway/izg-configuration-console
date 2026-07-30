@@ -157,7 +157,7 @@ updated:
       prompt:/github-copilot/0ee8a2ab-82ea-4cb0-95a2-3a9ce4f119f2/~7c6e0d67-a0cd-463a-bbdc-010a4d046992
     summary: Domain exclusivity constraint — one domain per sender only
 change_request: api-key-management
-ticket: IGDD-3140
+ticket: IGDD-3106, IGDD-3140
 ---
 # Spec: Domain Authorization — izg-configuration-console
 
@@ -175,17 +175,31 @@ ticket: IGDD-3140
 > sender**. Unlike the mTLS certificate model (where a domain could be shared across
 > multiple jurisdictions), a domain may only be authorized for a single sender per
 > environment. This is intentional and non-negotiable.
+>
+> **Conceptual vs physical identity:** the design's conceptual diagram labels the owning
+> organization `senderId`; physically that value is the `jurisdictionId` field on the
+> single `Jurisdiction` table (`senderId` = `organizationId` = `jurisdictionId`). The
+> scenarios below use `jurisdictionId` to match the as-built code.
 
 ## ADDED Requirements
 
 ### Requirement: Domain ownership is verified before authorization
 
-Before a domain may serve as the basis for a credential, the submitting organization
-MUST prove ownership via a DNS TXT record challenge. A domain name is **exclusively
+Before a domain may serve as the basis for a credential, the submitting organization MUST
+prove ownership via a DNS TXT record challenge. A domain name is **exclusively
 bound** to the first sender that successfully completes domain authorization — it may
 NEVER be authorized for a second sender within the same environment. This is a
 deliberate departure from the mTLS certificate model, where the same domain could be
 shared across multiple senders.
+
+> **Rationale — TXT at the domain apex:** the challenge TXT record is published at the
+> apex of the domain being validated (e.g., `kanuri.testing.izgateway.org`), not under a
+> `_izg-verify` (or similar) prefix. This intentionally reproduces the DigiCert DNS-TXT
+> validation procedure that jurisdiction IT teams already perform for certificate
+> issuance, so IIS IT staff need no retraining. Publishing a DNS record is typically a
+> multi-day ticketed process for a jurisdiction, so matching the familiar procedure
+> avoids added cost and confusion. Domain validation itself is a firm requirement
+> (Dave Bike); the apex placement makes meeting it as low-friction as possible.
 
 #### Scenario: Challenge record is issued on first domain submission
 
@@ -222,7 +236,7 @@ shared across multiple senders.
 
 ### Requirement: Domain authorization is scoped to a single environment by default, with cross-environment credentials available for admin and operational staff
 
-For standard credentials, an `ApiKeyDomain` authorization is valid only for the
+For standard credentials, an `ApiKeyDomain` authorization MUST be honored only for the
 (envId, jurisdictionId) pair under which it was created. A sender authorized in
 environment 5 cannot use that authorization in environment 6.
 
@@ -263,7 +277,7 @@ privilege is role-gated and is NOT available for standard sender credentials.
 
 ### Requirement: Domain authorization expires after one year
 
-An `ApiKeyDomain` authorization is valid for exactly 1 year from the date of
+An `ApiKeyDomain` authorization MUST expire exactly 1 year from the date of
 DNS verification. After expiry, the domain remains visible in the domain list so
 the organization can re-initiate the DNS challenge, but it MUST NOT be selectable
 as an already-authorized domain when creating a new credential.
@@ -285,9 +299,9 @@ as an already-authorized domain when creating a new credential.
 
 ### Requirement: DNS verification bypass MUST NOT be reachable in production
 
-The development-only bypass in `POST /api/apikeys/verify-domain` currently activates
-automatically when `NODE_ENV === 'development'`. It MUST be refactored to require an
-explicit opt-in flag, and MUST be blocked unconditionally when
+The development-only bypass in `POST /api/apikeys/verify-domain` MUST NOT be reachable in
+production. It currently activates automatically when `NODE_ENV === 'development'`; it MUST
+be refactored to require an explicit opt-in flag, and MUST be blocked unconditionally when
 `NODE_ENV === 'production'` even if the flag is set.
 
 > **Source:** Palak Patel, `api-key-management-ui` CR, IGDD-2707.

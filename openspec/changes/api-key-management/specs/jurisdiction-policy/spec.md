@@ -29,7 +29,7 @@ updated:
       Add user story and UI scenarios for jurisdiction manager view/edit
       allowedUseTypes
 change_request: api-key-management
-ticket: IGDD-3140
+ticket: IGDD-3106, IGDD-3140
 ---
 # Spec: Jurisdiction Policy — izg-configuration-console
 
@@ -82,10 +82,22 @@ use types SHALL NOT be created, as it would be unreachable by any credential.
 
 ---
 
-### Requirement: allowedUseTypes controls which credential categories are accepted
+### Requirement: allowedUseTypes controls which credential categories a destination accepts
 
-The `allowedUseTypes` field enforces at credential issuance time that the credential's
-`useTypes` are within the jurisdiction's declared policy.
+`allowedUseTypes` is a property of the **destination** jurisdiction and MUST be enforced
+by the Hub at **routing time**, NOT at credential issuance time in the console. It declares
+which categories of credential that jurisdiction accepts for access to its IIS data.
+
+A sender's credential is bound to the sender's own `jurisdictionId`, but a sender may
+transmit to many destinations. The access decision therefore compares the credential's
+`useTypes` against the **destination** jurisdiction's `allowedUseTypes` for the specific
+message being routed — this is a different check from anything evaluated at issuance.
+There is no issuance-time intersection check against the sender's own jurisdiction.
+
+> Enum-validation of `allowedUseTypes` on write is a console concern (covered below).
+> The intersection enforcement is Hub-side; it is also specified in the
+> credential-lifecycle spec ("Hub enforces useTypes intersection at routing time") and
+> implemented under the separate izgw-hub + izgw-core ticket.
 
 #### Scenario: allowedUseTypes values are restricted to the defined enum
 
@@ -94,20 +106,21 @@ The `allowedUseTypes` field enforces at credential issuance time that the creden
   `PUBLIC_HEALTH`
 - **AND** any value outside this set MUST be rejected
 
-#### Scenario: Credential useTypes must intersect jurisdiction allowedUseTypes at issuance
+#### Scenario: Destination jurisdiction useTypes intersection is enforced at routing time
 
-- **WHEN** a credential is created for a jurisdiction
-- **THEN** each value in the credential's `useTypes` MUST appear in the jurisdiction's
+- **WHEN** the Hub routes a message from a sender to a destination
+- **THEN** the credential's `useTypes` MUST intersect the **destination** jurisdiction's
   `allowedUseTypes`
-- **AND** credential creation MUST be rejected if the intersection is empty
+- **AND** the message MUST be rejected if the intersection is empty
+- **AND** this decision is made at routing time in the Hub, not at credential issuance
 
-#### Scenario: Single-use-type jurisdiction rejects out-of-scope credentials
+#### Scenario: Single-use-type destination jurisdiction rejects out-of-scope credentials
 
-- **WHEN** a jurisdiction has `allowedUseTypes = ["PROVIDER"]`
-- **THEN** a credential with `useTypes = ["PATIENT"]` MUST be rejected
-- **AND** a credential with `useTypes = ["PROVIDER"]` MUST be accepted
+- **WHEN** a destination jurisdiction has `allowedUseTypes = ["PROVIDER"]`
+- **THEN** a message from a credential with `useTypes = ["PATIENT"]` MUST be rejected
+- **AND** a message from a credential with `useTypes = ["PROVIDER"]` MUST be accepted
 
-#### Scenario: Multi-use-type jurisdiction accepts credentials for any listed category
+#### Scenario: Multi-use-type destination jurisdiction accepts credentials for any listed category
 
-- **WHEN** a jurisdiction has `allowedUseTypes = ["PATIENT", "PROVIDER", "PUBLIC_HEALTH"]`
-- **THEN** a credential with any non-empty subset of those values MUST be accepted
+- **WHEN** a destination jurisdiction has `allowedUseTypes = ["PATIENT", "PROVIDER", "PUBLIC_HEALTH"]`
+- **THEN** a message from a credential with any non-empty subset of those values MUST be accepted
