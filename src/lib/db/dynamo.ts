@@ -205,6 +205,16 @@ class Dynamo implements DbClient {
         sortKey: item.sortKey,
         name: item.name || item.sortKey,
         description: item.description || item.name || item.sortKey,
+        // Use-type policy fields (IGDD-3140). Read robustly whether stored as a
+        // DynamoDB List or a String Set (both are iterable once unmarshalled),
+        // filtered to the known enum. allowedUseTypes = jurisdiction/destination
+        // policy; useTypes = sender/submitter capability. Absent → undefined.
+        allowedUseTypes: item.allowedUseTypes
+          ? Array.from(item.allowedUseTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
+        useTypes: item.useTypes
+          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
         createdBy: item.createdBy,
         createdOn: item.createdOn,
       }))
@@ -290,6 +300,63 @@ class Dynamo implements DbClient {
         sortKey: params.sortKey,
         errorMessage: error.message,
         operation: 'upsertApiKeyDomain',
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Enforces GLOBAL domain exclusivity: a domain belongs to exactly one
+   * jurisdiction across every environment — unlike `ApiKeyDomain`, which is
+   * keyed per (env, jurisdiction, domain) and so cannot express a
+   * cross-jurisdiction constraint by itself. Uses a race-safe conditional
+   * write on a separate lock item (`ApiKeyDomainOwner`, keyed by the
+   * normalized domain alone) so the uniqueness check works regardless of how
+   * many environments a credential spans. Domain names are matched
+   * case-insensitively (DNS names are not case-sensitive).
+   */
+  async claimDomainOwnership(
+    domain: string,
+    jurisdictionId: string
+  ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }> {
+    const sortKey = domain.toLowerCase()
+    try {
+      await dynamodDbDocClient.send(
+        new PutCommand({
+          TableName: TABLE_NAME,
+          Item: {
+            entityType: 'ApiKeyDomainOwner',
+            sortKey,
+            jurisdictionId,
+            claimedAt: new Date().toISOString(),
+          },
+          // Succeeds if unclaimed, or already claimed by this same
+          // jurisdiction (idempotent re-verification/renewal) — fails only
+          // when a DIFFERENT jurisdiction already owns this domain.
+          ConditionExpression:
+            'attribute_not_exists(sortKey) OR jurisdictionId = :jurisdictionId',
+          ExpressionAttributeValues: { ':jurisdictionId': jurisdictionId },
+        })
+      )
+      return { claimed: true }
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        const existing = await dynamodDbDocClient.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: { entityType: 'ApiKeyDomainOwner', sortKey },
+          })
+        )
+        return {
+          claimed: false,
+          ownerJurisdictionId: existing.Item?.jurisdictionId as string | undefined,
+        }
+      }
+      logger.error('Error claiming ApiKeyDomainOwner', {
+        domain,
+        jurisdictionId,
+        errorMessage: error.message,
+        operation: 'claimDomainOwnership',
       })
       throw error
     }
@@ -1318,7 +1385,14 @@ class Dynamo implements DbClient {
           revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
           cancelledBy: item.cancelledBy as string | undefined,
           cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
-          env: item.env as string,
+          // Falls back to the legacy singular `env` attribute for rows written
+          // before the environments-list migration, so existing credentials
+          // don't lose their environment on read.
+          environments: item.environments
+            ? Array.from(item.environments as Iterable<string>)
+            : item.env
+              ? [item.env as string]
+              : [],
           description: item.description as string | undefined,
           domain: item.domain as string | undefined,
           viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
@@ -1357,7 +1431,14 @@ class Dynamo implements DbClient {
         revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
         cancelledBy: item.cancelledBy as string | undefined,
         cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
-        env: item.env as string,
+        // Falls back to the legacy singular `env` attribute for rows written
+        // before the environments-list migration, so existing credentials
+        // don't lose their environment on read.
+        environments: item.environments
+          ? Array.from(item.environments as Iterable<string>)
+          : item.env
+            ? [item.env as string]
+            : [],
         description: item.description as string | undefined,
         domain: item.domain as string | undefined,
         viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
@@ -1550,7 +1631,7 @@ class Dynamo implements DbClient {
     jti: string
     sortKey: string
     jurisdictionId: string
-    env: string
+    environments: string[]
     status: string
     createdOn: Date
     expiresAt?: Date | null
@@ -1564,7 +1645,8 @@ class Dynamo implements DbClient {
       sortKey: params.sortKey,
       jti: params.jti,
       jurisdictionId: params.jurisdictionId,
-      env: params.env,
+      // Stored as a plain List (deduped), same rationale as useTypes below.
+      environments: [...new Set(params.environments)],
       status: params.status,
       createdOn: params.createdOn.toISOString(),
       // Expiry is only stored once the key is issued. A ready_for_validation

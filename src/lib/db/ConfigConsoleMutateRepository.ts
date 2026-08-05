@@ -104,6 +104,10 @@ export default interface ConfigConsoleMutateRepository {
     validatedAt?: string
     authExpiresAt?: string
   }): Promise<void>
+  claimDomainOwnership(
+    domain: string,
+    jurisdictionId: string
+  ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }>
   supersedApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
@@ -116,7 +120,7 @@ export default interface ConfigConsoleMutateRepository {
     sortKey: string
     useTypes?: AllowedUseType[]
     jurisdictionId: string
-    env: string
+    environments: string[]
     status: string
     createdOn: Date
     expiresAt?: Date | null
