@@ -68,16 +68,25 @@ in `verify-domain/index.ts`; default disabled, `logger.warn` emitted when active
 documented in `src/.env.template`. `NODE_ENV` alone is not a reliable production guard in
 every deploy config, so the explicit opt-in is required.
 
-### D3 — `useTypes` stored as a DynamoDB List, not a String Set
+### D3 — `useTypes` stored as a DynamoDB String Set (SS)  *(REVISED — aligned to IGDD-3140)*
 
-**Decision:** persist `ApiKeyCredential.useTypes` (and, later, `Jurisdiction.useTypes`/
-`allowedUseTypes`) as a deduped **List**. The lib-dynamodb v3 DocumentClient returns Sets
-as native JS `Set`s (no unmarshall-to-array option), and the IGDD-3140 design ER diagram
-itself shows `+List useTypes`; a List avoids Set round-trip footguns and — critically —
-can be **empty**, which a String Set cannot: an empty `allowedUseTypes` is the
-DENY-ALL policy state, which a Set-typed attribute could never represent. Reads use
-`filter(isValidUseType)`. `useTypes` is a server-side property (Hub reads it by `jti`),
-**not** a JWT claim.
+**Decision:** persist `ApiKeyCredential.useTypes` as a deduped **DynamoDB String Set (`SS`)**
+via `docClient.createSet`, matching the canonical IGDD-3140 storage decision. On read the
+DocumentClient unmarshals the `SS` and values are validated via `filter(isValidUseType)`.
+`useTypes` is a server-side property (Hub reads it by `jti`), **not** a JWT claim. `SS` is
+safe here because a credential's `useTypes` is required to be non-empty (§5.3).
+
+> **Superseded approach:** this branch originally persisted `useTypes` as a deduped **List**
+> (the lib-dynamodb v3 DocumentClient returns Sets as native JS `Set`s with no
+> unmarshal-to-array option, and the interim ER diagram showed `+List useTypes`). IGDD-3140
+> makes `SS` canonical, so the shipped List implementation must be migrated to `SS`.
+
+> **Caveat — `Jurisdiction.allowedUseTypes` is not covered by this decision.** IGDD-3140's
+> `SS` decision is about the *credential* attribute. A jurisdiction's `allowedUseTypes` must
+> be able to be **empty** (empty = the DENY-ALL policy state), and a DynamoDB String Set
+> cannot be empty, so that attribute cannot use `SS` as-is. Storage for the jurisdiction-side
+> attribute needs to stay a List (or represent deny-all by attribute absence); resolve this
+> with the IGDD-3140 owner before migrating anything beyond the credential attribute.
 
 ### D4 — Expiry (and JWT `iat`) are stamped at issuance, not at record creation
 
@@ -93,7 +102,8 @@ exactly one year from issuance. Renewal expiry: within 30 days of the old expiry
 
 **Decision:** the console derives display status from the stored dates rather than waiting
 on the Hub sweeper. Effective grace end = `min(graceExpiresAt, exp)` (a token cannot outlive
-its `exp`). Precedence: stored `revoked`/`cancelled`/`expired` win; then for a renewed key
+its `exp`). Precedence: stored `revoked`/`cancelled` win (`expired` is derived-only, never
+stored); then for a renewed key
 `Grace Period` while `now < min(graceEnd, exp)`, else `Expired` if `exp <= graceEnd` else
 `Revoked`; then a non-renewed key past `exp` → `Expired`. The **Hub's**
 `GracePeriodRevocationScheduler` persists the authoritative status (and currently marks all

@@ -77,9 +77,12 @@
 
 - [x] 5.1 New `src/lib/type/AllowedUseType.ts` — `PATIENT | PROVIDER | PUBLIC_HEALTH`,
       `isValidUseType` guard, `USE_TYPE_LABELS`.
-- [x] 5.2 `ApiKeyCredential.useTypes?: AllowedUseType[]`; persisted as a deduped
-      DynamoDB **List** (not a String Set — an empty List can represent the deny-all
-      policy state, which a Set cannot), read back defensively via `filter(isValidUseType)`.
+- [ ] 5.2 `ApiKeyCredential.useTypes?: AllowedUseType[]`; persisted as a deduped
+      DynamoDB **String Set** (`SS`) via `docClient.createSet`, read back defensively via
+      `filter(isValidUseType)`. *(Canonical per IGDD-3140; the shipped code currently writes
+      a DynamoDB List and must be migrated to `SS` — see design D3. The deny-all/empty-set
+      concern applies to `Jurisdiction.allowedUseTypes`, not to this attribute, which §5.3
+      requires to be non-empty.)*
 - [x] 5.3 `POST /api/apikeys` requires a non-empty, enum-valid `useTypes` (400 otherwise);
       renew and re-issue carry it forward.
 - [x] 5.4 Create dialog uses the shared `SearchableMultiSelect` (chips) — matches the
@@ -105,7 +108,8 @@
       token `iat` = `issuedAt ?? createdOn` (existing-authorized / renew issue at create).
 - [x] 6.2 `Expired` status **derived in the UI** from `exp` / `graceExpiresAt`
       (effective grace end = `min(graceExpiresAt, exp)`); grace-ended-before-expiry
-      derives `Revoked`. Honors a stored `expired`/`revoked` once the Hub persists it.
+      derives `Revoked`. Honors a stored `revoked` once the Hub persists it (`expired`
+      is derived-only, never stored).
 - [x] 6.3 Renewal expiry formula confirmed: within 30 days of old expiry → `oldExpiry + 1yr`; else `now + 1yr`.
 - [x] 6.4 Renewal domain (`upn`), jurisdiction, and `environments` are prepopulated +
       read-only in the dialog and **server-authoritative** in `/renew` (inherited from
