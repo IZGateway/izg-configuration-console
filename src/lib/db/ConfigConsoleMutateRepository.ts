@@ -4,6 +4,7 @@ import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { AllowedUser } from '../type/AllowedUser'
+import { AllowedUseType } from '../type/AllowedUseType'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -80,4 +81,59 @@ export default interface ConfigConsoleMutateRepository {
     oldValues: AllowedUser | null,
     newValues: AllowedUser | null
   ): Promise<boolean>
+  cancelApiKeyCredential(
+    sortKey: string,
+    cancelledBy: string,
+    cancelledAt: string
+  ): Promise<void>
+  revokeApiKeyCredential(
+    sortKey: string,
+    revokedBy: string,
+    revokedAt: string,
+    reason?: string
+  ): Promise<void>
+  upsertApiKeyDomain(params: {
+    sortKey: string
+    domain: string
+    env: string
+    jurisdictionId: string
+    status: 'pending_challenge' | 'authorized'
+    challengeUuid?: string
+    challengeExpiresAt?: string
+    requestedBy?: string
+    validatedAt?: string
+    authExpiresAt?: string
+  }): Promise<void>
+  claimDomainOwnership(
+    domain: string,
+    jurisdictionId: string
+  ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }>
+  supersedApiKeyCredential(params: {
+    sortKey: string
+    renewedBy: string
+    renewedAt: string
+    graceExpiresAt: string
+    supersededBy: string
+  }): Promise<void>
+  createApiKeyCredential(params: {
+    jti: string
+    sortKey: string
+    useTypes?: AllowedUseType[]
+    jurisdictionId: string
+    environments: string[]
+    status: string
+    createdOn: Date
+    expiresAt?: Date | null
+    createdBy: string
+    description?: string
+    domain?: string
+  }): Promise<void>
+  updateApiKeyCredentialStatus(params: {
+    sortKey: string
+    status: string
+    expiresAt?: string
+    issuedAt?: string
+    expectedStatus?: string
+  }): Promise<void>
+  markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void>
 }
