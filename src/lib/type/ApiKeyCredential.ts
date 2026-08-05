@@ -13,7 +13,11 @@ export interface ApiKeyCredential extends DbAudit {
   // computed from issuance. Falls back to createdOn for keys issued at create.
   issuedAt?: Date | null
   revokedAt: Date | null
-  env: string
+  // List of environment ids (e.g. ["4","5"]) this credential is valid for.
+  // Standard credentials carry exactly one; multi-env credentials (IZG
+  // Operations only) may carry several. The Hub reads this by jti at routing
+  // time — it is not part of the JWT.
+  environments: string[]
   description?: string
   graceExpiresAt?: Date | null
   domain?: string

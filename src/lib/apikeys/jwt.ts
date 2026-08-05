@@ -36,13 +36,18 @@ export function issueApiKeyJwt(params: {
   jurisdictionId: string
   jti: string
   upn: string
-  envId: number
   secretString: string
   kid: string
   issuedAt: Date
   expiresAt: Date
   iss: string
 }): string {
+  // Identity-only payload (IGDD-2707/3140 design decision): environment(s) and
+  // useTypes are NOT JWT claims — the Hub reads them from the credential row by
+  // jti at routing time, so they can change (e.g. multi-env) without reissuing
+  // the token. `roles` is retained for now pending confirmation that no
+  // izgw-hub/izgw-core path reads it; env was removed because it no longer has
+  // a single value once a credential can span multiple environments.
   const payload: Record<string, unknown> = {
     iss: params.iss,
     sub: String(params.jurisdictionId),
@@ -51,7 +56,6 @@ export function issueApiKeyJwt(params: {
     exp: Math.floor(params.expiresAt.getTime() / 1000),
     upn: params.upn,
     roles: ['ads', 'soap'],
-    env: params.envId,
   }
   return signJwt(payload, params.secretString, params.kid)
 }

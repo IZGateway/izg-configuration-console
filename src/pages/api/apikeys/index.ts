@@ -5,6 +5,11 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { isValidUseType } from '../../../lib/type/AllowedUseType'
+import {
+  hasApiKeyPermission,
+  ownsJurisdiction,
+  requireApiKeyAccess,
+} from '../../../lib/security/apiKeyAuthz'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -13,6 +18,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const session = await getServerSession(req, res, authOptions)
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+      if (!hasApiKeyPermission(session, 'canListApiKeys')) {
+        return res.status(403).json({ error: 'Forbidden - insufficient role' })
       }
 
       const dbClient = await DbClientFactory.getDbClient()
@@ -26,7 +34,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(500).json({ error: 'Failed to fetch API key credentials' })
       }
 
-      return res.status(200).json(result)
+      // Tenancy scoping (fix enumeration/IDOR): a caller only sees credentials
+      // for jurisdictions they own. IZG roles are global; jurisdiction roles are
+      // limited to their assigned jurisdictions.
+      const scoped = result.filter((c) => ownsJurisdiction(session, c.jurisdictionId))
+
+      return res.status(200).json(scoped)
     } catch (error) {
       logger.error('Error fetching API key credentials', {
         operation: 'fetchApiKeyCredentials',
@@ -45,17 +58,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
 
-      const { jurisdictionId, envId, upn, description, dnsChoice, useTypes } = req.body
-      if (!jurisdictionId || envId === undefined || envId === null || !upn) {
-        return res.status(400).json({ error: 'jurisdictionId, envId, and upn are required' })
+      const { jurisdictionId, environments, upn, description, dnsChoice, useTypes } = req.body
+      if (!jurisdictionId || !Array.isArray(environments) || environments.length === 0 || !upn) {
+        return res.status(400).json({ error: 'jurisdictionId, environments (non-empty array), and upn are required' })
+      }
+      // Role + tenancy: a caller may only create keys for a jurisdiction they own.
+      const authz = requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
+      if (!authz.ok) {
+        return res.status(authz.status).json({ error: authz.error })
       }
       if (dnsChoice !== 'existing' && dnsChoice !== 'other') {
         return res.status(400).json({ error: "dnsChoice must be 'existing' or 'other'" })
       }
 
-      const envIdNum = Number(envId)
-      if (isNaN(envIdNum) || envIdNum < 1 || envIdNum > 5) {
-        return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
+      const envIds = [...new Set(environments.map(Number))]
+      if (envIds.some((n) => isNaN(n) || n < 1 || n > 5)) {
+        return res.status(400).json({ error: 'environments must each be a number between 1 and 5' })
+      }
+      // Multi-env credentials are an IZG Operations capability (server-enforced,
+      // not just UI-gated) — every other role is limited to a single environment.
+      if (envIds.length > 1 && !session.user.isAdmin) {
+        return res.status(403).json({ error: 'Only administrators may create a multi-environment key' })
       }
 
       // useTypes scopes the credential to submitter categories; it is required
@@ -71,31 +94,45 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const dbClient = await DbClientFactory.getDbClient()
-      // DNS-name authorization is scoped per (env, jurisdiction) pair —
-      // a domain authorized for one jurisdiction must not be selectable
-      // as "existing" under a different jurisdiction.
-      const domainSortKey = `${envIdNum}#${jurisdictionId}#${upn}`
+      // DNS-name authorization is scoped per (env, jurisdiction) pair — a domain
+      // authorized for one jurisdiction must not be selectable as "existing"
+      // under a different jurisdiction. A multi-env credential must have the
+      // domain authorized in EVERY one of its environments individually — there
+      // is no shortcut that grants access to an env the domain wasn't verified for.
+      const domainSortKeys = envIds.map((env) => `${env}#${jurisdictionId}#${upn}`)
       const now = new Date()
       const createdBy = session.user.email || 'unknown'
 
       if (dnsChoice === 'existing') {
-        const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
-        const isAuthorized =
-          domainRecord?.status === 'authorized' &&
-          domainRecord?.authExpiresAt &&
-          new Date(domainRecord.authExpiresAt) > now
-        if (!isAuthorized) {
-          return res.status(400).json({ error: 'Selected DNS name is not currently authorized' })
+        const domainRecords = await Promise.all(
+          domainSortKeys.map((sk) => dbClient.getApiKeyDomain(sk))
+        )
+        const unauthorizedEnv = envIds.find((_, i) => {
+          const rec = domainRecords[i]
+          return !(
+            rec?.status === 'authorized' &&
+            rec?.authExpiresAt &&
+            new Date(rec.authExpiresAt) > now
+          )
+        })
+        if (unauthorizedEnv !== undefined) {
+          return res.status(400).json({
+            error: `Selected DNS name is not currently authorized for environment ${unauthorizedEnv}`,
+          })
         }
 
         const jti = crypto.randomUUID()
         const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-        const sortKey = `${envIdNum}#${jti}`
+        // Credentials are keyed by bare jti (not env-prefixed): the Hub reads
+        // a credential by jti alone at routing time, and env membership is a
+        // stored attribute, not part of the key. jti is a UUID, so this is
+        // already globally unique without a prefix.
+        const sortKey = jti
         await dbClient.createApiKeyCredential({
           jti,
           sortKey,
           jurisdictionId: String(jurisdictionId),
-          env: String(envIdNum),
+          environments: envIds.map(String),
           status: 'active',
           createdOn: now,
           expiresAt,
@@ -120,13 +157,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // until DNS ownership is verified, and exp is stamped at activation
       // (verify-domain) so it is computed from issuance.
       const jti = crypto.randomUUID()
-      const sortKey = `${envIdNum}#${jti}`
+      // Bare jti — see the 'existing' branch above for why.
+      const sortKey = jti
 
       await dbClient.createApiKeyCredential({
         jti,
         sortKey,
         jurisdictionId: String(jurisdictionId),
-        env: String(envIdNum),
+        environments: envIds.map(String),
         status: 'ready_for_validation',
         createdOn: now,
         createdBy,
@@ -135,34 +173,45 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         useTypes,
       })
 
-      const domainRecord = await dbClient.getApiKeyDomain(domainSortKey)
+      // The DNS TXT challenge proves ownership of the domain itself (record
+      // placed at the domain APEX, DigiCert-style — not a `_izg-verify.`
+      // subdomain), which is env-independent — so one challenge/UUID covers
+      // every environment the credential targets. Reuse
+      // any still-pending challenge found on the first environment's row; a
+      // fresh UUID is (re)applied to every environment's ApiKeyDomain row so
+      // they all resolve together on the next verify-domain call.
+      const firstDomainRecord = await dbClient.getApiKeyDomain(domainSortKeys[0])
       const hasPendingChallenge =
-        domainRecord?.status === 'pending_challenge' &&
-        domainRecord?.challengeExpiresAt &&
-        new Date(domainRecord.challengeExpiresAt) > now
+        firstDomainRecord?.status === 'pending_challenge' &&
+        firstDomainRecord?.challengeExpiresAt &&
+        new Date(firstDomainRecord.challengeExpiresAt) > now
 
       const challengeUuid = hasPendingChallenge
-        ? domainRecord.challengeUuid
+        ? firstDomainRecord.challengeUuid
         : crypto.randomUUID()
 
       if (!hasPendingChallenge) {
         const challengeExpiresAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000)
-        await dbClient.upsertApiKeyDomain({
-          sortKey: domainSortKey,
-          domain: String(upn),
-          env: String(envIdNum),
-          jurisdictionId: String(jurisdictionId),
-          status: 'pending_challenge',
-          challengeUuid,
-          challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
-          requestedBy: createdBy,
-          authExpiresAt: '',
-        })
+        await Promise.all(
+          envIds.map((env, i) =>
+            dbClient.upsertApiKeyDomain({
+              sortKey: domainSortKeys[i],
+              domain: String(upn),
+              env: String(env),
+              jurisdictionId: String(jurisdictionId),
+              status: 'pending_challenge',
+              challengeUuid,
+              challengeExpiresAt: challengeExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+              requestedBy: createdBy,
+              authExpiresAt: '',
+            })
+          )
+        )
       }
 
       logger.info('DNS challenge required for new domain; credential created as ready_for_validation', {
         domain: upn,
-        envId: envIdNum,
+        environments: envIds,
         challengeUuid,
         jti,
         sortKey,
@@ -172,11 +221,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(202).json({
         status: 'ready_for_validation',
         domain: upn,
-        envId: envIdNum,
+        environments: envIds,
         challengeUuid,
         jti,
         sortKey,
-        txtRecord: `_izg-verify.${upn}`,
+        // TXT record placed at the domain apex (DigiCert-style validation),
+        // not a `_izg-verify.` subdomain.
+        txtRecord: upn,
         txtValue: `izg-challenge=${challengeUuid}`,
       })
     } catch (error) {
@@ -196,6 +247,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
+      if (!hasApiKeyPermission(session, 'canRevokeApiKey')) {
+        return res.status(403).json({ error: 'Forbidden - insufficient role' })
+      }
 
       const { sortKey, reason } = req.body
       if (!sortKey) {
@@ -212,6 +266,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const credential = await dbClient.getApiKeyCredential(String(sortKey))
       if (!credential) {
         return res.status(404).json({ error: 'API key not found' })
+      }
+      // Role + tenancy (fix IDOR): the caller must own the credential's
+      // jurisdiction. This is the authoritative gate, evaluated right before
+      // acting on the credential — checked before the status check so a
+      // non-owner learns nothing about the target credential's state.
+      const authz = requireApiKeyAccess(session, 'canRevokeApiKey', credential.jurisdictionId)
+      if (!authz.ok) {
+        return res.status(authz.status).json({ error: authz.error })
       }
       const revocableStatuses = ['active', 'grace_period', 'grace', 'superseded']
       if (!revocableStatuses.includes(credential.status)) {
@@ -251,6 +313,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
+      if (!hasApiKeyPermission(session, 'canCancelApiKey')) {
+        return res.status(403).json({ error: 'Forbidden - insufficient role' })
+      }
 
       const { sortKey } = req.body
       if (!sortKey) {
@@ -266,6 +331,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const credential = await dbClient.getApiKeyCredential(String(sortKey))
       if (!credential) {
         return res.status(404).json({ error: 'API key not found' })
+      }
+      // Role + tenancy (fix IDOR): the caller must own the credential's
+      // jurisdiction. Authoritative gate, evaluated right before acting on it.
+      const authz = requireApiKeyAccess(session, 'canCancelApiKey', credential.jurisdictionId)
+      if (!authz.ok) {
+        return res.status(authz.status).json({ error: authz.error })
       }
       if (credential.status !== 'ready_for_validation') {
         return res.status(409).json({
