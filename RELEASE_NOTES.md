@@ -1,5 +1,13 @@
 # Release Notes
 
+## Release v1.17.0
+
+- IGDD-2223 — Report the user that initiated a log-message action 
+- IGDD-2273 — Reset circuit breaker for a single destination + show breaker status
+- IGDD-2794 — Prevent full req/res objects from being logged
+- Dependency updates
+- Base Docker image update
+
 ## Release v1.16.1
 
 - Dependency updates
