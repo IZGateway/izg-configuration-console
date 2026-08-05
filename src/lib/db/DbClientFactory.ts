@@ -422,7 +422,7 @@ class EncryptedRepository implements DbClient {
     sortKey: string
     useTypes?: AllowedUseType[]
     jurisdictionId: string
-    env: string
+    environments: string[]
     status: string
     createdOn: Date
     expiresAt?: Date | null
@@ -454,6 +454,13 @@ class EncryptedRepository implements DbClient {
     authExpiresAt?: string
   }): Promise<void> {
     return await this.repository.upsertApiKeyDomain(params)
+  }
+
+  async claimDomainOwnership(
+    domain: string,
+    jurisdictionId: string
+  ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }> {
+    return await this.repository.claimDomainOwnership(domain, jurisdictionId)
   }
 
   async fetchAuthorizedApiKeyDomains(
