@@ -29,7 +29,7 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
 
 ### Use-type policy (IGDD-3140)
 - New `AllowedUseType` enum (`PATIENT | PROVIDER | PUBLIC_HEALTH`); required +
-  enum-validated on create; stored as a DynamoDB List; carried through renew.
+  enum-validated on create; stored as a DynamoDB String Set (`SS`); carried through renew.
 - Create-dialog Use Types picker narrows to the selected organization's registered
   `useTypes`, falling back to the full enum when unseeded (so creation isn't broken
   where senders haven't been backfilled yet).
