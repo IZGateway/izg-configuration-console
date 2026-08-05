@@ -285,7 +285,7 @@ ticket: IGDD-3106, IGDD-3140
       filtered by the `cancelled` status *(Palak, blocked: IGDD-3106)*
 - [ ] 3.8 Update `RevokeDialog` / cancel confirmation dialog submit handlers to call
       the correct endpoint per action *(Palak, blocked: IGDD-3106)*
-- [ ] 3.9 Hide cancel action for `active`/`grace` credentials; hide revoke action
+- [ ] 3.9 Hide cancel action for `active`/`grace_period` credentials; hide revoke action
       for `ready_for_validation` credentials *(Palak, blocked: IGDD-3106)*
 - [ ] 3.10 Verify stat cards (Total / Active / Revoked) update correctly for both
       revoke and cancel paths; confirm a cancelled credential is excluded from the

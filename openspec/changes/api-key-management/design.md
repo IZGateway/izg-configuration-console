@@ -1055,14 +1055,14 @@ classDiagram
             #Number jurisdictionId
             +String prefix
             +String vendor
-            +List allowedUseTypes
+            +Set allowedUseTypes
         }
 
         class Sender {
             <<Entity>>
             #Number senderId
             +Date lastActive
-            +List useTypes
+            +Set useTypes
         }
 
         class OrganizationRecord {
@@ -1131,7 +1131,8 @@ classDiagram
             +String domain
             +Date viewedAt
             +Date graceExpiresAt
-            +List useTypes
+            +String supersededBy
+            +Set useTypes
         }
     }
 
@@ -1277,7 +1278,7 @@ Domain ownership is verified via a **DNS TXT record** challenge. The challenge U
 
 The TXT record is placed at the **domain apex** — the exact name being validated — not under a `_izg-verify` (or similar) subdomain. This deliberately mirrors the DigiCert DNS-TXT validation procedure that jurisdiction IT teams already follow for certificate issuance, so no retraining of IIS IT staff is required. (Domain validation itself was a firm requirement from Dave Bike; matching the familiar procedure minimizes the multi-day ticket/turnaround cost each jurisdiction incurs to publish a DNS record.)
 
-The signed JWT is **not** persisted. It is generated on demand by re-signing the credential's stored claims (see the credential-lifecycle spec, "JWT is deterministically re-signed"), returned to the sender once, and never retained by IZ Gateway — we keep no copy and cannot reproduce a sender's token. Its authenticity comes from the HMAC signature, not from storage. There is therefore **no** encrypted credential-value storage for `ApiKeyCredential` (in contrast to `Destination.password`, which must be retained and is stored via `EncryptedRepository`).
+The signed JWT is **not** persisted. It is generated on demand by re-signing the credential's stored claims (see the credential-lifecycle spec, "JWT is deterministically re-signed"), returned to the sender once, and never retained by IZ Gateway — we keep no copy and cannot reproduce a sender's token. Its authenticity comes from the HMAC signature, not from storage. The token is signed with HS256 using the secret at `/izg/<env>/jwt/signing-secret` from AWS Secrets Manager; the JWT header carries a `kid` equal to the Secrets Manager version ID of the secret used to sign, and the payload includes an `iss` claim matching the Hub's configured `jwt.issuer`, so the Hub can select the correct secret version and validate the issuer before trusting the token. There is therefore **no** encrypted credential-value storage for `ApiKeyCredential` (in contrast to `Destination.password`, which must be retained and is stored via `EncryptedRepository`).
 
 ## Entity Quick Reference
 

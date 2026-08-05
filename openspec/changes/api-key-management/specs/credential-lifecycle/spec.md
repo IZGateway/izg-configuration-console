@@ -235,9 +235,9 @@ not a JWT claim.
 
 - `ready_for_validation` → `active` (DNS verification succeeds)
 - `ready_for_validation` → `cancelled` (cancellation confirmed; soft delete)
-- `active` → `grace` (renewal requested)
+- `active` → `grace_period` (renewal requested)
 - `active` → `revoked` (revocation confirmed)
-- `grace` → `revoked` (revocation confirmed during grace period)
+- `grace_period` → `revoked` (revocation confirmed during grace period)
 
 Cancellation is available only from `ready_for_validation` and is a **soft delete**: the
 record is retained with `status = 'cancelled'` and hidden from the default credential
@@ -252,14 +252,15 @@ table.
 - **THEN** that credential's status is updated to `active`
 - **AND** `expiresAt` is set to 1 year from the activation date
 
-#### Scenario: Renewal transitions active credential to grace
+#### Scenario: Renewal transitions active credential to grace_period
 
 - **WHEN** a valid renewal request is processed for an `active` credential
-- **THEN** the original credential's status is set to `grace`
+- **THEN** the original credential's status is set to `grace_period`
 - **AND** `graceExpiresAt` is set to 10 business days from the renewal date, computed
   using a business-day utility that excludes weekends and US federal holidays
+- **AND** `supersededBy` on the original credential is set to the new credential's `jti`
 
-#### Scenario: Revocation transitions active or grace credential to revoked
+#### Scenario: Revocation transitions active or grace_period credential to revoked
 
 - **WHEN** a user with the appropriate RBAC role confirms revocation
 - **THEN** the credential's status is set to `revoked`
@@ -284,7 +285,11 @@ signing secret from AWS Secrets Manager.
   credential
 - **THEN** the JWT is signed with HS256 using the secret at
   `/izg/<env>/jwt/signing-secret` from AWS Secrets Manager
-- **AND** the JWT payload carries identity claims only: `jti`, `sub` (jurisdictionId),
+- **AND** the JWT header carries a `kid` identifying the AWS Secrets Manager version of
+  the signing secret used, so the Hub can select the correct secret version to verify the
+  signature
+- **AND** the JWT payload carries identity claims only: `iss` (the configured issuer,
+  which the Hub validates against its `jwt.issuer`), `jti`, `sub` (jurisdictionId),
   `upn` (domain), `iat` (issuedAt), `exp` (expiresAt) — access control properties
   (`environments`, `useTypes`) are NOT embedded in the JWT; the Hub reads them from
   `ApiKeyCredential` by `jti` at routing time, so they can change without reissuance
@@ -309,7 +314,7 @@ signing secret from AWS Secrets Manager.
 
 ### Requirement: Revoke and Cancel are distinct operations
 
-Revoke and Cancel MUST be treated as distinct operations: revoking an `active`/`grace`
+Revoke and Cancel MUST be treated as distinct operations: revoking an `active`/`grace_period`
 credential and cancelling a `ready_for_validation` credential have different effects.
 
 > **Source:** Palak Patel, `api-key-management-ui` CR, IGDD-2707.
@@ -323,17 +328,17 @@ credential and cancelling a `ready_for_validation` credential have different eff
   when the list is explicitly filtered by the `cancelled` status
 - **AND** no `revokedAt` is recorded
 
-#### Scenario: Revoke sets status and timestamp on an active or grace credential
+#### Scenario: Revoke sets status and timestamp on an active or grace_period credential
 
-- **WHEN** a user confirms revocation of a credential in `active` or `grace` status,
+- **WHEN** a user confirms revocation of a credential in `active` or `grace_period` status,
   optionally supplying a reason
 - **THEN** `ApiKeyCredential.status` is set to `revoked`
 - **AND** `ApiKeyCredential.revokedAt` is set to the current timestamp
 - **AND** the reason (if supplied) is recorded on the credential record
 
-#### Scenario: Cancel is unavailable for active or grace credentials
+#### Scenario: Cancel is unavailable for active or grace_period credentials
 
-- **WHEN** a credential is in `active` or `grace` status
+- **WHEN** a credential is in `active` or `grace_period` status
 - **THEN** only the revoke action is available; the cancel action MUST NOT be presented
 
 #### Scenario: Revoke is unavailable for ready_for_validation credentials
@@ -343,11 +348,12 @@ credential and cancelling a `ready_for_validation` credential have different eff
 
 ---
 
-### Requirement: Credential renewal issues a new credential and transitions the old one to grace
+### Requirement: Credential renewal issues a new credential and transitions the old one to grace_period
 
 Renewing an active credential SHALL create a new `ApiKeyCredential` and set the existing
-credential to `grace` status with a computed `graceExpiresAt`. The new credential's
-`expiresAt` depends on how close the renewal request is to the original expiry.
+credential to `grace_period` status with a computed `graceExpiresAt`, and record the new
+credential's `jti` in the original credential's `supersededBy` attribute. The new
+credential's `expiresAt` depends on how close the renewal request is to the original expiry.
 
 > **Source:** IGDD-2709 acceptance criteria.
 
@@ -357,9 +363,10 @@ credential to `grace` status with a computed `graceExpiresAt`. The new credentia
   30 days before the existing credential's `expiresAt`
 - **THEN** a new `ApiKeyCredential` is created with `expiresAt` set to 1 year from
   the renewal request date
-- **AND** the original credential's status is set to `grace`
+- **AND** the original credential's status is set to `grace_period`
 - **AND** `graceExpiresAt` on the original credential is set to 10 business days from
   the renewal request date
+- **AND** `supersededBy` on the original credential is set to the new credential's `jti`
 
 #### Scenario: Renewal within 30 days of expiry sets new expiry to 1 year from old expiry
 
@@ -367,9 +374,10 @@ credential to `grace` status with a computed `graceExpiresAt`. The new credentia
   30 days of (or past) the existing credential's `expiresAt`
 - **THEN** a new `ApiKeyCredential` is created with `expiresAt` set to 1 year from
   the ORIGINAL credential's `expiresAt` date
-- **AND** the original credential's status is set to `grace`
+- **AND** the original credential's status is set to `grace_period`
 - **AND** `graceExpiresAt` on the original credential is set to 10 business days from
   the renewal request date
+- **AND** `supersededBy` on the original credential is set to the new credential's `jti`
 
 #### Scenario: Renewal of a non-active credential is rejected
 
