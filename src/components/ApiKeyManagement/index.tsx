@@ -50,6 +50,7 @@ import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
+import { mockOrganizations, MOCK_ORGANIZATIONS_ENABLED } from './mockData'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
@@ -58,6 +59,20 @@ import {
   AllowedUseType,
 } from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
+
+// Organizations dropdown data source. When NEXT_PUBLIC_MOCK_ORGANIZATIONS is
+// set, the mock list is returned directly and /api/jurisdictions is never
+// called, so the Create/Renew/Validate workflow can be exercised without a
+// live jurisdictions table. See mockData.ts.
+function useOrganizations(sessionStatus: string): Jurisdiction[] | undefined {
+  const { data } = useSWR<Jurisdiction[]>(
+    !MOCK_ORGANIZATIONS_ENABLED && sessionStatus === 'authenticated'
+      ? '/api/jurisdictions'
+      : null,
+    fetcher
+  )
+  return MOCK_ORGANIZATIONS_ENABLED ? mockOrganizations : data
+}
 
 const ENV_DISPLAY_NAMES: Record<string, string> = {
   PRODUCTION: 'Production',
@@ -95,9 +110,13 @@ interface ApiKey {
   sortKey: string
   description: string
   environment: string
+  // Raw environment ids (e.g. ["4","5"]) and use types, carried alongside the
+  // display string so flows that re-submit a key's scope (re-issue) don't have
+  // to reverse-map the display name.
+  environments: string[]
+  useTypes: AllowedUseType[]
   jurisdiction: string
   jurisdictionId: string
-  envRaw: string
   domain: string | null
   status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | 'Cancelled' | string
   created: string
@@ -117,6 +136,13 @@ function formatDate(value: string | Date | null | undefined): string {
   return d.toLocaleDateString()
 }
 
+// A credential's raw environment id can be a numeric string ("5") or, for
+// legacy rows, a name ("DEV") — normalize either to its display name.
+function envDisplayName(raw: string): string {
+  const code = isNaN(Number(raw)) ? raw.toUpperCase() : getEnvironmentName(Number(raw))
+  return ENV_DISPLAY_NAMES[code] ?? code
+}
+
 function toRow(cred: ApiKeyCredential): ApiKey {
   return {
     id: cred.jti,
@@ -124,13 +150,15 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     sortKey: cred.sortKey,
     description: cred.description ?? '—',
     jurisdictionId: cred.jurisdictionId,
-    envRaw: cred.env ?? '',
     domain: cred.domain ?? null,
-    environment: (() => {
-      if (!cred.env) return '—'
-      const code = isNaN(Number(cred.env)) ? cred.env.toUpperCase() : getEnvironmentName(Number(cred.env))
-      return ENV_DISPLAY_NAMES[code] ?? code
-    })(),
+    // Multi-env credentials (IZG Operations only) display every environment,
+    // comma-separated; standard credentials show their single environment.
+    environment:
+      cred.environments && cred.environments.length
+        ? cred.environments.map(envDisplayName).join(', ')
+        : '—',
+    environments: cred.environments ?? [],
+    useTypes: cred.useTypes ?? [],
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
     status: (() => {
       const now = Date.now()
@@ -431,6 +459,7 @@ function ActionCell({
   onRevoke,
   onCancel,
   onRenew,
+  onReissue,
   onValidate,
   onRevealToken,
   validating,
@@ -443,6 +472,7 @@ function ActionCell({
   onRevoke: (key: ApiKey) => void
   onCancel: (key: ApiKey) => void
   onRenew: (key: ApiKey) => void
+  onReissue: (key: ApiKey) => void
   onValidate: (key: ApiKey) => void
   onRevealToken: (key: ApiKey) => void
   validating: boolean
@@ -467,7 +497,15 @@ function ActionCell({
   }
 
   if (row.status === 'Expired') {
-    return (
+    // Expired keys can be re-issued (Q8): a fresh key, same scope, no grace
+    // overlap. Gated on the renew capability. Without it, just show the date.
+    return canRenew ? (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <ActionIconButton title="Re-issue key" onClick={() => onReissue(row)}>
+          <AutorenewIcon sx={{ fontSize: 'inherit' }} />
+        </ActionIconButton>
+      </Box>
+    ) : (
       <Typography variant="body2" sx={{ color: palette.greyText }}>
         {row.expires ? `Expired ${row.expires}` : 'Expired'}
       </Typography>
@@ -1000,21 +1038,8 @@ function RenewDialog({
     setSubmitting(true)
     setError(null)
     try {
-      // Derive numeric envId from envRaw (may be numeric string "5" or legacy "DEV")
-      const envIdNum = isNaN(Number(apiKey.envRaw))
-        ? (() => {
-            const upper = apiKey.envRaw.toUpperCase()
-            const found = ENV_OPTIONS.find(
-              (o) => o.name === upper || o.displayName.toUpperCase() === upper
-            )
-            return found ? found.id : null
-          })()
-        : Number(apiKey.envRaw)
-
-      if (!envIdNum) {
-        throw new Error(`Cannot determine environment ID from: ${apiKey.envRaw}`)
-      }
-
+      // The server derives the renewed key's environment(s) from the
+      // credential being renewed — it is not sent from the client.
       const res = await fetch('/api/apikeys/renew', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1022,7 +1047,6 @@ function RenewDialog({
           oldSortKey: apiKey.sortKey,
           oldExpiresAt: apiKey.expiresAtRaw,
           jurisdictionId: apiKey.jurisdictionId,
-          envId: envIdNum,
           upn: domain,
           description: description.trim() || undefined,
         }),
@@ -1114,6 +1138,329 @@ function RenewDialog({
   )
 }
 
+type ReissueStep = 'confirm' | 'challenge' | 'failure'
+
+// Re-issue (IGDD-3140 Q8) — the action offered on EXPIRED keys. Unlike renew,
+// there is no grace-period overlap (the old key is already dead) and the new
+// key gets a fresh 1-year expiry from issuance. It reuses the create +
+// verify-domain endpoints: if the key's domain is still authorized it issues a
+// fresh active key immediately; if that authorization has lapsed it runs the
+// DNS TXT challenge first, then activates. Prefilled + read-only, like renew.
+function ReissueDialog({
+  apiKey,
+  onClose,
+  onReissued,
+}: {
+  apiKey: ApiKey | null
+  onClose: () => void
+  onReissued: (sortKey: string, jurisdiction: string) => void
+}) {
+  const [step, setStep] = useState<ReissueStep>('confirm')
+  const [description, setDescription] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [challenge, setChallenge] = useState<{
+    sortKey: string
+    jti: string
+    txtRecord: string
+    txtValue: string
+    domain: string
+  } | null>(null)
+
+  if (!apiKey) return null
+
+  const domain = apiKey.domain?.trim() ?? ''
+  const jurisdictionId = apiKey.jurisdictionId
+  const environments = apiKey.environments
+  const useTypes = apiKey.useTypes
+
+  const handleClose = () => {
+    setStep('confirm')
+    setDescription('')
+    setSubmitting(false)
+    setVerifying(false)
+    setError(null)
+    setChallenge(null)
+    onClose()
+  }
+
+  const finish = (sortKey: string) => {
+    const jurisdiction = apiKey.jurisdiction
+    mutate('/api/apikeys')
+    handleClose()
+    onReissued(sortKey, jurisdiction)
+  }
+
+  const handleReissue = async () => {
+    if (!domain) {
+      setError('This key has no DNS domain on record and cannot be re-issued.')
+      return
+    }
+    if (!useTypes.length) {
+      setError('This key has no use types on record and cannot be re-issued.')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      // Is the domain still authorized (and unexpired) for every one of the
+      // key's environments? /api/apikeys/domains returns exactly the
+      // authorized+unexpired intersection the create 'existing' path accepts,
+      // so it is a reliable predictor of which path will succeed.
+      const domainsRes = await fetch(
+        `/api/apikeys/domains?envId=${environments.join(',')}&jurisdictionId=${jurisdictionId}`
+      )
+      const authorizedDomains: { domain: string }[] = domainsRes.ok
+        ? await domainsRes.json()
+        : []
+      const stillAuthorized = authorizedDomains.some((d) => d.domain === domain)
+
+      const res = await fetch('/api/apikeys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jurisdictionId,
+          environments: environments.map(Number),
+          upn: domain,
+          useTypes,
+          description: description.trim() || undefined,
+          dnsChoice: stillAuthorized ? 'existing' : 'other',
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(body.error || 'Failed to re-issue key')
+      }
+      if (stillAuthorized) {
+        // 201 — a fresh active key was issued immediately.
+        finish(body.sortKey)
+      } else {
+        // 202 — the domain authorization has lapsed; a DNS challenge is
+        // required before the new key can be activated.
+        setChallenge({
+          sortKey: body.sortKey,
+          jti: body.jti,
+          txtRecord: body.txtRecord,
+          txtValue: body.txtValue,
+          domain: body.domain,
+        })
+        setStep('challenge')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to re-issue key')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleValidate = async () => {
+    if (!challenge) return
+    setVerifying(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/apikeys/verify-domain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain: challenge.domain,
+          sortKey: challenge.sortKey,
+          jti: challenge.jti,
+          jurisdictionId,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || !body.verified) {
+        mutate('/api/apikeys')
+        setError(body.error || "We couldn't find the expected record.")
+        setStep('failure')
+        return
+      }
+      finish(challenge.sortKey)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed')
+      setStep('failure')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const primaryBtnSx = {
+    flex: 1,
+    borderRadius: '50px',
+    backgroundColor: palette.primary,
+    fontWeight: 700,
+    py: 1.5,
+    '&:hover': { backgroundColor: palette.primaryDark },
+  }
+
+  const confirmContent = (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2">
+        This key expired
+        {apiKey.expires && apiKey.expires !== '—' ? ` on ${apiKey.expires}` : ''}.
+        A new key will be issued with the same scope, valid for{' '}
+        <strong>1 year</strong> from issuance. The expired key is not reactivated.
+      </Typography>
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        If this domain’s authorization has lapsed, you’ll be asked to re-verify
+        it via DNS before the new key is issued.
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <PolicyField label="Jurisdiction" value={apiKey.jurisdiction} />
+        <PolicyField label="Environment" value={apiKey.environment} />
+      </Box>
+      <PolicyField
+        label="Use Types"
+        value={useTypes.map((u) => USE_TYPE_LABELS[u] ?? u).join(', ') || '—'}
+      />
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: '8px' }}>
+          {error}
+        </Alert>
+      )}
+      <TextField
+        label="Description (optional)"
+        placeholder="e.g. Massachusetts IIS production key — re-issue"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        fullWidth
+        size="small"
+        multiline
+        rows={2}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '8px' } }}
+      />
+      <TextField
+        label="Domain (upn)"
+        value={domain}
+        fullWidth
+        size="small"
+        InputProps={{ readOnly: true }}
+        helperText="Carried over from the expired key — cannot be changed"
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '8px',
+            backgroundColor: palette.greyLight,
+          },
+          '& .MuiInputBase-input': { color: palette.greyDarkTypography },
+        }}
+      />
+    </Box>
+  )
+
+  const challengeContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2">
+        This domain’s authorization has lapsed. Add the following DNS TXT record
+        at your DNS provider to re-verify ownership, then validate:
+      </Typography>
+      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
+        </Typography>
+      </Box>
+      <Alert severity="info" sx={{ borderRadius: '8px' }}>
+        DNS changes may take up to 48 hours to propagate.
+      </Alert>
+    </Box>
+  )
+
+  const failureContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
+        We couldn&apos;t find the expected record. Add this TXT record and try
+        again:
+      </Typography>
+      <Box sx={{ backgroundColor: '#FDECEA', borderRadius: '8px', p: 2 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
+        </Typography>
+      </Box>
+      {error && (
+        <Alert severity="warning" sx={{ borderRadius: '8px' }}>
+          {error}
+        </Alert>
+      )}
+    </Box>
+  )
+
+  const titleByStep: Record<ReissueStep, React.ReactNode> = {
+    confirm: 'Re-issue API Key',
+    challenge: 'Re-verify Domain Ownership',
+    failure: (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <WarningAmberIcon sx={{ fontSize: 28, color: palette.error }} />
+        <span>Validation Failed</span>
+      </Box>
+    ),
+  }
+
+  const contentByStep: Record<ReissueStep, React.ReactNode> = {
+    confirm: confirmContent,
+    challenge: challengeContent,
+    failure: failureContent,
+  }
+
+  const actionsByStep: Record<ReissueStep, React.ReactNode> = {
+    confirm: (
+      <Button
+        variant="contained"
+        onClick={handleReissue}
+        disabled={submitting || !domain}
+        sx={primaryBtnSx}
+      >
+        {submitting ? 'RE-ISSUING...' : 'RE-ISSUE KEY'}
+      </Button>
+    ),
+    challenge: (
+      <Button
+        variant="contained"
+        onClick={handleValidate}
+        disabled={verifying}
+        sx={primaryBtnSx}
+      >
+        {verifying ? 'VALIDATING...' : 'VALIDATE'}
+      </Button>
+    ),
+    failure: (
+      <Button
+        variant="contained"
+        onClick={handleValidate}
+        disabled={verifying}
+        sx={primaryBtnSx}
+      >
+        {verifying ? 'RETRYING...' : 'TRY AGAIN'}
+      </Button>
+    ),
+  }
+
+  return (
+    <CustomDialogBox
+      open={!!apiKey}
+      onClose={handleClose}
+      maxWidth="sm"
+      title={
+        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+          {titleByStep[step]}
+        </Typography>
+      }
+      content={contentByStep[step]}
+      actions={
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          {actionsByStep[step]}
+          <Button
+            variant="outlined"
+            onClick={handleClose}
+            sx={{ flex: 1, borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+          >
+            CLOSE
+          </Button>
+        </Box>
+      }
+    />
+  )
+}
+
 const ENV_OPTIONS = DEST_TYPES.reduce(
   (acc, name, id) => {
     if (name && name !== 'UNKNOWN') acc.push({ id, name, displayName: ENV_DISPLAY_NAMES[name] ?? name })
@@ -1154,14 +1501,25 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
 
 // The Use Types picker shows human-readable labels ("Public Health") as the
 // visible option/chip text, while the credential is stored and validated by its
-// canonical enum value ("PUBLIC_HEALTH"). These maps convert between the two at
+// canonical enum value ("PUBLIC_HEALTH"). This map converts label -> enum at
 // the SearchableMultiSelect boundary so component state stays in enum values.
-const USE_TYPE_OPTION_LABELS: string[] = ALLOWED_USE_TYPES.map(
-  (ut) => USE_TYPE_LABELS[ut]
-)
+// (The option labels are computed per-org in CreateKeyDialog so the picker can
+// narrow to the selected sender's useTypes.)
 const LABEL_TO_USE_TYPE = Object.fromEntries(
   ALLOWED_USE_TYPES.map((ut) => [USE_TYPE_LABELS[ut], ut])
 ) as Record<string, AllowedUseType>
+
+// Same display-label <-> id mapping pattern as useTypes above, for the
+// multi-env Create-form picker (IZG Operations only — see isAdmin gating in
+// CreateKeyDialog). CREATE_ENV_OPTIONS ids are numbers; component state keeps
+// them as strings (matching envIds elsewhere in this dialog).
+const CREATE_ENV_OPTION_LABELS: string[] = CREATE_ENV_OPTIONS.map((o) => o.displayName)
+const LABEL_TO_ENV_ID = Object.fromEntries(
+  CREATE_ENV_OPTIONS.map((o) => [o.displayName, String(o.id)])
+) as Record<string, string>
+const ENV_ID_TO_LABEL = Object.fromEntries(
+  CREATE_ENV_OPTIONS.map((o) => [String(o.id), o.displayName])
+) as Record<string, string>
 
 const OTHER_DNS_VALUE = '__other__'
 
@@ -1175,6 +1533,15 @@ function isValidDomainName(value: string): boolean {
   return DOMAIN_NAME_REGEX.test(value.trim())
 }
 
+// Order-insensitive equality for two string lists (used to compare a
+// credential's environment set and use-type set for the duplicate-scope check).
+function sameStringSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const sortedA = [...a].sort()
+  const sortedB = [...b].sort()
+  return sortedA.every((v, i) => v === sortedB[i])
+}
+
 type CreateKeyStep = 'form' | 'challenge' | 'success' | 'failure'
 
 function CreateKeyDialog({
@@ -1186,14 +1553,15 @@ function CreateKeyDialog({
   onClose: () => void
   onCreated: (sortKey: string) => void
 }) {
-  const { status: sessionStatus } = useSession()
-  const { data: jurisdictions } = useSWR<Jurisdiction[]>(
-    sessionStatus === 'authenticated' ? '/api/jurisdictions' : null,
-    fetcher
-  )
+  const { status: sessionStatus, data: session } = useSession()
+  const isAdmin = !!session?.user?.isAdmin
+  const jurisdictions = useOrganizations(sessionStatus)
 
   const [jurisdictionId, setJurisdictionId] = useState<string>('')
-  const [envId, setEnvId] = useState<string>('')
+  // Multi-select (several environments) is an admin-only capability; every
+  // other role is limited to exactly one, but state is always an array so the
+  // rest of the form doesn't need two code paths.
+  const [envIds, setEnvIds] = useState<string[]>([])
   const [dnsSelection, setDnsSelection] = useState<string>('')
   const [customDomain, setCustomDomain] = useState<string>('')
   const [description, setDescription] = useState<string>('')
@@ -1208,15 +1576,28 @@ function CreateKeyDialog({
     txtRecord: string
     txtValue: string
     domain: string
-    envId: number
+    environments: number[]
   } | null>(null)
 
   const { data: existingDomains } = useSWR<{ domain: string }[]>(
-    envId && jurisdictionId
-      ? `/api/apikeys/domains?envId=${envId}&jurisdictionId=${jurisdictionId}`
+    envIds.length && jurisdictionId
+      ? `/api/apikeys/domains?envId=${envIds.join(',')}&jurisdictionId=${jurisdictionId}`
       : null,
     fetcher
   )
+
+  // Existing credentials (ownership-scoped by the API) for the Q7
+  // duplicate-scope guardrail. Reuses the SWR cache the main list already
+  // populated; only keyed while the dialog is open.
+  const { data: existingCredentials } = useSWR<ApiKeyCredential[]>(
+    open ? '/api/apikeys' : null,
+    fetcher
+  )
+  // jti of a duplicate the user has explicitly chosen to override, so the
+  // warning arms once per distinct duplicate and clears if the scope changes.
+  const [acknowledgedDuplicateJti, setAcknowledgedDuplicateJti] = useState<
+    string | null
+  >(null)
 
   const jurisdictionDescription =
     (Array.isArray(jurisdictions) &&
@@ -1224,14 +1605,62 @@ function CreateKeyDialog({
         ?.description) ||
     ''
 
-  const environmentDisplayName =
-    CREATE_ENV_OPTIONS.find((opt) => String(opt.id) === envId)?.displayName || ''
+  // The credential's Use Types must be a subset of the selected sender's own
+  // useTypes capability (IGDD-3140: `credential.useTypes ⊆ Sender.useTypes`).
+  // So the picker narrows to the selected org's useTypes. Fallback to the full
+  // enum when the org carries no useTypes — e.g. the real /api/jurisdictions
+  // does not return it yet, and jurisdiction-only rows have none — so creation
+  // still works outside mock mode rather than offering an empty picker.
+  const useTypesForOrg = (
+    orgId: string
+  ): { options: readonly AllowedUseType[]; constrained: boolean } => {
+    const org = Array.isArray(jurisdictions)
+      ? jurisdictions.find((j) => String(j.jurisdictionId) === orgId)
+      : undefined
+    return org?.useTypes && org.useTypes.length
+      ? { options: org.useTypes, constrained: true }
+      : { options: ALLOWED_USE_TYPES, constrained: false }
+  }
+  const { options: allowedUseTypesForOrg, constrained: useTypesAreConstrained } =
+    useTypesForOrg(jurisdictionId)
+  const useTypeOptionLabels = allowedUseTypesForOrg.map(
+    (ut) => USE_TYPE_LABELS[ut]
+  )
+
+  const environmentDisplayName = envIds
+    .map((id) => CREATE_ENV_OPTIONS.find((opt) => String(opt.id) === id)?.displayName)
+    .filter(Boolean)
+    .join(', ')
 
   const isOther = dnsSelection === OTHER_DNS_VALUE
 
+  // Q7 duplicate-scope guardrail (soft warning, not a block): if the key being
+  // created would exactly duplicate an existing ACTIVE key's scope — same
+  // jurisdiction, DNS name, environment set, and use-type set — steer the user
+  // toward renewing that key instead of minting a redundant one. Renewal, not
+  // a block, is the intended remedy, so this only warns and can be overridden.
+  const pendingUpn = isOther ? customDomain.trim() : dnsSelection
+  const duplicateKey =
+    jurisdictionId && pendingUpn && envIds.length && useTypes.length
+      ? (existingCredentials ?? []).find(
+          (c) =>
+            c.status === 'active' &&
+            String(c.jurisdictionId) === jurisdictionId &&
+            (c.domain ?? '') === pendingUpn &&
+            sameStringSet(c.environments ?? [], envIds) &&
+            sameStringSet((c.useTypes ?? []) as string[], useTypes)
+        )
+      : undefined
+  // Shown only after the first submit attempt has "armed" it for this exact
+  // duplicate (see handleNext), so the first click reveals the warning and the
+  // second ("Create Anyway") proceeds. Clears automatically if the scope
+  // changes to a different duplicate or none.
+  const showDuplicateWarning =
+    !!duplicateKey && acknowledgedDuplicateJti === duplicateKey.jti
+
   const handleClose = () => {
     setJurisdictionId('')
-    setEnvId('')
+    setEnvIds([])
     setDnsSelection('')
     setCustomDomain('')
     setDescription('')
@@ -1239,17 +1668,25 @@ function CreateKeyDialog({
     setChallenge(null)
     setError(null)
     setStep('form')
+    setAcknowledgedDuplicateJti(null)
     onClose()
   }
 
   const handleNext = async () => {
     const upn = isOther ? customDomain.trim() : dnsSelection
-    if (!jurisdictionId || !envId || !upn || useTypes.length === 0) {
+    if (!jurisdictionId || envIds.length === 0 || !upn || useTypes.length === 0) {
       setError('Please fill in all fields.')
       return
     }
     if (isOther && !isValidDomainName(upn)) {
       setError('Enter a valid domain name, e.g. dev.iz.gateway.org')
+      return
+    }
+    // Soft duplicate-scope guardrail: first attempt on an exact-duplicate scope
+    // only arms the warning (see showDuplicateWarning) and stops here; a second
+    // click proceeds, creating the key anyway.
+    if (duplicateKey && acknowledgedDuplicateJti !== duplicateKey.jti) {
+      setAcknowledgedDuplicateJti(duplicateKey.jti)
       return
     }
     setSubmitting(true)
@@ -1260,7 +1697,7 @@ function CreateKeyDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jurisdictionId,
-          envId: Number(envId),
+          environments: envIds.map(Number),
           upn,
           description: description.trim() || undefined,
           dnsChoice: isOther ? 'other' : 'existing',
@@ -1275,7 +1712,7 @@ function CreateKeyDialog({
           txtRecord: body.txtRecord,
           txtValue: body.txtValue,
           domain: body.domain,
-          envId: body.envId,
+          environments: body.environments,
         })
         mutate('/api/apikeys')
         setStep('challenge')
@@ -1302,7 +1739,6 @@ function CreateKeyDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           domain: challenge.domain,
-          envId: challenge.envId,
           sortKey: challenge.sortKey,
           jti: challenge.jti,
           jurisdictionId,
@@ -1332,13 +1768,27 @@ function CreateKeyDialog({
         {environmentDisplayName ? ` (${environmentDisplayName})` : ''}.
       </Typography>
       {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+      {showDuplicateWarning && duplicateKey && (
+        <Alert severity="warning" sx={{ borderRadius: '8px' }}>
+          An active key with this exact scope already exists
+          {duplicateKey.description ? ` (“${duplicateKey.description}”)` : ''} —
+          same organization, DNS name, environment(s), and use types. Renewing
+          that key is usually preferable to creating a duplicate. Click “Create
+          Anyway” to proceed regardless.
+        </Alert>
+      )}
       <LabeledField label="Organization" required>
         <Select
           value={jurisdictionId}
           onChange={(e) => {
-            setJurisdictionId(e.target.value)
+            const newId = e.target.value
+            setJurisdictionId(newId)
             setDnsSelection('')
             setCustomDomain('')
+            // Drop any selected use types the newly-chosen sender doesn't
+            // permit, so the credential's useTypes stay a subset of the org's.
+            const allowed = useTypesForOrg(newId).options as readonly string[]
+            setUseTypes((prev) => prev.filter((ut) => allowed.includes(ut)))
           }}
           displayEmpty
           fullWidth
@@ -1362,25 +1812,42 @@ function CreateKeyDialog({
         </Select>
       </LabeledField>
       <LabeledField label="Environment" required>
-        <Select
-          value={envId}
-          onChange={(e) => {
-            setEnvId(e.target.value)
-            setDnsSelection('')
-            setCustomDomain('')
-          }}
-          displayEmpty
-          fullWidth
-          sx={roundedFieldSx['& .MuiOutlinedInput-root']}
-          renderValue={(value) => {
-            if (!value) return <Box sx={{ color: palette.greyText }}>Select environment</Box>
-            return CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
-          }}
-        >
-          {CREATE_ENV_OPTIONS.map((opt) => (
-            <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
-          ))}
-        </Select>
+        {isAdmin ? (
+          // Multi-env is an admin-only capability (server-enforced too, not
+          // just this UI gate) — matches the useTypes multi-select pattern.
+          <SearchableMultiSelect
+            label=""
+            value={envIds.map((id) => ENV_ID_TO_LABEL[id] ?? id)}
+            options={CREATE_ENV_OPTION_LABELS}
+            onChange={(labels) => {
+              setEnvIds(labels.map((l) => LABEL_TO_ENV_ID[l] ?? l))
+              setDnsSelection('')
+              setCustomDomain('')
+            }}
+            placeholder="Select one or more environments"
+            chipColor="primary"
+          />
+        ) : (
+          <Select
+            value={envIds[0] ?? ''}
+            onChange={(e) => {
+              setEnvIds(e.target.value ? [e.target.value] : [])
+              setDnsSelection('')
+              setCustomDomain('')
+            }}
+            displayEmpty
+            fullWidth
+            sx={roundedFieldSx['& .MuiOutlinedInput-root']}
+            renderValue={(value) => {
+              if (!value) return <Box sx={{ color: palette.greyText }}>Select environment</Box>
+              return CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
+            }}
+          >
+            {CREATE_ENV_OPTIONS.map((opt) => (
+              <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
+            ))}
+          </Select>
+        )}
       </LabeledField>
       <LabeledField label="Description" required>
         <TextField
@@ -1397,11 +1864,21 @@ function CreateKeyDialog({
           value={useTypes.map(
             (v) => USE_TYPE_LABELS[v as AllowedUseType] ?? v
           )}
-          options={USE_TYPE_OPTION_LABELS}
+          options={useTypeOptionLabels}
           onChange={(labels) =>
             setUseTypes(labels.map((l) => LABEL_TO_USE_TYPE[l] ?? l))
           }
-          placeholder="Select one or more use types"
+          placeholder={
+            jurisdictionId
+              ? 'Select one or more use types'
+              : 'Select an organization first'
+          }
+          disabled={!jurisdictionId}
+          helperText={
+            useTypesAreConstrained
+              ? `Limited to what ${jurisdictionDescription || 'this organization'} is registered for`
+              : undefined
+          }
           chipColor="primary"
         />
       </LabeledField>
@@ -1409,7 +1886,7 @@ function CreateKeyDialog({
         <Select
           value={dnsSelection}
           onChange={(e) => setDnsSelection(e.target.value)}
-          disabled={!envId || !jurisdictionId}
+          disabled={envIds.length === 0 || !jurisdictionId}
           displayEmpty
           fullWidth
           sx={roundedFieldSx['& .MuiOutlinedInput-root']}
@@ -1471,8 +1948,12 @@ function CreateKeyDialog({
   const successContent = challenge && (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="body2" sx={{ color: palette.greyDarkTypography }}>
-        Your validation for {jurisdictionDescription || challenge.envId} was
-        confirmed. You can now remove this record.
+        Your validation for{' '}
+        {jurisdictionDescription ||
+          challenge.environments
+            .map((id) => CREATE_ENV_OPTIONS.find((opt) => opt.id === id)?.displayName ?? id)
+            .join(', ')}{' '}
+        was confirmed. You can now remove this record.
       </Typography>
       <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
@@ -1529,7 +2010,7 @@ function CreateKeyDialog({
         disabled={
           submitting ||
           !jurisdictionId ||
-          !envId ||
+          envIds.length === 0 ||
           !dnsSelection ||
           useTypes.length === 0 ||
           (isOther && !isValidDomainName(customDomain))
@@ -1543,7 +2024,11 @@ function CreateKeyDialog({
           '&:hover': { backgroundColor: palette.primaryDark },
         }}
       >
-        {submitting ? 'CHECKING...' : 'NEXT'}
+        {submitting
+          ? 'CHECKING...'
+          : showDuplicateWarning
+            ? 'CREATE ANYWAY'
+            : 'NEXT'}
       </Button>
     ),
     challenge: (
@@ -1729,11 +2214,12 @@ function RenewSuccessDialog({
   onViewKey,
   onClose,
 }: {
-  info: { sortKey: string; jurisdiction: string } | null
+  info: { sortKey: string; jurisdiction: string; mode: 'renew' | 'reissue' } | null
   onViewKey: () => void
   onClose: () => void
 }) {
   if (!info) return null
+  const isReissue = info.mode === 'reissue'
   return (
     <CustomDialogBox
       open={!!info}
@@ -1742,18 +2228,19 @@ function RenewSuccessDialog({
       title={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <CheckCircleIcon sx={{ fontSize: 28, color: palette.secondary }} />
-          <span>Renewal Complete</span>
+          <span>{isReissue ? 'Re-issue Complete' : 'Renewal Complete'}</span>
         </Box>
       }
       content={
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography variant="body2">
-            A new API key was created for <strong>{info.jurisdiction}</strong>.
+            A new API key was {isReissue ? 'issued' : 'created'} for{' '}
+            <strong>{info.jurisdiction}</strong>.
           </Typography>
           <Typography variant="body2" sx={{ color: palette.greyText }}>
-            The previous key stays valid for 10 business days (grace period),
-            then expires automatically. You can view the new token now, or later
-            from the key&apos;s View action.
+            {isReissue
+              ? 'It is valid for 1 year from issuance. The expired key is not reactivated. You can view the new token now, or later from the key’s View action.'
+              : 'The previous key stays valid for 10 business days (grace period), then expires automatically. You can view the new token now, or later from the key’s View action.'}
           </Typography>
         </Box>
       }
@@ -1816,10 +2303,7 @@ export default function ApiKeyManagement() {
 
   // Organization filter options come from the jurisdictions list (not the
   // loaded rows) so they're complete and page-independent.
-  const { data: jurisdictions } = useSWR<Jurisdiction[]>(
-    sessionStatus === 'authenticated' ? '/api/jurisdictions' : null,
-    fetcher
-  )
+  const jurisdictions = useOrganizations(sessionStatus)
 
   const [validatingSortKey, setValidatingSortKey] = useState<string | null>(null)
 
@@ -1859,6 +2343,7 @@ export default function ApiKeyManagement() {
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null)
   const [cancelTarget, setCancelTarget] = useState<ApiKey | null>(null)
   const [renewTarget, setRenewTarget] = useState<ApiKey | null>(null)
+  const [reissueTarget, setReissueTarget] = useState<ApiKey | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
   const [snackbar, setSnackbar] = useState<{
@@ -1871,6 +2356,7 @@ export default function ApiKeyManagement() {
   const [renewSuccess, setRenewSuccess] = useState<{
     sortKey: string
     jurisdiction: string
+    mode: 'renew' | 'reissue'
   } | null>(null)
 
   const showSnackbar = useCallback(
@@ -1890,8 +2376,11 @@ export default function ApiKeyManagement() {
           k.jurisdiction.toLowerCase().includes(q) ||
           (k.domain ?? '').toLowerCase().includes(q) ||
           k.environment.toLowerCase().includes(q)
+        // k.environment may be a comma-joined list for multi-env credentials,
+        // so match on membership rather than exact equality.
         const matchesEnv =
-          !filters.environment || k.environment === filters.environment
+          !filters.environment ||
+          k.environment.split(', ').includes(filters.environment)
         // Cancelled records are retained for audit but kept off the default
         // view (noise); they surface only when explicitly filtered to Cancelled.
         const matchesStatus = filters.status
@@ -1908,6 +2397,7 @@ export default function ApiKeyManagement() {
   const handleRevoke = useCallback((key: ApiKey) => setRevokeTarget(key), [])
   const handleCancel = useCallback((key: ApiKey) => setCancelTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
+  const handleReissue = useCallback((key: ApiKey) => setReissueTarget(key), [])
 
   const confirmRevoke = useCallback(async (reason?: string) => {
     if (!revokeTarget) return
@@ -1984,7 +2474,13 @@ export default function ApiKeyManagement() {
   // success dialog that confirms the new key + grace window and lets the user
   // choose to view the token now (or later via the row's View icon).
   const handleRenewed = useCallback((sortKey: string, jurisdiction: string) => {
-    setRenewSuccess({ sortKey, jurisdiction })
+    setRenewSuccess({ sortKey, jurisdiction, mode: 'renew' })
+  }, [])
+
+  // Re-issue completion mirrors renewal's success dialog (View Key now/later),
+  // but with re-issue wording (no grace period) via the shared dialog's mode.
+  const handleReissued = useCallback((sortKey: string, jurisdiction: string) => {
+    setRenewSuccess({ sortKey, jurisdiction, mode: 'reissue' })
   }, [])
 
   const handleValidateRow = useCallback(async (key: ApiKey) => {
@@ -1999,7 +2495,6 @@ export default function ApiKeyManagement() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           domain: key.domain,
-          envId: key.envRaw,
           sortKey: key.sortKey,
           jti: key.keyId,
           jurisdictionId: key.jurisdictionId,
@@ -2116,6 +2611,7 @@ export default function ApiKeyManagement() {
             onRevoke={handleRevoke}
             onCancel={handleCancel}
             onRenew={handleRenew}
+            onReissue={handleReissue}
             onValidate={handleValidateRow}
             onRevealToken={handleRevealToken}
             validating={validatingSortKey === (params.row as ApiKey).sortKey}
@@ -2131,6 +2627,7 @@ export default function ApiKeyManagement() {
       handleRevoke,
       handleCancel,
       handleRenew,
+      handleReissue,
       handleValidateRow,
       handleRevealToken,
       validatingSortKey,
@@ -2283,6 +2780,11 @@ export default function ApiKeyManagement() {
         apiKey={renewTarget}
         onClose={() => setRenewTarget(null)}
         onRenewed={handleRenewed}
+      />
+      <ReissueDialog
+        apiKey={reissueTarget}
+        onClose={() => setReissueTarget(null)}
+        onReissued={handleReissued}
       />
       <CreateKeyDialog
         open={createDialogOpen}

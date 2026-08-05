@@ -4,6 +4,10 @@ import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
+import {
+  hasApiKeyPermission,
+  requireApiKeyAccess,
+} from '../../../../lib/security/apiKeyAuthz'
 import crypto from 'crypto'
 
 /** Add N business days (Mon–Fri) to a date, excluding the start date. */
@@ -29,19 +33,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-
-    // Note: `upn` (DNS domain) is intentionally NOT read from the request body.
-    // A renewal must keep the same domain as the credential being renewed, so
-    // the domain is sourced from the stored credential below — the client
-    // cannot redirect a renewal to a different domain.
-    const { oldSortKey, oldExpiresAt, jurisdictionId, envId, description } = req.body
-    if (!oldSortKey || !jurisdictionId || envId === undefined || envId === null) {
-      return res.status(400).json({ error: 'oldSortKey, jurisdictionId, and envId are required' })
+    if (!hasApiKeyPermission(session, 'canRenewApiKey')) {
+      return res.status(403).json({ error: 'Forbidden - insufficient role' })
     }
 
-    const envIdNum = Number(envId)
-    if (isNaN(envIdNum) || envIdNum < 1 || envIdNum > 5) {
-      return res.status(400).json({ error: 'envId must be a number between 1 and 5' })
+    // Note: neither `upn` (DNS domain) nor the environment(s) are read from the
+    // request body. A renewal must keep the same domain AND the same
+    // environment(s) as the credential being renewed, so both are sourced from
+    // the stored credential below — the client cannot redirect a renewal to a
+    // different domain or re-attribute it to different environments.
+    const { oldSortKey, oldExpiresAt, jurisdictionId, description } = req.body
+    if (!oldSortKey || !jurisdictionId) {
+      return res.status(400).json({ error: 'oldSortKey and jurisdictionId are required' })
     }
 
     const dbClient = await DbClientFactory.getDbClient()
@@ -54,10 +57,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (oldCredential.status !== 'active') {
       return res.status(409).json({ error: 'Only active credentials can be renewed' })
     }
+    // Role + tenancy (fix IDOR): the caller must own the jurisdiction of the
+    // credential being renewed. Authoritative gate, evaluated right before the
+    // renewal is performed.
+    const authz = requireApiKeyAccess(session, 'canRenewApiKey', oldCredential.jurisdictionId)
+    if (!authz.ok) {
+      return res.status(authz.status).json({ error: authz.error })
+    }
 
-    // The renewed key inherits the DNS domain (JWT upn) from the credential
-    // being renewed — the server, not the client, is authoritative here.
+    // The renewed key inherits the DNS domain (JWT upn), jurisdiction, AND
+    // environment(s) from the credential being renewed — the server, not the
+    // client, is authoritative here, so the client cannot re-attribute the
+    // renewed key to a different jurisdiction/environment than the one it just
+    // passed the ownership check for.
     const domain = oldCredential.domain
+    const renewedJurisdictionId = oldCredential.jurisdictionId
+    const renewedEnvironments = oldCredential.environments
     if (!domain) {
       return res.status(409).json({
         error: 'The credential being renewed has no DNS domain on record and cannot be renewed',
@@ -88,15 +103,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const graceExpiresAt = addBusinessDays(now, 10)
     const renewedBy = session.user.email || 'unknown'
     const renewedAt = now.toISOString().replace(/\.\d{3}Z$/, 'Z')
-    const newSortKey = `${envIdNum}#${newJti}`
+    // Bare jti — the Hub reads a credential by jti alone at routing time, and
+    // env membership is a stored attribute, not part of the key.
+    const newSortKey = newJti
 
     // Create the new key record. The JWT itself is never generated/persisted
     // here — it's regenerated on demand, once, via POST /api/apikeys/token.
     await dbClient.createApiKeyCredential({
       jti: newJti,
       sortKey: newSortKey,
-      jurisdictionId: String(jurisdictionId),
-      env: String(envIdNum),
+      jurisdictionId: renewedJurisdictionId,
+      environments: renewedEnvironments,
       status: 'active',
       createdOn: now,
       expiresAt,
