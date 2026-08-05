@@ -26,7 +26,7 @@ four gap-closers. Delivered on this branch:
   **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active);
   "REVERT BEFORE COMMITTING" removed.
 - **Use Types**: new `AllowedUseType` enum; required + enum-validated on create; stored as
-  a DynamoDB List; carried through renew; multi-select in the create dialog.
+  a DynamoDB String Set (`SS`); carried through renew; multi-select in the create dialog.
 - **Credential lifecycle**: expiry stamped at **issuance** (not record creation); a derived
   **`Expired`** status and grace-ended **`Revoked`**; renewal domain is fixed
   (prepopulated/read-only and server-authoritative).
