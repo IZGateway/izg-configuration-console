@@ -126,7 +126,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     // Transition the old key to grace: both old and new remain valid until
     // graceExpiresAt so dependent systems can roll over without disruption.
-    await dbClient.supersedApiKeyCredential({
+    await dbClient.supersedeApiKeyCredential({
       sortKey: oldSortKey,
       renewedBy,
       renewedAt,
