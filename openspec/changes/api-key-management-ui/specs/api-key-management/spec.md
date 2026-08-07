@@ -197,7 +197,8 @@ A credential MUST record one or more submitter Use Types
 
 - **WHEN** `POST /api/apikeys` is called
 - **THEN** it rejects (400) a missing/empty `useTypes` or any value outside the enum
-- **AND** on success stores `useTypes` as a deduped DynamoDB List
+- **AND** on success stores `useTypes` as a deduped DynamoDB List (see design D3 — a
+  String Set cannot represent the related deny-all `allowedUseTypes` state)
 
 #### Scenario: Renewal and re-issue preserve Use Types
 
@@ -248,7 +249,8 @@ the JWT `exp` ceiling and the credential's grace window.
 - **THEN** a renewed key shows `Grace Period` until the effective grace end, then `Expired`
   if expiry came on/before the grace end, otherwise `Revoked`
 - **AND** a non-renewed key past its own `exp` shows `Expired`
-- **AND** a persisted terminal status (`revoked`/`cancelled`/`expired`) takes precedence
+- **AND** a persisted terminal status (`revoked`/`cancelled`) takes precedence
+  (`expired` is derived-only, never persisted)
 
 ---
 

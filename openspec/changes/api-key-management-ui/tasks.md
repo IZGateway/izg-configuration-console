@@ -80,6 +80,9 @@
 - [x] 5.2 `ApiKeyCredential.useTypes?: AllowedUseType[]`; persisted as a deduped
       DynamoDB **List** (not a String Set — an empty List can represent the deny-all
       policy state, which a Set cannot), read back defensively via `filter(isValidUseType)`.
+      *(The Aug 5 OpenSpec alignment pass, `c47df5d`, argued `SS` is canonical per
+      IGDD-3140 and reopened this item; kept as List per design D3 — `SS` cannot be
+      empty in DynamoDB, which the deny-all `allowedUseTypes` state requires.)*
 - [x] 5.3 `POST /api/apikeys` requires a non-empty, enum-valid `useTypes` (400 otherwise);
       renew and re-issue carry it forward.
 - [x] 5.4 Create dialog uses the shared `SearchableMultiSelect` (chips) — matches the
@@ -105,7 +108,8 @@
       token `iat` = `issuedAt ?? createdOn` (existing-authorized / renew issue at create).
 - [x] 6.2 `Expired` status **derived in the UI** from `exp` / `graceExpiresAt`
       (effective grace end = `min(graceExpiresAt, exp)`); grace-ended-before-expiry
-      derives `Revoked`. Honors a stored `expired`/`revoked` once the Hub persists it.
+      derives `Revoked`. Honors a stored `revoked` once the Hub persists it (`expired`
+      is derived-only, never stored).
 - [x] 6.3 Renewal expiry formula confirmed: within 30 days of old expiry → `oldExpiry + 1yr`; else `now + 1yr`.
 - [x] 6.4 Renewal domain (`upn`), jurisdiction, and `environments` are prepopulated +
       read-only in the dialog and **server-authoritative** in `/renew` (inherited from

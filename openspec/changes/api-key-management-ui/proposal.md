@@ -25,7 +25,8 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   `cancelledBy`/`cancelledAt`, **retains** the record for audit, hidden from the default
   view) — revised from the initial "hard delete" plan; see design D1.
 - **DNS verification hardening**: dev bypass gated behind `NODE_ENV !== 'production'`
-  **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active).
+  **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active);
+  "REVERT BEFORE COMMITTING" removed.
 
 ### Use-type policy (IGDD-3140)
 - New `AllowedUseType` enum (`PATIENT | PROVIDER | PUBLIC_HEALTH`); required +

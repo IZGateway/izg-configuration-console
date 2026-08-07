@@ -68,7 +68,7 @@ in `verify-domain/index.ts`; default disabled, `logger.warn` emitted when active
 documented in `src/.env.template`. `NODE_ENV` alone is not a reliable production guard in
 every deploy config, so the explicit opt-in is required.
 
-### D3 — `useTypes` stored as a DynamoDB List, not a String Set
+### D3 — `useTypes` stored as a DynamoDB List, not a String Set (SS)
 
 **Decision:** persist `ApiKeyCredential.useTypes` (and, later, `Jurisdiction.useTypes`/
 `allowedUseTypes`) as a deduped **List**. The lib-dynamodb v3 DocumentClient returns Sets
@@ -78,6 +78,36 @@ can be **empty**, which a String Set cannot: an empty `allowedUseTypes` is the
 DENY-ALL policy state, which a Set-typed attribute could never represent. Reads use
 `filter(isValidUseType)`. `useTypes` is a server-side property (Hub reads it by `jti`),
 **not** a JWT claim.
+
+> **Reconciling with the Aug 5 OpenSpec alignment pass:** a subsequent commit (Paul
+> Cahill, `c47df5d`, "OpenSpec alignment to IGDD-3140 (source of truth)") rewrote this
+> decision to say `SS` is canonical per IGDD-3140 and reopened task 5.2 as a required
+> List→SS migration. That pass doesn't appear to account for the empty-Set constraint
+> above — DynamoDB's String/Number/Binary Set types cannot be stored empty at all (an
+> empty `SS` fails write validation), so `SS` cannot represent an intentionally-empty
+> `allowedUseTypes` the way `List` can. Kept as **List** for this reason rather than
+> silently reverted; task 5.2 stays `[x]` (shipped as List, deliberately). Worth a direct
+> conversation with Paul / the IGDD-3140 spec owners to confirm whether the deny-all
+> requirement was considered when `SS` was specified there.
+
+> **Follow-up investigation (2026-08-07):** checked the actual IGDD-3140 spec branch
+> (`origin/IGDD-3140-api-key-management:openspec/changes/api-key-management/design.md`)
+> directly. Its ER diagram does deliberately type these fields `+Set` (distinct from
+> `+List` used elsewhere in the same diagram for `environments`/`principalNames`), and
+> its text confirms "empty `allowedUseTypes` denies everything" is a real, relied-upon
+> behavior — so Paul's SS claim isn't unfounded. However, neither the console nor the
+> seed script currently ever *writes* an empty collection for either field: deny-all is
+> represented today by `allowedUseTypes` being **absent** (`dynamo.ts` reads
+> `item.allowedUseTypes ? ... : undefined`), and `ApiKeyCredential.useTypes` (the field
+> task 5.2 is actually about) is **always non-empty by construction** (`POST
+> /api/apikeys` 400s on empty). So the empty-Set constraint above doesn't strictly block
+> `SS` as the fields are *currently* used — it would only matter if a future workflow
+> needs to explicitly persist an empty set rather than omit the attribute. Two open
+> questions for Paul before treating this as settled either way: (1) will deny-all
+> always mean attribute-absent, or will some future action (e.g., an admin "revoke all
+> use-types") need to write an explicit empty set; (2) does IGDD-3140 require one
+> uniform storage type across these fields, or is a per-field choice acceptable. Decision
+> above (List) stands for now regardless.
 
 ### D4 — Expiry (and JWT `iat`) are stamped at issuance, not at record creation
 
@@ -93,7 +123,8 @@ exactly one year from issuance. Renewal expiry: within 30 days of the old expiry
 
 **Decision:** the console derives display status from the stored dates rather than waiting
 on the Hub sweeper. Effective grace end = `min(graceExpiresAt, exp)` (a token cannot outlive
-its `exp`). Precedence: stored `revoked`/`cancelled`/`expired` win; then for a renewed key
+its `exp`). Precedence: stored `revoked`/`cancelled` win (`expired` is derived-only, never
+stored); then for a renewed key
 `Grace Period` while `now < min(graceEnd, exp)`, else `Expired` if `exp <= graceEnd` else
 `Revoked`; then a non-renewed key past `exp` → `Expired`. The **Hub's**
 `GracePeriodRevocationScheduler` persists the authoritative status (and currently marks all
