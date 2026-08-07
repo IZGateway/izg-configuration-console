@@ -23,6 +23,7 @@ import {
 import {
   DataGrid,
   GridColDef,
+  GridComparatorFn,
   GridFooter,
   GridFooterContainer,
   GridRenderCellParams,
@@ -50,7 +51,6 @@ import { useSession } from 'next-auth/react'
 import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
-import { mockOrganizations, MOCK_ORGANIZATIONS_ENABLED } from './mockData'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
@@ -60,18 +60,13 @@ import {
 } from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 
-// Organizations dropdown data source. When NEXT_PUBLIC_MOCK_ORGANIZATIONS is
-// set, the mock list is returned directly and /api/jurisdictions is never
-// called, so the Create/Renew/Validate workflow can be exercised without a
-// live jurisdictions table. See mockData.ts.
+// Organizations dropdown data source.
 function useOrganizations(sessionStatus: string): Jurisdiction[] | undefined {
   const { data } = useSWR<Jurisdiction[]>(
-    !MOCK_ORGANIZATIONS_ENABLED && sessionStatus === 'authenticated'
-      ? '/api/jurisdictions'
-      : null,
+    sessionStatus === 'authenticated' ? '/api/jurisdictions' : null,
     fetcher
   )
-  return MOCK_ORGANIZATIONS_ENABLED ? mockOrganizations : data
+  return data
 }
 
 const ENV_DISPLAY_NAMES: Record<string, string> = {
@@ -120,6 +115,10 @@ interface ApiKey {
   domain: string | null
   status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | 'Cancelled' | string
   created: string
+  // Raw ISO timestamp alongside the locale-formatted `created` display string,
+  // so the grid can sort chronologically — the formatted string has no time
+  // component and sorts incorrectly across months (lexical, not chronological).
+  createdOnRaw: string | null
   expires: string
   createdBy: string
   revokedAt: string | null
@@ -159,7 +158,11 @@ function toRow(cred: ApiKeyCredential): ApiKey {
         : '—',
     environments: cred.environments ?? [],
     useTypes: cred.useTypes ?? [],
-    jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId,
+    // Both fields are typed as always-present, but a malformed/legacy row (e.g.
+    // missing jurisdictionId) can violate that at runtime — DynamoDB is
+    // schemaless. Falling back to '—' keeps this a renderable string so the
+    // grid (and the search filter's `.toLowerCase()`) never crashes on it.
+    jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId ?? '—',
     status: (() => {
       const now = Date.now()
       const exp = cred.expiresAt ? new Date(cred.expiresAt).getTime() : null
@@ -196,6 +199,11 @@ function toRow(cred: ApiKeyCredential): ApiKey {
         : cred.status
     })(),
     created: formatDate(cred.createdOn),
+    createdOnRaw: (() => {
+      if (!cred.createdOn) return null
+      const d = new Date(cred.createdOn)
+      return isNaN(d.getTime()) ? null : d.toISOString()
+    })(),
     expires: formatDate(cred.expiresAt),
     createdBy: cred.createdBy ?? '—',
     revokedAt: cred.revokedAt ? formatDate(cred.revokedAt) : null,
@@ -987,7 +995,8 @@ function CancelDialog({
           </Typography>
           <Typography variant="body2" sx={{ color: palette.greyText }}>
             This key has not been activated yet, so nothing is using it. The
-            pending request will be removed.
+            pending request will be cancelled and hidden from the default
+            list; the record is retained for audit.
           </Typography>
         </Box>
       }
@@ -1557,6 +1566,21 @@ function CreateKeyDialog({
   const isAdmin = !!session?.user?.isAdmin
   const jurisdictions = useOrganizations(sessionStatus)
 
+  // The Create flow issues credentials to SENDERS, so the Organization dropdown
+  // lists only sender rows — those carrying a non-empty `useTypes` (which also
+  // covers dual-role rows that additionally have `allowedUseTypes`). Pure
+  // jurisdiction/destination rows (`allowedUseTypes` only, no `useTypes`) are
+  // excluded: a submitter credential can't be issued to a destination-only org.
+  // NOTE: in an environment where no senders are seeded, this list is empty by
+  // design (see IGDD-3140 seeding / Ticket 2).
+  const senderOrganizations = useMemo(
+    () =>
+      Array.isArray(jurisdictions)
+        ? jurisdictions.filter((j) => (j.useTypes?.length ?? 0) > 0)
+        : [],
+    [jurisdictions]
+  )
+
   const [jurisdictionId, setJurisdictionId] = useState<string>('')
   // Multi-select (several environments) is an admin-only capability; every
   // other role is limited to exactly one, but state is always an array so the
@@ -1803,12 +1827,11 @@ function CreateKeyDialog({
             return j?.description || j?.name || value
           }}
         >
-          {Array.isArray(jurisdictions) &&
-            jurisdictions.map((j) => (
-              <MenuItem key={j.jurisdictionId} value={String(j.jurisdictionId)}>
-                {j.description || j.name || j.jurisdictionId}
-              </MenuItem>
-            ))}
+          {senderOrganizations.map((j) => (
+            <MenuItem key={j.jurisdictionId} value={String(j.jurisdictionId)}>
+              {j.description || j.name || j.jurisdictionId}
+            </MenuItem>
+          ))}
         </Select>
       </LabeledField>
       <LabeledField label="Environment" required>
@@ -1849,7 +1872,7 @@ function CreateKeyDialog({
           </Select>
         )}
       </LabeledField>
-      <LabeledField label="Description" required>
+      <LabeledField label="Description (optional)">
         <TextField
           placeholder="e.g AAMBAE"
           value={description}
@@ -2435,7 +2458,7 @@ export default function ApiKeyManagement() {
         throw new Error(body.error || 'Failed to cancel key')
       }
       mutate('/api/apikeys')
-      showSnackbar('success', `${jurisdiction} API Key request cancelled`, 'The pending request has been removed.')
+      showSnackbar('success', `${jurisdiction} API Key request cancelled`, 'The pending request has been cancelled.')
     } catch (err) {
       showSnackbar('error', 'Failed to cancel key', err instanceof Error ? err.message : 'Please try again.')
     }
@@ -2589,7 +2612,19 @@ export default function ApiKeyManagement() {
           <StatusCell row={params.row as ApiKey} />
         ),
       },
-      { field: 'created', headerName: 'CREATED', flex: 1, minWidth: 100 },
+      {
+        field: 'created',
+        headerName: 'CREATED',
+        flex: 1,
+        minWidth: 100,
+        // Compares the raw ISO timestamp, not the displayed locale date string
+        // (which has no time component and sorts lexically, not chronologically).
+        sortComparator: ((_v1, _v2, param1, param2) => {
+          const t1 = (param1.api.getRow(param1.id) as ApiKey).createdOnRaw
+          const t2 = (param2.api.getRow(param2.id) as ApiKey).createdOnRaw
+          return (t1 ? new Date(t1).getTime() : 0) - (t2 ? new Date(t2).getTime() : 0)
+        }) as GridComparatorFn,
+      },
       { field: 'expires', headerName: 'EXPIRES', flex: 1, minWidth: 100 },
       {
         field: 'createdBy',
@@ -2716,7 +2751,13 @@ export default function ApiKeyManagement() {
         }
         autoHeight
         pageSizeOptions={[5, 25, 50, 100]}
-        initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 5 } },
+          // Newest keys first by default, so a just-created row is immediately
+          // visible on page 1 instead of wherever it lands in natural order.
+          // Still just the default — clicking any column header re-sorts.
+          sorting: { sortModel: [{ field: 'created', sort: 'desc' }] },
+        }}
         disableRowSelectionOnClick
         disableColumnMenu
         disableColumnSelector

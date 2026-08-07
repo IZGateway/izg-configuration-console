@@ -18,10 +18,10 @@ import {
 } from '../security/crypto/cryptoSupport'
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
-import { ApiKeyCredential } from '../type/ApiKeyCredential'
-import { AllowedUseType } from '../type/AllowedUseType'
-import { Jurisdiction } from '../type/Jurisdiction'
-import { ApiKeyDomain } from '../type/ApiKeyDomain'
+import type { ApiKeyCredential } from '../type/ApiKeyCredential'
+import type { AllowedUseType } from '../type/AllowedUseType'
+import type { Jurisdiction } from '../type/Jurisdiction'
+import type { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default class DbClientFactory {
   static defaultClient: DbClient | null = null
@@ -402,19 +402,26 @@ class EncryptedRepository implements DbClient {
     sortKey: string,
     revokedBy: string,
     revokedAt: string,
-    reason?: string
+    reason?: string,
+    expectedStatuses?: string[]
   ): Promise<void> {
-    return await this.repository.revokeApiKeyCredential(sortKey, revokedBy, revokedAt, reason)
+    return await this.repository.revokeApiKeyCredential(
+      sortKey,
+      revokedBy,
+      revokedAt,
+      reason,
+      expectedStatuses
+    )
   }
 
-  async supersedApiKeyCredential(params: {
+  async supersedeApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
     renewedAt: string
     graceExpiresAt: string
     supersededBy: string
   }): Promise<void> {
-    return await this.repository.supersedApiKeyCredential(params)
+    return await this.repository.supersedeApiKeyCredential(params)
   }
 
   async createApiKeyCredential(params: {
@@ -461,6 +468,10 @@ class EncryptedRepository implements DbClient {
     jurisdictionId: string
   ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }> {
     return await this.repository.claimDomainOwnership(domain, jurisdictionId)
+  }
+
+  async getDomainOwner(domain: string): Promise<string | undefined> {
+    return await this.repository.getDomainOwner(domain)
   }
 
   async fetchAuthorizedApiKeyDomains(

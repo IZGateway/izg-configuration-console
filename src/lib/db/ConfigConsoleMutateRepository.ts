@@ -4,7 +4,7 @@ import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { AllowedUser } from '../type/AllowedUser'
-import { AllowedUseType } from '../type/AllowedUseType'
+import type { AllowedUseType } from '../type/AllowedUseType'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -90,7 +90,8 @@ export default interface ConfigConsoleMutateRepository {
     sortKey: string,
     revokedBy: string,
     revokedAt: string,
-    reason?: string
+    reason?: string,
+    expectedStatuses?: string[]
   ): Promise<void>
   upsertApiKeyDomain(params: {
     sortKey: string
@@ -108,7 +109,8 @@ export default interface ConfigConsoleMutateRepository {
     domain: string,
     jurisdictionId: string
   ): Promise<{ claimed: boolean; ownerJurisdictionId?: string }>
-  supersedApiKeyCredential(params: {
+  getDomainOwner(domain: string): Promise<string | undefined>
+  supersedeApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
     renewedAt: string

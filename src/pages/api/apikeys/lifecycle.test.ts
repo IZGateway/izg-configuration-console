@@ -143,10 +143,25 @@ describe('API key lifecycle guards', () => {
           '5#abc',
           'tester@example.com',
           expect.any(String),
-          'compromised'
+          'compromised',
+          ['active', 'grace_period', 'grace', 'superseded']
         )
       }
     )
+
+    it('surfaces a concurrent status change (lost race) as the same 409 as the pre-check', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ status: 'active' })
+      const conditionalError = Object.assign(new Error('conditional'), {
+        name: 'ConditionalCheckFailedException',
+      })
+      const revokeApiKeyCredential = jest.fn().mockRejectedValue(conditionalError)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, revokeApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(409)
+    })
   })
 
   describe('cancel — DELETE /api/apikeys', () => {
@@ -208,11 +223,11 @@ describe('API key lifecycle guards', () => {
         .fn()
         .mockResolvedValue({ status: 'grace_period', expiresAt: new Date() })
       const createApiKeyCredential = jest.fn()
-      const supersedApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -220,17 +235,17 @@ describe('API key lifecycle guards', () => {
 
       expect(res.statusCode).toBe(409)
       expect(createApiKeyCredential).not.toHaveBeenCalled()
-      expect(supersedApiKeyCredential).not.toHaveBeenCalled()
+      expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
     })
 
     it('returns 404 when the credential to renew is missing', async () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue(null)
       const createApiKeyCredential = jest.fn()
-      const supersedApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -247,11 +262,11 @@ describe('API key lifecycle guards', () => {
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
-      const supersedApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const supersedeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -259,9 +274,9 @@ describe('API key lifecycle guards', () => {
 
       expect(res.statusCode).toBe(201)
       expect(createApiKeyCredential).toHaveBeenCalledTimes(1)
-      expect(supersedApiKeyCredential).toHaveBeenCalledTimes(1)
+      expect(supersedeApiKeyCredential).toHaveBeenCalledTimes(1)
       // The credential being renewed is the one moved to grace.
-      expect(supersedApiKeyCredential.mock.calls[0][0].sortKey).toBe('5#old')
+      expect(supersedeApiKeyCredential.mock.calls[0][0].sortKey).toBe('5#old')
       // The new credential is keyed by bare jti, with no env prefix
       // (IGDD-2707 re-key — the Hub reads a credential by jti alone).
       const created = createApiKeyCredential.mock.calls[0][0]
@@ -275,11 +290,11 @@ describe('API key lifecycle guards', () => {
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
-      const supersedApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const supersedeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -299,11 +314,11 @@ describe('API key lifecycle guards', () => {
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn()
-      const supersedApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -311,7 +326,7 @@ describe('API key lifecycle guards', () => {
 
       expect(res.statusCode).toBe(409)
       expect(createApiKeyCredential).not.toHaveBeenCalled()
-      expect(supersedApiKeyCredential).not.toHaveBeenCalled()
+      expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
     })
   })
 
@@ -388,10 +403,12 @@ describe('API key lifecycle guards', () => {
 
     it('places the DNS challenge TXT record at the domain apex, not a _izg-verify. subdomain', async () => {
       const getApiKeyDomain = jest.fn().mockResolvedValue(null)
+      const getDomainOwner = jest.fn().mockResolvedValue(undefined)
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
       const upsertApiKeyDomain = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
         getApiKeyDomain,
+        getDomainOwner,
         createApiKeyCredential,
         upsertApiKeyDomain,
       })
@@ -406,6 +423,53 @@ describe('API key lifecycle guards', () => {
       const body = res.body as { txtRecord: string; txtValue: string; domain: string }
       expect(body.txtRecord).toBe('immunize.example.gov')
       expect(body.txtValue).toMatch(/^izg-challenge=/)
+    })
+
+    it('refuses to start a DNS challenge for a domain already owned by another jurisdiction (early exclusivity check)', async () => {
+      const getDomainOwner = jest.fn().mockResolvedValue('999')
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getDomainOwner, createApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('POST', {
+          ...validBody,
+          jurisdictionId: '1',
+          dnsChoice: 'other',
+          useTypes: ['PATIENT'],
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(409)
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('allows a DNS challenge when the domain is unclaimed or already owned by the same jurisdiction', async () => {
+      const getApiKeyDomain = jest.fn().mockResolvedValue(null)
+      const getDomainOwner = jest.fn().mockResolvedValue('1')
+      const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const upsertApiKeyDomain = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyDomain,
+        getDomainOwner,
+        createApiKeyCredential,
+        upsertApiKeyDomain,
+      })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('POST', {
+          ...validBody,
+          jurisdictionId: '1',
+          dnsChoice: 'other',
+          useTypes: ['PATIENT'],
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(202)
+      expect(createApiKeyCredential).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -424,7 +488,10 @@ describe('API key lifecycle guards', () => {
     }
 
     it('activates a pending credential bound to the verified domain (status-guarded write)', async () => {
-      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'authorized' })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const getApiKeyCredential = jest.fn().mockResolvedValue({ ...matchingCredential })
       const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
@@ -447,7 +514,10 @@ describe('API key lifecycle guards', () => {
     })
 
     it('refuses (400) to activate a credential not bound to the verified domain', async () => {
-      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'authorized' })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const getApiKeyCredential = jest
         .fn()
         .mockResolvedValue({ ...matchingCredential, domain: 'attacker.example' })
@@ -466,7 +536,10 @@ describe('API key lifecycle guards', () => {
     })
 
     it('refuses (409) to resurrect a non-pending (e.g. revoked) credential', async () => {
-      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'authorized' })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const getApiKeyCredential = jest
         .fn()
         .mockResolvedValue({ ...matchingCredential, status: 'revoked' })
@@ -485,7 +558,10 @@ describe('API key lifecycle guards', () => {
     })
 
     it('returns 404 when the credential to activate does not exist', async () => {
-      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'authorized' })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const getApiKeyCredential = jest.fn().mockResolvedValue(null)
       const updateApiKeyCredentialStatus = jest.fn()
       mockGetDbClient.mockResolvedValue({
@@ -499,6 +575,71 @@ describe('API key lifecycle guards', () => {
 
       expect(res.statusCode).toBe(404)
       expect(updateApiKeyCredentialStatus).not.toHaveBeenCalled()
+    })
+
+    it('does not take the already-authorized fast path when authExpiresAt has passed (stale authorization)', async () => {
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() - 86_400_000).toISOString(), // expired yesterday
+        // No challengeUuid — matches real data once a domain has been
+        // authorized (upsertApiKeyDomain clears the challenge fields).
+      })
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ ...matchingCredential })
+      const updateApiKeyCredentialStatus = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyDomain,
+        getApiKeyCredential,
+        updateApiKeyCredentialStatus,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('POST', { ...body }), res)
+
+      // Falls through to "needs a pending challenge" and finds none, rather
+      // than silently activating on the stale authorization.
+      expect(res.statusCode).toBe(404)
+      expect(updateApiKeyCredentialStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('token reveal — view exactly once', () => {
+    const activeCredential = {
+      status: 'active',
+      jurisdictionId: '1',
+      sortKey: '5#abc',
+      jti: 'jti-abc',
+      domain: 'immunize.example.gov',
+      createdOn: new Date(),
+      expiresAt: new Date(Date.now() + 86_400_000),
+    }
+
+    it('surfaces a lost view-once race (concurrent request already marked it viewed) as the same 410 as the pre-check', async () => {
+      // credential.viewedAt is still falsy here — the pre-check is a stale
+      // read; markApiKeyCredentialViewed's own atomic condition is what
+      // actually catches a concurrent request that won the race.
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ ...activeCredential })
+      const conditionalError = Object.assign(new Error('conditional'), {
+        name: 'ConditionalCheckFailedException',
+      })
+      const markApiKeyCredentialViewed = jest.fn().mockRejectedValue(conditionalError)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, markApiKeyCredentialViewed })
+
+      const res = createRes()
+      await tokenHandler(createReq('POST', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(410)
+    })
+
+    it('reveals the token and marks it viewed when no concurrent request has won the race', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ ...activeCredential })
+      const markApiKeyCredentialViewed = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, markApiKeyCredentialViewed })
+
+      const res = createRes()
+      await tokenHandler(createReq('POST', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(200)
+      expect(markApiKeyCredentialViewed).toHaveBeenCalledWith('5#abc', expect.any(String))
     })
   })
 })
@@ -644,11 +785,11 @@ describe('API key authorization (role + tenancy)', () => {
         expiresAt: new Date(),
       })
       const createApiKeyCredential = jest.fn()
-      const supersedApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
         createApiKeyCredential,
-        supersedApiKeyCredential,
+        supersedeApiKeyCredential,
       })
 
       const res = createRes()
@@ -659,7 +800,7 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(createApiKeyCredential).not.toHaveBeenCalled()
-      expect(supersedApiKeyCredential).not.toHaveBeenCalled()
+      expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
     })
 
     it('403s verify-domain for a non-owned jurisdiction (before touching the DB)', async () => {
@@ -861,7 +1002,10 @@ describe('API key authorization (role + tenancy)', () => {
         environments: ['4', '5'],
       }
       const getApiKeyCredential = jest.fn().mockResolvedValue(credential)
-      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'authorized' })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,

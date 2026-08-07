@@ -76,7 +76,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     })
 
     const viewedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
-    await dbClient.markApiKeyCredentialViewed(credential.sortKey, viewedAt)
+    try {
+      await dbClient.markApiKeyCredentialViewed(credential.sortKey, viewedAt)
+    } catch (error) {
+      // The earlier `credential.viewedAt` check is a stale read, not the
+      // enforcement — markApiKeyCredentialViewed's own atomic condition is
+      // what actually guarantees "viewed exactly once" against a concurrent
+      // request. Losing that race surfaces the same 410 as the pre-check.
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        return res.status(410).json({
+          error: 'This token has already been viewed and cannot be retrieved again',
+        })
+      }
+      throw error
+    }
 
     logger.info('API key token viewed', {
       sortKey: credential.sortKey,

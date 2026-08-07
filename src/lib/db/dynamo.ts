@@ -9,8 +9,9 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
-import { ApiKeyCredential } from '../type/ApiKeyCredential'
-import { AllowedUseType, isValidUseType } from '../type/AllowedUseType'
+import type { ApiKeyCredential } from '../type/ApiKeyCredential'
+import type { AllowedUseType } from '../type/AllowedUseType'
+import { isValidUseType } from '../type/AllowedUseType'
 import { asyncRequestContext } from '../Context'
 import os from 'os'
 import {
@@ -360,6 +361,25 @@ class Dynamo implements DbClient {
       })
       throw error
     }
+  }
+
+  /**
+   * Read-only lookup of a domain's current owner, if any — does NOT claim it.
+   * Used as an early, non-authoritative check at credential-creation time so a
+   * caller isn't sent through the DNS challenge for a domain another
+   * jurisdiction already owns. `claimDomainOwnership` (a conditional write)
+   * remains the sole authoritative enforcement at verify time; this must never
+   * write, since doing so would let a domain be "reserved" by merely starting
+   * a create request, without ever proving DNS ownership.
+   */
+  async getDomainOwner(domain: string): Promise<string | undefined> {
+    const result = await dynamodDbDocClient.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: { entityType: 'ApiKeyDomainOwner', sortKey: domain.toLowerCase() },
+      })
+    )
+    return result.Item?.jurisdictionId as string | undefined
   }
 
   async fetchAuthorizedApiKeyDomains(
@@ -1357,56 +1377,74 @@ class Dynamo implements DbClient {
   }
 
   async fetchApiKeyCredentials(): Promise<ApiKeyCredential[]> {
-    const params: QueryCommandInput = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'entityType = :entityType',
-      ExpressionAttributeValues: {
-        ':entityType': 'ApiKeyCredential',
-      },
-    }
+    // Page through the full result set. A single Query returns at most 1MB of
+    // items, so without following LastEvaluatedKey the credential list would
+    // silently truncate as the table grows (terminal/cancelled rows are retained
+    // for audit, so it only grows over time).
+    const items: Record<string, any>[] = []
+    let lastEvaluatedKey: Record<string, any> | undefined
+    do {
+      const result = await dynamodDbDocClient.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: 'entityType = :entityType',
+          ExpressionAttributeValues: { ':entityType': 'ApiKeyCredential' },
+          ExclusiveStartKey: lastEvaluatedKey,
+        })
+      )
+      if (result.Items) items.push(...result.Items)
+      lastEvaluatedKey = result.LastEvaluatedKey
+    } while (lastEvaluatedKey)
 
-    const result = await dynamodDbDocClient.send(new QueryCommand(params))
-
-    if (!result.Items || result.Items.length === 0) {
+    if (items.length === 0) {
       return []
     }
 
-    return await Promise.all(
-      result.Items.map(async (item) => {
-        const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
-        return {
-          jti: item.jti as string,
-          sortKey: item.sortKey as string,
-          jurisdictionId: item.jurisdictionId as string,
-          jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
-          status: item.status as ApiKeyCredential['status'],
-          expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
-          issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
-          revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
-          cancelledBy: item.cancelledBy as string | undefined,
-          cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
-          // Falls back to the legacy singular `env` attribute for rows written
-          // before the environments-list migration, so existing credentials
-          // don't lose their environment on read.
-          environments: item.environments
-            ? Array.from(item.environments as Iterable<string>)
-            : item.env
-              ? [item.env as string]
-              : [],
-          description: item.description as string | undefined,
-          domain: item.domain as string | undefined,
-          viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
-          graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
-          useTypes: item.useTypes
-            ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
-            : undefined,
-          createdOn: item.createdOn ? new Date(item.createdOn) : null,
-          createdBy: item.createdBy as string,
-          updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
-          updatedBy: item.updatedBy as string,
-        }
-      })
+    // Resolve each DISTINCT jurisdiction exactly once. getJurisdiction memoizes,
+    // but mapping over every credential concurrently would still fire duplicate
+    // reads before the cache is populated — so pre-warm the distinct set first,
+    // then build rows from the cache (one read per jurisdiction, not per key).
+    const distinctJurisdictionIds = [
+      ...new Set(items.map((item) => item.jurisdictionId as string)),
+    ]
+    await Promise.all(
+      distinctJurisdictionIds.map((id) => this.getJurisdiction(id))
     )
+
+    return items.map((item) => {
+      const jurisdiction = this.jurisdictionsCache.get(item.jurisdictionId)
+      return {
+        jti: item.jti as string,
+        sortKey: item.sortKey as string,
+        jurisdictionId: item.jurisdictionId as string,
+        jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+        status: item.status as ApiKeyCredential['status'],
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
+        revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        cancelledBy: item.cancelledBy as string | undefined,
+        cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
+        // Falls back to the legacy singular `env` attribute for rows written
+        // before the environments-list migration, so existing credentials
+        // don't lose their environment on read.
+        environments: item.environments
+          ? Array.from(item.environments as Iterable<string>)
+          : item.env
+            ? [item.env as string]
+            : [],
+        description: item.description as string | undefined,
+        domain: item.domain as string | undefined,
+        viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
+        graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        useTypes: item.useTypes
+          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        createdBy: item.createdBy as string,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        updatedBy: item.updatedBy as string,
+      }
+    })
   }
 
   async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
@@ -1465,7 +1503,8 @@ class Dynamo implements DbClient {
     sortKey: string,
     revokedBy: string,
     revokedAt: string,
-    reason?: string
+    reason?: string,
+    expectedStatuses?: string[]
   ): Promise<void> {
     const updateParts = [
       '#status = :status',
@@ -1487,6 +1526,21 @@ class Dynamo implements DbClient {
       attrNames['#reason'] = 'reason'
       attrValues[':reason'] = reason
     }
+    // Pinning the write to the CALLER's own revocable-status list (rather than
+    // hardcoding one here) keeps a single source of truth while still making
+    // the check atomic — the route's pre-check is a stale read, this is what
+    // actually prevents a concurrent status change (e.g. a race with cancel or
+    // renewal) from letting a revoke land on a credential that no longer
+    // qualifies.
+    let conditionExpression =
+      'attribute_exists(entityType) AND attribute_exists(sortKey)'
+    if (expectedStatuses && expectedStatuses.length > 0) {
+      const statusPlaceholders = expectedStatuses.map((_, i) => `:expectedStatus${i}`)
+      statusPlaceholders.forEach((placeholder, i) => {
+        attrValues[placeholder] = expectedStatuses[i]
+      })
+      conditionExpression += ` AND #status IN (${statusPlaceholders.join(', ')})`
+    }
     const params: UpdateCommandInput = {
       TableName: TABLE_NAME,
       Key: {
@@ -1496,8 +1550,7 @@ class Dynamo implements DbClient {
       UpdateExpression: `SET ${updateParts.join(', ')}`,
       ExpressionAttributeNames: attrNames,
       ExpressionAttributeValues: attrValues,
-      ConditionExpression:
-        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+      ConditionExpression: conditionExpression,
     }
     try {
       await dynamodDbDocClient.send(new UpdateCommand(params))
@@ -1571,7 +1624,7 @@ class Dynamo implements DbClient {
     }
   }
 
-  async supersedApiKeyCredential(params: {
+  async supersedeApiKeyCredential(params: {
     sortKey: string
     renewedBy: string
     renewedAt: string
@@ -1605,7 +1658,14 @@ class Dynamo implements DbClient {
         ':supersededBy': params.supersededBy,
         ':updatedBy': params.renewedBy,
         ':updatedOn': params.renewedAt,
+        ':expectedStatus': 'active',
       },
+      // Renewal is only ever valid from `active` (enforced by the caller
+      // before this is invoked) — pinning it here too makes that atomic
+      // against a concurrent status change, matching the guard pattern
+      // already used by cancelApiKeyCredential/updateApiKeyCredentialStatus.
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey) AND #status = :expectedStatus',
     })
     try {
       await dynamodDbDocClient.send(command)
@@ -1613,7 +1673,7 @@ class Dynamo implements DbClient {
         sortKey: params.sortKey,
         supersededBy: params.supersededBy,
         graceExpiresAt: params.graceExpiresAt,
-        operation: 'supersedApiKeyCredential',
+        operation: 'supersedeApiKeyCredential',
       })
     } catch (error) {
       logger.error('Error superseding ApiKeyCredential', {
@@ -1621,7 +1681,7 @@ class Dynamo implements DbClient {
         errorMessage: error.message,
         errorType: error.name,
         stack: error.stack,
-        operation: 'supersedApiKeyCredential',
+        operation: 'supersedeApiKeyCredential',
       })
       throw error
     }
@@ -1748,8 +1808,13 @@ class Dynamo implements DbClient {
       UpdateExpression: 'SET #viewedAt = :viewedAt',
       ExpressionAttributeNames: { '#viewedAt': 'viewedAt' },
       ExpressionAttributeValues: { ':viewedAt': viewedAt },
+      // attribute_not_exists(viewedAt) makes "viewed exactly once" atomic: the
+      // caller's earlier `if (credential.viewedAt)` read-then-check is only a
+      // fast-path optimization, not the enforcement — without this, two
+      // concurrent token requests could both pass that stale-read check and
+      // both succeed here.
       ConditionExpression:
-        'attribute_exists(entityType) AND attribute_exists(sortKey)',
+        'attribute_exists(entityType) AND attribute_exists(sortKey) AND attribute_not_exists(#viewedAt)',
     })
     try {
       await dynamodDbDocClient.send(command)

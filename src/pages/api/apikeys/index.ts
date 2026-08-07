@@ -152,10 +152,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(201).json({ jti, sortKey })
       }
 
-      // dnsChoice === 'other' — create the credential row up front as
-      // ready_for_validation. No expiry is set yet: the key is not "issued"
-      // until DNS ownership is verified, and exp is stamped at activation
-      // (verify-domain) so it is computed from issuance.
+      // dnsChoice === 'other' — early, non-authoritative exclusivity check:
+      // if this domain is already owned by a DIFFERENT jurisdiction, refuse
+      // up front rather than sending the caller through the DNS challenge
+      // only to lose the race at verify time. This is a read-only lookup
+      // (getDomainOwner), not a claim — claimDomainOwnership at verify time
+      // remains the sole authoritative enforcement, since a domain can only
+      // be legitimately reserved by actually proving DNS ownership, not by
+      // merely starting a create request.
+      const existingOwner = await dbClient.getDomainOwner(String(upn))
+      if (existingOwner && existingOwner !== String(jurisdictionId)) {
+        return res.status(409).json({
+          error: 'This domain is already authorized for another organization.',
+        })
+      }
+
+      // create the credential row up front as ready_for_validation. No
+      // expiry is set yet: the key is not "issued" until DNS ownership is
+      // verified, and exp is stamped at activation (verify-domain) so it is
+      // computed from issuance.
       const jti = crypto.randomUUID()
       // Bare jti — see the 'existing' branch above for why.
       const sortKey = jti
@@ -286,7 +301,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const revokedBy = session.user.email || 'unknown'
       const revokedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 
-      await dbClient.revokeApiKeyCredential(sortKey, revokedBy, revokedAt, reason || undefined)
+      try {
+        await dbClient.revokeApiKeyCredential(
+          sortKey,
+          revokedBy,
+          revokedAt,
+          reason || undefined,
+          revocableStatuses
+        )
+      } catch (error) {
+        // The status check above is a stale read — revokeApiKeyCredential's
+        // own atomic condition is what actually prevents a concurrent status
+        // change (e.g. a race with cancel/renewal) from landing a revoke on a
+        // credential that no longer qualifies. Losing that race surfaces the
+        // same 409 as the pre-check.
+        if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+          return res.status(409).json({
+            error:
+              'Only active or grace-period credentials can be revoked. Pending credentials should be cancelled instead.',
+          })
+        }
+        throw error
+      }
 
       logger.info('API key revoked', {
         sortKey,
