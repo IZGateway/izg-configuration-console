@@ -92,13 +92,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       domainSortKeys.map((sk) => dbClient.getApiKeyDomain(sk))
     )
     const now = new Date()
-    // Matches the pre-existing single-env fast path exactly: an 'authorized'
-    // domain record is treated as already satisfied without re-checking
-    // authExpiresAt here (expiry re-validation is a separate, not-yet-scoped
-    // concern — see the create route's 'existing domain' path, which does
-    // check it, for the other half of this asymmetry).
+    // An 'authorized' record whose authExpiresAt has passed must NOT short-
+    // circuit activation — otherwise a stale authorization could activate a
+    // credential without re-proving DNS ownership. Matches the same
+    // status+expiry check already used by the create route's 'existing
+    // domain' path.
     const isAuthorizedRecord = (rec: (typeof domainRecords)[number]) =>
-      rec?.status === 'authorized'
+      rec?.status === 'authorized' &&
+      !!rec?.authExpiresAt &&
+      new Date(rec.authExpiresAt) > now
     const pendingIndexes = environments
       .map((_, i) => i)
       .filter((i) => !isAuthorizedRecord(domainRecords[i]))

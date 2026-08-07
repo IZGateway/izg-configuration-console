@@ -8,9 +8,9 @@ import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
-import { ApiKeyCredential } from '../type/ApiKeyCredential'
-import { Jurisdiction } from '../type/Jurisdiction'
-import { ApiKeyDomain } from '../type/ApiKeyDomain'
+import type { ApiKeyCredential } from '../type/ApiKeyCredential'
+import type { Jurisdiction } from '../type/Jurisdiction'
+import type { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
