@@ -5,23 +5,39 @@ import AppHeaderBar from '../../components/AppHeader'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import AdminOperations from '../../components/AdminOperations'
 import AdminGuard from '../../components/AdminGuard'
+import {
+  getHubEnvironments,
+  type HubEnvironment,
+} from '../../lib/utils/izghubenvironments'
 
-const AdminOperationsPage = ({ hasKeyName }: { hasKeyName: boolean }) => {
+interface AdminOperationsPageProps {
+  hasKeyName: boolean
+  hubEnvironments: HubEnvironment[]
+}
+
+const AdminOperationsPage = ({
+  hasKeyName,
+  hubEnvironments,
+}: AdminOperationsPageProps) => {
   return (
     <Container title="Admin Operations">
       <AppHeaderBar open />
       <ErrorBoundary>
-        <AdminOperations hasKeyName={hasKeyName} />
+        <AdminOperations
+          hasKeyName={hasKeyName}
+          hubEnvironments={hubEnvironments}
+        />
       </ErrorBoundary>
     </Container>
   )
 }
 
-export const getServerSideProps: GetServerSideProps<{
-  hasKeyName: boolean
-}> = async () => {
+export const getServerSideProps: GetServerSideProps<
+  AdminOperationsPageProps
+> = async () => {
   const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
-  return { props: { hasKeyName } }
+  const hubEnvironments = getHubEnvironments()
+  return { props: { hasKeyName, hubEnvironments } }
 }
 
 export default AdminGuard(AdminOperationsPage)

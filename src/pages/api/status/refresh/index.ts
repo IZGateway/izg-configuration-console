@@ -1,16 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../../api-middleware-helper'
 import logger from '../../../../../logger'
-import { refreshAllHubs } from '../../../../lib/utils/izghubdbrefresh'
+import {
+  refreshAllHubs,
+  refreshHubForEnvironment,
+} from '../../../../lib/utils/izghubdbrefresh'
 
 /**
  * @swagger
  * /api/status/refresh:
  *   post:
- *     summary: Refresh all hubs' configuration from the database.
+ *     summary: Refresh hub configuration from the database.
  *     description: >
- *       Signals every configured hub to reload its configuration from the
- *       database across all Hub environments. Operations/admin users only.
+ *       Signals a configured hub environment, or every configured hub when no
+ *       destinationTypeId is provided, to reload its configuration from the
+ *       database. Operations/admin users only.
  *     responses:
  *       200:
  *         description: OK.
@@ -23,19 +27,41 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const result = await refreshAllHubs()
+    const hasDestinationTypeId =
+      req.body &&
+      Object.prototype.hasOwnProperty.call(req.body, 'destinationTypeId')
+    const destinationTypeId = Number(req.body?.destinationTypeId)
+    const isEnvironmentRefresh =
+      hasDestinationTypeId &&
+      Number.isInteger(destinationTypeId) &&
+      destinationTypeId > 0
+
+    if (hasDestinationTypeId && !isEnvironmentRefresh) {
+      return res.status(400).json({
+        success: false,
+        error: 'A valid destinationTypeId is required.',
+      })
+    }
+
+    const result = isEnvironmentRefresh
+      ? await refreshHubForEnvironment(destinationTypeId)
+      : await refreshAllHubs()
 
     if (result.attempted > 0 && result.succeeded === 0) {
       return res.status(502).json({
         success: false,
-        error: 'Failed to signal any hub instance to refresh from the database.',
+        error: isEnvironmentRefresh
+          ? 'Failed to signal the hub instance to refresh from the database.'
+          : 'Failed to signal any hub instance to refresh from the database.',
         result,
       })
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Database refresh signaled to all hubs.',
+      message: isEnvironmentRefresh
+        ? 'Database refresh signaled for the selected environment.'
+        : 'Database refresh signaled to all hubs.',
       result,
     })
   } catch (err) {
