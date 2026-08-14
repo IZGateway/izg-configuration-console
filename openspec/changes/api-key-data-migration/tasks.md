@@ -24,10 +24,18 @@ ticket: IGDD-3258
     `allowedUseTypes` (String Set) on the existing record using `SET` expression
   - For IIS-to-IIS senders (identified from `iis-access-control-pairs.csv`): also
     set `useTypes: PUBLIC_HEALTH` in the same expression
-  - Include prefix corrections: `hi` (id=14), `id` (id=16), `ne` (id=32)
   - Texas: must NOT receive `useTypes` (not an IIS-to-IIS sender)
   - Write commands to `migrate/jurisdiction-updates.sh` (one command per line)
   - CCUAT (id=64): generate a `PutRequest` entry (new record, not update)
+
+- [ ] 1.3a Generate prefix corrections as a separate batch file
+  - The three Jurisdiction records with incorrect prefixes SHALL be written as a
+    dedicated batch file `migrate/batches/prefix-corrections.json` (applies to
+    both environments — same table)
+  - Contents: `UpdateItem` for Hawaii (id=14, prefix=hi), Idaho (id=16, prefix=id),
+    Nebraska (id=32, prefix=ne)
+  - Keeping these separate from `allowedUseTypes` updates makes the correction
+    auditable and independently verifiable
 
 - [ ] 1.4 Implement Sender `PutRequest` batch generation
   - Load `sender-organizations.csv`
@@ -44,11 +52,8 @@ ticket: IGDD-3258
   - Sort key: `{environment}#{destinationId}#{senderCertCommonName}`
   - Look up sender cert(s) from `certificate-inventory.csv`; one AllowedUser per cert
     per destination
-  - Apply split-endpoint routing rules (see design.md Split-Endpoint Jurisdictions):
-    - Virginia IIS pairs: use `va_s` (not `va`)
-    - Maryland IIS pairs: use `md` (not `md_c`)
-    - New York: generate both `ny_vxu` (both envs) and `ny_qbp` (onboarding only)
-    - Exclude `_test` destIds (`ny_test`, `mi_test`, `nc_test`) from AllowedUser generation
+  - `receiver_destid` values in the CSV already encode the correct endpoint
+    (split-endpoint routing for MD/VA/NY is pre-resolved in the CSV data)
   - Apply production DenyList: exclude 7 certs from production batches
   - Apply environment split from cert `environments` column
   - Set `validUntil` from cert expiry date in inventory
@@ -58,11 +63,7 @@ ticket: IGDD-3258
   - Load `provider-access-control-pairs.csv`
   - For each row: resolve `receiver_destid` to string `destinationId` (prefix)
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
-  - Apply split-endpoint routing rules:
-    - Maryland PROVIDER pairs: use `md_c` (not `md`)
-    - Virginia PROVIDER pairs: use `va` (correct as-is)
-    - New York: generate both `ny_vxu` (both envs) and `ny_qbp` (onboarding only)
-    - Exclude `_test` destIds from AllowedUser generation
+  - `receiver_destid` values in the CSV already encode the correct endpoint
   - Apply same environment split and DenyList logic as 1.5
   - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`
 
@@ -110,10 +111,11 @@ ticket: IGDD-3258
 
 - [ ] 3.2 Write migration execution block in `run-migration.sh`
   - Enforce execution order per hub-safety spec:
-    1. Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
-    2. Run `migrate/batches/${ENV}/senders-*.json` batches
-    3. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
-    4. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
+    1. Run `migrate/batches/prefix-corrections.json` (prefix fixes, env-agnostic)
+    2. Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
+    3. Run `migrate/batches/${ENV}/senders-*.json` batches
+    4. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
+    5. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
   - Abort entire migration on first failure in any phase; do NOT proceed to AllowedUser
     batches if Jurisdiction or Sender phase fails
   - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
