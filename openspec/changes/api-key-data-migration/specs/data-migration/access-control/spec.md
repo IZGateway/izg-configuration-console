@@ -61,11 +61,15 @@ for this migration; they will be addressed separately when that data is availabl
 is a separate concern and is not addressed by this migration; those sender organizations
 are covered by the sender-entities capability.
 
-**CDC/DEX reporting out of scope:** The `dex` endpoint (CDC data reporting) represents
-a separate use case (`IIS to CDC Data Reporting`) outside the three canonical use types
-(`PATIENT`, `PROVIDER`, `PUBLIC_HEALTH`). AllowedUser records for jurisdiction-to-CDC
-reporting are **out of scope** for this migration. No `AllowedUser` records SHALL be
-generated with `dex` as the destination.
+**CDC/DEX access control is in scope:** Jurisdictions that send IIS reports to CDC
+require AllowedUser records with `dex` as the destination and `PUBLIC_HEALTH` as the
+use type. These are included in `iis-access-control-pairs.csv`. Note: the `REPORTING`
+use type extension for CDC data reporting is out of scope for the JWT token work; the
+existing `PUBLIC_HEALTH` value is used for these records in this migration.
+
+**Texas→DEX:** Texas sends reports to CDC and SHALL have one AllowedUser record with
+`dex` as the destination. Texas is NOT an IIS-to-IIS sender (no AllowedUser records
+with other jurisdictions as receivers).
 
 ## ADDED Requirements
 
