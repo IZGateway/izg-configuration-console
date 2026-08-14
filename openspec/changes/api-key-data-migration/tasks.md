@@ -94,9 +94,13 @@ ticket: IGDD-3258
     tunable constants at top of script
 
 - [ ] 3.2 Write migration execution block in `run-migration.sh`
-  - Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
-  - Loop over all `migrate/batches/${ENV}/` JSON files and run `batch-write-item`
-    for each; abort on first failure
+  - Enforce execution order per hub-safety spec:
+    1. Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
+    2. Run `migrate/batches/${ENV}/senders-*.json` batches
+    3. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
+    4. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
+  - Abort entire migration on first failure in any phase; do NOT proceed to AllowedUser
+    batches if Jurisdiction or Sender phase fails
   - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
   - On full success: `UpdateItem` sets `status=COMPLETED`, `completed=<ISO>`, exit 0
 
@@ -145,4 +149,10 @@ ticket: IGDD-3258
   - Delete Event lock record (`Migration#api-key-data-migration`)
   - Leave Jurisdiction `allowedUseTypes` updates in place (safe to keep)
 
-- [ ] 5.5 Update Jira ticket IGDD-3258 with test results and migration report output
+- [ ] 5.5 Verify Hub logs no errors after migration (hub-safety validation)
+  - Check Hub logs in onboarding for any DynamoDB marshalling exceptions or NPEs
+    following the migration run
+  - Confirm Hub cache refresh completes normally with new Sender records present
+  - Confirm Hub AllowedUser cache includes at least one new record from the migration
+
+- [ ] 5.6 Update Jira ticket IGDD-3258 with test results and migration report output

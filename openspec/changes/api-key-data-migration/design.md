@@ -234,6 +234,28 @@ Fields written:
 
 ---
 
+## Execution Order
+
+The migration MUST execute its three write phases in the following order to satisfy
+the hub-safety requirement that Jurisdiction `allowedUseTypes` are in place before
+AllowedUser records activate new sender permissions:
+
+1. **Jurisdiction `UpdateItem` commands** (`jurisdiction-updates.sh`) — backfill
+   `allowedUseTypes` and `useTypes` on existing records; insert CCUAT.
+2. **Sender `PutItem` batches** — insert new Sender records (ids 100–114).
+3. **AllowedUser `PutItem` batches** — insert access control records; by this point
+   both the receiver Jurisdiction's `allowedUseTypes` and the sender's record exist.
+
+`run-migration.sh` MUST enforce this sequence. AllowedUser batches MUST NOT run if
+either of the preceding phases fails.
+
+**Operational note:** AllowedUser records scoped to `production#...` sort keys take
+effect on the **next Hub cache refresh** after they are written. Writing these records
+to the live production table is an immediate access control change. Ops should be aware
+that once Phase 3 runs against production, the new sender principals can connect.
+
+---
+
 ## Destination ID Resolution
 
 Access control pairs in the input CSVs use short identifiers (`az`, `nv`, etc.) derived
