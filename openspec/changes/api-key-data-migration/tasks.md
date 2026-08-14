@@ -39,9 +39,9 @@ ticket: IGDD-3258
 
 - [ ] 1.5 Implement AllowedUser `PutRequest` batch generation — IIS pairs
   - Load `iis-access-control-pairs.csv`
-  - For each row: resolve `sender_id` and `receiver_destid` to integer `jurisdictionId`
-    via the map from 1.2
-  - Sort key: `{environment}#{receiverJurisdictionId}#{senderCertCommonName}`
+  - For each row: resolve `receiver_destid` short abbreviation to the string `prefix`
+    (= `destinationId`) via `jurisdiction-table-current.csv`
+  - Sort key: `{environment}#{destinationId}#{senderCertCommonName}`
   - Look up sender cert(s) from `certificate-inventory.csv`; one AllowedUser per cert
     per destination
   - Apply production DenyList: exclude 7 certs from production batches
@@ -51,7 +51,7 @@ ticket: IGDD-3258
 
 - [ ] 1.6 Implement AllowedUser `PutRequest` batch generation — Provider pairs
   - Load `provider-access-control-pairs.csv`
-  - For each row: resolve `receiver_destid` to integer `jurisdictionId`
+  - For each row: resolve `receiver_destid` to string `destinationId` (prefix)
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
   - Apply same environment split and DenyList logic as 1.5
   - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`

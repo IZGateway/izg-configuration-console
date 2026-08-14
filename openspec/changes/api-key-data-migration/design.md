@@ -95,7 +95,7 @@ Each batch file contains up to 25 `PutRequest` items in the format required by
       "PutRequest": {
         "Item": {
           "entityType": { "S": "AllowedUser" },
-          "sortKey":    { "S": "production#6#azova.com" },
+          "sortKey":    { "S": "production#az#azova.com" },
           ...
         }
       }
@@ -200,8 +200,8 @@ Sort key: `{environment}#{destinationId}#{principal}`
 
 Where:
 - `environment` = `"production"` or `"onboarding"`
-- `destinationId` = integer `jurisdictionId` resolved from `jurisdiction-table-current.csv`
-  via the `prefix` column (e.g., `"az"` → `6` for Arizona)
+- `destinationId` = string prefix from `jurisdiction-table-current.csv`
+  (e.g., `az` for Arizona, `md_c` for Maryland Provider Connect, `nyc` for NYC CIR)
 - `principal` = TLS certificate common name from `certificate-inventory.csv`
 
 Fields written:
@@ -214,7 +214,7 @@ Fields written:
 | `organizationName` | from cert inventory or sender CSV | |
 | `useTypes` | from sender CSV or IIS useType rule | String Set (SS) |
 | `validUntil` | cert expiry date from inventory | ISO-8601 date string |
-| `destinationId` | numeric destId | |
+| `destinationId` | string prefix from `jurisdiction-table-current.csv` (e.g., `az`, `md_c`) | |
 | `environment` | `"production"` or `"onboarding"` | |
 
 ---
@@ -258,14 +258,18 @@ that once Phase 3 runs against production, the new sender principals can connect
 
 ## Destination ID Resolution
 
-Access control pairs in the input CSVs use short identifiers (`az`, `nv`, etc.) derived
-from jurisdiction names. The generator resolves these to integer `jurisdictionId` values
-using the `prefix` column in `jurisdiction-table-current.csv`. This file is the
-authoritative source of the integer key for every existing Jurisdiction record.
+Access control pairs in the input CSVs use short state abbreviations (`az`, `nv`, etc.)
+derived from jurisdiction names. These short strings ARE the `destinationId` — the string
+prefix stored in `jurisdiction-table-current.csv` and used directly in the AllowedUser
+sort key: `{environment}#{destinationId}#{principal}`.
 
-Entries whose short identifier cannot be resolved to a `jurisdictionId` are logged as
-warnings and excluded from the batch output. The `AllowedUser` sort key uses the
-resolved integer: `{environment}#{jurisdictionId}#{principal}`.
+The `jurisdiction-table-current.csv` `prefix` column is the authoritative mapping from
+Salesforce jurisdiction name → `destinationId` string. The integer `jurisdictionId` is
+used only for Jurisdiction and Sender record sort keys — it is NOT used in AllowedUser
+sort keys.
+
+Entries whose short identifier cannot be resolved via the prefix map are logged as
+warnings and excluded from the batch output.
 
 ---
 
