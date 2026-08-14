@@ -2,12 +2,12 @@ common_name,organization,environment,sender_type,jurisdiction_destid,notes
 prod-cc.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,IZ Gateway Config Console
 prod.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform service
 prod.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub
-preprod.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform preprod
+preprod.xform.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Hub transform preprod
 onboard.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform onboarding
 preprod.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI preprod
 onboard.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI onboarding
-preprod-cc.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Config Console preprod
-preprod.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub preprod
+preprod-cc.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Config Console preprod
+preprod.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Hub preprod
 dev.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub dev
 dev.xform.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Hub transform dev
 uptrends.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Uptime monitoring service
@@ -23,7 +23,7 @@ tyoung.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 mstankiewicz.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 pcahill.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 amoody.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
-cicd.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,CI/CD pipeline cert
+cicd.testing.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,CI/CD pipeline cert
 weckels.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert (Bill Eckels)
 ppatel.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 kboone.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert (Keith Boone)
@@ -32,7 +32,7 @@ ebrock.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 bwilliams.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 izgateway.stchealthops.com,STC Health LLC,production,jurisdiction,,STC shared cert - maps to all 17 STChealth jurisdictions
 izgateway2.stchealthops.com,STC Health LLC,production,jurisdiction,,STC second shared cert
-epicenter.stchome.com,STC Health LLC,production,jurisdiction,,STC third cert
+epicenter.stchome.com,STC Health LLC,onboarding,jurisdiction,,STC third cert
 njiis-stage.doh.nj.gov,Department of Health State of New Jersey,onboarding,jurisdiction,nj,
 hl-iispia-ha-e.njdoh.net,Department of Health State of New Jersey,production,jurisdiction,nj,
 soa.alertiis.org,Oregon ALERT IIS,production,jurisdiction,or,
@@ -113,7 +113,7 @@ Philly-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,p
 Philly-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ph,
 RMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,mh,
 RMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,mh,
-SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,sc,
+SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,sc,NOTE: despite prod in name this cert cannot access production
 SC-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,sc,
 riise.cdc.gov,Division of Global Migration Health (DGMH),production,sender,riise,RIISE CDC/EDN program
 riisetest.cdc.gov,Division of Global Migration Health (DGMH),onboarding,sender,riise,RIISE test cert
@@ -136,3 +136,5 @@ ehealthexchange.org,Healtheway Inc.,onboarding,sender,ehealthexchange,eHealth Ex
 iris-prod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,production,sender,fresenius,
 iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,onboarding,sender,fresenius,prod-izgateway.adph.state.al.us,Alabama Department of Public Health,production,jurisdiction,al,
 test-izgateway.adph.state.al.us,Alabama Department of Public Health,onboarding,jurisdiction,al,
+dev.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Non-production only; not in DigiCert export but explicitly listed as restricted
+test.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Non-production only; not in DigiCert export but explicitly listed as restricted
