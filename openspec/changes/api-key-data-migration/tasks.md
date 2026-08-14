@@ -2,6 +2,25 @@
 schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
+updated:
+  - date: '2026-08-14T13:18:17.750Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.79
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
+    summary: >-
+      Add tasks 1.8 and 1.9 for ApiKeyDomain seeding; Extend report to include
+      ApiKeyDomain counts and STC exclusions; Extend Phase 2 verification
+      checklist for ApiKeyDomain batches; Add ApiKeyDomain batches as step 6 in
+      execution order; Add ApiKeyDomain validation check to Phase 5
+created:
+  date: '2026-08-14T06:34:51.000Z'
+  user: Keith W. Boone
 ---
 # Tasks — API Key Data Migration
 
@@ -67,13 +86,43 @@ ticket: IGDD-3258
   - Apply same environment split and DenyList logic as 1.5
   - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`
 
+- [ ] 1.8 Add `validUntil` column to `certificate-inventory.csv`
+  - Pull cert expiry dates from DigiCert for all active certs in the inventory
+  - Add `validUntil` column (ISO 8601, e.g. `2026-11-15`) to each row where
+    `sender_type` is `jurisdiction` or `sender`
+  - Ops/infrastructure certs (`sender_type = ops`) may be left blank
+  - Commit updated CSV before running generator
+
+- [ ] 1.9 Implement ApiKeyDomain `PutRequest` batch generation
+  - Load `certificate-inventory.csv`; skip rows where `sender_type = ops` or
+    `environment = exclude`
+  - Skip STC Health shared certs (`izgateway.stchealthops.com`,
+    `izgateway2.stchealthops.com`, `epicenter.stchome.com`); log to unresolved.txt
+  - For `sender_type = jurisdiction`: resolve `jurisdiction_destid` to `jurisdictionId`
+    integer via `jurisdiction-table-current.csv` prefix lookup
+  - For `sender_type = sender`: resolve `organization` to `senderId` integer via
+    `sender-organizations.csv` `salesforce_name_variants` matching
+  - Map `environment` column to envId(s): `production`→[1], `onboarding`→[3], `any`→[1,3]
+  - Apply production DenyList: exclude 7 deny-listed certs from envId=1 records
+  - For each (envId, jurisdictionId/senderId, domain) tuple:
+    - `entityType = ApiKeyDomain`
+    - `sortKey = {envId}#{senderId}#{domain}`
+    - `status = authorized`
+    - `validatedAt` = migration run timestamp
+    - `authExpiresAt` = `validUntil` from CSV, or migration timestamp + 1 year if blank
+    - `requestedBy = migration`
+  - Batch into groups of 25; write to
+    `migrate/batches/{env}/apikey-domains-batch-NNN.json`
+
 - [ ] 1.7 Implement execution report output
   - After generating all output, print summary:
     - Count of Jurisdiction `update-item` commands generated
     - Count of CCUAT PutRequest records
     - Count of Sender PutRequest records
     - Count of AllowedUser PutRequest records (production / onboarding separately)
-    - List of any unresolved input rows (could not map to jurisdictionId or cert)
+    - Count of ApiKeyDomain PutRequest records (production / onboarding separately)
+    - List of any unresolved input rows (could not map to jurisdictionId, cert, or senderId)
+    - List of STC Health shared cert exclusions with explanation
   - Write unresolved rows to `migrate/unresolved.txt` for ops review
 
 ## Phase 2: Pre-generated Batch Files
@@ -87,6 +136,9 @@ ticket: IGDD-3258
     - IIS sender → Virginia uses `va_s`; provider sender → Virginia uses `va`
     - New York `ny_vxu` present in both env batches; `ny_qbp` in onboarding only
     - No `ny_test`, `mi_test`, or `nc_test` entries in any batch file
+  - Verify ApiKeyDomain batch files present for both environments
+  - Confirm no STC Health shared cert domains appear in ApiKeyDomain batches
+  - Confirm `any`-environment certs appear in both production and onboarding batches
 
 - [ ] 2.2 Commit pre-generated batch files to branch
   - `migrate/batches/production/` — all production batch JSON files
@@ -116,6 +168,7 @@ ticket: IGDD-3258
     3. Run `migrate/batches/${ENV}/senders-*.json` batches
     4. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
     5. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
+    6. Run `migrate/batches/${ENV}/apikey-domains-*.json` batches
   - Abort entire migration on first failure in any phase; do NOT proceed to AllowedUser
     batches if Jurisdiction or Sender phase fails
   - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
@@ -149,6 +202,8 @@ ticket: IGDD-3258
   - Confirm at least one Jurisdiction record has `allowedUseTypes` set (e.g., Arizona)
   - Confirm eHealth Exchange Sender record exists with `sender_id=100`, `useTypes=PUBLIC_HEALTH`
   - Confirm at least one AllowedUser record exists for a known IIS-to-IIS pair
+  - Confirm at least one `ApiKeyDomain` record exists with `status=authorized` for a
+    known jurisdiction cert (e.g., Arizona's `cair.cdph.ca.gov` → wait, pick a real one)
   - Calibrate `POLL_INTERVAL_SECONDS` and `POLL_TIMEOUT_SECONDS` from observed runtime
 
 - [ ] 5.2 Verify prefix corrections applied in onboarding
