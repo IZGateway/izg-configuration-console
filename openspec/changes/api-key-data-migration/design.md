@@ -29,22 +29,59 @@ as running it once.
 
 ## Execution Model
 
-The migration is delivered as:
+The migration runs automatically at container startup via `run_and_monitor.sh`, the
+bash script that is the container `CMD`. The migration block is inserted in
+`run_and_monitor.sh` after `replace-variable.sh` completes and before `next start`
+launches the Node application — ensuring the database is ready before the application
+begins serving requests.
 
-1. **`migrate/generate-batches.js`** — a Node.js script run once by a developer that
-   reads the input CSVs and writes numbered batch JSON files in the format expected by
-   `aws dynamodb batch-write-item`.
+The AWS CLI (`aws-cli` package) must be added to the `apk add` line in the runner
+stage of the Dockerfile.
 
-2. **Pre-generated batch files** committed to this branch:
-   - `migrate/batches/onboarding/batch-NNN.json`
-   - `migrate/batches/production/batch-NNN.json`
+### Startup Sequence
 
-3. **`migrate/README.md`** — the exact AWS CLI commands to execute per environment,
-   including the loop command and any prerequisites.
+```
+run_and_monitor.sh
+  ├── start filebeat / metricbeat (if configured)
+  ├── generate SSL / configure nginx / start nginx
+  ├── replace-variable.sh
+  ├── [NEW] run-migration.sh       ← this migration
+  └── start node (next start)
+```
 
-Operations staff runs the migration using only the AWS CLI — no Node.js, no SDK, no
-application code. A developer generates the batch files once, reviews and commits them,
-and operations executes against each environment.
+### Migration Lock Protocol (Event entity)
+
+The migration uses DynamoDB's `attribute_not_exists` conditional write as a distributed
+lock. The `Event` entity (managed by `izgw-hub`) serves as the lock and audit record.
+
+**Fixed sort key:** `Migration#api-key-data-migration`
+This key is deterministic so any instance can locate it with a `GetItem`.
+
+**Lock lifecycle:**
+
+| Status | Meaning |
+|---|---|
+| Record absent | Migration has never been attempted — claim it |
+| `IN_PROGRESS` | Another instance is running the migration — wait and poll |
+| `COMPLETED` | Migration finished successfully — skip, proceed to launch |
+| `FAILED` | Previous attempt failed — delete record and retry |
+
+**Claim step:** `PutItem` with `ConditionExpression: attribute_not_exists(sortKey)`.
+Written fields: `entityType=Event`, `sortKey`, `name=api-key-data-migration`,
+`started=<ISO timestamp>`, `reportedBy=<hostname>`, `status=IN_PROGRESS`.
+
+If the conditional write fails (`ConditionalCheckFailedException`), another instance
+owns the lock — this instance reads the existing record and follows the status table above.
+
+**Polling:** While status is `IN_PROGRESS`, poll every 15 seconds. Give up (log warning,
+proceed to launch) after 5 minutes. Timeout value is a configurable constant in
+`run-migration.sh`.
+
+**On migration success:** `UpdateItem` sets `status=COMPLETED`, `completed=<ISO timestamp>`.
+
+**On migration failure:** Script catches the error, sets `status=FAILED`, exits non-zero.
+The container will restart (ECS restart policy). Next startup attempt sees `FAILED`,
+deletes the lock record, and retries from the beginning.
 
 ### Batch Format
 
@@ -58,7 +95,7 @@ Each batch file contains up to 25 `PutRequest` items in the format required by
       "PutRequest": {
         "Item": {
           "entityType": { "S": "AllowedUser" },
-          "sortKey":    { "S": "production#az#azova.com" },
+          "sortKey":    { "S": "production#6#azova.com" },
           ...
         }
       }
@@ -67,30 +104,19 @@ Each batch file contains up to 25 `PutRequest` items in the format required by
 }
 ```
 
-### Execution Commands
+### Required IAM Permissions
 
-**Run all batches for a given environment** (Windows cmd.exe):
+The ECS task role must have the following permissions on the `izgw-hub` table:
 
-```cmd
-for %f in (migrate\batches\production\*.json) do ^
-  aws dynamodb batch-write-item --request-items file://%f --region us-east-1
-```
+- `dynamodb:GetItem` — read lock record and check migration status
+- `dynamodb:PutItem` — claim lock, insert Sender and AllowedUser records
+- `dynamodb:UpdateItem` — backfill Jurisdiction fields, update lock status
+- `dynamodb:DeleteItem` — remove FAILED lock record before retry
+- `dynamodb:BatchWriteItem` — bulk insert of Sender and AllowedUser records
 
-**Single batch (verification/testing):**
-
-```cmd
-aws dynamodb batch-write-item ^
-  --request-items file://migrate\batches\onboarding\batch-001.json ^
-  --region us-east-1
-```
-
-### AWS Credentials
-
-The operator must have AWS credentials configured with `dynamodb:BatchWriteItem`,
-`dynamodb:PutItem`, and `dynamodb:UpdateItem` on the `izgw-hub` table for the target
-account. Note: `batch-write-item` only supports `PutRequest` and `DeleteRequest` —
-`UpdateItem` calls for existing Jurisdiction records are executed as individual
-`aws dynamodb update-item` commands, not as batch operations. The correct AWS
+Note: `batch-write-item` only supports `PutRequest` and `DeleteRequest` —
+`UpdateItem` calls for existing Jurisdiction records run as individual
+`aws dynamodb update-item` commands outside the batch loop. The correct AWS
 profile (onboarding vs. production account) must be active before executing.
 
 ---

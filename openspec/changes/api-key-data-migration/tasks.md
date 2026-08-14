@@ -8,7 +8,7 @@ ticket: IGDD-3258
 ## Phase 1: Generator Script (`migrate/generate-batches.js`)
 
 - [ ] 1.1 Create `migrate/` directory and `generate-batches.js` scaffold
-  - Entry point reads all input CSVs from `../openspec/changes/api-key-data-migration/`
+  - Entry point reads all input CSVs from the change directory
   - Accepts `--env production` or `--env onboarding` flag (default: both)
   - Writes output to `migrate/batches/production/` and `migrate/batches/onboarding/`
 
@@ -18,58 +18,50 @@ ticket: IGDD-3258
   - Build `jurisdictionId → name` reverse lookup for reporting
   - Warn and skip any input row whose prefix cannot be resolved
 
-- [ ] 1.3 Implement Jurisdiction `UpdateItem` command generation
+- [ ] 1.3 Implement Jurisdiction `update-item` command generation
   - Load `jurisdiction-allowed-use-types.csv`; skip rows flagged `SKIP`
-  - For each jurisdiction with `allowedUseTypes`: generate `aws dynamodb update-item`
-    command that sets `allowedUseTypes` (String Set) on the existing record
-  - For jurisdictions also present as IIS senders (see 1.5): also set `useTypes: PUBLIC_HEALTH`
-    in the same `UpdateItem` expression
-  - Include prefix corrections: `hi` (id=14), `id` (id=16), `ne` (id=32) in the SET expression
+  - For each jurisdiction: generate `aws dynamodb update-item` command that sets
+    `allowedUseTypes` (String Set) on the existing record using `SET` expression
+  - For IIS-to-IIS senders (identified from `iis-access-control-pairs.csv`): also
+    set `useTypes: PUBLIC_HEALTH` in the same expression
+  - Include prefix corrections: `hi` (id=14), `id` (id=16), `ne` (id=32)
+  - Texas: must NOT receive `useTypes` (not an IIS-to-IIS sender)
   - Write commands to `migrate/jurisdiction-updates.sh` (one command per line)
-  - CCUAT (id=64): generate a `PutItem` batch entry (new record, not update)
+  - CCUAT (id=64): generate a `PutRequest` entry (new record, not update)
 
-- [ ] 1.4 Implement Sender `PutItem` batch generation
+- [ ] 1.4 Implement Sender `PutRequest` batch generation
   - Load `sender-organizations.csv`
   - For each of the 15 non-jurisdiction sender rows: produce a `PutRequest` item with
     `entityType=Jurisdiction`, `sortKey={sender_id}`, `jurisdictionId={sender_id}`,
     `jurisdictionName={canonical_name}`, `useTypes` as String Set
-  - Batch into groups of 25; write to `migrate/batches/production/senders-batch-NNN.json`
+  - Batch into groups of 25; write to `migrate/batches/{env}/senders-batch-NNN.json`
     (same content for both environments — sender records are environment-agnostic)
 
-- [ ] 1.5 Identify IIS-to-IIS sender jurisdictions
-  - Load `iis-access-control-pairs.csv`; collect unique `sender_id` values (left-hand side)
-  - These are the IIS jurisdictions that need `useTypes: PUBLIC_HEALTH` added
-    (handled in task 1.3 — this task just produces the set for 1.3 to consume)
-  - Exclude `dex` from this set (CDC is a destination, not an IIS sender jurisdiction)
-  - Texas: must NOT be included even though Texas appears as a sender in the CSV
-    (Texas→DEX only; not an IIS-to-IIS sender)
-
-- [ ] 1.6 Implement AllowedUser `PutItem` batch generation — IIS pairs
+- [ ] 1.5 Implement AllowedUser `PutRequest` batch generation — IIS pairs
   - Load `iis-access-control-pairs.csv`
   - For each row: resolve `sender_id` and `receiver_destid` to integer `jurisdictionId`
-    via the ID map from 1.2
+    via the map from 1.2
   - Sort key: `{environment}#{receiverJurisdictionId}#{senderCertCommonName}`
-  - Cert common name: look up sender jurisdiction in `certificate-inventory.csv` by
-    `jurisdiction` or `sender_id` column; a sender may have multiple certs (one row
-    per cert, one AllowedUser per cert per destination)
+  - Look up sender cert(s) from `certificate-inventory.csv`; one AllowedUser per cert
+    per destination
   - Apply production DenyList: exclude 7 certs from production batches
-  - Apply environment split: cert `environments` column drives which batch set receives the record
+  - Apply environment split from cert `environments` column
   - Set `validUntil` from cert expiry date in inventory
   - Write to `migrate/batches/{env}/iis-allowedusers-batch-NNN.json`
 
-- [ ] 1.7 Implement AllowedUser `PutItem` batch generation — Provider pairs
+- [ ] 1.6 Implement AllowedUser `PutRequest` batch generation — Provider pairs
   - Load `provider-access-control-pairs.csv`
   - For each row: resolve `receiver_destid` to integer `jurisdictionId`
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
-  - Apply same environment split and DenyList logic as 1.6
+  - Apply same environment split and DenyList logic as 1.5
   - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`
 
-- [ ] 1.8 Implement execution report output
+- [ ] 1.7 Implement execution report output
   - After generating all output, print summary:
-    - Count of Jurisdiction UpdateItem commands generated
-    - Count of CCUAT PutItem records
-    - Count of Sender PutItem records
-    - Count of AllowedUser PutItem records (production / onboarding)
+    - Count of Jurisdiction `update-item` commands generated
+    - Count of CCUAT PutRequest records
+    - Count of Sender PutRequest records
+    - Count of AllowedUser PutRequest records (production / onboarding separately)
     - List of any unresolved input rows (could not map to jurisdictionId or cert)
   - Write unresolved rows to `migrate/unresolved.txt` for ops review
 
@@ -83,39 +75,74 @@ ticket: IGDD-3258
 - [ ] 2.2 Commit pre-generated batch files to branch
   - `migrate/batches/production/` — all production batch JSON files
   - `migrate/batches/onboarding/` — all onboarding batch JSON files
-  - `migrate/jurisdiction-updates.sh` — UpdateItem commands for existing jurisdictions
+  - `migrate/jurisdiction-updates.sh` — `update-item` commands for existing jurisdictions
   - `migrate/unresolved.txt` — any unresolved rows for ops awareness
 
-## Phase 3: Execution README
+## Phase 3: Startup Migration Script (`migrate/run-migration.sh`)
 
-- [ ] 3.1 Write `migrate/README.md` with exact execution instructions
-  - Prerequisites: AWS CLI installed, correct AWS profile active per environment
-  - Required IAM permissions: `dynamodb:BatchWriteItem`, `dynamodb:PutItem`,
-    `dynamodb:UpdateItem` on the `izgw-hub` table
-  - Step 1: Run jurisdiction `UpdateItem` commands (from `jurisdiction-updates.sh`)
-  - Step 2: Run sender and AllowedUser batch files with loop command
-  - Onboarding execution commands (cmd.exe loop)
-  - Production execution commands (cmd.exe loop)
-  - Verification queries: sample `aws dynamodb get-item` calls to confirm key records
-  - Rollback note: migration adds new fields/records only; no rollback script needed
-    for the `allowedUseTypes`/`useTypes` additions; new Sender and AllowedUser records
-    can be deleted if needed using their sort keys
+- [ ] 3.1 Write `migrate/run-migration.sh` — Event lock acquisition
+  - Attempt `PutItem` on `Event#Migration#api-key-data-migration` with
+    `ConditionExpression: attribute_not_exists(sortKey)`
+  - Write: `entityType=Event`, `name=api-key-data-migration`, `started=<ISO>`,
+    `reportedBy=<hostname>`, `status=IN_PROGRESS`
+  - If `ConditionalCheckFailedException`: read existing record → branch on status:
+    - `COMPLETED` → log "migration already done", exit 0
+    - `IN_PROGRESS` → poll every 15 seconds up to 5 minutes; exit 0 on COMPLETED,
+      log warning and exit 0 on timeout
+    - `FAILED` → delete record, retry from lock acquisition
+  - Define `POLL_INTERVAL_SECONDS=15` and `POLL_TIMEOUT_SECONDS=300` as
+    tunable constants at top of script
 
-## Phase 4: Validation
+- [ ] 3.2 Write migration execution block in `run-migration.sh`
+  - Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
+  - Loop over all `migrate/batches/${ENV}/` JSON files and run `batch-write-item`
+    for each; abort on first failure
+  - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
+  - On full success: `UpdateItem` sets `status=COMPLETED`, `completed=<ISO>`, exit 0
 
-- [ ] 4.1 Run migration against onboarding environment; verify report output
+- [ ] 3.3 Write `migrate/README.md` — manual fallback execution instructions
+  - How to run `run-migration.sh` manually against onboarding or production
+  - How to check Event lock record status with `aws dynamodb get-item`
+  - How to reset a stuck FAILED or IN_PROGRESS lock for a retry
+  - Sample verification queries (`get-item` for key records post-migration)
+
+## Phase 4: Dockerfile Integration
+
+- [ ] 4.1 Add `aws-cli` to the `apk add` line in the Dockerfile runner stage
+  - Verify `aws` binary is available in the container after build
+
+- [ ] 4.2 Copy `migrate/` directory into the runner image
+  - Add `COPY --from=builder /app/migrate ./migrate` to Dockerfile runner stage
+  - Make `run-migration.sh` and `jurisdiction-updates.sh` executable
+
+- [ ] 4.3 Wire `run-migration.sh` into `run_and_monitor.sh`
+  - Insert call after `replace-variable.sh` and before `next start`
+  - Pass `ENV` variable (production/onboarding) derived from existing env vars
+  - Log migration start/end to `run_and_monitor.log`
+  - If `run-migration.sh` exits non-zero, exit the container (do not launch console
+    with unmigrated data)
+
+## Phase 5: Validation
+
+- [ ] 5.1 Run migration against onboarding environment; review report output
   - Confirm at least one Jurisdiction record has `allowedUseTypes` set (e.g., Arizona)
-  - Confirm VHA Sender record exists with `sender_id=114`, `useTypes=PROVIDER`
+  - Confirm eHealth Exchange Sender record exists with `sender_id=100`, `useTypes=PUBLIC_HEALTH`
   - Confirm at least one AllowedUser record exists for a known IIS-to-IIS pair
+  - Calibrate `POLL_INTERVAL_SECONDS` and `POLL_TIMEOUT_SECONDS` from observed runtime
 
-- [ ] 4.2 Verify prefix corrections applied in onboarding
+- [ ] 5.2 Verify prefix corrections applied in onboarding
   - `aws dynamodb get-item` for Hawaii (id=14) → `prefix` should be `hi`
   - `aws dynamodb get-item` for Idaho (id=16) → `prefix` should be `id`
   - `aws dynamodb get-item` for Nebraska (id=32) → `prefix` should be `ne`
 
-- [ ] 4.3 Confirm STChealth limitation documented and no JWT domains generated
-  - Verify no `ApiKeyDomain` records are created by this migration (out of scope)
-  - Confirm the 17 STC-managed jurisdictions each have an `AllowedUser` record using
-    the shared STC certificate common name
+- [ ] 5.3 Verify Event lock record written correctly
+  - `status=COMPLETED`, `completed` timestamp present, `reportedBy` matches container hostname
+  - Confirm second container startup skips migration (COMPLETED fast-path)
 
-- [ ] 4.4 Update Jira ticket IGDD-3258 with test results and migration report output
+- [ ] 5.4 Clean up onboarding database after validation
+  - Delete all Sender records (id 100–114)
+  - Delete sample AllowedUser records written during test
+  - Delete Event lock record (`Migration#api-key-data-migration`)
+  - Leave Jurisdiction `allowedUseTypes` updates in place (safe to keep)
+
+- [ ] 5.5 Update Jira ticket IGDD-3258 with test results and migration report output
