@@ -44,6 +44,11 @@ ticket: IGDD-3258
   - Sort key: `{environment}#{destinationId}#{senderCertCommonName}`
   - Look up sender cert(s) from `certificate-inventory.csv`; one AllowedUser per cert
     per destination
+  - Apply split-endpoint routing rules (see design.md Split-Endpoint Jurisdictions):
+    - Virginia IIS pairs: use `va_s` (not `va`)
+    - Maryland IIS pairs: use `md` (not `md_c`)
+    - New York: generate both `ny_vxu` (both envs) and `ny_qbp` (onboarding only)
+    - Exclude `_test` destIds (`ny_test`, `mi_test`, `nc_test`) from AllowedUser generation
   - Apply production DenyList: exclude 7 certs from production batches
   - Apply environment split from cert `environments` column
   - Set `validUntil` from cert expiry date in inventory
@@ -53,6 +58,11 @@ ticket: IGDD-3258
   - Load `provider-access-control-pairs.csv`
   - For each row: resolve `receiver_destid` to string `destinationId` (prefix)
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
+  - Apply split-endpoint routing rules:
+    - Maryland PROVIDER pairs: use `md_c` (not `md`)
+    - Virginia PROVIDER pairs: use `va` (correct as-is)
+    - New York: generate both `ny_vxu` (both envs) and `ny_qbp` (onboarding only)
+    - Exclude `_test` destIds from AllowedUser generation
   - Apply same environment split and DenyList logic as 1.5
   - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`
 
@@ -71,6 +81,11 @@ ticket: IGDD-3258
   - Verify counts match estimates in `design.md` (~37 batch files per environment)
   - Review `migrate/unresolved.txt` — resolve or document any unresolved entries
   - Spot-check 3–5 batch files against source CSVs for correctness
+  - Verify split-endpoint routing in output:
+    - IIS sender → Maryland uses `md`; provider sender → Maryland uses `md_c`
+    - IIS sender → Virginia uses `va_s`; provider sender → Virginia uses `va`
+    - New York `ny_vxu` present in both env batches; `ny_qbp` in onboarding only
+    - No `ny_test`, `mi_test`, or `nc_test` entries in any batch file
 
 - [ ] 2.2 Commit pre-generated batch files to branch
   - `migrate/batches/production/` — all production batch JSON files
