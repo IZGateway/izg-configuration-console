@@ -256,6 +256,28 @@ that once Phase 3 runs against production, the new sender principals can connect
 
 ---
 
+## Split-Endpoint Jurisdictions
+
+Some jurisdictions operate two separate IZ Gateway endpoints scoped by use case.
+The `destinationId` used in an AllowedUser sort key must match the endpoint that
+corresponds to the sender's use type:
+
+| State | destinationId | Use case | Sender type |
+|---|---|---|---|
+| Maryland | `md` | IIS-to-IIS data exchange | PUBLIC_HEALTH (IIS senders) |
+| Maryland | `md_c` | Provider connect | PROVIDER senders |
+| Virginia | `va_s` | IIS-to-IIS data exchange | PUBLIC_HEALTH (IIS senders) |
+| Virginia | `va` | Provider connect | PROVIDER senders |
+
+The use case is determined by the **sender**, not the receiver. A sender with
+`useTypes=PUBLIC_HEALTH` (an IIS) routes to the IIS endpoint; a sender with
+`useTypes=PROVIDER` routes to the provider connect endpoint.
+
+The generator MUST apply this mapping when producing AllowedUser sort keys for
+Maryland and Virginia destinations.
+
+---
+
 ## Destination ID Resolution
 
 Access control pairs in the input CSVs use short state abbreviations (`az`, `nv`, etc.)
