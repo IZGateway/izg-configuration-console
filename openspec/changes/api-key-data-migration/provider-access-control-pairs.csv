@@ -135,3 +135,4 @@
 "VHA","Veterans Administration (VistA)","vi","Virgin Islands U.S.","PROVIDER","production|onboarding",""
 "eHealth Exchange","eHealth Exchange","nv","Nevada","PUBLIC_HEALTH","onboarding","eHealth Exchange QHIN pilot - onboarding only"
 "DOD","Department of Defense (DOD)","il","Illinois","PROVIDER","production|onboarding","Parent-state mapping: DOD sends to Chicago which routes through Illinois IIS"
+"VHA","Veterans Administration (VistA)","ny_qbp","New York State (QBP)","PROVIDER","onboarding","ny_qbp onboarding-only; mirrors ny_vxu access"

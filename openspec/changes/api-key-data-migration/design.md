@@ -276,6 +276,21 @@ The use case is determined by the **sender**, not the receiver. A sender with
 The generator MUST apply this mapping when producing AllowedUser sort keys for
 Maryland and Virginia destinations.
 
+### New York Split Endpoints
+
+New York State operates two endpoints split by message type:
+
+| destId | Environment | Message type |
+|---|---|---|
+| `ny_vxu` | production + onboarding | VXU (immunization update) |
+| `ny_qbp` | onboarding only | QBP (query by parameter) |
+
+Any sender permitted to reach `ny_vxu` is also permitted to reach `ny_qbp`.
+AllowedUser records for `ny_qbp` are generated for onboarding batches only.
+
+The `_test` destIds (`ny_test`, `mi_test`, `nc_test`) are onboarding-only test
+endpoints and do NOT receive AllowedUser records from this migration.
+
 ---
 
 ## Destination ID Resolution

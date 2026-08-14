@@ -646,3 +646,4 @@
 "wi","Wisconsin","dex","CDC","PUBLIC_HEALTH","production|onboarding","IIS-to-CDC reporting"
 "md","Maryland","dex","CDC","PUBLIC_HEALTH","production|onboarding","IIS-to-CDC reporting"
 "tx","Texas","dex","CDC","PUBLIC_HEALTH","production|onboarding","IIS-to-CDC reporting; Texas sends to CDC only (not to other IIS systems)"
+"pr","Puerto Rico","ny_qbp","New York State (QBP)","PUBLIC_HEALTH","onboarding","ny_qbp onboarding-only; mirrors ny_vxu access"
