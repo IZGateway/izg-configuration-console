@@ -1,3 +1,21 @@
+---
+schema_version: '1.0'
+updated:
+  - date: '2026-08-14T13:34:23.560Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.79
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
+    summary: Update design to reference JSON files for jurisdiction updates
+created:
+  date: '2026-08-14T06:23:29.000Z'
+  user: Keith W. Boone
+---
 # Design — API Key Data Migration
 
 **Change:** api-key-data-migration
@@ -240,7 +258,7 @@ The migration MUST execute its three write phases in the following order to sati
 the hub-safety requirement that Jurisdiction `allowedUseTypes` are in place before
 AllowedUser records activate new sender permissions:
 
-1. **Jurisdiction `UpdateItem` commands** (`jurisdiction-updates.sh`) — backfill
+1. **Jurisdiction `UpdateItem` JSON files** (`batches/jurisdiction-updates/*.json`) — backfill
    `allowedUseTypes` and `useTypes` on existing records; insert CCUAT.
 2. **Sender `PutItem` batches** — insert new Sender records (ids 100–114).
 3. **AllowedUser `PutItem` batches** — insert access control records; by this point

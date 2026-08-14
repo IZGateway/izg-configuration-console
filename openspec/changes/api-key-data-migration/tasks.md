@@ -3,7 +3,7 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
-  - date: '2026-08-14T13:18:17.750Z'
+  - date: '2026-08-14T13:34:12.848Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -17,7 +17,11 @@ updated:
       Add tasks 1.8 and 1.9 for ApiKeyDomain seeding; Extend report to include
       ApiKeyDomain counts and STC exclusions; Extend Phase 2 verification
       checklist for ApiKeyDomain batches; Add ApiKeyDomain batches as step 6 in
-      execution order; Add ApiKeyDomain validation check to Phase 5
+      execution order; Add ApiKeyDomain validation check to Phase 5; Replace
+      jurisdiction-updates.sh with per-record JSON files for update-item; Update
+      Phase 2 commit list to reflect JSON files instead of .sh; Update Phase 3
+      execution to use JSON file loop for jurisdiction updates; Update README
+      task to mention individual JSON file re-run
 created:
   date: '2026-08-14T06:34:51.000Z'
   user: Keith W. Boone
@@ -37,15 +41,19 @@ created:
   - Build `jurisdictionId → name` reverse lookup for reporting
   - Warn and skip any input row whose prefix cannot be resolved
 
-- [ ] 1.3 Implement Jurisdiction `update-item` command generation
+- [ ] 1.3 Implement Jurisdiction `update-item` JSON file generation
   - Load `jurisdiction-allowed-use-types.csv`; skip rows flagged `SKIP`
-  - For each jurisdiction: generate `aws dynamodb update-item` command that sets
-    `allowedUseTypes` (String Set) on the existing record using `SET` expression
+  - For each jurisdiction: generate a JSON file suitable for `aws dynamodb update-item
+    --cli-input-json file://...` that sets `allowedUseTypes` (String Set) using a
+    `SET` expression
   - For IIS-to-IIS senders (identified from `iis-access-control-pairs.csv`): also
     set `useTypes: PUBLIC_HEALTH` in the same expression
   - Texas: must NOT receive `useTypes` (not an IIS-to-IIS sender)
-  - Write commands to `migrate/jurisdiction-updates.sh` (one command per line)
-  - CCUAT (id=64): generate a `PutRequest` entry (new record, not update)
+  - Write one JSON file per jurisdiction to
+    `migrate/batches/jurisdiction-updates/{jurisdictionId}.json`
+    (env-agnostic — same table in both environments)
+  - CCUAT (id=64): generate a `PutRequest` entry in a separate batch file
+    (new record, not an update)
 
 - [ ] 1.3a Generate prefix corrections as a separate batch file
   - The three Jurisdiction records with incorrect prefixes SHALL be written as a
@@ -143,8 +151,8 @@ created:
 - [ ] 2.2 Commit pre-generated batch files to branch
   - `migrate/batches/production/` — all production batch JSON files
   - `migrate/batches/onboarding/` — all onboarding batch JSON files
-  - `migrate/jurisdiction-updates.sh` — `update-item` commands for existing jurisdictions
-  - `migrate/unresolved.txt` — any unresolved rows for ops awareness
+  - `migrate/batches/jurisdiction-updates/` — one JSON file per jurisdiction
+  - `migrate/batches/prefix-corrections.json` — prefix correction batch
 
 ## Phase 3: Startup Migration Script (`migrate/run-migration.sh`)
 
@@ -164,7 +172,8 @@ created:
 - [ ] 3.2 Write migration execution block in `run-migration.sh`
   - Enforce execution order per hub-safety spec:
     1. Run `migrate/batches/prefix-corrections.json` (prefix fixes, env-agnostic)
-    2. Run `migrate/jurisdiction-updates.sh` (individual `update-item` commands)
+    2. Run `migrate/batches/jurisdiction-updates/*.json` files via
+       `for f in ...; do aws dynamodb update-item --cli-input-json file://$f; done`
     3. Run `migrate/batches/${ENV}/senders-*.json` batches
     4. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
     5. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
@@ -178,6 +187,7 @@ created:
   - How to run `run-migration.sh` manually against onboarding or production
   - How to check Event lock record status with `aws dynamodb get-item`
   - How to reset a stuck FAILED or IN_PROGRESS lock for a retry
+  - How to re-run individual jurisdiction update files manually
   - Sample verification queries (`get-item` for key records post-migration)
 
 ## Phase 4: Dockerfile Integration
