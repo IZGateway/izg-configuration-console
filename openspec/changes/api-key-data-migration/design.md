@@ -135,22 +135,23 @@ reserved as a gap between existing jurisdictions and senders.
 
 ID assignment (fixed, committed to `sender-organizations.csv` `sender_id` column):
 
-| sender_id | Organization |
-|---|---|
-| 100 | AZOVA |
-| 101 | DaVita Physician Solutions |
-| 102 | DOD |
-| 103 | DocStation |
-| 104 | Fond du Lac |
-| 105 | Fresenius Medical Care |
-| 106 | Mayo Clinic |
-| 107 | RIISE |
-| 108 | VAMS |
-| 109 | VHA |
-| 110 | eHealth Exchange |
-| 111 | ops-securityrs (ops staff) |
-| 112 | ops-ehealthsign (ops staff) |
-| 113 | ops-testing (ops staff) |
+| sender_id | Organization | use_types |
+|---|---|---|
+| 100 | eHealth Exchange | PUBLIC_HEALTH |
+| 101 | Docket | PATIENT |
+| 102 | Security Risk Solutions (ops) | PUBLIC_HEALTH, PROVIDER, PATIENT |
+| 103 | e-HealthSign (ops) | PUBLIC_HEALTH, PROVIDER, PATIENT |
+| 104 | Audacious Inquiry operators | PUBLIC_HEALTH, PROVIDER, PATIENT |
+| 105 | AZOVA | PROVIDER |
+| 106 | DaVita Physician Solutions | PROVIDER |
+| 107 | Department of Defense | PROVIDER |
+| 108 | DocStation | PROVIDER |
+| 109 | Fond du Lac | PROVIDER |
+| 110 | Fresenius Medical Care | PROVIDER |
+| 111 | Mayo Clinic | PROVIDER |
+| 112 | RIISE | PROVIDER |
+| 113 | VAMS | PROVIDER |
+| 114 | Veterans Administration | PROVIDER |
 
 Fields written by this migration:
 
