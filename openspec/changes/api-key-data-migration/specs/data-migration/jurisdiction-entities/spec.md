@@ -91,6 +91,9 @@ SHALL receive records:** New York City - New York State, Pennsylvania - Philadel
 **Test entries excluded:** `Test IIS 1` and `Test IIS 2` are not real jurisdictions
 and SHALL NOT be written to DynamoDB.
 
+**CDC/DEX excluded:** The `dex` endpoint (CDC data reporting) is not an IIS jurisdiction
+and SHALL NOT receive a Jurisdiction entity record in this migration.
+
 **DEVELOPMENT and CCUAT jurisdiction records:** These logical jurisdictions exist in
 `prod_config.json` and `onboarding_config.json` but do not appear in Salesforce.
 They represent test and connectivity-testing endpoints accessible by any sender type.

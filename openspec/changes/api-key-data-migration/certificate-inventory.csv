@@ -1,0 +1,138 @@
+common_name,organization,environment,sender_type,jurisdiction_destid,notes
+prod-cc.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,IZ Gateway Config Console
+prod.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform service
+prod.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub
+preprod.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform preprod
+onboard.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform onboarding
+preprod.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI preprod
+onboard.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI onboarding
+preprod-cc.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Config Console preprod
+preprod.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub preprod
+dev.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub dev
+dev.xform.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Hub transform dev
+uptrends.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Uptime monitoring service
+ehex-xform.prod2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform production
+ehex-xform.onboard2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform onboarding
+ehex-xform.sandbox2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform sandbox
+securityrs.com,Security Risk Solutions Inc.,any,ops,,IZ Gateway ops team - all environments
+ehealthsign.com,e-HealthSign LLC,any,ops,,IZ Gateway ops team - all environments
+IZGTesting.ehealthsign.com,e-HealthSign LLC,any,ops,,IZ Gateway ops team - all environments
+onc.envisiontechnology.com,Envision Technology Partners Inc.,exclude,ops,,Envision internal dev/test; ONC name is historical artifact
+clinics-sit.olympus-tst.com,Centers for Disease Control and Prevention,onboarding,sender,vams,VAMS SIT environment cert
+tyoung.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+mstankiewicz.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+pcahill.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+amoody.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+cicd.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,CI/CD pipeline cert
+weckels.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert (Bill Eckels)
+ppatel.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+kboone.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert (Keith Boone)
+akanuri.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+ebrock.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+bwilliams.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
+izgateway.stchealthops.com,STC Health LLC,production,jurisdiction,,STC shared cert - maps to all 17 STChealth jurisdictions
+izgateway2.stchealthops.com,STC Health LLC,production,jurisdiction,,STC second shared cert
+epicenter.stchome.com,STC Health LLC,production,jurisdiction,,STC third cert
+njiis-stage.doh.nj.gov,Department of Health State of New Jersey,onboarding,jurisdiction,nj,
+hl-iispia-ha-e.njdoh.net,Department of Health State of New Jersey,production,jurisdiction,nj,
+soa.alertiis.org,Oregon ALERT IIS,production,jurisdiction,or,
+soa-test.alertiis.org,Oregon ALERT IIS,onboarding,jurisdiction,or,
+dpprod1.health.ny.gov,New York State Department of Health,production,jurisdiction,ny_vxu,
+soa4.health.ny.gov,New York State Department of Health,production,jurisdiction,ny_vxu,
+test.ndiis.org,Blue Cross Blue Shield of North Dakota,onboarding,jurisdiction,nd,BCBS operates ND IIS (NDIIS)
+prod.ndiis.org,Blue Cross Blue Shield of North Dakota,production,jurisdiction,nd,BCBS operates ND IIS (NDIIS)
+cdc-izg-onboarding-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health,onboarding,jurisdiction,ri,
+cdc-izg-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health,production,jurisdiction,ri,
+miic-jboss-test.web.health.state.mn.us,Minnesota Department of Health,onboarding,jurisdiction,mn,
+state.mn.us,Minnesota Department of Health,production,jurisdiction,mn,
+nesiis-dhhs-prod.ne.gov,DHHS Nebraska,production,jurisdiction,ne,
+testnesiis-dhhs-test.ne.gov,DHHS Nebraska,onboarding,jurisdiction,ne,
+izg-onboarding.immunize.nyc,New York City Department of Health,onboarding,jurisdiction,nyc,
+izg.immunize.nyc,New York City Department of Health,production,jurisdiction,nyc,
+www.mdimmunet.org,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene,production,jurisdiction,md,
+immutest.health.maryland.gov,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene,onboarding,jurisdiction,md,
+immtrac.dshs.texas.gov,Texas Department of State Health Services,production,jurisdiction,tx,
+uat-immtrac.dshs.state.tx.us,Texas Department of State Health Services,onboarding,jurisdiction,tx,
+icarehl7.dph.illinois.gov,Illinois Department of Public Health,production,jurisdiction,il,
+icarehl7test.dph.illinois.gov,Illinois Department of Public Health,onboarding,jurisdiction,il,
+cair.cdph.ca.gov,California Immunization Registry,production,jurisdiction,ca,
+cairstaging.cdph.ca.gov,California Immunization Registry,onboarding,jurisdiction,ca,
+integrationengine.mihin.org,Michigan Health Information Network Shared Services,production,jurisdiction,mi,
+integrationengine-preprod.mihin.org,Michigan Health Information Network Shared Services,onboarding,jurisdiction,mi,
+ncir2.ncdhhs.gov,North Carolina Department of Health and Human Services,production,jurisdiction,nc,
+ncir2-uat.ncdhhs.gov,North Carolina Department of Health and Human Services,onboarding,jurisdiction,nc,
+miis.massimmunize.org,Massachusetts Department of Public Health,production,jurisdiction,ma,
+miis-cert.massimmunize.org,Massachusetts Department of Public Health,production,jurisdiction,ma,Second production cert
+viirs.optimoz.com,Optimoz Inc.,production,jurisdiction,vi,US Virgin Islands IIS operated by Optimoz
+hco.optimoz.com,Optimoz Inc.,production,jurisdiction,vi,US Virgin Islands IIS operated by Optimoz
+dhswir.org,Wisconsin Department of Health Services,production,jurisdiction,wi,
+training.dhswir.org,Wisconsin Department of Health Services,onboarding,jurisdiction,wi,Training environment
+flshotsizgateway.flshots.com,Florida Department of Health,production,jurisdiction,fl,
+flshotsizgatewaydev.flshots.com,Florida Department of Health,onboarding,jurisdiction,fl,
+iris.dhw.idaho.gov,Idaho Department of Health and Welfare,production,jurisdiction,id,
+irisdev.dhw.idaho.gov,Idaho Department of Health and Welfare,onboarding,jurisdiction,id,
+usiisonboarding.utah.gov,Utah Department of Health and Human Services,onboarding,jurisdiction,ut,
+usiisapps.utah.gov,Utah Department of Health and Human Services,production,jurisdiction,ut,
+immpact.maine.gov,Maine Immunization Information System,production,jurisdiction,me,
+medev.ir.hhs-ctp.net,Maine Immunization Information System,onboarding,jurisdiction,me,
+PA-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,pa,
+PA-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,pa,
+AR-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ar,
+AR-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ar,
+AS-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,as,
+AS-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,as,
+CNMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,mp,
+CNMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,mp,
+CO-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,co,
+CO-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,co,
+CT-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ct,
+CT-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ct,
+DE-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,de,
+DE-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,de,
+FSM-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,fm,
+FSM-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,fm,
+Guam-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,gu,
+Guam-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,gu,
+KS-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ks,
+KS-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ks,
+KY-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ky,
+KY-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ky,
+MO-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,mo,
+MO-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,mo,
+NV-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,nv,
+NV-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,nv,
+NH-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,nh,
+NH-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,nh,
+NM-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,nm,
+NM-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,nm,
+OK-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ok,
+OK-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ok,
+Palau-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,pw,
+Palau-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,pw,
+Philly-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,ph,
+Philly-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ph,
+RMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,mh,
+RMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,mh,
+SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,sc,
+SC-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,sc,
+riise.cdc.gov,Division of Global Migration Health (DGMH),production,sender,riise,RIISE CDC/EDN program
+riisetest.cdc.gov,Division of Global Migration Health (DGMH),onboarding,sender,riise,RIISE test cert
+integration.vams.cdc.gov,Centers for Disease Control and Prevention,production,sender,vams,VAMS production cert
+vac10accessgwprd01.va.gov,Veterans Data Integration and Federation Enterprise Platform,production,sender,VHA,VA VistA production
+vac10accessgwsqa01.va.gov,Veterans Data Integration and Federation Enterprise Platform,onboarding,sender,VHA,VA VistA SQA/onboarding
+cernerspaces.com,Cerner Corporation,production,sender,VHA,VA Oracle Health (Cerner) production
+preprodcernerspaces.com,Cerner Corporation,onboarding,sender,VHA,VA Oracle Health (Cerner) non-prod
+docstation.co,DocStation Inc.,any,sender,docstation,Currently permitted in both environments - JWT tokens will restrict to one environment per cert
+fdlrez.com,Fond du lac Human Services,production,sender,fond-du-lac,
+davita.com,DaVita Inc,production,sender,davita,
+test.davita.com,DaVita Inc,onboarding,sender,davita,
+azova.com,Azova Inc.,production,sender,azova,
+staging.azova.com,Azova Inc.,onboarding,sender,azova,
+prod.mayo.qvera.com,Qvera LLC.,production,sender,mayo,Mayo Clinic (non-jurisdiction PROVIDER sender) via Qvera integration engine
+test.mayo.qvera.com,Qvera LLC.,onboarding,sender,mayo,Mayo Clinic (non-jurisdiction PROVIDER sender) via Qvera integration engine
+dockethealth.com,DOCKET HEALTH INC.,production,sender,docket,
+beta.dockethealth.com,DOCKET HEALTH INC.,onboarding,sender,docket,
+ehealthexchange.org,Healtheway Inc.,onboarding,sender,ehealthexchange,eHealth Exchange QHIN pilot - onboarding only; Nevada only
+iris-prod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,production,sender,fresenius,
+iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,onboarding,sender,fresenius,prod-izgateway.adph.state.al.us,Alabama Department of Public Health,production,jurisdiction,al,
+test-izgateway.adph.state.al.us,Alabama Department of Public Health,onboarding,jurisdiction,al,

@@ -32,32 +32,90 @@ ticket: IGDD-3258
 ## Purpose
 
 Specifies the required outcome of seeding Sender entity records in DynamoDB so that
-each organization currently sending messages via IZ Gateway — including non-jurisdiction
-senders such as commercial and federal entities — is represented with accurate
-`useTypes` and identity information before the JWT API Token feature is enabled.
+each organization currently sending messages via IZ Gateway is represented with accurate
+`useTypes` before the JWT API Token feature is enabled.
+
+There are two categories of sender:
+
+1. **Jurisdiction IIS senders** — public health IIS systems that participate in
+   IIS-to-IIS data exchange. These are already Jurisdiction records in DynamoDB;
+   the migration adds `useTypes: PUBLIC_HEALTH` to those records. Every jurisdiction
+   with `IIS to IIS Data Exchange = true` in the input data is in this category.
+
+2. **Non-jurisdiction senders** — commercial, federal, and consumer-access organizations
+   (e.g., VHA, Mayo Clinic, Docket, eHealth Exchange) that are not public health IIS
+   systems. These require new Jurisdiction table records with only `useTypes` set
+   (no `allowedUseTypes`, no `prefix`).
 
 ## Input Data
 
-The set of non-jurisdiction Sender organizations is derived from the **"List of Live
-Pro to IIS Data Exchange"** column in the Salesforce Live Data Exchange export
-(`Live Data Exchange-2026-08-10-11-17-22.xlsx`). The canonical sender list with
-`useTypes` is captured in:
+**Jurisdiction IIS senders** are identified from the authoritative Salesforce report
+(same source as jurisdiction-entities): every jurisdiction with `IIS to IIS Data
+Exchange = true` SHALL have `useTypes: PUBLIC_HEALTH` added to its existing Jurisdiction
+record. Sub-state entries flagged SKIP in `jurisdiction-allowed-use-types.csv` (Chicago,
+Houston, San Antonio, LA County, Maricopa County) are excluded -- they use their parent
+state's IIS infrastructure and do not have separate records.
+
+**Non-jurisdiction senders** are derived from the **"List of Live Pro to IIS Data
+Exchange"** column in the same export. The canonical sender list with `useTypes` is:
 
 **`openspec/changes/api-key-data-migration/sender-organizations.csv`**
 
 **Consolidation rules applied:**
 - `Veterans Administration (VistA)`, `Veterans Administration (Oracle Health)`, and
-  `Veterans Administration` are three Salesforce name variants for the same organization.
-  They SHALL be consolidated into **one Sender record**. The two sending infrastructures
-  (VistA and Oracle Health/Cerner) will produce multiple MSH identities on that single record.
+  `Veterans Administration` are three Salesforce name variants for one organization
+  (sender_id: `VHA`). They SHALL produce one Sender record.
 - `Department of Defense (DOD)` and the historical name `Department of War (DOW)` refer
-  to the same entity and SHALL produce one Sender record.
+  to the same entity (sender_id: `DOD`) and SHALL produce one Sender record.
 
-This yields **10 unique Sender records**, all with `useTypes: PROVIDER`.
+This yields **15 unique non-jurisdiction Sender records**:
+- 10 x `PROVIDER` (VHA, RIISE, DOD, VAMS, Mayo Clinic, DaVita, Fresenius, AZOVA, DocStation, Fond du Lac)
+- 1 x `PATIENT` (Docket)
+- 1 x `PUBLIC_HEALTH` (eHealth Exchange, pilot scope)
+- 3 x `PUBLIC_HEALTH|PROVIDER|PATIENT` (Security Risk Solutions, e-HealthSign, Audacious Inquiry operators)
+**eHealth Exchange (pilot):** eHealth Exchange is a QHIN currently in onboarding-only
+pilot. Its `useTypes` is `PUBLIC_HEALTH` only for this migration. It is permitted to
+send only to Nevada. Full `useTypes` (`PUBLIC_HEALTH|PROVIDER|PATIENT`) is planned
+post-pilot but is out of scope here.
 
-MSH-3/MSH-4 identity values for each sender are not available from Salesforce and must
-be collected separately from Elasticsearch message history before the sender-entities
-migration can be executed.
+Note: MSH-3/MSH-4 message header values are used by the Hub for inbound message routing
+(mapping a message to a destination), not for access control. Access control is determined
+entirely by TLS certificate identity (DNS common name). MSH identity data is therefore
+not required for this migration.
+
+## Certificate Identity and Environment Mapping
+
+Sender DNS identities are derived from the **DigiCert issued certificate list**, which
+is the definitive source for certificates permitted to connect to IZ Gateway. The
+following rules govern how certificate common names map to environments and senders:
+
+- A certificate whose common name contains `test` or `UAT` (case-insensitive) is
+  permitted in the **onboarding** environment only.
+- A certificate whose common name contains `prod` (case-insensitive) is permitted in
+  the **production** environment only.
+- A certificate matching `*.testing.izgateway.org` is permitted in **any** environment
+  (production, onboarding, and all dev/test environments). These are issued to IZ
+  Gateway operators and Tier 3 technical staff.
+- Certificates matching *.phiz-project.org are IZ Gateway's own certificates in the
+  APHL environment and represent the Hub itself, NOT a sender or jurisdiction. These SHALL
+  be excluded from AllowedUser record generation entirely.
+- Certificates with names that do not match any of the above patterns require manual
+  resolution by ops to determine the permitted environment.
+- The certificate expiry date SHALL be used as the `validUntil` value on the
+  corresponding AllowedUser records generated during the access-control migration.
+
+**STChealth shared certificate — known limitation:** STChealth manages 17 jurisdictions
+that share a single certificate for sending to IZ Gateway. This works under the current
+X.509 mutual-TLS model (one cert, many destinations), but is incompatible with JWT API
+Tokens (one certificate identity maps to one Sender record; routing to multiple
+jurisdiction destinations from one cert is not supported). These 17 jurisdictions
+cannot use JWT tokens until each obtains its own individual certificate. This
+limitation is out of scope for this migration and is documented here for future
+planning.
+
+The 17 STChealth-managed jurisdictions are: Wyoming, Alaska, Maricopa County (AZ),
+South Dakota, Michigan, Washington, West Virginia, Puerto Rico, Montana, Mississippi,
+Tennessee, Ohio, Arizona, Louisiana, Indiana, District of Columbia, Virginia.
 
 ## ADDED Requirements
 
@@ -88,24 +146,6 @@ exist in the table (IDs are never reused across the shared namespace).
   input data
 - **AND** the existing record's ID SHALL NOT change
 
-### Requirement: Sender identity information is recorded
-
-Each Sender record SHALL include the identifiers (such as MSH-3 and MSH-4 values from
-HL7 message headers) that the Sender currently uses when submitting messages, as
-collected from Elasticsearch message history provided in the input data.
-
-#### Scenario: Sender with known MSH identifiers
-
-- **WHEN** the migration runs and the input data includes MSH-3/MSH-4 values for a
-  sender
-- **THEN** those identity values SHALL be recorded on the Sender's record in DynamoDB
-
-#### Scenario: Sender with no MSH identifiers in input data
-
-- **WHEN** the migration runs and the input data does not include MSH identifiers for
-  a sender
-- **THEN** the Sender record SHALL be created or updated without identity values
-- **AND** the migration SHALL note the missing identity in its output report
 
 ### Requirement: Migration is idempotent
 

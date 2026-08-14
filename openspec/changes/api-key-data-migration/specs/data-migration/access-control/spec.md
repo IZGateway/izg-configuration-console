@@ -61,6 +61,12 @@ for this migration; they will be addressed separately when that data is availabl
 is a separate concern and is not addressed by this migration; those sender organizations
 are covered by the sender-entities capability.
 
+**CDC/DEX reporting out of scope:** The `dex` endpoint (CDC data reporting) represents
+a separate use case (`IIS to CDC Data Reporting`) outside the three canonical use types
+(`PATIENT`, `PROVIDER`, `PUBLIC_HEALTH`). AllowedUser records for jurisdiction-to-CDC
+reporting are **out of scope** for this migration. No `AllowedUser` records SHALL be
+generated with `dex` as the destination.
+
 ## ADDED Requirements
 
 ### Requirement: AllowedUser records reflect current Salesforce onboarding data
