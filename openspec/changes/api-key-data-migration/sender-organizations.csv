@@ -1,0 +1,12 @@
+canonical_name,use_types,salesforce_name_variants,notes
+Veterans Administration,PROVIDER,Veterans Administration (VistA)|Veterans Administration (Oracle Health)|Veterans Administration,Three Salesforce entries represent one organization; VistA and Oracle Health (Cerner) are different sending infrastructures. Expect multiple MSH identities.
+RIISE,PROVIDER,RIISE,CDC/EDN RIISE program
+Department of Defense,PROVIDER,Department of Defense (DOD),Also known historically as Department of War (DOW)
+VAMS,PROVIDER,VAMS,CDC Vaccine Administration Management System
+Mayo Clinic,PROVIDER,Mayo Clinic,
+DaVita Physician Solutions,PROVIDER,DaVita Physician Solutions,
+Fresenius Medical Care,PROVIDER,Fresenius Medical Care,
+AZOVA,PROVIDER,AZOVA,
+DocStation,PROVIDER,DocStation,
+Fond du Lac,PROVIDER,Fond du Lac,Fond du Lac Band of Lake Superior Chippewa tribal health program
+Docket,PATIENT,Docket,Consumer-access sender only; may send to any Jurisdiction whose allowedUseTypes includes PATIENT
