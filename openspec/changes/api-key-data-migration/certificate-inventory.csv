@@ -9,7 +9,7 @@ onboard.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI onbo
 preprod-cc.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Config Console preprod
 preprod.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Hub preprod
 dev.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub dev
-dev.xform.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Hub transform dev
+dev.xform.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Hub transform dev; on production deny list
 uptrends.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Uptime monitoring service
 ehex-xform.prod2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform production
 ehex-xform.onboard2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform onboarding
@@ -32,7 +32,7 @@ ebrock.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 bwilliams.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert
 izgateway.stchealthops.com,STC Health LLC,production,jurisdiction,,STC shared cert - maps to all 17 STChealth jurisdictions
 izgateway2.stchealthops.com,STC Health LLC,production,jurisdiction,,STC second shared cert
-epicenter.stchome.com,STC Health LLC,onboarding,jurisdiction,,STC third cert
+epicenter.stchome.com,STC Health LLC,production,jurisdiction,,STC third cert
 njiis-stage.doh.nj.gov,Department of Health State of New Jersey,onboarding,jurisdiction,nj,
 hl-iispia-ha-e.njdoh.net,Department of Health State of New Jersey,production,jurisdiction,nj,
 soa.alertiis.org,Oregon ALERT IIS,production,jurisdiction,or,
@@ -113,7 +113,7 @@ Philly-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,p
 Philly-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,ph,
 RMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,mh,
 RMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,mh,
-SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,sc,NOTE: despite prod in name this cert cannot access production
+SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,production,jurisdiction,sc,
 SC-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,onboarding,jurisdiction,sc,
 riise.cdc.gov,Division of Global Migration Health (DGMH),production,sender,riise,RIISE CDC/EDN program
 riisetest.cdc.gov,Division of Global Migration Health (DGMH),onboarding,sender,riise,RIISE test cert
@@ -134,7 +134,8 @@ dockethealth.com,DOCKET HEALTH INC.,production,sender,docket,
 beta.dockethealth.com,DOCKET HEALTH INC.,onboarding,sender,docket,
 ehealthexchange.org,Healtheway Inc.,onboarding,sender,ehealthexchange,eHealth Exchange QHIN pilot - onboarding only; Nevada only
 iris-prod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,production,sender,fresenius,
-iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,onboarding,sender,fresenius,prod-izgateway.adph.state.al.us,Alabama Department of Public Health,production,jurisdiction,al,
+iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,onboarding,sender,fresenius,
+prod-izgateway.adph.state.al.us,Alabama Department of Public Health,production,jurisdiction,al,
 test-izgateway.adph.state.al.us,Alabama Department of Public Health,onboarding,jurisdiction,al,
 dev.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Non-production only; not in DigiCert export but explicitly listed as restricted
 test.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Non-production only; not in DigiCert export but explicitly listed as restricted

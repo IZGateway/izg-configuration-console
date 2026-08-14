@@ -95,14 +95,14 @@ following rules govern how certificate common names map to environments and send
   the **production** environment only.
 - A certificate matching `*.testing.izgateway.org` is permitted in **any** environment
   (production, onboarding, and all dev/test environments), with the exception of
-  `cicd.testing.izgateway.org` which is restricted to non-production environments only.
+  `cicd.testing.izgateway.org` which is on the production DenyList (onboarding only).
   These are issued to IZ Gateway operators and Tier 3 technical staff.
-- The following certificates are restricted to **non-production environments only**
-  regardless of any `prod` substring in their common name:
-  `SC-prod.izgateway.envisiontechnology.com`, `epicenter.stchome.com`,
-  `preprod.phiz-project.org`, `preprod-cc.phiz-project.org`,
-  `preprod.xform.phiz-project.org`, `cicd.testing.izgateway.org`,
-  `dev.izgateway.org`, `dev.xform.izgateway.org`, `test.izgateway.org`.
+- The following certificates appear on a production **DenyList** and cannot access
+  the production environment regardless of their common name pattern:
+  `cicd.testing.izgateway.org`, `dev.izgateway.org`, `dev.xform.izgateway.org`,
+  `preprod-cc.phiz-project.org`, `preprod.phiz-project.org`,
+  `preprod.xform.phiz-project.org`, `test.izgateway.org`.
+  These certs are onboarding-only.
 - Certificates matching *.phiz-project.org are IZ Gateway's own certificates in the
   APHL environment and represent the Hub itself, NOT a sender or jurisdiction. These SHALL
   be excluded from AllowedUser record generation entirely.
