@@ -3,7 +3,7 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
-  - date: '2026-08-15T03:59:41.529Z'
+  - date: '2026-08-15T04:27:18.658Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -22,7 +22,7 @@ updated:
       Phase 2 commit list to reflect JSON files instead of .sh; Update Phase 3
       execution to use JSON file loop for jurisdiction updates; Update README
       task to mention individual JSON file re-run; Correct _test destId
-      verification check in Phase 2
+      verification check in Phase 2; Mark task 1.1 complete
 created:
   date: '2026-08-14T06:34:51.000Z'
   user: Keith W. Boone
@@ -31,7 +31,7 @@ created:
 
 ## Phase 1: Generator Script (`migrate/generate-batches.js`)
 
-- [ ] 1.1 Create `migrate/` directory and `generate-batches.js` scaffold
+- [x] 1.1 Create `migrate/` directory and `generate-batches.js` scaffold
   - Entry point reads all input CSVs from the change directory
   - Accepts `--env production` or `--env onboarding` flag (default: both)
   - Writes output to `migrate/batches/production/` and `migrate/batches/onboarding/`
