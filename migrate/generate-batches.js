@@ -22,9 +22,9 @@
 const fs   = require('fs');
 const path = require('path');
 /**
- * Minimal CSV parser — handles quoted fields with embedded commas and newlines.
- * Avoids the csv-parse dependency which conflicts with the project's GitHub
- * package registry configuration.
+ * Minimal CSV parser — handles quoted fields with embedded commas.
+ * Used in place of csv-parse to keep this migration script self-contained
+ * with no dependencies beyond Node.js builtins.
  */
 function parse(content, { columns = false } = {}) {
   const rows = [];
