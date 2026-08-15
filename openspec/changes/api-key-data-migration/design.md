@@ -1,7 +1,7 @@
 ---
 schema_version: '1.0'
 updated:
-  - date: '2026-08-15T02:59:29.484Z'
+  - date: '2026-08-15T03:59:36.061Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -14,7 +14,8 @@ updated:
     summary: >-
       Update design to reference JSON files for jurisdiction updates; Fix
       AllowedUser sortKey example to use onboarding cert/domain; Fix operational
-      note to reflect environment-specific scoping of AllowedUser records
+      note to reflect environment-specific scoping of AllowedUser records;
+      Correct _test destId policy: onboarding AllowedUser records ARE generated
 created:
   date: '2026-08-14T06:23:29.000Z'
   user: Keith W. Boone
@@ -312,7 +313,8 @@ Any sender permitted to reach `ny_vxu` is also permitted to reach `ny_qbp`.
 AllowedUser records for `ny_qbp` are generated for onboarding batches only.
 
 The `_test` destIds (`ny_test`, `mi_test`, `nc_test`) are onboarding-only test
-endpoints and do NOT receive AllowedUser records from this migration.
+endpoints. They DO receive AllowedUser records, but only in the onboarding
+environment batch — never in production.
 
 ---
 

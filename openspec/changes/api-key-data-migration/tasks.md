@@ -3,7 +3,7 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
-  - date: '2026-08-14T13:34:12.848Z'
+  - date: '2026-08-15T03:59:41.529Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -21,7 +21,8 @@ updated:
       jurisdiction-updates.sh with per-record JSON files for update-item; Update
       Phase 2 commit list to reflect JSON files instead of .sh; Update Phase 3
       execution to use JSON file loop for jurisdiction updates; Update README
-      task to mention individual JSON file re-run
+      task to mention individual JSON file re-run; Correct _test destId
+      verification check in Phase 2
 created:
   date: '2026-08-14T06:34:51.000Z'
   user: Keith W. Boone
@@ -143,7 +144,8 @@ created:
     - IIS sender → Maryland uses `md`; provider sender → Maryland uses `md_c`
     - IIS sender → Virginia uses `va_s`; provider sender → Virginia uses `va`
     - New York `ny_vxu` present in both env batches; `ny_qbp` in onboarding only
-    - No `ny_test`, `mi_test`, or `nc_test` entries in any batch file
+    - `ny_test`, `mi_test`, `nc_test` entries present in onboarding batches only;
+      absent from production batches
   - Verify ApiKeyDomain batch files present for both environments
   - Confirm no STC Health shared cert domains appear in ApiKeyDomain batches
   - Confirm `any`-environment certs appear in both production and onboarding batches
