@@ -6,17 +6,20 @@
  *
  * Generates DynamoDB batch files for the api-key-data-migration (IGDD-3258).
  *
- * Usage:
- *   node migrate/generate-batches.js [--env production|onboarding]
+ * Usage (run from the change directory):
+ *   node openspec/changes/api-key-data-migration/generate-batches.js [--env production|onboarding]
  *
- * Outputs:
- *   migrate/batches/prefix-corrections.json          (env-agnostic BatchWriteItem)
- *   migrate/batches/jurisdiction-updates/{id}.json   (per-jurisdiction UpdateItem)
- *   migrate/batches/{env}/senders-batch-NNN.json     (BatchWriteItem PutRequests)
- *   migrate/batches/{env}/iis-allowedusers-batch-NNN.json
- *   migrate/batches/{env}/provider-allowedusers-batch-NNN.json
- *   migrate/batches/{env}/apikey-domains-batch-NNN.json
- *   migrate/unresolved.txt                           (rows that could not be resolved)
+ * Or from the change directory itself:
+ *   node generate-batches.js [--env production|onboarding]
+ *
+ * Outputs (relative to the change directory):
+ *   batches/prefix-corrections.json
+ *   batches/jurisdiction-updates/{id}.json
+ *   batches/{env}/senders-batch-NNN.json
+ *   batches/{env}/iis-allowedusers-batch-NNN.json
+ *   batches/{env}/provider-allowedusers-batch-NNN.json
+ *   batches/{env}/apikey-domains-batch-NNN.json
+ *   unresolved.txt
  */
 
 const fs   = require('fs');
@@ -110,7 +113,7 @@ const STC_SHARED_CERTS = new Set([
 // Paths
 // ---------------------------------------------------------------------------
 
-const CHANGE_DIR  = path.join(__dirname, '..', 'openspec', 'changes', 'api-key-data-migration');
+const CHANGE_DIR  = __dirname;
 const BATCHES_DIR = path.join(__dirname, 'batches');
 const OUTPUT_DIRS = {
   production:          path.join(BATCHES_DIR, 'production'),

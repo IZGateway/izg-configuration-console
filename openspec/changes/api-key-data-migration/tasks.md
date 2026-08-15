@@ -3,7 +3,7 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
-  - date: '2026-08-15T04:27:18.658Z'
+  - date: '2026-08-15T05:22:54.597Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -22,19 +22,21 @@ updated:
       Phase 2 commit list to reflect JSON files instead of .sh; Update Phase 3
       execution to use JSON file loop for jurisdiction updates; Update README
       task to mention individual JSON file re-run; Correct _test destId
-      verification check in Phase 2; Mark task 1.1 complete
+      verification check in Phase 2; Mark task 1.1 complete; Move generator
+      script to change directory, update task 1.1
 created:
   date: '2026-08-14T06:34:51.000Z'
   user: Keith W. Boone
 ---
 # Tasks — API Key Data Migration
 
-## Phase 1: Generator Script (`migrate/generate-batches.js`)
+## Phase 1: Generator Script (`generate-batches.js`)
 
-- [x] 1.1 Create `migrate/` directory and `generate-batches.js` scaffold
-  - Entry point reads all input CSVs from the change directory
+- [x] 1.1 Create `generate-batches.js` in the change directory
+  - Lives alongside the input CSVs in `openspec/changes/api-key-data-migration/`
+  - Run with `node generate-batches.js` — no npm install, no application dependencies
   - Accepts `--env production` or `--env onboarding` flag (default: both)
-  - Writes output to `migrate/batches/production/` and `migrate/batches/onboarding/`
+  - Writes output to `batches/production/` and `batches/onboarding/` under the change directory
 
 - [ ] 1.2 Implement jurisdiction ID resolution map
   - Load `jurisdiction-table-current.csv`
@@ -51,14 +53,14 @@ created:
     set `useTypes: PUBLIC_HEALTH` in the same expression
   - Texas: must NOT receive `useTypes` (not an IIS-to-IIS sender)
   - Write one JSON file per jurisdiction to
-    `migrate/batches/jurisdiction-updates/{jurisdictionId}.json`
+    `batches/jurisdiction-updates/{jurisdictionId}.json`
     (env-agnostic — same table in both environments)
   - CCUAT (id=64): generate a `PutRequest` entry in a separate batch file
     (new record, not an update)
 
 - [ ] 1.3a Generate prefix corrections as a separate batch file
   - The three Jurisdiction records with incorrect prefixes SHALL be written as a
-    dedicated batch file `migrate/batches/prefix-corrections.json` (applies to
+    dedicated batch file `batches/prefix-corrections.json` (applies to
     both environments — same table)
   - Contents: `UpdateItem` for Hawaii (id=14, prefix=hi), Idaho (id=16, prefix=id),
     Nebraska (id=32, prefix=ne)
@@ -70,7 +72,7 @@ created:
   - For each of the 15 non-jurisdiction sender rows: produce a `PutRequest` item with
     `entityType=Jurisdiction`, `sortKey={sender_id}`, `jurisdictionId={sender_id}`,
     `jurisdictionName={canonical_name}`, `useTypes` as String Set
-  - Batch into groups of 25; write to `migrate/batches/{env}/senders-batch-NNN.json`
+  - Batch into groups of 25; write to `batches/{env}/senders-batch-NNN.json`
     (same content for both environments — sender records are environment-agnostic)
 
 - [ ] 1.5 Implement AllowedUser `PutRequest` batch generation — IIS pairs
@@ -85,7 +87,7 @@ created:
   - Apply production DenyList: exclude 7 certs from production batches
   - Apply environment split from cert `environments` column
   - Set `validUntil` from cert expiry date in inventory
-  - Write to `migrate/batches/{env}/iis-allowedusers-batch-NNN.json`
+  - Write to `batches/{env}/iis-allowedusers-batch-NNN.json`
 
 - [ ] 1.6 Implement AllowedUser `PutRequest` batch generation — Provider pairs
   - Load `provider-access-control-pairs.csv`
@@ -93,7 +95,7 @@ created:
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
   - `receiver_destid` values in the CSV already encode the correct endpoint
   - Apply same environment split and DenyList logic as 1.5
-  - Write to `migrate/batches/{env}/provider-allowedusers-batch-NNN.json`
+  - Write to `batches/{env}/provider-allowedusers-batch-NNN.json`
 
 - [ ] 1.8 Add `validUntil` column to `certificate-inventory.csv`
   - Pull cert expiry dates from DigiCert for all active certs in the inventory
@@ -121,7 +123,7 @@ created:
     - `authExpiresAt` = `validUntil` from CSV, or migration timestamp + 1 year if blank
     - `requestedBy = migration`
   - Batch into groups of 25; write to
-    `migrate/batches/{env}/apikey-domains-batch-NNN.json`
+    `batches/{env}/apikey-domains-batch-NNN.json`
 
 - [ ] 1.7 Implement execution report output
   - After generating all output, print summary:
@@ -132,13 +134,13 @@ created:
     - Count of ApiKeyDomain PutRequest records (production / onboarding separately)
     - List of any unresolved input rows (could not map to jurisdictionId, cert, or senderId)
     - List of STC Health shared cert exclusions with explanation
-  - Write unresolved rows to `migrate/unresolved.txt` for ops review
+  - Write unresolved rows to `unresolved.txt` for ops review
 
 ## Phase 2: Pre-generated Batch Files
 
-- [ ] 2.1 Run `node migrate/generate-batches.js` and review output
+- [ ] 2.1 Run `node generate-batches.js` and review output
   - Verify counts match estimates in `design.md` (~37 batch files per environment)
-  - Review `migrate/unresolved.txt` — resolve or document any unresolved entries
+  - Review `unresolved.txt` — resolve or document any unresolved entries
   - Spot-check 3–5 batch files against source CSVs for correctness
   - Verify split-endpoint routing in output:
     - IIS sender → Maryland uses `md`; provider sender → Maryland uses `md_c`
@@ -151,14 +153,14 @@ created:
   - Confirm `any`-environment certs appear in both production and onboarding batches
 
 - [ ] 2.2 Commit pre-generated batch files to branch
-  - `migrate/batches/production/` — all production batch JSON files
-  - `migrate/batches/onboarding/` — all onboarding batch JSON files
-  - `migrate/batches/jurisdiction-updates/` — one JSON file per jurisdiction
-  - `migrate/batches/prefix-corrections.json` — prefix correction batch
+  - `batches/production/` — all production batch JSON files
+  - `batches/onboarding/` — all onboarding batch JSON files
+  - `batches/jurisdiction-updates/` — one JSON file per jurisdiction
+  - `batches/prefix-corrections.json` — prefix correction batch
 
-## Phase 3: Startup Migration Script (`migrate/run-migration.sh`)
+## Phase 3: Startup Migration Script (`run-migration.sh`)
 
-- [ ] 3.1 Write `migrate/run-migration.sh` — Event lock acquisition
+- [ ] 3.1 Write `run-migration.sh` — Event lock acquisition
   - Attempt `PutItem` on `Event#Migration#api-key-data-migration` with
     `ConditionExpression: attribute_not_exists(sortKey)`
   - Write: `entityType=Event`, `name=api-key-data-migration`, `started=<ISO>`,
@@ -173,19 +175,19 @@ created:
 
 - [ ] 3.2 Write migration execution block in `run-migration.sh`
   - Enforce execution order per hub-safety spec:
-    1. Run `migrate/batches/prefix-corrections.json` (prefix fixes, env-agnostic)
-    2. Run `migrate/batches/jurisdiction-updates/*.json` files via
+    1. Run `batches/prefix-corrections.json` (prefix fixes, env-agnostic)
+    2. Run `batches/jurisdiction-updates/*.json` files via
        `for f in ...; do aws dynamodb update-item --cli-input-json file://$f; done`
-    3. Run `migrate/batches/${ENV}/senders-*.json` batches
-    4. Run `migrate/batches/${ENV}/iis-allowedusers-*.json` batches
-    5. Run `migrate/batches/${ENV}/provider-allowedusers-*.json` batches
-    6. Run `migrate/batches/${ENV}/apikey-domains-*.json` batches
+    3. Run `batches/${ENV}/senders-*.json` batches
+    4. Run `batches/${ENV}/iis-allowedusers-*.json` batches
+    5. Run `batches/${ENV}/provider-allowedusers-*.json` batches
+    6. Run `batches/${ENV}/apikey-domains-*.json` batches
   - Abort entire migration on first failure in any phase; do NOT proceed to AllowedUser
     batches if Jurisdiction or Sender phase fails
   - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
   - On full success: `UpdateItem` sets `status=COMPLETED`, `completed=<ISO>`, exit 0
 
-- [ ] 3.3 Write `migrate/README.md` — manual fallback execution instructions
+- [ ] 3.3 Write `README.md` — manual fallback execution instructions
   - How to run `run-migration.sh` manually against onboarding or production
   - How to check Event lock record status with `aws dynamodb get-item`
   - How to reset a stuck FAILED or IN_PROGRESS lock for a retry
@@ -197,7 +199,7 @@ created:
 - [ ] 4.1 Add `aws-cli` to the `apk add` line in the Dockerfile runner stage
   - Verify `aws` binary is available in the container after build
 
-- [ ] 4.2 Copy `migrate/` directory into the runner image
+- [ ] 4.2 Copy migration directory into the runner image
   - Add `COPY --from=builder /app/migrate ./migrate` to Dockerfile runner stage
   - Make `run-migration.sh` and `jurisdiction-updates.sh` executable
 
