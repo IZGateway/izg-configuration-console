@@ -1,7 +1,7 @@
 ---
 schema_version: '1.0'
 updated:
-  - date: '2026-08-14T13:34:23.560Z'
+  - date: '2026-08-15T02:59:29.484Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -11,7 +11,10 @@ updated:
       version: '4.6'
     prompt_uri: >-
       prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
-    summary: Update design to reference JSON files for jurisdiction updates
+    summary: >-
+      Update design to reference JSON files for jurisdiction updates; Fix
+      AllowedUser sortKey example to use onboarding cert/domain; Fix operational
+      note to reflect environment-specific scoping of AllowedUser records
 created:
   date: '2026-08-14T06:23:29.000Z'
   user: Keith W. Boone
@@ -113,7 +116,7 @@ Each batch file contains up to 25 `PutRequest` items in the format required by
       "PutRequest": {
         "Item": {
           "entityType": { "S": "AllowedUser" },
-          "sortKey":    { "S": "production#az#azova.com" },
+          "sortKey":    { "S": "onboarding#az#staging.azova.com" },
           ...
         }
       }
@@ -267,10 +270,12 @@ AllowedUser records activate new sender permissions:
 `run-migration.sh` MUST enforce this sequence. AllowedUser batches MUST NOT run if
 either of the preceding phases fails.
 
-**Operational note:** AllowedUser records scoped to `production#...` sort keys take
-effect on the **next Hub cache refresh** after they are written. Writing these records
-to the live production table is an immediate access control change. Ops should be aware
-that once Phase 3 runs against production, the new sender principals can connect.
+**Operational note:** AllowedUser records are scoped to the environment prefix
+(`production#...` or `onboarding#...`) determined by the cert's `environment`
+field in `certificate-inventory.csv`. Records with `environment = any` produce
+entries in both environment batch sets. Writing these records to the live
+production table is an immediate access control change — ops should be aware that
+once the production AllowedUser batches run, the new sender principals can connect.
 
 ---
 
