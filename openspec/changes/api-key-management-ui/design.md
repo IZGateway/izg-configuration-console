@@ -68,46 +68,38 @@ in `verify-domain/index.ts`; default disabled, `logger.warn` emitted when active
 documented in `src/.env.template`. `NODE_ENV` alone is not a reliable production guard in
 every deploy config, so the explicit opt-in is required.
 
-### D3 — `useTypes` stored as a DynamoDB List, not a String Set (SS)
+### D3 — `useTypes` stored as a DynamoDB String Set (SS)  *(REVISED — aligned to IGDD-3140)*
 
-**Decision:** persist `ApiKeyCredential.useTypes` (and, later, `Jurisdiction.useTypes`/
-`allowedUseTypes`) as a deduped **List**. The lib-dynamodb v3 DocumentClient returns Sets
-as native JS `Set`s (no unmarshall-to-array option), and the IGDD-3140 design ER diagram
-itself shows `+List useTypes`; a List avoids Set round-trip footguns and — critically —
-can be **empty**, which a String Set cannot: an empty `allowedUseTypes` is the
-DENY-ALL policy state, which a Set-typed attribute could never represent. Reads use
+**Decision:** persist `ApiKeyCredential.useTypes` (and `environments`) as a deduped
+**DynamoDB String Set (`SS`)**, matching the canonical IGDD-3140 storage decision. In the
+SDK v3 `DynamoDBDocumentClient`, that means passing a native JS `Set` (`new Set(params.useTypes)`)
+— the marshaller emits `SS` directly; there is no `docClient.createSet` in v3 (that's an
+AWS SDK v2 DocumentClient method and does not exist on this client — an earlier autofix
+attempt called it and crashed every `POST /api/apikeys` with `TypeError:
+dynamodDbDocClient.createSet is not a function` before this fix). On read, both attributes
+are unmarshalled via `Array.from(item.X as Iterable<string>)`, which handles a native `Set`
+or a legacy `Array` alike, and `useTypes` values are further validated via
 `filter(isValidUseType)`. `useTypes` is a server-side property (Hub reads it by `jti`),
-**not** a JWT claim.
+**not** a JWT claim. `SS` is safe for both attributes because callers guarantee non-empty:
+`useTypes` is required non-empty at create (§5.3), and `environments` is now guarded the
+same way — `POST /api/apikeys` already rejected empty `environments`, and `/renew` now
+returns 409 rather than passing an existing credential's empty `environments` straight
+through (an empty `SS` is not a legal DynamoDB value; as a List this previously wrote
+silently rather than failing loudly).
 
-> **Reconciling with the Aug 5 OpenSpec alignment pass:** a subsequent commit (Paul
-> Cahill, `c47df5d`, "OpenSpec alignment to IGDD-3140 (source of truth)") rewrote this
-> decision to say `SS` is canonical per IGDD-3140 and reopened task 5.2 as a required
-> List→SS migration. That pass doesn't appear to account for the empty-Set constraint
-> above — DynamoDB's String/Number/Binary Set types cannot be stored empty at all (an
-> empty `SS` fails write validation), so `SS` cannot represent an intentionally-empty
-> `allowedUseTypes` the way `List` can. Kept as **List** for this reason rather than
-> silently reverted; task 5.2 stays `[x]` (shipped as List, deliberately). Worth a direct
-> conversation with Paul / the IGDD-3140 spec owners to confirm whether the deny-all
-> requirement was considered when `SS` was specified there.
+> **Superseded approach:** this branch originally persisted `useTypes` and `environments`
+> as a deduped **List** (the lib-dynamodb v3 DocumentClient returns Sets as native JS
+> `Set`s with no unmarshal-to-array option, and the interim ER diagram showed `+List
+> useTypes`). IGDD-3140 makes `SS` canonical, so the shipped List implementation was
+> migrated to `SS` for these two attributes.
 
-> **Follow-up investigation (2026-08-07):** checked the actual IGDD-3140 spec branch
-> (`origin/IGDD-3140-api-key-management:openspec/changes/api-key-management/design.md`)
-> directly. Its ER diagram does deliberately type these fields `+Set` (distinct from
-> `+List` used elsewhere in the same diagram for `environments`/`principalNames`), and
-> its text confirms "empty `allowedUseTypes` denies everything" is a real, relied-upon
-> behavior — so Paul's SS claim isn't unfounded. However, neither the console nor the
-> seed script currently ever *writes* an empty collection for either field: deny-all is
-> represented today by `allowedUseTypes` being **absent** (`dynamo.ts` reads
-> `item.allowedUseTypes ? ... : undefined`), and `ApiKeyCredential.useTypes` (the field
-> task 5.2 is actually about) is **always non-empty by construction** (`POST
-> /api/apikeys` 400s on empty). So the empty-Set constraint above doesn't strictly block
-> `SS` as the fields are *currently* used — it would only matter if a future workflow
-> needs to explicitly persist an empty set rather than omit the attribute. Two open
-> questions for Paul before treating this as settled either way: (1) will deny-all
-> always mean attribute-absent, or will some future action (e.g., an admin "revoke all
-> use-types") need to write an explicit empty set; (2) does IGDD-3140 require one
-> uniform storage type across these fields, or is a per-field choice acceptable. Decision
-> above (List) stands for now regardless.
+> **Caveat — `Jurisdiction.allowedUseTypes` is not covered by this decision.** IGDD-3140's
+> `SS` decision is about the *credential*-level attributes above. A jurisdiction's
+> `allowedUseTypes` must be able to be **empty** (empty = the DENY-ALL policy state), and a
+> DynamoDB String Set cannot be empty, so that attribute cannot use `SS` as-is. Storage for
+> the jurisdiction-side attribute needs to stay a List (or represent deny-all by attribute
+> absence, which is how the console's read path already treats it); resolve this with the
+> IGDD-3140 owner before migrating anything beyond the two credential attributes above.
 
 ### D4 — Expiry (and JWT `iat`) are stamped at issuance, not at record creation
 

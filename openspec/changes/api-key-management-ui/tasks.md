@@ -78,11 +78,11 @@
 - [x] 5.1 New `src/lib/type/AllowedUseType.ts` — `PATIENT | PROVIDER | PUBLIC_HEALTH`,
       `isValidUseType` guard, `USE_TYPE_LABELS`.
 - [x] 5.2 `ApiKeyCredential.useTypes?: AllowedUseType[]`; persisted as a deduped
-      DynamoDB **List** (not a String Set — an empty List can represent the deny-all
-      policy state, which a Set cannot), read back defensively via `filter(isValidUseType)`.
-      *(The Aug 5 OpenSpec alignment pass, `c47df5d`, argued `SS` is canonical per
-      IGDD-3140 and reopened this item; kept as List per design D3 — `SS` cannot be
-      empty in DynamoDB, which the deny-all `allowedUseTypes` state requires.)*
+      DynamoDB **String Set** (`SS`, via a native JS `Set` — SDK v3 has no
+      `docClient.createSet`), read back defensively via `filter(isValidUseType)`.
+      *(Canonical per IGDD-3140 — see design D3. The deny-all/empty-set concern applies to
+      `Jurisdiction.allowedUseTypes`, not to this attribute, which §5.3 requires to be
+      non-empty.)*
 - [x] 5.3 `POST /api/apikeys` requires a non-empty, enum-valid `useTypes` (400 otherwise);
       renew and re-issue carry it forward.
 - [x] 5.4 Create dialog uses the shared `SearchableMultiSelect` (chips) — matches the
@@ -134,10 +134,13 @@
       via the sort key exactly as stored (no reconstruction), so pre-existing
       `{env}#{jti}` rows still resolve; a Hub-side migration is a separate,
       not-yet-scoped concern if the Hub starts reading exclusively by bare `jti`.
-- [x] 7.2 `env` (string) replaced by **`environments`** (List); admin-only (IZG
-      Operations) multi-environment credential creation, **server-enforced** (a
-      non-admin request for >1 environment is 403'd even with create permission).
-      Reads fall back to the legacy singular `env` attribute for un-migrated rows.
+- [x] 7.2 `env` (string) replaced by **`environments`** (DynamoDB String Set, `SS` —
+      matching `useTypes`, see design D3); admin-only (IZG Operations) multi-environment
+      credential creation, **server-enforced** (a non-admin request for >1 environment is
+      403'd even with create permission). `POST /api/apikeys` already rejected empty
+      `environments`; `/renew` now 409s rather than passing an existing credential's
+      `environments` through empty (an empty `SS` is not a legal DynamoDB value). Reads
+      fall back to the legacy singular `env` attribute for un-migrated rows.
 - [x] 7.3 Renamed `supersedApiKeyCredential` → `supersedeApiKeyCredential` (was a
       misspelling) across the interface, implementation, factory delegate, both test
       files, and the renew route's call site.

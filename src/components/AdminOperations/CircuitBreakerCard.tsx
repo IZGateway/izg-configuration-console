@@ -2,43 +2,75 @@ import * as React from 'react'
 import { Box, Typography, Button, Card, CardContent, Divider } from '@mui/material'
 import ResetCircuitBreakerDialog from './ResetCircuitBreakerDialog'
 import Loader from '../Loader'
+import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
 
 interface CircuitBreakerCardProps {
+  environments: HubEnvironment[]
   onResult: (result: { level: 'success' | 'error'; message: string }) => void
 }
 
-const CircuitBreakerCard = ({ onResult }: CircuitBreakerCardProps) => {
+const getButtonId = (environment: HubEnvironment) =>
+  `reset-${environment.destinationType.toLowerCase()}-circuit-breakers`
+
+const CircuitBreakerCard = ({
+  environments,
+  onResult,
+}: CircuitBreakerCardProps) => {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [selectedEnvironment, setSelectedEnvironment] =
+    React.useState<HubEnvironment | null>(null)
   const [loading, setLoading] = React.useState(false)
 
   const handleReset = async () => {
+    const environment = selectedEnvironment
+
+    if (!environment) {
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch('/api/status/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationTypeId: environment.destinationTypeId,
+        }),
       })
       const data = await res.json()
       if (res.ok) {
         onResult({
           level: 'success',
-          message: 'All circuit breakers were reset.',
+          message: `${environment.label} circuit breakers were reset.`,
         })
       } else {
         onResult({
           level: 'error',
-          message: data.error || 'Failed to reset circuit breakers.',
+          message: `Failed to reset ${environment.label} circuit breakers. ${
+            data.error || 'Please try again.'
+          }`,
         })
       }
     } catch {
       onResult({
         level: 'error',
-        message: 'Failed to reset circuit breakers. Please try again.',
+        message: `Failed to reset ${environment.label} circuit breakers. Please try again.`,
       })
     } finally {
       setLoading(false)
       setConfirmOpen(false)
+      setSelectedEnvironment(null)
     }
+  }
+
+  const openConfirmDialog = (environment: HubEnvironment) => {
+    setSelectedEnvironment(environment)
+    setConfirmOpen(true)
+  }
+
+  const closeConfirmDialog = () => {
+    setConfirmOpen(false)
+    setSelectedEnvironment(null)
   }
 
   return (
@@ -52,35 +84,42 @@ const CircuitBreakerCard = ({ onResult }: CircuitBreakerCardProps) => {
         </Typography>
         <Divider sx={{ my: 2 }} />
         <Typography paragraph>
-          Reset circuit breakers globally to recover from connection failures.
-          When a circuit breaker is thrown, the affected destination becomes
-          unreachable until manually reset. Resetting signals every hub instance
-          across all environments to restore connectivity; the updated status
-          reflects once the operation completes.
+          Reset circuit breakers to recover from connection failures. When a
+          circuit breaker is thrown, the affected destination becomes
+          unreachable until manually reset. Use the controls below to reset the
+          circuit breakers for a connected Hub environment.
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-          <Button
-            id="reset-all-circuit-breakers"
-            variant="contained"
-            color="primary"
-            size="large"
-            disabled={loading}
-            onClick={() => setConfirmOpen(true)}
-            sx={{ borderRadius: 6, textTransform: 'uppercase' }}
-          >
-            Reset All Circuit Breakers
-          </Button>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
+          {environments.map((environment) => (
+            <Button
+              key={environment.destinationTypeId}
+              id={getButtonId(environment)}
+              variant="contained"
+              color="primary"
+              size="large"
+              disabled={loading}
+              onClick={() => openConfirmDialog(environment)}
+              sx={{ borderRadius: 6, textTransform: 'uppercase' }}
+            >
+              Reset {environment.label}
+            </Button>
+          ))}
+          {environments.length === 0 && (
+            <Typography color="text.secondary">
+              No Hub environments are configured for circuit breaker reset.
+            </Typography>
+          )}
         </Box>
         <Loader open={loading} />
       </CardContent>
 
-      {confirmOpen && (
+      {confirmOpen && selectedEnvironment && (
         <ResetCircuitBreakerDialog
           open={confirmOpen}
-          target="all destinations across every Hub environment"
+          target={`the ${selectedEnvironment.label} environment`}
           loading={loading}
           onConfirm={handleReset}
-          onCancel={() => setConfirmOpen(false)}
+          onCancel={closeConfirmDialog}
         />
       )}
     </Card>

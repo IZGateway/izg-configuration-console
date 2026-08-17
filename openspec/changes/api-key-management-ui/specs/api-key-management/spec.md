@@ -151,7 +151,8 @@ environment.
 ### Requirement: Credentials are identified by a bare `jti`, and may span multiple environments
 
 The credential's DynamoDB sort key MUST be the bare credential `jti`, with environment
-membership stored as a list attribute rather than encoded in the key.
+membership stored as an `environments` attribute (a deduped DynamoDB String Set, see
+design D3) rather than encoded in the key.
 
 #### Scenario: New credentials are keyed by bare jti
 
@@ -197,8 +198,7 @@ A credential MUST record one or more submitter Use Types
 
 - **WHEN** `POST /api/apikeys` is called
 - **THEN** it rejects (400) a missing/empty `useTypes` or any value outside the enum
-- **AND** on success stores `useTypes` as a deduped DynamoDB List (see design D3 — a
-  String Set cannot represent the related deny-all `allowedUseTypes` state)
+- **AND** on success stores `useTypes` as a deduped DynamoDB String Set (`SS`)
 
 #### Scenario: Renewal and re-issue preserve Use Types
 

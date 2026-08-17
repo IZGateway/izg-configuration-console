@@ -78,6 +78,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         error: 'The credential being renewed has no DNS domain on record and cannot be renewed',
       })
     }
+    if (!renewedEnvironments.length) {
+      return res.status(409).json({
+        error:
+          'The credential being renewed has no environments on record and cannot be renewed',
+      })
+    }
 
     const newJti = crypto.randomUUID()
     const now = new Date()

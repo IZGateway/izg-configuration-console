@@ -1705,8 +1705,10 @@ class Dynamo implements DbClient {
       sortKey: params.sortKey,
       jti: params.jti,
       jurisdictionId: params.jurisdictionId,
-      // Stored as a plain List (deduped), same rationale as useTypes below.
-      environments: [...new Set(params.environments)],
+      // Stored as a DynamoDB String Set (deduped), same rationale as useTypes
+      // below. Callers guarantee at least one environment — an empty SS is not
+      // a legal DynamoDB value.
+      environments: new Set(params.environments),
       status: params.status,
       createdOn: params.createdOn.toISOString(),
       // Expiry is only stored once the key is issued. A ready_for_validation
@@ -1715,10 +1717,10 @@ class Dynamo implements DbClient {
       createdBy: params.createdBy,
       ...(params.description ? { description: params.description } : {}),
       ...(params.domain ? { domain: params.domain } : {}),
-      // Stored as a plain List (deduped). AllowedUseType[] is the app-side type;
+      // Stored as a DynamoDB String Set (deduped). AllowedUseType[] is the app-side type;
       // the Hub reads this by jti at routing time (it is NOT a JWT claim).
       ...(params.useTypes && params.useTypes.length
-        ? { useTypes: [...new Set(params.useTypes)] }
+        ? { useTypes: new Set(params.useTypes) }
         : {}),
     }
     const command = new PutCommand({

@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios'
 import * as fs from 'fs'
 import path from 'path'
 import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
+import { getDestinationType } from '../desttypehelper'
 
 /**
  * Hub refresh REST path, relative to the hub's `/rest/` base. Signals a hub to
@@ -33,24 +33,19 @@ const getHttpsAgentOptions = () => {
 const deriveHubRestBaseUrl = (statusHistoryUrl: string) =>
   statusHistoryUrl.substring(0, statusHistoryUrl.indexOf('/rest/') + 6)
 
+const getConfiguredHubURLs = () =>
+  new IZGHubStatusHistoryEndpoint(process.env.IZG_STATUS_ENDPOINT_URL || '')
+
 export interface HubRefreshResult {
   attempted: number
   succeeded: number
   failed: number
 }
 
-/**
- * Signals every configured hub to refresh its configuration from the database,
- * across all Hub environments (IGDD-2272 global DB refresh). Mirrors the
- * https/cert handling used by the existing hub refresh + status-history calls.
- */
-export const refreshAllHubs = async (): Promise<HubRefreshResult> => {
-  const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
-    process.env.IZG_STATUS_ENDPOINT_URL || ''
-  )
-  const baseUrls = Array.from(
-    new Set(configuredHubURLs.getIZGHubURLs().map(deriveHubRestBaseUrl))
-  )
+const refreshHubsForBaseUrls = async (
+  baseUrls: string[],
+  metadata?: { destinationTypeId?: number; destinationType?: string }
+): Promise<HubRefreshResult> => {
   const httpsAgent = new https.Agent(getHttpsAgentOptions())
 
   const outcomes = await Promise.allSettled(
@@ -59,6 +54,7 @@ export const refreshAllHubs = async (): Promise<HubRefreshResult> => {
       logger.info('Signaling hub to refresh from database', {
         url,
         operation: 'refresh_database',
+        ...metadata,
       })
       return axios.get(url, { httpsAgent, timeout: 5000 })
     })
@@ -69,6 +65,7 @@ export const refreshAllHubs = async (): Promise<HubRefreshResult> => {
     if (o.status === 'rejected') {
       logger.error('Hub database refresh failed', {
         operation: 'refresh_database',
+        ...metadata,
         errorMessage: o.reason?.message,
         statusCode: axios.isAxiosError(o.reason)
           ? o.reason.response?.status
@@ -82,4 +79,31 @@ export const refreshAllHubs = async (): Promise<HubRefreshResult> => {
     succeeded: outcomes.length - failed.length,
     failed: failed.length,
   }
+}
+
+/**
+ * Signals every configured hub to refresh its configuration from the database,
+ * across all Hub environments (IGDD-2272 global DB refresh). Mirrors the
+ * https/cert handling used by the existing hub refresh + status-history calls.
+ */
+export const refreshAllHubs = async (): Promise<HubRefreshResult> => {
+  const configuredHubURLs = getConfiguredHubURLs()
+  const baseUrls = Array.from(
+    new Set(configuredHubURLs.getIZGHubURLs().map(deriveHubRestBaseUrl))
+  )
+
+  return refreshHubsForBaseUrls(baseUrls)
+}
+
+export const refreshHubForEnvironment = async (
+  destinationTypeId: number
+): Promise<HubRefreshResult> => {
+  const configuredHubURLs = getConfiguredHubURLs()
+  const statusHistoryUrl = configuredHubURLs.getIZGHubURL(destinationTypeId)
+  const destinationType = getDestinationType(destinationTypeId)
+
+  return refreshHubsForBaseUrls([deriveHubRestBaseUrl(statusHistoryUrl)], {
+    destinationTypeId,
+    destinationType,
+  })
 }

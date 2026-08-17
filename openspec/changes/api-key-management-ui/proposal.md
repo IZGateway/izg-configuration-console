@@ -25,12 +25,11 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   `cancelledBy`/`cancelledAt`, **retains** the record for audit, hidden from the default
   view) — revised from the initial "hard delete" plan; see design D1.
 - **DNS verification hardening**: dev bypass gated behind `NODE_ENV !== 'production'`
-  **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active);
-  "REVERT BEFORE COMMITTING" removed.
+  **and** an explicit `ALLOW_DNS_VERIFY_BYPASS` flag (default off, warns when active).
 
 ### Use-type policy (IGDD-3140)
 - New `AllowedUseType` enum (`PATIENT | PROVIDER | PUBLIC_HEALTH`); required +
-  enum-validated on create; stored as a DynamoDB List; carried through renew.
+  enum-validated on create; stored as a DynamoDB String Set (`SS`); carried through renew.
 - Create-dialog Use Types picker narrows to the selected organization's registered
   `useTypes`, falling back to the full enum when unseeded (so creation isn't broken
   where senders haven't been backfilled yet).
@@ -41,8 +40,8 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
 ### Credential/JWT model reconciliation (IGDD-3140)
 - Credential re-keyed from `{env}#{jti}` to bare **`{jti}`** — the Hub reads a
   credential directly by `jti` at routing time.
-- `env` (string) replaced by **`environments`** (List); admin-only (IZG Operations)
-  multi-environment credential creation, server-enforced.
+- `env` (string) replaced by **`environments`** (DynamoDB String Set, `SS`); admin-only
+  (IZG Operations) multi-environment credential creation, server-enforced.
 - JWT reduced toward identity-only: the `env` claim is removed (environment
   authorization is a server-side property the Hub reads by `jti`). `roles` is
   retained for now, pending confirmation that nothing in izgw-hub/izgw-core reads it.
@@ -146,8 +145,8 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   61 tests total across the two files).
 - **Shared-table contract**: the console and the Hub (`izgw-hub`) read/write the same
   DynamoDB `ApiKeyCredential`/`ApiKeyDomain` rows. Status value `grace_period`,
-  attribute `supersededBy`, the bare-`{jti}` sort key, and the `environments` List are
-  all contractual — reconciled with the Hub's own IGDD-3140 OpenSpec update
+  attribute `supersededBy`, the bare-`{jti}` sort key, and the `environments` String Set
+  are all contractual — reconciled with the Hub's own IGDD-3140 OpenSpec update
   (izgw-hub PR #177).
 - **Security**: closes a real IDOR — every apikey route now requires both role and
   jurisdiction ownership, not just an authenticated session (previously any
