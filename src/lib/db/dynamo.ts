@@ -1715,10 +1715,10 @@ class Dynamo implements DbClient {
       createdBy: params.createdBy,
       ...(params.description ? { description: params.description } : {}),
       ...(params.domain ? { domain: params.domain } : {}),
-      // Stored as a plain List (deduped). AllowedUseType[] is the app-side type;
+      // Stored as a DynamoDB String Set (deduped). AllowedUseType[] is the app-side type;
       // the Hub reads this by jti at routing time (it is NOT a JWT claim).
       ...(params.useTypes && params.useTypes.length
-        ? { useTypes: [...new Set(params.useTypes)] }
+        ? { useTypes: dynamodDbDocClient.createSet([...new Set(params.useTypes)]) }
         : {}),
     }
     const command = new PutCommand({
