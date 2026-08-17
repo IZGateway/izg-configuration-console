@@ -41,3 +41,6 @@ docker-compose.override.yml
 test-results
 playwright-report
 /docker/
+
+# Claude Code agent worktrees (nested repo checkouts, not source content)
+.claude/worktrees/
