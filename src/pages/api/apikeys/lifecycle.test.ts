@@ -259,6 +259,7 @@ describe('API key lifecycle guards', () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue({
         status: 'active',
         domain: 'stored.example.gov',
+        environments: ['2'],
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
@@ -287,6 +288,7 @@ describe('API key lifecycle guards', () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue({
         status: 'active',
         domain: 'stored.example.gov',
+        environments: ['2'],
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)

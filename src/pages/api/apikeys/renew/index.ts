@@ -54,15 +54,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!oldCredential) {
       return res.status(404).json({ error: 'Credential to renew was not found' })
     }
-    if (oldCredential.status !== 'active') {
-      return res.status(409).json({ error: 'Only active credentials can be renewed' })
-    }
     // Role + tenancy (fix IDOR): the caller must own the jurisdiction of the
-    // credential being renewed. Authoritative gate, evaluated right before the
-    // renewal is performed.
+    // credential being renewed. Authoritative gate, checked before the status
+    // check so a non-owner learns nothing about the target credential's state.
     const authz = requireApiKeyAccess(session, 'canRenewApiKey', oldCredential.jurisdictionId)
     if (!authz.ok) {
       return res.status(authz.status).json({ error: authz.error })
+    }
+    if (oldCredential.status !== 'active') {
+      return res.status(409).json({ error: 'Only active credentials can be renewed' })
     }
 
     // The renewed key inherits the DNS domain (JWT upn), jurisdiction, AND
