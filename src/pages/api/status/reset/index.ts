@@ -1,7 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../../api-middleware-helper'
 import logger from '../../../../../logger'
-import { resetAllCircuitBreakers } from '../../../../lib/utils/izghubcircuitbreakerreset'
+import {
+  resetAllCircuitBreakers,
+  resetCircuitBreakersForEnvironment,
+} from '../../../../lib/utils/izghubcircuitbreakerreset'
 
 /**
  * @swagger
@@ -24,21 +27,43 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const result = await resetAllCircuitBreakers()
+    const hasDestinationTypeId =
+      req.body &&
+      Object.prototype.hasOwnProperty.call(req.body, 'destinationTypeId')
+    const destinationTypeId = Number(req.body?.destinationTypeId)
+    const isEnvironmentReset =
+      hasDestinationTypeId &&
+      Number.isInteger(destinationTypeId) &&
+      destinationTypeId > 0
+
+    if (hasDestinationTypeId && !isEnvironmentReset) {
+      return res.status(400).json({
+        success: false,
+        error: 'A valid destinationTypeId is required.',
+      })
+    }
+
+    const result = isEnvironmentReset
+      ? await resetCircuitBreakersForEnvironment(destinationTypeId)
+      : await resetAllCircuitBreakers()
 
     // Treat a total failure (every hub unreachable) as an error; partial success
     // still reports 200 so the operator sees that some hubs responded.
     if (result.attempted > 0 && result.succeeded === 0) {
       return res.status(502).json({
         success: false,
-        error: 'Failed to signal any hub instance to reset circuit breakers.',
+        error: isEnvironmentReset
+          ? 'Failed to signal the hub instance to reset circuit breakers.'
+          : 'Failed to signal any hub instance to reset circuit breakers.',
         result,
       })
     }
 
     return res.status(200).json({
       success: true,
-      message: 'All circuit breakers reset.',
+      message: isEnvironmentReset
+        ? 'Circuit breakers reset for the selected environment.'
+        : 'All circuit breakers reset.',
       result,
     })
   } catch (err) {

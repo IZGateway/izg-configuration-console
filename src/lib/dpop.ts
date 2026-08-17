@@ -30,8 +30,16 @@ function base64urlEncode(data: ArrayBuffer | string): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-/** Decodes an unpadded base64url string back to a binary ArrayBuffer. */
-function base64urlDecodeToBuffer(str: string): ArrayBuffer {
+/**
+ * Decodes an unpadded base64url string back to bytes.
+ *
+ * Returns the Uint8Array view rather than its backing `.buffer` on purpose.
+ * Edge middleware runs inside a Node `vm` realm, and Node's WebCrypto argument
+ * converter rejects a bare ArrayBuffer created in another realm ("3rd argument
+ * is not instance of ArrayBuffer, Buffer, TypedArray, or DataView"). Typed-array
+ * views are checked with a cross-realm-safe test and are accepted.
+ */
+function base64urlDecodeToBytes(str: string): Uint8Array<ArrayBuffer> {
   // Re-add standard base64 characters and padding before passing to atob.
   const padded =
     str.replace(/-/g, '+').replace(/_/g, '/') +
@@ -41,7 +49,7 @@ function base64urlDecodeToBuffer(str: string): ArrayBuffer {
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)
   }
-  return bytes.buffer
+  return bytes
 }
 
 /** ECDSA P-256 / SHA-256 algorithm parameters used for both sign and verify. */
@@ -123,7 +131,7 @@ export async function verifyDpopProof(
     const [headerB64, payloadB64, sigB64] = parts
 
     const payload = JSON.parse(
-      new TextDecoder().decode(base64urlDecodeToBuffer(payloadB64))
+      new TextDecoder().decode(base64urlDecodeToBytes(payloadB64))
     )
 
     // Reject proofs older than 30 seconds or timestamped more than 30 seconds
@@ -149,10 +157,13 @@ export async function verifyDpopProof(
 
     // The verified data is the ASCII bytes of "header.payload" — identical to
     // the signing input used in buildDpopProof.
-    return crypto.subtle.verify(
+    // `await` is required: a bare `return promise` inside try/catch does not
+    // route a rejection through the catch block, so a crypto error would escape
+    // and crash the middleware instead of failing verification cleanly.
+    return await crypto.subtle.verify(
       ECDSA_PARAMS,
       publicKey,
-      base64urlDecodeToBuffer(sigB64),
+      base64urlDecodeToBytes(sigB64),
       new TextEncoder().encode(`${headerB64}.${payloadB64}`)
     )
   } catch {
