@@ -1,0 +1,37 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "Jurisdiction"
+            },
+            "sortKey": {
+              "S": "64"
+            },
+            "jurisdictionId": {
+              "N": "64"
+            },
+            "description": {
+              "S": "CCUAT"
+            },
+            "name": {
+              "S": "CCUAT"
+            },
+            "prefix": {
+              "S": "ccuat"
+            },
+            "allowedUseTypes": {
+              "SS": [
+                "PUBLIC_HEALTH",
+                "PROVIDER",
+                "PATIENT"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

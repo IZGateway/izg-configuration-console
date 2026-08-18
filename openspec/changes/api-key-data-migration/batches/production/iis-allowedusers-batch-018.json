@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#oh#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "oh"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pa#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "pa"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pr#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#vi#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "vi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#va_s#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "va_s"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wv#hl-iispia-ha-e.njdoh.net"
+            },
+            "principal": {
+              "S": "hl-iispia-ha-e.njdoh.net"
+            },
+            "organization": {
+              "S": "Department of Health State of New Jersey"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-01-06"
+            },
+            "destinationId": {
+              "S": "wv"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ky#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ky"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nv#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "nv"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ok#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ok"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ct#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#de#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "de"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ks#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ks"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mo#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ar#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ar"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ut#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "ut"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#co#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "co"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#or#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "or"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#tx#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "tx"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pr#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#md#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "md"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#vi#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "vi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#il#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wa#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "wa"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wy#NM-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "NM-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "wy"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}

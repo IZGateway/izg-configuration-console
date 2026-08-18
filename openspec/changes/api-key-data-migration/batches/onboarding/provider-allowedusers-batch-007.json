@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#or#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "or"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#or#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "or"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ct#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ct#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ok#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "ok"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ok#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "ok"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#wv#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "wv"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#wv#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "wv"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ga#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "ga"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ga#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "ga"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#me#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "me"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#me#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "me"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ne#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "ne"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ne#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "ne"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#va#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "va"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#va#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "va"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#tn#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "tn"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#tn#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "tn"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nj#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nj#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#mo#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#mo#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#pr#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#pr#preprodcernerspaces.com"
+            },
+            "principal": {
+              "S": "preprodcernerspaces.com"
+            },
+            "organization": {
+              "S": "Cerner Corporation"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-08"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ks#vac10accessgwsqa01.va.gov"
+            },
+            "principal": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "organization": {
+              "S": "Veterans Data Integration and Federation Enterprise Platform"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-16"
+            },
+            "destinationId": {
+              "S": "ks"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}

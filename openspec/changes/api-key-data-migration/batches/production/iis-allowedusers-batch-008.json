@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ct#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ri#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "ri"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#il#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ut#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "ut"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mi#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "mi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#al#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "al"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#in#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "in"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ky#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "ky"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ms#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "ms"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mo#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#oh#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "oh"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#tn#flshotsizgateway.flshots.com"
+            },
+            "principal": {
+              "S": "flshotsizgateway.flshots.com"
+            },
+            "organization": {
+              "S": "Florida Department of Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-02"
+            },
+            "destinationId": {
+              "S": "tn"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#fm#Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "fm"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mp#Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "mp"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mh#Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "mh"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pw#Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "pw"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#as#Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "principal": {
+              "S": "Guam-prod.izgateway.envisiontechnology.com"
+            },
+            "organization": {
+              "S": "Envision Technology Partners Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-05-25"
+            },
+            "destinationId": {
+              "S": "as"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mi#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "mi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ri#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "ri"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ph#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "ph"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#fl#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "fl"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nj#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ut#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "ut"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#in#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "in"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ms#icarehl7.dph.illinois.gov"
+            },
+            "principal": {
+              "S": "icarehl7.dph.illinois.gov"
+            },
+            "organization": {
+              "S": "Illinois Department of Public Health"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-03"
+            },
+            "destinationId": {
+              "S": "ms"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}

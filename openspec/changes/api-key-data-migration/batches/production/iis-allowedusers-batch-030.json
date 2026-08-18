@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nyc#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "nyc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pa#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "pa"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pa#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "pa"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ph#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "ph"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ph#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "ph"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nyc#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "nyc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nyc#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "nyc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#fl#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "fl"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#fl#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "fl"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pr#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#pr#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "pr"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#md#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "md"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#md#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "md"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wi#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "wi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wi#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "wi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#il#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#il#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ct#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ct#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nm#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "nm"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nm#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "nm"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#viirs.optimoz.com"
+            },
+            "principal": {
+              "S": "viirs.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#hco.optimoz.com"
+            },
+            "principal": {
+              "S": "hco.optimoz.com"
+            },
+            "organization": {
+              "S": "Optimoz Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-21"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}

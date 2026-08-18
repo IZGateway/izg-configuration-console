@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nv#azova.com"
+            },
+            "principal": {
+              "S": "azova.com"
+            },
+            "organization": {
+              "S": "Azova Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-11"
+            },
+            "destinationId": {
+              "S": "nv"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ut#azova.com"
+            },
+            "principal": {
+              "S": "azova.com"
+            },
+            "organization": {
+              "S": "Azova Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-12-11"
+            },
+            "destinationId": {
+              "S": "ut"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nj#davita.com"
+            },
+            "principal": {
+              "S": "davita.com"
+            },
+            "organization": {
+              "S": "DaVita Inc"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-19"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#va#davita.com"
+            },
+            "principal": {
+              "S": "davita.com"
+            },
+            "organization": {
+              "S": "DaVita Inc"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-19"
+            },
+            "destinationId": {
+              "S": "va"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ca#davita.com"
+            },
+            "principal": {
+              "S": "davita.com"
+            },
+            "organization": {
+              "S": "DaVita Inc"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-19"
+            },
+            "destinationId": {
+              "S": "ca"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mn#docstation.co"
+            },
+            "principal": {
+              "S": "docstation.co"
+            },
+            "organization": {
+              "S": "DocStation Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-06"
+            },
+            "destinationId": {
+              "S": "mn"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mn#fdlrez.com"
+            },
+            "principal": {
+              "S": "fdlrez.com"
+            },
+            "organization": {
+              "S": "Fond du lac Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-06-24"
+            },
+            "destinationId": {
+              "S": "mn"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#co#iris-prod.freseniusmedicalcare.com"
+            },
+            "principal": {
+              "S": "iris-prod.freseniusmedicalcare.com"
+            },
+            "organization": {
+              "S": "Fresenius Medical Care Holdings Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-09-09"
+            },
+            "destinationId": {
+              "S": "co"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ar#iris-prod.freseniusmedicalcare.com"
+            },
+            "principal": {
+              "S": "iris-prod.freseniusmedicalcare.com"
+            },
+            "organization": {
+              "S": "Fresenius Medical Care Holdings Inc."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-09-09"
+            },
+            "destinationId": {
+              "S": "ar"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mt#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "mt"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#in#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "in"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ak#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "ak"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nj#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#co#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "co"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nd#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "nd"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mo#prod.mayo.qvera.com"
+            },
+            "principal": {
+              "S": "prod.mayo.qvera.com"
+            },
+            "organization": {
+              "S": "Qvera LLC."
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-11-04"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ct#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "ct"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ca#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "ca"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#co#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "co"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ak#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "ak"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ar#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "ar"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#de#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "de"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#riise.cdc.gov"
+            },
+            "principal": {
+              "S": "riise.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-02"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}
