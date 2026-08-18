@@ -2,14 +2,14 @@ common_name,organization,environment,sender_type,jurisdiction_destid,notes,valid
 prod-cc.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,IZ Gateway Config Console,2027-08-12
 prod.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform service,2027-07-30
 prod.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub,2027-06-15
-preprod.xform.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Hub transform preprod,2027-06-12
+preprod.xform.phiz-project.org,Audacious Inquiry LLC,onboarding,ops-service,,Hub transform preprod,2027-06-12
 onboard.xform.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub transform onboarding,2027-06-06
 preprod.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI preprod,2026-10-02
 onboard.xform-ui.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub UI onboarding,2026-10-02
-preprod-cc.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Config Console preprod,2026-09-24
-preprod.phiz-project.org,Audacious Inquiry LLC,onboarding,ops,,Hub preprod,2026-09-24
+preprod-cc.phiz-project.org,Audacious Inquiry LLC,onboarding,ops-service,,Config Console preprod,2026-09-24
+preprod.phiz-project.org,Audacious Inquiry LLC,onboarding,ops-service,,Hub preprod,2026-09-24
 dev.phiz-project.org,Audacious Inquiry LLC,exclude,ops,,Hub dev,2026-10-10
-dev.xform.izgateway.org,Audacious Inquiry LLC,onboarding,ops,,Hub transform dev; on production deny list,2027-04-28
+dev.xform.izgateway.org,Audacious Inquiry LLC,onboarding,ops-service,,Hub transform dev; on production deny list,2027-04-28
 uptrends.izgateway.org,Audacious Inquiry LLC,exclude,ops,,Uptime monitoring service,2026-10-30
 ehex-xform.prod2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform production,2027-07-02
 ehex-xform.onboard2.aimsplatform.org,Association of Public Health Laboratories,exclude,ops,,APHL AIMS Hub transform onboarding,2027-04-10
@@ -31,7 +31,7 @@ akanuri.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert,20
 ebrock.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert,2026-09-30
 bwilliams.testing.izgateway.org,Audacious Inquiry LLC,any,ops,,AI operator cert,2026-10-01
 izgateway.stchealthops.com,STC Health LLC,production,jurisdiction,,STC shared cert - maps to all 17 STChealth jurisdictions,2027-08-19
-izgateway2.stchealthops.com,STC Health LLC,production,jurisdiction,,STC second shared cert,2026-10-09
+izgateway2.stchealthops.com,STC Health LLC,onboarding,jurisdiction,,STC second shared cert,2026-10-09
 epicenter.stchome.com,STC Health LLC,production,jurisdiction,,STC third cert,2027-04-01
 njiis-stage.doh.nj.gov,Department of Health State of New Jersey,onboarding,jurisdiction,nj,,2027-08-25
 hl-iispia-ha-e.njdoh.net,Department of Health State of New Jersey,production,jurisdiction,nj,,2027-01-06

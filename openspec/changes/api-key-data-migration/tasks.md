@@ -3,7 +3,7 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
-  - date: '2026-08-15T05:22:54.597Z'
+  - date: '2026-08-18T12:57:53.436Z'
     user: boonek
     agent:
       name: GitHub Copilot CLI
@@ -23,7 +23,8 @@ updated:
       execution to use JSON file loop for jurisdiction updates; Update README
       task to mention individual JSON file re-run; Correct _test destId
       verification check in Phase 2; Mark task 1.1 complete; Move generator
-      script to change directory, update task 1.1
+      script to change directory, update task 1.1; Mark tasks 1.2, 1.3, 1.3a,
+      1.4, 1.5, 1.6, 1.8 complete
 created:
   date: '2026-08-14T06:34:51.000Z'
   user: Keith W. Boone
@@ -38,13 +39,13 @@ created:
   - Accepts `--env production` or `--env onboarding` flag (default: both)
   - Writes output to `batches/production/` and `batches/onboarding/` under the change directory
 
-- [ ] 1.2 Implement jurisdiction ID resolution map
+- [x] 1.2 Implement jurisdiction ID resolution map
   - Load `jurisdiction-table-current.csv`
   - Build `prefix → jurisdictionId` lookup (integer values)
   - Build `jurisdictionId → name` reverse lookup for reporting
   - Warn and skip any input row whose prefix cannot be resolved
 
-- [ ] 1.3 Implement Jurisdiction `update-item` JSON file generation
+- [x] 1.3 Implement Jurisdiction `update-item` JSON file generation
   - Load `jurisdiction-allowed-use-types.csv`; skip rows flagged `SKIP`
   - For each jurisdiction: generate a JSON file suitable for `aws dynamodb update-item
     --cli-input-json file://...` that sets `allowedUseTypes` (String Set) using a
@@ -58,7 +59,7 @@ created:
   - CCUAT (id=64): generate a `PutRequest` entry in a separate batch file
     (new record, not an update)
 
-- [ ] 1.3a Generate prefix corrections as a separate batch file
+- [x] 1.4 Generate prefix corrections as a separate batch file
   - The three Jurisdiction records with incorrect prefixes SHALL be written as a
     dedicated batch file `batches/prefix-corrections.json` (applies to
     both environments — same table)
@@ -67,7 +68,7 @@ created:
   - Keeping these separate from `allowedUseTypes` updates makes the correction
     auditable and independently verifiable
 
-- [ ] 1.4 Implement Sender `PutRequest` batch generation
+- [x] 1.5 Implement Sender `PutRequest` batch generation
   - Load `sender-organizations.csv`
   - For each of the 15 non-jurisdiction sender rows: produce a `PutRequest` item with
     `entityType=Jurisdiction`, `sortKey={sender_id}`, `jurisdictionId={sender_id}`,
@@ -75,7 +76,7 @@ created:
   - Batch into groups of 25; write to `batches/{env}/senders-batch-NNN.json`
     (same content for both environments — sender records are environment-agnostic)
 
-- [ ] 1.5 Implement AllowedUser `PutRequest` batch generation — IIS pairs
+- [x] 1.6 Implement AllowedUser `PutRequest` batch generation — IIS pairs
   - Load `iis-access-control-pairs.csv`
   - For each row: resolve `receiver_destid` short abbreviation to the string `prefix`
     (= `destinationId`) via `jurisdiction-table-current.csv`
@@ -89,7 +90,7 @@ created:
   - Set `validUntil` from cert expiry date in inventory
   - Write to `batches/{env}/iis-allowedusers-batch-NNN.json`
 
-- [ ] 1.6 Implement AllowedUser `PutRequest` batch generation — Provider pairs
+- [x] 1.7 Implement AllowedUser `PutRequest` batch generation — Provider pairs
   - Load `provider-access-control-pairs.csv`
   - For each row: resolve `receiver_destid` to string `destinationId` (prefix)
   - Look up sender cert(s) from `certificate-inventory.csv` by `sender_id`
@@ -97,14 +98,14 @@ created:
   - Apply same environment split and DenyList logic as 1.5
   - Write to `batches/{env}/provider-allowedusers-batch-NNN.json`
 
-- [ ] 1.8 Add `validUntil` column to `certificate-inventory.csv`
+- [x] 1.8 Add `validUntil` column to `certificate-inventory.csv`
   - Pull cert expiry dates from DigiCert for all active certs in the inventory
   - Add `validUntil` column (ISO 8601, e.g. `2026-11-15`) to each row where
     `sender_type` is `jurisdiction` or `sender`
   - Ops/infrastructure certs (`sender_type = ops`) may be left blank
   - Commit updated CSV before running generator
 
-- [ ] 1.9 Implement ApiKeyDomain `PutRequest` batch generation
+- [x] 1.9 Implement ApiKeyDomain `PutRequest` batch generation
   - Load `certificate-inventory.csv`; skip rows where `sender_type = ops` or
     `environment = exclude`
   - Skip STC Health shared certs (`izgateway.stchealthops.com`,
@@ -125,7 +126,7 @@ created:
   - Batch into groups of 25; write to
     `batches/{env}/apikey-domains-batch-NNN.json`
 
-- [ ] 1.7 Implement execution report output
+- [ ] 1.10 Implement execution report output
   - After generating all output, print summary:
     - Count of Jurisdiction `update-item` commands generated
     - Count of CCUAT PutRequest records

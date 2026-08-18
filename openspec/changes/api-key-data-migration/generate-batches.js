@@ -22,65 +22,9 @@
  *   unresolved.txt
  */
 
-const fs   = require('fs');
-const path = require('path');
-/**
- * Minimal CSV parser — handles quoted fields with embedded commas.
- * Used in place of csv-parse to keep this migration script self-contained
- * with no dependencies beyond Node.js builtins.
- */
-function parse(content, { columns = false } = {}) {
-  const rows = [];
-  let i = 0;
-  const len = content.length;
-
-  function parseField() {
-    if (content[i] === '"') {
-      i++; // skip opening quote
-      let val = '';
-      while (i < len) {
-        if (content[i] === '"' && content[i + 1] === '"') { val += '"'; i += 2; }
-        else if (content[i] === '"') { i++; break; }
-        else { val += content[i++]; }
-      }
-      return val;
-    }
-    let val = '';
-    while (i < len && content[i] !== ',' && content[i] !== '\n' && content[i] !== '\r') {
-      val += content[i++];
-    }
-    return val;
-  }
-
-  function parseLine() {
-    const fields = [];
-    while (i < len && content[i] !== '\n' && content[i] !== '\r') {
-      fields.push(parseField());
-      if (i < len && content[i] === ',') i++;
-    }
-    if (content[i] === '\r') i++;
-    if (content[i] === '\n') i++;
-    return fields;
-  }
-
-  // strip BOM if present
-  if (content.charCodeAt(0) === 0xFEFF) { i = 1; }
-
-  const header = columns ? parseLine() : null;
-  while (i < len) {
-    if (content[i] === '\r' || content[i] === '\n') { i++; continue; }
-    const fields = parseLine();
-    if (fields.length === 0 || (fields.length === 1 && fields[0] === '')) continue;
-    if (columns) {
-      const obj = {};
-      header.forEach((h, idx) => { obj[h] = (fields[idx] || '').trim(); });
-      rows.push(obj);
-    } else {
-      rows.push(fields);
-    }
-  }
-  return rows;
-}
+const fs      = require('fs');
+const path    = require('path');
+const { parse } = require('csv-parse/sync');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -143,7 +87,7 @@ const ENVS = envFilter ? [envFilter] : ['production', 'onboarding'];
 function readCsv(filename) {
   const filepath = path.join(CHANGE_DIR, filename);
   const content  = fs.readFileSync(filepath, 'utf8');
-  return parse(content, { columns: true });
+  return parse(content, { columns: true, skip_empty_lines: true, bom: true, trim: true });
 }
 
 function ensureDirs() {
@@ -209,10 +153,29 @@ for (const row of jurisdictionRows) {
   idToName[id] = row.jurisdictionName || row.name || row.prefix;
 }
 
-// sender shortId → senderId (integer) — from sender-organizations.csv
+// Split-endpoint aliases — these prefixes don't appear in jurisdiction-table-current.csv
+// but map to the same jurisdictionId as their parent prefix
+const SPLIT_ENDPOINT_ALIASES = {
+  'md_c':    'md',   // Maryland Provider Connect → Maryland
+  'va_s':    'va',   // Virginia IIS → Virginia
+  'ny_vxu':  'ny',   // New York VXU → New York
+  'ny_qbp':  'ny',   // New York QBP (onboarding only) → New York
+  'ny_test': 'ny',   // New York test (onboarding only) → New York
+  'mi_test': 'mi',   // Michigan test (onboarding only) → Michigan
+  'nc_test': 'nc',   // North Carolina test (onboarding only) → North Carolina
+};
+for (const [alias, parent] of Object.entries(SPLIT_ENDPOINT_ALIASES)) {
+  if (prefixToId[parent] !== undefined) {
+    prefixToId[alias] = prefixToId[parent];
+  }
+}
+
+// sender short_id → senderId (integer) — from sender-organizations.csv short_id column
 const senderShortIdToId = {};
 for (const row of senderOrgRows) {
-  senderShortIdToId[row.sender_id.trim().toLowerCase()] = parseInt(row.sender_id, 10);
+  if (row.short_id) {
+    senderShortIdToId[row.short_id.trim().toLowerCase()] = parseInt(row.sender_id, 10);
+  }
 }
 
 // cert common_name → senderId for sender-type certs
@@ -244,11 +207,399 @@ console.log(`  Loaded ${iisAccessRows.length} IIS pairs, ${providerAccessRows.le
 
 ensureDirs();
 
-// Tasks will be implemented in subsequent subtasks (1.3a through 1.9).
-// This scaffold wires up the structure; each generation function is a stub.
+// ---------------------------------------------------------------------------
+// Task 1.3a: Prefix corrections
+// ---------------------------------------------------------------------------
+// Three Jurisdiction records have incorrect prefix values in the live DB.
+// The CSV contains the correct target values; generate unconditional UpdateItem
+// JSONs so the correction is auditable and independently re-runnable.
 
-console.log('\nGeneration stubs ready. Implement tasks 1.2–1.9 to populate output.');
-console.log(`Environments: ${ENVS.join(', ')}`);
+const PREFIX_CORRECTIONS = [
+  { jurisdictionId: 14, correctPrefix: 'hi' },  // Hawaii  (live: 'ha')
+  { jurisdictionId: 16, correctPrefix: 'id' },  // Idaho   (live: possibly 'io')
+  { jurisdictionId: 32, correctPrefix: 'ne' },  // Nebraska (live: 'nb')
+];
+
+const prefixCorrectionRequests = PREFIX_CORRECTIONS.map(({ jurisdictionId, correctPrefix }) => ({
+  Update: {
+    TableName: DYNAMO_TABLE,
+    Key: {
+      entityType: s('Jurisdiction'),
+      sortKey:    s(String(jurisdictionId)),
+    },
+    UpdateExpression: 'SET #prefix = :prefix',
+    ExpressionAttributeNames:  { '#prefix': 'prefix' },
+    ExpressionAttributeValues: { ':prefix': s(correctPrefix) },
+  },
+}));
+
+// TransactWriteItems accepts up to 100 items; 3 fits in one call
+const prefixCorrectionsPath = path.join(BATCHES_DIR, 'prefix-corrections.json');
+fs.writeFileSync(prefixCorrectionsPath, JSON.stringify(
+  { TransactItems: prefixCorrectionRequests }, null, 2
+));
+counts.prefixCorrections = PREFIX_CORRECTIONS.length;
+console.log(`\nPrefix corrections: ${counts.prefixCorrections} items → ${prefixCorrectionsPath}`);
+
+// ---------------------------------------------------------------------------
+// Task 1.3: Jurisdiction update-item JSON generation
+// ---------------------------------------------------------------------------
+
+// Name aliases: organization_name in allowed-use-types CSV → description in jurisdiction table
+const ORG_NAME_ALIASES = {
+  'american samoa - pi':             'pi - american samoa',
+  'guam - pi':                       'pi - guam',
+  'marshall islands - pi':           'pi - republic of the marshall islands',
+  'micronesia - pi':                 'pi - federated states of micronesia',
+  'n. mariana islands - pi':         'pi - commonwealth of the mariana islands',
+  'palau - pi':                      'pi - palau',
+  'new york city - new york state':  'new york city',
+  'development':                     'development testing',
+  'virgin islands u.s.':             'u.s. virgin islands',
+};
+
+// description (lowercase) → jurisdictionId integer
+const descToJurisdictionId = {};
+for (const row of jurisdictionRows) {
+  descToJurisdictionId[row.description.trim().toLowerCase()] = parseInt(row.jurisdictionId, 10);
+}
+
+// prefix (lowercase) → description string (for AllowedUser destinationId)
+const prefixToDesc = {};
+for (const row of jurisdictionRows) {
+  prefixToDesc[row.prefix.trim().toLowerCase()] = row.prefix.trim().toLowerCase();
+}
+
+// IIS sender prefixes — jurisdictions that send IIS-to-IIS messages → get useTypes=PUBLIC_HEALTH
+const iisSenderPrefixes = new Set(iisAccessRows.map(r => r.sender_destid?.trim().toLowerCase()).filter(Boolean));
+// Texas is in the IIS sender list but must NOT receive useTypes (legally prohibited from sending)
+iisSenderPrefixes.delete('tx');
+
+// prefix (lowercase) → jurisdictionId for quick lookup during jurisdiction updates
+const prefixToJurisdictionId = {};
+for (const row of jurisdictionRows) {
+  prefixToJurisdictionId[row.prefix.trim().toLowerCase()] = parseInt(row.jurisdictionId, 10);
+}
+
+const ccuatPutItems = [];
+
+for (const row of allowedUseTypeRows) {
+  if (row.notes && row.notes.includes('SKIP')) continue;
+
+  const orgKey  = row.organization_name.trim().toLowerCase();
+  const descKey = ORG_NAME_ALIASES[orgKey] || orgKey;
+  const jid     = descToJurisdictionId[descKey];
+
+  if (jid === undefined) {
+    if (orgKey === 'ccuat') {
+      // CCUAT is a new record — PutItem, id=64
+      const useTypes = row.allowed_use_types.split('|').map(s => s.trim()).filter(Boolean);
+      ccuatPutItems.push({
+        PutRequest: {
+          Item: {
+            entityType:        s('Jurisdiction'),
+            sortKey:           s('64'),
+            jurisdictionId:    n(64),
+            description:       s('CCUAT'),
+            name:              s('CCUAT'),
+            prefix:            s('ccuat'),
+            allowedUseTypes:   ss(useTypes),
+          },
+        },
+      });
+      counts.jurisdictionUpdates++;
+      continue;
+    }
+    unresolved.push(`jurisdiction-allowed-use-types: no jurisdictionId for "${row.organization_name}"`);
+    continue;
+  }
+
+  const useTypes = row.allowed_use_types.split('|').map(s => s.trim()).filter(Boolean);
+
+  // Determine if this jurisdiction is an IIS sender — look up its prefix
+  const jRow = jurisdictionRows.find(r => parseInt(r.jurisdictionId, 10) === jid);
+  const prefix = jRow?.prefix?.trim().toLowerCase();
+  const isIisSender = prefix && iisSenderPrefixes.has(prefix);
+
+  let updateExpr = 'SET allowedUseTypes = :aut';
+  const exprValues = { ':aut': ss(useTypes) };
+
+  if (isIisSender) {
+    updateExpr += ', useTypes = :ut';
+    exprValues[':ut'] = ss(['PUBLIC_HEALTH']);
+  }
+
+  const updateJson = {
+    TableName: DYNAMO_TABLE,
+    Key: {
+      entityType: s('Jurisdiction'),
+      sortKey:    s(String(jid)),
+    },
+    UpdateExpression:          updateExpr,
+    ExpressionAttributeValues: exprValues,
+  };
+
+  const outPath = path.join(OUTPUT_DIRS.jurisdictionUpdates, `${jid}.json`);
+  fs.writeFileSync(outPath, JSON.stringify(updateJson, null, 2));
+  counts.jurisdictionUpdates++;
+}
+
+// CCUAT PutItem batch (single item, written as a BatchWriteItem for consistency)
+if (ccuatPutItems.length > 0) {
+  const ccuatPath = path.join(OUTPUT_DIRS.jurisdictionUpdates, 'ccuat-put.json');
+  fs.writeFileSync(ccuatPath, JSON.stringify(
+    { RequestItems: { [DYNAMO_TABLE]: ccuatPutItems } }, null, 2
+  ));
+}
+
+console.log(`Jurisdiction updates: ${counts.jurisdictionUpdates} files → ${OUTPUT_DIRS.jurisdictionUpdates}`);
+
+// ---------------------------------------------------------------------------
+// Task 1.4: Sender PutRequest batch generation
+// ---------------------------------------------------------------------------
+// Sender records are environment-agnostic — same batch written to both env dirs.
+
+const senderPutItems = senderOrgRows.map(row => {
+  const useTypes = row.use_types.split('|').map(t => t.trim()).filter(Boolean);
+  return {
+    PutRequest: {
+      Item: {
+        entityType:       s('Jurisdiction'),
+        sortKey:          s(row.sender_id),
+        jurisdictionId:   n(parseInt(row.sender_id, 10)),
+        jurisdictionName: s(row.canonical_name),
+        useTypes:         ss(useTypes),
+      },
+    },
+  };
+});
+
+for (const env of ENVS) {
+  const numBatches = writeBatches(senderPutItems, env, 'senders');
+  counts.senderRecords = senderPutItems.length;
+  console.log(`Sender records [${env}]: ${senderPutItems.length} items → ${numBatches} batch file(s)`);
+}
+
+// ---------------------------------------------------------------------------
+// Task 1.5: IIS AllowedUser PutRequest batch generation
+// ---------------------------------------------------------------------------
+
+// STC shared certs: jurisdiction-type certs with no jurisdiction_destid.
+// Used as fallback principal for STC-hosted IIS jurisdictions that have no
+// individual certs in the inventory.
+const stcSharedCerts = certRows.filter(
+  c => c.sender_type === 'jurisdiction' && !c.jurisdiction_destid.trim() && c.environment !== 'exclude'
+);
+
+// Build map: sender_destid (lower) → [cert rows] for jurisdiction-type certs
+const iisDestIdToCerts = {};
+for (const cert of certRows) {
+  if (cert.sender_type !== 'jurisdiction') continue;
+  if (cert.environment === 'exclude') continue;
+  const key = cert.jurisdiction_destid.trim().toLowerCase();
+  if (!key) continue; // STC shared certs handled via stcSharedCerts fallback
+  if (!iisDestIdToCerts[key]) iisDestIdToCerts[key] = [];
+  iisDestIdToCerts[key].push(cert);
+}
+
+// Returns true if a cert should appear in targetEnv batch, given:
+//   pairEnvs  — pipe-separated string from the pairs CSV (e.g. "production|onboarding")
+//   certEnv   — string from cert inventory ("production", "onboarding", "any", "exclude")
+//   targetEnv — the env we are currently generating ("production" or "onboarding")
+function certAppliesToEnv(pairEnvs, certEnv, targetEnv) {
+  if (certEnv === 'exclude') return false;
+  const pairSet = new Set(pairEnvs.split('|').map(e => e.trim()));
+  if (!pairSet.has(targetEnv)) return false;
+  if (certEnv === 'any') return true;
+  return certEnv === targetEnv;
+}
+
+// Build an AllowedUser PutRequest item with correct DynamoDB types
+function makeAllowedUserItem(envName, destId, cert, useTypesList) {
+  const envId = ENV_IDS[envName];
+  return {
+    PutRequest: {
+      Item: {
+        entityType:    s('AllowedUser'),
+        sortKey:       s(`${envId}#${destId}#${cert.common_name}`),
+        principal:     s(cert.common_name),
+        organization:  s(cert.organization),
+        useTypes:      ss(useTypesList),
+        validUntil:    s(cert.validUntil || ''),
+        destinationId: s(destId),
+        environment:   n(envId),
+        enabled:       { BOOL: true },
+      },
+    },
+  };
+}
+
+for (const env of ENVS) {
+  const items = [];
+
+  for (const pair of iisAccessRows) {
+    const senderKey  = pair.sender_destid.trim().toLowerCase();
+    const destId     = pair.receiver_destid.trim().toLowerCase();
+    let   certs      = iisDestIdToCerts[senderKey];
+
+    if (!certs || certs.length === 0) {
+      // No individual certs — fall back to STC shared certs for this sender
+      certs = stcSharedCerts;
+    }
+
+    for (const cert of certs) {
+      if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
+      if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
+      items.push(makeAllowedUserItem(env, destId, cert, ['PUBLIC_HEALTH']));
+    }
+  }
+
+  const numBatches = writeBatches(items, env, 'iis-allowedusers');
+  counts.iisAllowedUsers[env] = items.length;
+  console.log(`IIS AllowedUsers [${env}]: ${items.length} items → ${numBatches} batch file(s)`);
+}
+
+// ---------------------------------------------------------------------------
+// Task 1.6: Provider AllowedUser PutRequest batch generation
+// ---------------------------------------------------------------------------
+
+// Build sender cert map: jurisdiction_destid (lower) → [cert rows] for sender-type certs
+const providerDestIdToCerts = {};
+for (const cert of certRows) {
+  if (cert.sender_type !== 'sender') continue;
+  if (cert.environment === 'exclude') continue;
+  const key = cert.jurisdiction_destid.trim().toLowerCase();
+  if (!key) continue;
+  if (!providerDestIdToCerts[key]) providerDestIdToCerts[key] = [];
+  providerDestIdToCerts[key].push(cert);
+}
+
+// Bridge map: provider pairs sender_id (lower) → short_id (lower) via sender-organizations.csv
+// Covers cases where the pairs CSV uses canonical_name instead of short_id
+const senderNameToShortId = {};
+for (const row of senderOrgRows) {
+  const shortId = row.short_id.trim().toLowerCase();
+  senderNameToShortId[row.canonical_name.trim().toLowerCase()] = shortId;
+  senderNameToShortId[shortId] = shortId; // identity mapping for direct short_id matches
+  // Also map each salesforce name variant
+  for (const variant of row.salesforce_name_variants.split('|')) {
+    const v = variant.trim().toLowerCase();
+    if (v) senderNameToShortId[v] = shortId;
+  }
+}
+
+for (const env of ENVS) {
+  const items = [];
+
+  for (const pair of providerAccessRows) {
+    const senderRaw = pair.sender_id.trim();
+    const shortId   = senderNameToShortId[senderRaw.toLowerCase()];
+    const destId    = pair.receiver_destid.trim().toLowerCase();
+
+    if (!shortId) {
+      unresolved.push(`provider-pair: no short_id mapping for sender_id="${senderRaw}"`);
+      continue;
+    }
+
+    const certs = providerDestIdToCerts[shortId];
+    if (!certs || certs.length === 0) {
+      unresolved.push(`provider-pair: no certs for sender "${senderRaw}" (short_id="${shortId}")`);
+      continue;
+    }
+
+    for (const cert of certs) {
+      if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
+      if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
+      items.push(makeAllowedUserItem(env, destId, cert, [pair.use_type]));
+    }
+  }
+
+  const numBatches = writeBatches(items, env, 'provider-allowedusers');
+  counts.providerAllowedUsers[env] = items.length;
+  console.log(`Provider AllowedUsers [${env}]: ${items.length} items → ${numBatches} batch file(s)`);
+}
+
+
+// ---------------------------------------------------------------------------
+// Task 1.9: ApiKeyDomain PutRequest batch generation
+// ---------------------------------------------------------------------------
+
+const migrationTs    = new Date().toISOString();
+const fallbackExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+const stcExclusionsSeen = new Set();
+
+function resolveEntityId(cert) {
+  const destId = cert.jurisdiction_destid?.trim().toLowerCase();
+  switch (cert.sender_type) {
+    case 'jurisdiction': {
+      const jid = prefixToId[destId];
+      return jid !== undefined ? jid : null;
+    }
+    case 'sender': {
+      const sid = senderShortIdToId[destId];
+      return sid !== undefined ? sid : null;
+    }
+    case 'ops': {
+      const shortId = senderNameToShortId[cert.organization?.trim().toLowerCase()];
+      if (!shortId) return null;
+      return senderShortIdToId[shortId] ?? null;
+    }
+    default:
+      return null;
+  }
+}
+
+for (const env of ENVS) {
+  const envId = ENV_IDS[env];
+  const items = [];
+
+  for (const cert of certRows) {
+    if (cert.sender_type === 'ops-service') continue;
+    if (cert.environment === 'exclude') continue;
+
+    if (STC_SHARED_CERTS.has(cert.common_name)) {
+      stcExclusionsSeen.add(cert.common_name);
+      continue;
+    }
+
+    const certEnv = cert.environment;
+    if (certEnv !== 'any' && certEnv !== env) continue;
+    if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
+
+    const entityId = resolveEntityId(cert);
+    if (entityId === null) {
+      unresolved.push(`apikey-domain: no entity ID for "${cert.common_name}" (org="${cert.organization}", type="${cert.sender_type}", dest="${cert.jurisdiction_destid}")`);
+      continue;
+    }
+
+    items.push({
+      PutRequest: {
+        Item: {
+          entityType:    s('ApiKeyDomain'),
+          sortKey:       s(`${envId}#${entityId}#${cert.common_name}`),
+          domain:        s(cert.common_name),
+          entityId:      n(entityId),
+          environment:   n(envId),
+          status:        s('authorized'),
+          validatedAt:   s(migrationTs),
+          authExpiresAt: s(cert.validUntil?.trim() || fallbackExpiry),
+          requestedBy:   s('migration'),
+        },
+      },
+    });
+  }
+
+  const numBatches = writeBatches(items, env, 'apikey-domains');
+  counts.apikeyDomains[env] = items.length;
+  console.log(`ApiKey Domains [${env}]: ${items.length} items -> ${numBatches} batch file(s)`);
+}
+
+if (stcExclusionsSeen.size > 0) {
+  console.log(`STC shared cert exclusions (no 1:1 mapping): ${[...stcExclusionsSeen].join(', ')}`);
+}
+
+
+console.log(`\nEnvironments: ${ENVS.join(', ')}`);
 
 // ---------------------------------------------------------------------------
 // Report

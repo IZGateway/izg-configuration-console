@@ -1,16 +1,16 @@
-"sender_id","canonical_name","use_types","salesforce_name_variants","notes"
-"100","eHealth Exchange","PUBLIC_HEALTH","eHealth Exchange","QHIN pilot sender; PUBLIC_HEALTH only during pilot (onboarding environment); permitted destination: Nevada only. Full useTypes (PUBLIC_HEALTH|PROVIDER|PATIENT) planned post-pilot."
-"101","Docket","PATIENT","Docket","Consumer-access sender only; may send to any Jurisdiction whose allowedUseTypes includes PATIENT"
-"102","Security Risk Solutions","PUBLIC_HEALTH|PROVIDER|PATIENT","Security Risk Solutions","IZ Gateway operations staff - all use types permitted"
-"103","e-HealthSign","PUBLIC_HEALTH|PROVIDER|PATIENT","e-HealthSign","IZ Gateway operations staff - all use types permitted"
-"104","Audacious Inquiry (operators)","PUBLIC_HEALTH|PROVIDER|PATIENT","","IZ Gateway operators and Tier 3 staff via *.testing.izgateway.org certificates - all use types permitted"
-"105","AZOVA","PROVIDER","AZOVA",""
-"106","DaVita Physician Solutions","PROVIDER","DaVita Physician Solutions",""
-"107","Department of Defense","PROVIDER","Department of Defense (DOD)","Historical acronym retained; also known as Department of War (DOW)"
-"108","DocStation","PROVIDER","DocStation","Currently permitted in both environments; JWT tokens will restrict to one environment per cert"
-"109","Fond du Lac","PROVIDER","Fond du Lac","Fond du Lac Band of Lake Superior Chippewa tribal health program"
-"110","Fresenius Medical Care","PROVIDER","Fresenius Medical Care",""
-"111","Mayo Clinic","PROVIDER","Mayo Clinic","Non-jurisdiction PROVIDER sender"
-"112","RIISE","PROVIDER","RIISE","CDC/EDN RIISE program; currently offline but remains a permitted sender"
-"113","VAMS","PROVIDER","VAMS","CDC Vaccine Administration Management System"
-"114","Veterans Administration","PROVIDER","Veterans Administration (VistA)|Veterans Administration (Oracle Health)|Veterans Administration","Three Salesforce entries represent one organization; VistA and Oracle Health (Cerner) are different sending infrastructures. Expect multiple MSH identities."
+sender_id,canonical_name,use_types,salesforce_name_variants,short_id,notes
+100,eHealth Exchange,PUBLIC_HEALTH,eHealth Exchange,ehealthexchange,QHIN pilot sender; PUBLIC_HEALTH only during pilot (onboarding environment); permitted destination: Nevada only. Full useTypes (PUBLIC_HEALTH|PROVIDER|PATIENT) planned post-pilot.
+101,Docket,PATIENT,Docket,docket,Consumer-access sender only; may send to any Jurisdiction whose allowedUseTypes includes PATIENT
+102,Security Risk Solutions,PUBLIC_HEALTH|PROVIDER|PATIENT,Security Risk Solutions|Security Risk Solutions Inc.,securityrs,IZ Gateway operations staff - all use types permitted
+103,e-HealthSign,PUBLIC_HEALTH|PROVIDER|PATIENT,e-HealthSign|e-HealthSign LLC,ehealthsign,IZ Gateway operations staff - all use types permitted
+104,Audacious Inquiry (operators),PUBLIC_HEALTH|PROVIDER|PATIENT,Audacious Inquiry LLC,ai-ops,IZ Gateway operators and Tier 3 staff via *.testing.izgateway.org certificates - all use types permitted
+105,AZOVA,PROVIDER,AZOVA,azova,
+106,DaVita Physician Solutions,PROVIDER,DaVita Physician Solutions,davita,
+107,Department of Defense,PROVIDER,Department of Defense (DOD),DOD,Historical acronym retained; also known as Department of War (DOW)
+108,DocStation,PROVIDER,DocStation,docstation,Currently permitted in both environments; JWT tokens will restrict to one environment per cert
+109,Fond du Lac,PROVIDER,Fond du Lac,fond-du-lac,Fond du Lac Band of Lake Superior Chippewa tribal health program
+110,Fresenius Medical Care,PROVIDER,Fresenius Medical Care,fresenius,
+111,Mayo Clinic,PROVIDER,Mayo Clinic,mayo,Non-jurisdiction PROVIDER sender
+112,RIISE,PROVIDER,RIISE,riise,CDC/EDN RIISE program; currently offline but remains a permitted sender
+113,VAMS,PROVIDER,VAMS,vams,CDC Vaccine Administration Management System
+114,Veterans Administration,PROVIDER,Veterans Administration (VistA)|Veterans Administration (Oracle Health)|Veterans Administration,VHA,Three Salesforce entries represent one organization; VistA and Oracle Health (Cerner) are different sending infrastructures. Expect multiple MSH identities.
