@@ -243,7 +243,9 @@ class Dynamo implements DbClient {
       return {
         sortKey: item.sortKey,
         domain: item.domain,
-        env: item.env,
+        // Number(item.env) tolerates any pre-existing row written back when
+        // this attribute was a String.
+        env: Number(item.env),
         jurisdictionId: item.jurisdictionId,
         status: item.status,
         challengeUuid: item.challengeUuid,
@@ -267,7 +269,7 @@ class Dynamo implements DbClient {
   async upsertApiKeyDomain(params: {
     sortKey: string
     domain: string
-    env: string
+    env: number
     jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string
@@ -383,17 +385,17 @@ class Dynamo implements DbClient {
   }
 
   async fetchAuthorizedApiKeyDomains(
-    envId: string,
+    envId: number,
     jurisdictionId: string
   ): Promise<any[]> {
     const nowMs = Date.now()
     try {
       // Filtering by env/jurisdictionId/authExpiresAt is done in application
-      // code (with String() coercion) rather than in a DynamoDB
+      // code (with Number()/String() coercion) rather than in a DynamoDB
       // FilterExpression, because DynamoDB comparisons are type-strict — if
-      // those attributes were ever hand-entered as Number instead of String,
-      // a `env = :env` expression would silently (and confusingly) exclude
-      // an otherwise-matching item instead of erroring.
+      // those attributes were ever hand-entered as the wrong type, a
+      // `env = :env` expression would silently (and confusingly) exclude an
+      // otherwise-matching item instead of erroring.
       const result = await dynamodDbDocClient.send(
         new QueryCommand({
           TableName: TABLE_NAME,
@@ -408,7 +410,7 @@ class Dynamo implements DbClient {
             : NaN
           return (
             String(item.status) === 'authorized' &&
-            String(item.env) === String(envId) &&
+            Number(item.env) === envId &&
             String(item.jurisdictionId) === String(jurisdictionId) &&
             !isNaN(authExpiresAtMs) &&
             authExpiresAtMs > nowMs
@@ -417,7 +419,7 @@ class Dynamo implements DbClient {
         .map((item) => ({
           sortKey: item.sortKey,
           domain: item.domain,
-          env: item.env,
+          env: Number(item.env),
           jurisdictionId: item.jurisdictionId,
           status: item.status,
           validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
@@ -1426,11 +1428,14 @@ class Dynamo implements DbClient {
         cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
         // Falls back to the legacy singular `env` attribute for rows written
         // before the environments-list migration, so existing credentials
-        // don't lose their environment on read.
+        // don't lose their environment on read. `environments` is a deduped
+        // DynamoDB Number Set (see createApiKeyCredential); `Array.from` +
+        // `Number` also tolerates any interim rows written as a List or with
+        // string elements.
         environments: item.environments
-          ? Array.from(item.environments as Iterable<string>)
+          ? Array.from(item.environments as Iterable<string | number>, Number)
           : item.env
-            ? [item.env as string]
+            ? [Number(item.env)]
             : [],
         description: item.description as string | undefined,
         domain: item.domain as string | undefined,
@@ -1471,11 +1476,14 @@ class Dynamo implements DbClient {
         cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
         // Falls back to the legacy singular `env` attribute for rows written
         // before the environments-list migration, so existing credentials
-        // don't lose their environment on read.
+        // don't lose their environment on read. `environments` is a deduped
+        // DynamoDB Number Set (see createApiKeyCredential); `Array.from` +
+        // `Number` also tolerates any interim rows written as a List or with
+        // string elements.
         environments: item.environments
-          ? Array.from(item.environments as Iterable<string>)
+          ? Array.from(item.environments as Iterable<string | number>, Number)
           : item.env
-            ? [item.env as string]
+            ? [Number(item.env)]
             : [],
         description: item.description as string | undefined,
         domain: item.domain as string | undefined,
@@ -1691,7 +1699,7 @@ class Dynamo implements DbClient {
     jti: string
     sortKey: string
     jurisdictionId: string
-    environments: string[]
+    environments: number[]
     status: string
     createdOn: Date
     expiresAt?: Date | null
@@ -1705,9 +1713,12 @@ class Dynamo implements DbClient {
       sortKey: params.sortKey,
       jti: params.jti,
       jurisdictionId: params.jurisdictionId,
-      // Stored as a DynamoDB String Set (deduped), same rationale as useTypes
-      // below. Callers guarantee at least one environment — an empty SS is not
-      // a legal DynamoDB value.
+      // Stored as a deduped DynamoDB Number Set (`NS`), same rationale as
+      // useTypes below: a Set enforces uniqueness natively (a List would allow
+      // duplicate environment ids). Matches the Hub's own model, which moves
+      // `environments` from `List<Integer>` to `Set<Integer>` in lockstep with
+      // this change (izgw-hub, IGDD-3257). Callers guarantee at least one
+      // environment — an empty NS is not a legal DynamoDB value.
       environments: new Set(params.environments),
       status: params.status,
       createdOn: params.createdOn.toISOString(),

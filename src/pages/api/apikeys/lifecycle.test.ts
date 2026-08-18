@@ -259,7 +259,7 @@ describe('API key lifecycle guards', () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue({
         status: 'active',
         domain: 'stored.example.gov',
-        environments: ['2'],
+        environments: [2],
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
@@ -288,7 +288,7 @@ describe('API key lifecycle guards', () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue({
         status: 'active',
         domain: 'stored.example.gov',
-        environments: ['2'],
+        environments: [2],
         expiresAt: new Date('2027-01-01T00:00:00.000Z'),
       })
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
@@ -486,7 +486,7 @@ describe('API key lifecycle guards', () => {
       status: 'ready_for_validation',
       domain: 'immunize.example.gov',
       jurisdictionId: '1',
-      environments: ['5'],
+      environments: [5],
     }
 
     it('activates a pending credential bound to the verified domain (status-guarded write)', async () => {
@@ -906,7 +906,7 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(201)
       expect(getApiKeyDomain).toHaveBeenCalledTimes(2)
-      expect(createApiKeyCredential.mock.calls[0][0].environments).toEqual(['4', '5'])
+      expect(createApiKeyCredential.mock.calls[0][0].environments).toEqual([4, 5])
     })
 
     it('403s a multi-env create for a non-admin role, even one that can create single-env keys', async () => {
@@ -975,9 +975,9 @@ describe('API key authorization (role + tenancy)', () => {
 
     it('returns only domains authorized in every requested environment (intersection)', async () => {
       mockGetServerSession.mockResolvedValue(adminSession)
-      const fetchAuthorizedApiKeyDomains = jest.fn().mockImplementation((envId: string) =>
+      const fetchAuthorizedApiKeyDomains = jest.fn().mockImplementation((envId: number) =>
         Promise.resolve(
-          envId === '4'
+          envId === 4
             ? [{ domain: 'a.example.gov' }, { domain: 'shared.example.gov' }]
             : [{ domain: 'shared.example.gov' }, { domain: 'b.example.gov' }]
         )
@@ -1001,7 +1001,7 @@ describe('API key authorization (role + tenancy)', () => {
         status: 'ready_for_validation',
         domain: 'immunize.example.gov',
         jurisdictionId: '1',
-        environments: ['4', '5'],
+        environments: [4, 5],
       }
       const getApiKeyCredential = jest.fn().mockResolvedValue(credential)
       const getApiKeyDomain = jest.fn().mockResolvedValue({
@@ -1052,7 +1052,7 @@ describe('API key authorization (role + tenancy)', () => {
       status: 'ready_for_validation',
       domain: 'immunize.example.gov',
       jurisdictionId: '1',
-      environments: ['5'],
+      environments: [5],
     }
 
     beforeEach(() => {

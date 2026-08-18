@@ -105,10 +105,10 @@ interface ApiKey {
   sortKey: string
   description: string
   environment: string
-  // Raw environment ids (e.g. ["4","5"]) and use types, carried alongside the
+  // Raw environment ids (e.g. [4, 5]) and use types, carried alongside the
   // display string so flows that re-submit a key's scope (re-issue) don't have
   // to reverse-map the display name.
-  environments: string[]
+  environments: number[]
   useTypes: AllowedUseType[]
   jurisdiction: string
   jurisdictionId: string
@@ -135,9 +135,13 @@ function formatDate(value: string | Date | null | undefined): string {
   return d.toLocaleDateString()
 }
 
-// A credential's raw environment id can be a numeric string ("5") or, for
-// legacy rows, a name ("DEV") — normalize either to its display name.
-function envDisplayName(raw: string): string {
+// A credential's raw environment id is a number, or, for legacy rows, a
+// string name ("DEV") — normalize either to its display name.
+function envDisplayName(raw: number | string): string {
+  if (typeof raw === 'number') {
+    const code = getEnvironmentName(raw)
+    return ENV_DISPLAY_NAMES[code] ?? code
+  }
   const code = isNaN(Number(raw)) ? raw.toUpperCase() : getEnvironmentName(Number(raw))
   return ENV_DISPLAY_NAMES[code] ?? code
 }
@@ -1230,7 +1234,7 @@ function ReissueDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jurisdictionId,
-          environments: environments.map(Number),
+          environments,
           upn: domain,
           useTypes,
           description: description.trim() || undefined,
@@ -1671,7 +1675,7 @@ function CreateKeyDialog({
             c.status === 'active' &&
             String(c.jurisdictionId) === jurisdictionId &&
             (c.domain ?? '') === pendingUpn &&
-            sameStringSet(c.environments ?? [], envIds) &&
+            sameStringSet((c.environments ?? []).map(String), envIds) &&
             sameStringSet((c.useTypes ?? []) as string[], useTypes)
         )
       : undefined
