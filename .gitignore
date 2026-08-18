@@ -41,3 +41,6 @@ docker-compose.override.yml
 test-results
 playwright-report
 /docker/
+
+# Local metadata index files (md-csv-mcp)
+.meta/
