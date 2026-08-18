@@ -62,7 +62,7 @@ const BATCHES_DIR = path.join(__dirname, 'batches');
 const OUTPUT_DIRS = {
   production:          path.join(BATCHES_DIR, 'production'),
   onboarding:          path.join(BATCHES_DIR, 'onboarding'),
-  jurisdictionUpdates: path.join(BATCHES_DIR, 'jurisdiction-updates'),
+  denormalized:        path.join(BATCHES_DIR, 'denormalized'),
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +109,21 @@ function writeBatches(items, envOrDir, prefix) {
     batchNum++;
   }
   return batchNum - 1; // number of batch files written
+}
+
+function csvField(v) {
+  const str = v === null || v === undefined ? '' : String(v);
+  return /[,"\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function writeCsv(filename, headers, rows) {
+  const outPath = path.join(OUTPUT_DIRS.denormalized, filename);
+  const lines   = [headers.join(',')];
+  for (const row of rows) {
+    lines.push(headers.map(h => csvField(row[h])).join(','));
+  }
+  fs.writeFileSync(outPath, lines.join('\n') + '\n', 'utf8');
+  console.log(`  CSV: ${filename} — ${rows.length} rows → ${outPath}`);
 }
 
 function s(val)  { return { S: String(val) }; }
@@ -201,6 +216,17 @@ const iisSenderDestIds = new Set(iisAccessRows.map(r => r.sender_destid?.trim().
 
 console.log(`  Loaded ${jurisdictionRows.length} jurisdictions, ${senderOrgRows.length} senders, ${certRows.length} certs`);
 console.log(`  Loaded ${iisAccessRows.length} IIS pairs, ${providerAccessRows.length} provider pairs`);
+
+// ---------------------------------------------------------------------------
+// CSV row accumulators (populated during JSON-generation phases below)
+// ---------------------------------------------------------------------------
+
+const csvRows = {
+  apikeyDomains:        [],
+  allowedUsersIis:      [],
+  allowedUsersProvider: [],
+  jurisdictionUpdates:  [],
+};
 
 // ---------------------------------------------------------------------------
 // Main
@@ -309,6 +335,13 @@ for (const row of allowedUseTypeRows) {
         },
       });
       counts.ccuatRecords++;
+      csvRows.jurisdictionUpdates.push({
+        jurisdictionId:  64,
+        prefix:          'ccuat',
+        description:     'CCUAT',
+        allowedUseTypes: useTypes.join('|'),
+        useTypes:        '',
+      });
       continue;
     }
     unresolved.push(`jurisdiction-allowed-use-types: no jurisdictionId for "${row.organization_name}"`);
@@ -340,20 +373,20 @@ for (const row of allowedUseTypeRows) {
     ExpressionAttributeValues: exprValues,
   };
 
-  const outPath = path.join(OUTPUT_DIRS.jurisdictionUpdates, `${jid}.json`);
-  fs.writeFileSync(outPath, JSON.stringify(updateJson, null, 2));
   counts.jurisdictionUpdates++;
+
+  csvRows.jurisdictionUpdates.push({
+    jurisdictionId:   jid,
+    prefix:           prefix || '',
+    description:      jRow?.description?.trim() || '',
+    allowedUseTypes:  useTypes.join('|'),
+    useTypes:         isIisSender ? 'PUBLIC_HEALTH' : '',
+  });
 }
 
-// CCUAT PutItem batch (single item, written as a BatchWriteItem for consistency)
-if (ccuatPutItems.length > 0) {
-  const ccuatPath = path.join(OUTPUT_DIRS.jurisdictionUpdates, 'ccuat-put.json');
-  fs.writeFileSync(ccuatPath, JSON.stringify(
-    { RequestItems: { [DYNAMO_TABLE]: ccuatPutItems } }, null, 2
-  ));
-}
+// CCUAT PutItem was generated once and committed to batches/jurisdiction-updates/ccuat-put.json
 
-console.log(`Jurisdiction updates: ${counts.jurisdictionUpdates} files → ${OUTPUT_DIRS.jurisdictionUpdates}`);
+console.log(`Jurisdiction updates: ${counts.jurisdictionUpdates} update-item records (shell script)`);
 
 // ---------------------------------------------------------------------------
 // Task 1.4: Sender PutRequest batch generation
@@ -452,6 +485,17 @@ for (const env of ENVS) {
       if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
       if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
       items.push(makeAllowedUserItem(env, destId, cert, ['PUBLIC_HEALTH']));
+      csvRows.allowedUsersIis.push({
+        env,
+        envId:           ENV_IDS[env],
+        sender_name:     pair.sender_name?.trim() || pair.sender_destid?.trim() || senderKey,
+        sender_prefix:   pair.sender_destid?.trim() || senderKey,
+        cert_domain:     cert.common_name,
+        receiver_destid: pair.receiver_destid?.trim(),
+        receiver_name:   pair.receiver_name?.trim() || pair.receiver_destid?.trim(),
+        use_type:        'PUBLIC_HEALTH',
+        validUntil:      cert.validUntil || '',
+      });
     }
   }
 
@@ -512,6 +556,18 @@ for (const env of ENVS) {
       if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
       if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
       items.push(makeAllowedUserItem(env, destId, cert, [pair.use_type]));
+      const senderOrg = senderOrgRows.find(r => r.short_id.trim().toLowerCase() === shortId);
+      csvRows.allowedUsersProvider.push({
+        env,
+        envId:           ENV_IDS[env],
+        sender_name:     senderOrg?.canonical_name?.trim() || senderRaw,
+        sender_id:       senderOrg?.sender_id || '',
+        cert_domain:     cert.common_name,
+        receiver_destid: pair.receiver_destid?.trim(),
+        receiver_name:   pair.receiver_name?.trim() || pair.receiver_destid?.trim(),
+        use_type:        pair.use_type,
+        validUntil:      cert.validUntil || '',
+      });
     }
   }
 
@@ -525,7 +581,7 @@ for (const env of ENVS) {
 // Task 1.9: ApiKeyDomain PutRequest batch generation
 // ---------------------------------------------------------------------------
 
-const migrationTs    = new Date().toISOString();
+const migrationTs    = '2026-08-18T19:41:02.971Z';
 const fallbackExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const stcExclusionsSeen = new Set();
 
@@ -587,6 +643,25 @@ for (const env of ENVS) {
           requestedBy:   s('migration'),
         },
       },
+    });
+
+    let entityName = '';
+    if (cert.sender_type === 'jurisdiction') {
+      entityName = idToName[entityId] || '';
+    } else {
+      const sOrg = senderOrgRows.find(r => parseInt(r.sender_id, 10) === entityId);
+      entityName = sOrg?.canonical_name?.trim() || '';
+    }
+    csvRows.apikeyDomains.push({
+      env,
+      envId,
+      domain:        cert.common_name,
+      organization:  cert.organization?.trim() || '',
+      sender_type:   cert.sender_type,
+      entityId,
+      entityName,
+      status:        'authorized',
+      authExpiresAt: cert.validUntil?.trim() || fallbackExpiry,
     });
   }
 
@@ -652,6 +727,39 @@ function writeReport() {
 }
 
 writeReport();
+
+// ---------------------------------------------------------------------------
+// Denormalized CSV output
+// ---------------------------------------------------------------------------
+
+console.log('\nWriting denormalized CSVs...');
+
+// senders.csv — env-agnostic, one row per sender org
+const sendersCsvRows = senderOrgRows.map(row => ({
+  sender_id:      row.sender_id,
+  canonical_name: row.canonical_name,
+  use_types:      row.use_types,
+}));
+
+writeCsv('senders.csv',
+  ['sender_id', 'canonical_name', 'use_types'],
+  sendersCsvRows);
+
+writeCsv('jurisdiction-updates.csv',
+  ['jurisdictionId', 'prefix', 'description', 'allowedUseTypes', 'useTypes'],
+  csvRows.jurisdictionUpdates);
+
+writeCsv('apikey-domains.csv',
+  ['env', 'envId', 'domain', 'organization', 'sender_type', 'entityId', 'entityName', 'status', 'authExpiresAt'],
+  csvRows.apikeyDomains);
+
+writeCsv('allowed-users-iis.csv',
+  ['env', 'envId', 'sender_name', 'sender_prefix', 'cert_domain', 'receiver_destid', 'receiver_name', 'use_type', 'validUntil'],
+  csvRows.allowedUsersIis);
+
+writeCsv('allowed-users-provider.csv',
+  ['env', 'envId', 'sender_name', 'sender_id', 'cert_domain', 'receiver_destid', 'receiver_name', 'use_type', 'validUntil'],
+  csvRows.allowedUsersProvider);
 
 module.exports = {
   // exported for testing / incremental implementation
