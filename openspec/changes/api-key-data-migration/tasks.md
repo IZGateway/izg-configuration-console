@@ -211,35 +211,63 @@ created:
   - If `run-migration.sh` exits non-zero, exit the container (do not launch console
     with unmigrated data)
 
-## Phase 5: Validation
+## Phase 5: Local DynamoDB Emulator Validation
 
-- [ ] 5.1 Run migration against onboarding environment; review report output
-  - Confirm at least one Jurisdiction record has `allowedUseTypes` set (e.g., Arizona)
-  - Confirm eHealth Exchange Sender record exists with `sender_id=100`, `useTypes=PUBLIC_HEALTH`
-  - Confirm at least one AllowedUser record exists for a known IIS-to-IIS pair
-  - Confirm at least one `ApiKeyDomain` record exists with `status=authorized` for a
-    known jurisdiction cert (e.g., Arizona's `cair.cdph.ca.gov` → wait, pick a real one)
-  - Calibrate `POLL_INTERVAL_SECONDS` and `POLL_TIMEOUT_SECONDS` from observed runtime
+Validate the migration against your local DynamoDB emulator using a copy of the
+current table at a known state. No shared environments are touched.
 
-- [ ] 5.2 Verify prefix corrections applied in onboarding
-  - `aws dynamodb get-item` for Hawaii (id=14) → `prefix` should be `hi`
-  - `aws dynamodb get-item` for Idaho (id=16) → `prefix` should be `id`
-  - `aws dynamodb get-item` for Nebraska (id=32) → `prefix` should be `ne`
+- [ ] 5.1 Seed local DynamoDB instance with a copy of the current table
+  - Export or seed the `izgw-hub` table into the local emulator
+  - Confirm the table exists and is queryable before proceeding
 
-- [ ] 5.3 Verify Event lock record written correctly
-  - `status=COMPLETED`, `completed` timestamp present, `reportedBy` matches container hostname
-  - Confirm second container startup skips migration (COMPLETED fast-path)
+- [ ] 5.2 Run `run-migration.sh` against local emulator
+  - Set `AWS_ENDPOINT_URL` (or equivalent) to point to the local emulator
+  - Run the script and capture the output
 
-- [ ] 5.4 Clean up onboarding database after validation
-  - Delete all Sender records (id 100–114)
-  - Delete sample AllowedUser records written during test
-  - Delete Event lock record (`Migration#api-key-data-migration`)
-  - Leave Jurisdiction `allowedUseTypes` updates in place (safe to keep)
+- [ ] 5.3 Verify key records in local emulator post-migration
+  - Jurisdiction: confirm at least one record has `allowedUseTypes` set
+  - Prefix corrections: `get-item` for Hawaii (id=14, prefix=`hi`), Idaho (id=16,
+    prefix=`id`), Nebraska (id=32, prefix=`ne`)
+  - Sender: confirm eHealth Exchange (id=100) exists with `useTypes=PUBLIC_HEALTH`
+  - AllowedUser: confirm at least one IIS-to-IIS pair record exists
+  - ApiKeyDomain: confirm at least one record with `status=authorized`
 
-- [ ] 5.5 Verify Hub logs no errors after migration (hub-safety validation)
-  - Check Hub logs in onboarding for any DynamoDB marshalling exceptions or NPEs
-    following the migration run
-  - Confirm Hub cache refresh completes normally with new Sender records present
-  - Confirm Hub AllowedUser cache includes at least one new record from the migration
+- [ ] 5.4 Verify Event lock record behavior
+  - Confirm `status=COMPLETED`, `completed` timestamp present after first run
+  - Run script a second time — confirm COMPLETED fast-path exits cleanly without
+    re-running any batch writes
 
-- [ ] 5.6 Update Jira ticket IGDD-3258 with test results and migration report output
+- [ ] 5.5 Calibrate timeout constants from observed local runtime
+  - Record elapsed time for full migration run
+  - Adjust `POLL_INTERVAL_SECONDS` and `POLL_TIMEOUT_SECONDS` in `run-migration.sh`
+    if needed based on observed timing
+
+## Phase 6: AWS Dev Environment Validation
+
+Validate against the shared dev DynamoDB table in AWS. A backup must be taken before
+any writes so the table can be fully restored if the migration produces unexpected results.
+
+- [ ] 6.1 Take an on-demand DynamoDB backup of `izgw-hub` before migration
+  - Via AWS Console: DynamoDB → Tables → `izgw-hub` → Backups → Create backup
+  - Or via CLI:
+    ```
+    aws dynamodb create-backup \
+      --table-name izgw-hub \
+      --backup-name izgw-hub-pre-api-key-migration-$(date +%Y%m%d)
+    ```
+  - Confirm backup status is `AVAILABLE` before proceeding
+
+- [ ] 6.2 Run `run-migration.sh` against AWS dev environment
+  - Ensure `AWS_DEFAULT_REGION` and credentials are set for dev account
+  - Run script and capture full output including the report block
+  - Confirm exit code is 0
+
+- [ ] 6.3 Verify key records in AWS dev post-migration
+  - Repeat the verification checks from 5.3 against the live dev table
+  - Confirm Event lock record is `COMPLETED`
+  - Confirm Hub in dev logs no DynamoDB exceptions or marshalling errors after migration
+
+- [ ] 6.4 Update Jira ticket [IGDD-3258](https://izgateway.atlassian.net/browse/IGDD-3258) with test results
+  - Paste migration report output into ticket comment
+  - Note any issues found and how they were resolved
+  - Confirm backup ARN is recorded in the ticket for rollback reference
