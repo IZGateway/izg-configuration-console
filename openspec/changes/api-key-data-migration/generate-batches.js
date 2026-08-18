@@ -123,6 +123,7 @@ const unresolved = [];
 const counts = {
   prefixCorrections:      0,
   jurisdictionUpdates:    0,
+  ccuatRecords:           0,
   senderRecords:          0,
   iisAllowedUsers:        { production: 0, onboarding: 0 },
   providerAllowedUsers:   { production: 0, onboarding: 0 },
@@ -307,7 +308,7 @@ for (const row of allowedUseTypeRows) {
           },
         },
       });
-      counts.jurisdictionUpdates++;
+      counts.ccuatRecords++;
       continue;
     }
     unresolved.push(`jurisdiction-allowed-use-types: no jurisdictionId for "${row.organization_name}"`);
@@ -606,20 +607,47 @@ console.log(`\nEnvironments: ${ENVS.join(', ')}`);
 // ---------------------------------------------------------------------------
 
 function writeReport() {
+  const pad = (label, val) => console.log(`  ${label.padEnd(36)} ${val}`);
+
   console.log('\n=== Migration Batch Generation Report ===');
-  console.log(`Prefix corrections:       ${counts.prefixCorrections}`);
-  console.log(`Jurisdiction updates:     ${counts.jurisdictionUpdates}`);
-  console.log(`Sender records:           ${counts.senderRecords}`);
+  console.log('\nEnv-agnostic:');
+  pad('Prefix corrections:',       counts.prefixCorrections);
+  pad('Jurisdiction update-item:', counts.jurisdictionUpdates);
+  pad('CCUAT PutRequest:',         counts.ccuatRecords);
+  pad('Sender PutRequest:',        counts.senderRecords);
+
   for (const env of ENVS) {
-    console.log(`IIS AllowedUsers    [${env}]: ${counts.iisAllowedUsers[env]}`);
-    console.log(`Provider AllowedUsers [${env}]: ${counts.providerAllowedUsers[env]}`);
-    console.log(`ApiKey Domains      [${env}]: ${counts.apikeyDomains[env]}`);
+    const allowedUsers = counts.iisAllowedUsers[env] + counts.providerAllowedUsers[env];
+    console.log(`\n[${env}]`);
+    pad('  IIS AllowedUser PutRequest:',      counts.iisAllowedUsers[env]);
+    pad('  Provider AllowedUser PutRequest:', counts.providerAllowedUsers[env]);
+    pad('  AllowedUser total:',               allowedUsers);
+    pad('  ApiKeyDomain PutRequest:',         counts.apikeyDomains[env]);
   }
+
+  if (stcExclusionsSeen.size > 0) {
+    console.log('\nSTC Health shared cert exclusions (no 1:1 sender mapping; must be seeded manually):');
+    for (const domain of stcExclusionsSeen) {
+      console.log(`  - ${domain}`);
+    }
+  }
+
+  const unresolvedPath = path.join(__dirname, 'unresolved.txt');
   if (unresolved.length > 0) {
-    console.warn(`\nUnresolved rows: ${unresolved.length} (see migrate/unresolved.txt)`);
-    fs.writeFileSync(path.join(__dirname, 'unresolved.txt'), unresolved.join('\n') + '\n');
+    // Deduplicate: count occurrences of each unique message
+    const tally = {};
+    for (const msg of unresolved) {
+      tally[msg] = (tally[msg] || 0) + 1;
+    }
+    const lines = Object.entries(tally).map(([msg, n]) => n > 1 ? `${msg} (x${n})` : msg);
+    console.warn(`\nUnresolved rows: ${Object.keys(tally).length} unique (${unresolved.length} total) — written to unresolved.txt`);
+    fs.writeFileSync(unresolvedPath, lines.join('\n') + '\n');
   } else {
     console.log('\nNo unresolved rows.');
+    if (fs.existsSync(unresolvedPath)) {
+      fs.unlinkSync(unresolvedPath);
+      console.log('  (stale unresolved.txt deleted)');
+    }
   }
 }
 

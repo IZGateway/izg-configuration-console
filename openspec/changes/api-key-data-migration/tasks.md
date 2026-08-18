@@ -126,7 +126,7 @@ created:
   - Batch into groups of 25; write to
     `batches/{env}/apikey-domains-batch-NNN.json`
 
-- [ ] 1.10 Implement execution report output
+- [x] 1.10 Implement execution report output
   - After generating all output, print summary:
     - Count of Jurisdiction `update-item` commands generated
     - Count of CCUAT PutRequest records
