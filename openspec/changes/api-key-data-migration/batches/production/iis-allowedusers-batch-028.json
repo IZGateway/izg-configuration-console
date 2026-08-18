@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wy#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "wy"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#va_s#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "va_s"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#va_s#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "va_s"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ar#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "ar"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ar#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "ar"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nv#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "nv"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nm#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "nm"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#fl#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "fl"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#il#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#mi#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "mi"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#nj#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "nj"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#co#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "co"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wa#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "wa"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#wy#usiisapps.utah.gov"
+            },
+            "principal": {
+              "S": "usiisapps.utah.gov"
+            },
+            "organization": {
+              "S": "Utah Department of Health and Human Services"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2026-10-08"
+            },
+            "destinationId": {
+              "S": "wy"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#de#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "de"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#de#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "de"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#md#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "md"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#md#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "md"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ak#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "ak"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#ak#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "ak"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#az#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "az"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#izgateway.stchealthops.com"
+            },
+            "principal": {
+              "S": "izgateway.stchealthops.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-08-19"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "1#dc#epicenter.stchome.com"
+            },
+            "principal": {
+              "S": "epicenter.stchome.com"
+            },
+            "organization": {
+              "S": "STC Health LLC"
+            },
+            "useTypes": {
+              "SS": [
+                "PUBLIC_HEALTH"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-01"
+            },
+            "destinationId": {
+              "S": "dc"
+            },
+            "environment": {
+              "N": "1"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}

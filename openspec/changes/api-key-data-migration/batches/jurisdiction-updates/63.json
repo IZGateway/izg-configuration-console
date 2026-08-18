@@ -1,0 +1,26 @@
+{
+  "TableName": "izgw-hub",
+  "Key": {
+    "entityType": {
+      "S": "Jurisdiction"
+    },
+    "sortKey": {
+      "S": "63"
+    }
+  },
+  "UpdateExpression": "SET allowedUseTypes = :aut, useTypes = :ut",
+  "ExpressionAttributeValues": {
+    ":aut": {
+      "SS": [
+        "PUBLIC_HEALTH",
+        "PROVIDER",
+        "PATIENT"
+      ]
+    },
+    ":ut": {
+      "SS": [
+        "PUBLIC_HEALTH"
+      ]
+    }
+  }
+}

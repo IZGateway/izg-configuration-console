@@ -1,0 +1,831 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#102#securityrs.com"
+            },
+            "domain": {
+              "S": "securityrs.com"
+            },
+            "entityId": {
+              "N": "102"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-07-02"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#103#ehealthsign.com"
+            },
+            "domain": {
+              "S": "ehealthsign.com"
+            },
+            "entityId": {
+              "N": "103"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-07-21"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#103#IZGTesting.ehealthsign.com"
+            },
+            "domain": {
+              "S": "IZGTesting.ehealthsign.com"
+            },
+            "entityId": {
+              "N": "103"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-07-21"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#113#clinics-sit.olympus-tst.com"
+            },
+            "domain": {
+              "S": "clinics-sit.olympus-tst.com"
+            },
+            "entityId": {
+              "N": "113"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-03-06"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#tyoung.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "tyoung.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-04"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#mstankiewicz.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "mstankiewicz.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-13"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#pcahill.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "pcahill.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-07-24"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#amoody.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "amoody.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-04-20"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#cicd.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "cicd.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-03-31"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#weckels.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "weckels.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-02-12"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#ppatel.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "ppatel.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-11-19"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#kboone.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "kboone.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-11-05"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#akanuri.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "akanuri.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-09-30"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#ebrock.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "ebrock.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-09-30"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#104#bwilliams.testing.izgateway.org"
+            },
+            "domain": {
+              "S": "bwilliams.testing.izgateway.org"
+            },
+            "entityId": {
+              "N": "104"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-10-01"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#34#njiis-stage.doh.nj.gov"
+            },
+            "domain": {
+              "S": "njiis-stage.doh.nj.gov"
+            },
+            "entityId": {
+              "N": "34"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-25"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#41#soa-test.alertiis.org"
+            },
+            "domain": {
+              "S": "soa-test.alertiis.org"
+            },
+            "entityId": {
+              "N": "41"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-11-21"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#31#test.ndiis.org"
+            },
+            "domain": {
+              "S": "test.ndiis.org"
+            },
+            "entityId": {
+              "N": "31"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-07-28"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#51#cdc-izg-onboarding-client-certificate.kidsnet.health.ri.gov"
+            },
+            "domain": {
+              "S": "cdc-izg-onboarding-client-certificate.kidsnet.health.ri.gov"
+            },
+            "entityId": {
+              "N": "51"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-07"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#26#miic-jboss-test.web.health.state.mn.us"
+            },
+            "domain": {
+              "S": "miic-jboss-test.web.health.state.mn.us"
+            },
+            "entityId": {
+              "N": "26"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-06"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#32#testnesiis-dhhs-test.ne.gov"
+            },
+            "domain": {
+              "S": "testnesiis-dhhs-test.ne.gov"
+            },
+            "entityId": {
+              "N": "32"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-12-18"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#38#izg-onboarding.immunize.nyc"
+            },
+            "domain": {
+              "S": "izg-onboarding.immunize.nyc"
+            },
+            "entityId": {
+              "N": "38"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-03-03"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#23#immutest.health.maryland.gov"
+            },
+            "domain": {
+              "S": "immutest.health.maryland.gov"
+            },
+            "entityId": {
+              "N": "23"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-02-15"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#55#uat-immtrac.dshs.state.tx.us"
+            },
+            "domain": {
+              "S": "uat-immtrac.dshs.state.tx.us"
+            },
+            "entityId": {
+              "N": "55"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-05-08"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#17#icarehl7test.dph.illinois.gov"
+            },
+            "domain": {
+              "S": "icarehl7test.dph.illinois.gov"
+            },
+            "entityId": {
+              "N": "17"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-04-14"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

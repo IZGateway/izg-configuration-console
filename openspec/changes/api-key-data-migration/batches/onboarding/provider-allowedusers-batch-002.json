@@ -1,0 +1,881 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#id#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "id"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#il#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "il"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#in#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "in"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ky#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ky"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#la#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "la"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ma#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ma"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#mi#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "mi"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#mo#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "mo"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#mt#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "mt"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ne#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ne"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nv#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "nv"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nm#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "nm"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nyc#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "nyc"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nc#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "nc"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#nd#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "nd"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#oh#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "oh"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#or#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "or"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ok#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ok"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ph#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ph"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ri#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ri"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#sd#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "sd"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#tn#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "tn"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#ut#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "ut"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#wa#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "wa"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "AllowedUser"
+            },
+            "sortKey": {
+              "S": "3#wv#riisetest.cdc.gov"
+            },
+            "principal": {
+              "S": "riisetest.cdc.gov"
+            },
+            "organization": {
+              "S": "Division of Global Migration Health (DGMH)"
+            },
+            "useTypes": {
+              "SS": [
+                "PROVIDER"
+              ]
+            },
+            "validUntil": {
+              "S": "2027-04-13"
+            },
+            "destinationId": {
+              "S": "wv"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "enabled": {
+              "BOOL": true
+            }
+          }
+        }
+      }
+    ]
+  }
+}
