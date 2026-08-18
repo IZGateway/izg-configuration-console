@@ -1,0 +1,468 @@
+{
+  "RequestItems": {
+    "izgw-hub": [
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#42#Philly-test.izgateway.envisiontechnology.com"
+            },
+            "domain": {
+              "S": "Philly-test.izgateway.envisiontechnology.com"
+            },
+            "entityId": {
+              "N": "42"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-05-25"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#49#RMI-test.izgateway.envisiontechnology.com"
+            },
+            "domain": {
+              "S": "RMI-test.izgateway.envisiontechnology.com"
+            },
+            "entityId": {
+              "N": "49"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-05-25"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#52#SC-test.izgateway.envisiontechnology.com"
+            },
+            "domain": {
+              "S": "SC-test.izgateway.envisiontechnology.com"
+            },
+            "entityId": {
+              "N": "52"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-05-25"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#112#riisetest.cdc.gov"
+            },
+            "domain": {
+              "S": "riisetest.cdc.gov"
+            },
+            "entityId": {
+              "N": "112"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-04-13"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#114#vac10accessgwsqa01.va.gov"
+            },
+            "domain": {
+              "S": "vac10accessgwsqa01.va.gov"
+            },
+            "entityId": {
+              "N": "114"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-12-16"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#114#preprodcernerspaces.com"
+            },
+            "domain": {
+              "S": "preprodcernerspaces.com"
+            },
+            "entityId": {
+              "N": "114"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-05-08"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#108#docstation.co"
+            },
+            "domain": {
+              "S": "docstation.co"
+            },
+            "entityId": {
+              "N": "108"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-08-06"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#106#test.davita.com"
+            },
+            "domain": {
+              "S": "test.davita.com"
+            },
+            "entityId": {
+              "N": "106"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-06-16"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#105#staging.azova.com"
+            },
+            "domain": {
+              "S": "staging.azova.com"
+            },
+            "entityId": {
+              "N": "105"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-12-09"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#111#test.mayo.qvera.com"
+            },
+            "domain": {
+              "S": "test.mayo.qvera.com"
+            },
+            "entityId": {
+              "N": "111"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-11-13"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#101#beta.dockethealth.com"
+            },
+            "domain": {
+              "S": "beta.dockethealth.com"
+            },
+            "entityId": {
+              "N": "101"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-02-05"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#100#ehealthexchange.org"
+            },
+            "domain": {
+              "S": "ehealthexchange.org"
+            },
+            "entityId": {
+              "N": "100"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-09-09"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#110#iris-nonprod.freseniusmedicalcare.com"
+            },
+            "domain": {
+              "S": "iris-nonprod.freseniusmedicalcare.com"
+            },
+            "entityId": {
+              "N": "110"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2026-09-09"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      },
+      {
+        "PutRequest": {
+          "Item": {
+            "entityType": {
+              "S": "ApiKeyDomain"
+            },
+            "sortKey": {
+              "S": "3#4#test-izgateway.adph.state.al.us"
+            },
+            "domain": {
+              "S": "test-izgateway.adph.state.al.us"
+            },
+            "entityId": {
+              "N": "4"
+            },
+            "environment": {
+              "N": "3"
+            },
+            "status": {
+              "S": "authorized"
+            },
+            "validatedAt": {
+              "S": "2026-08-18T19:41:02.971Z"
+            },
+            "authExpiresAt": {
+              "S": "2027-04-08"
+            },
+            "requestedBy": {
+              "S": "migration"
+            }
+          }
+        }
+      }
+    ]
+  }
+}

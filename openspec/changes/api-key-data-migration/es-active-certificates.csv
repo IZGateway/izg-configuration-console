@@ -1,0 +1,124 @@
+﻿Environment,Common Name,Organization
+staging,pcahill.testing.izgateway.org,Audacious Inquiry LLC
+staging,preprod.phiz-project.org,Audacious Inquiry LLC
+staging,akanuri.testing.izgateway.org,Audacious Inquiry LLC
+staging,ebrock.testing.izgateway.org,Audacious Inquiry LLC
+staging,uptrends.izgateway.org,Audacious Inquiry LLC
+staging,kboone.testing.izgateway.org,Audacious Inquiry LLC
+staging,ppatel.testing.izgateway.org,Audacious Inquiry LLC
+staging,ehex-xform.sandbox2.aimsplatform.org,Association of Public Health Laboratories
+staging,amoody.testing.izgateway.org,Audacious Inquiry LLC
+staging,preprod.xform.phiz-project.org,Audacious Inquiry LLC
+prod,CNMI-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,FSM-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,Guam-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,Palau-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,IZGTesting.ehealthsign.com,"e-HealthSign, LLC"
+prod,soa.alertiis.org,Oregon ALERT IIS
+prod,docstation.co,"DocStation, Inc."
+prod,izgateway.stchealthops.com,"STC Health, LLC"
+prod,prod.ndiis.org,Blue Cross Blue Shield of North Dakota
+prod,iris-prod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.
+prod,akanuri.testing.izgateway.org,Audacious Inquiry LLC
+prod,ebrock.testing.izgateway.org,Audacious Inquiry LLC
+prod,usiisapps.utah.gov,Utah Department of Health and Human Services
+prod,izgateway2.stchealthops.com,"STC Health, LLC"
+prod,uptrends.izgateway.org,Audacious Inquiry LLC
+prod,prod.mayo.qvera.com,Qvera LLC.
+prod,kboone.testing.izgateway.org,Audacious Inquiry LLC
+prod,ppatel.testing.izgateway.org,Audacious Inquiry LLC
+prod,viirs.optimoz.com,"Optimoz, Inc"
+prod,flshotsizgateway.flshots.com,Florida Department of Health
+prod,dhswir.org,Wisconsin Department of Health Services
+prod,vac10accessgwprd01.va.gov,Veterans Data Integration and Federation Enterprise Platform
+prod,hl-iispia-ha-e.njdoh.net,"Department of Health, State of New Jersey"
+prod,izg.immunize.nyc,New York City Department of Health
+prod,cernerspaces.com,Cerner Corporation
+prod,miis.massimmunize.org,Massachusetts Department of Public Health
+prod,dockethealth.com,"DOCKET HEALTH, INC."
+prod,integration.vams.cdc.gov,Centers for Disease Control and Prevention
+prod,integrationengine.mihin.org,Michigan Health Information Network Shared Services
+prod,epicenter.stchome.com,"STC Health, LLC"
+prod,riise.cdc.gov,Division of Global Migration Health (DGMH)
+prod,riise.cdc.gov,Centers for Disease Control and Prevention (DGMH)
+prod,riise.cdc.gov,Centers for Disease Control and Prevention DGMH
+prod,prod-izgateway.adph.state.al.us,Alabama Department of Public Health
+prod,amoody.testing.izgateway.org,Audacious Inquiry LLC
+prod,cair.cdph.ca.gov,California Immunization Registry
+prod,AS-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,FSM-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,Palau-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,AR-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,CNMI-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,CO-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,CT-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,DE-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,Guam-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,KS-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,KY-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,MO-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,NM-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,NV-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,OK-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,Philly-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,RMI-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,pcahill.testing.izgateway.org,Audacious Inquiry LLC
+prod,icarehl7.dph.illinois.gov,Illinois Department of Public Health
+prod,prod.phiz-project.org,Audacious Inquiry LLC
+prod,www.mdimmunet.org,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene
+prod,davita.com,DaVita Inc
+prod,fdlrez.com,Fond du lac Human Services
+prod,PA-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+prod,cdc-izg-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health
+onboard,Guam-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,davita.com,DaVita Inc
+onboard,onc.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,pcahill.testing.izgateway.org,Audacious Inquiry LLC
+onboard,test.ndiis.org,Blue Cross Blue Shield of North Dakota
+onboard,njiis-stage.doh.nj.gov,"Department of Health, State of New Jersey"
+onboard,iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.
+onboard,akanuri.testing.izgateway.org,Audacious Inquiry LLC
+onboard,ebrock.testing.izgateway.org,Audacious Inquiry LLC
+onboard,usiisonboarding.utah.gov,Utah Department of Health and Human Services
+onboard,izgateway2.stchealthops.com,"STC Health, LLC"
+onboard,dev.phiz-project.org,Audacious Inquiry LLC
+onboard,uptrends.izgateway.org,Audacious Inquiry LLC
+onboard,kboone.testing.izgateway.org,Audacious Inquiry LLC
+onboard,test.mayo.qvera.com,Qvera LLC.
+onboard,hco.optimoz.com,"Optimoz, Inc"
+onboard,soa-test.alertiis.org,Oregon ALERT IIS
+onboard,flshotsizgatewaydev.flshots.com,Florida Department of Health
+onboard,ncir2-uat.ncdhhs.gov,North Carolina Department of Health and Human Services
+onboard,training.dhswir.org,Wisconsin Department of Health Services
+onboard,vac10accessgwsqa01.va.gov,Veterans Data Integration and Federation Enterprise Platform
+onboard,miis-cert.massimmunize.org,Massachusetts Department of Public Health
+onboard,beta.dockethealth.com,"DOCKET HEALTH, INC."
+onboard,immutest.health.maryland.gov,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene
+onboard,izg-onboarding.immunize.nyc,New York City Department of Health
+onboard,clinics-sit.olympus-tst.com,Centers for Disease Control and Prevention
+onboard,test-izgateway.adph.state.al.us,Alabama Department of Public Health
+onboard,ehex-xform.onboard2.aimsplatform.org,Association of Public Health Laboratories
+onboard,riisetest.cdc.gov,Division of Global Migration Health (DGMH)
+onboard,icarehl7test.dph.illinois.gov,Illinois Department of Public Health
+onboard,amoody.testing.izgateway.org,Audacious Inquiry LLC
+onboard,cairstaging.cdph.ca.gov,California Immunization Registry
+onboard,preprodcernerspaces.com,Cerner Corporation
+onboard,uat-immtrac.dshs.state.tx.us,Texas Department of State Health Services
+onboard,AR-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,CNMI-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,CO-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,FSM-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,Guam-prod.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,KS-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,KY-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,NV-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,Philly-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,onboard.xform.phiz-project.org,Audacious Inquiry LLC
+onboard,CT-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,MO-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,NM-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,test.davita.com,DaVita Inc
+onboard,PA-test.izgateway.envisiontechnology.com,"Envision Technology Partners, Inc."
+onboard,securityrs.com,"Security Risk Solutions, Inc."
+onboard,IZGTesting.ehealthsign.com,"e-HealthSign, LLC"
+onboard,cdc-izg-onboarding-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health

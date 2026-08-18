@@ -1,0 +1,17 @@
+{
+  "TableName": "izgw-hub",
+  "Key": {
+    "entityType": {
+      "S": "Jurisdiction"
+    },
+    "sortKey": {
+      "S": "14"
+    }
+  },
+  "UpdateExpression": "SET allowedUseTypes = :aut",
+  "ExpressionAttributeValues": {
+    ":aut": {
+      "SS": []
+    }
+  }
+}

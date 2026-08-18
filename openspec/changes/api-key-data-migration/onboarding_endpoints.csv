@@ -1,0 +1,93 @@
+destId,jurisdictionName,msh3,msh4,environment
+404,DEVELOPMENT,IZGW,IZGW,onboarding
+ak,AK VacTrAK,IZGATEWAY,IZGATEWAY,onboarding
+al,AL ImmPRINT,1465,1334,onboarding
+ar,AR WebIZ,,IZGATEWAY-AART,onboarding
+as,PI - American Samoa,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+az,AZ ASIIS,IZGATEWAY,69002,onboarding
+ca,CA CAIR,IZGATEWAY,IZGATEWAY,onboarding
+ccuat,CCUAT,IZGW,IZGW,onboarding
+ccuata,CCUAT,IZGW,IZGW,onboarding
+ccuatb,CCUAT,IZGW,IZGW,onboarding
+ccuatc,CCUAT,IZGW,IZGW,onboarding
+ccuatd,CCUAT,IZGW,IZGW,onboarding
+ccuate,CCUAT,IZGW,IZGW,onboarding
+ccuatf,CCUAT,IZGW,IZGW,onboarding
+ccuatg,CCUAT,IZGW,IZGW,onboarding
+ccuath,CCUAT,IZGW,IZGW,onboarding
+ccuati,CCUAT,IZGW,IZGW,onboarding
+ccuatj,CCUAT,IZGW,IZGW,onboarding
+ccuatk,CCUAT,IZGW,IZGW,onboarding
+ccuatl,CCUAT,IZGW,IZGW,onboarding
+co,CO CIIS,,IZGATEWAY-AART,onboarding
+ct,CT WiZ,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+dc,DC DOCIIS,IZGATEWAY,IZGATEWAY,onboarding
+de,DE DelVAX,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+dev,DEVELOPMENT,IZGW,IZGW,onboarding
+dev2011,DEVELOPMENT,IZGW,IZGW,onboarding
+devwup,DEVELOPMENT,IZGW,IZGW,onboarding
+dex,CDC,,,onboarding
+dex-dev,DEVELOPMENT,IZGW,IZGW,onboarding
+down,DEVELOPMENT,IZGW,IZGW,onboarding
+fl,FL SHOTS,IZGATEWAY,DMC53427,onboarding
+fm,PI - Federated States of Micronesia,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+ga,GA GRITS,31441,31441,onboarding
+gu,PI - PI Guam,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+ia,IA IRIS,INTDX2,INTDX2,onboarding
+id,ID IRIS,IRIS,59549,onboarding
+il,IL I-CARE,AART,TEST,onboarding
+in,IN CHIRP,IZGATEWAY,IZGATEWAY,onboarding
+invalid,DEVELOPMENT,IZGW,IZGW,onboarding
+ks,KS WebIZ,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+ky,KY KYIR,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+la,LA LINKS,IZGATEWAY,IZGATEWAY,onboarding
+ma,MA MIIS,60182,60182,onboarding
+maint,DEVELOPMENT,IZGW,IZGW,onboarding
+md,MD IMMUNET,IMMUNET,161143928,onboarding
+md_c,MD IMMUNET,161147173,161147173,onboarding
+me,ME ImmPact2,34227,34227,onboarding
+mh,PI - Republic of the Marshall Islands,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+mi,MI MCIR,IZGATEWAY,IZGATEWAY,onboarding
+mi_test,MI MCIR,IZGATEWAY,IZGATEWAY,onboarding
+mn,MN MIIC,AART,IZGATE,onboarding
+mo,MO ShowMeVax,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+mp,PI - PI N Mariana Islands,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+ms,MS MIIX,IZGATEWAY,IZGATEWAY,onboarding
+mt,MT imMTrax,IZGATEWAY,80844,onboarding
+nc,NCIR,IZGATE,IZGATE,onboarding
+nc_test,NCIR,IZG,IZGATE,onboarding
+nd,ND SIIS,IHS00048,DS-ND-06501,onboarding
+ne,NE NESIIS,IZGTW,IZGTW,onboarding
+nh,NH VaxNH,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+nj,NJ NJIIS,IZGATEWAY,12895,onboarding
+nm,NM NMSIIS,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+nv,NV WebIZ,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+ny_qbp,NY NYSIIS,,,onboarding
+ny_test,NY NYSIIS,,,onboarding
+ny_vxu,NY NYSIIS,118978,118978,onboarding
+nyc,NY NYSIIS,7004D01,7004D01,onboarding
+oh,OH Impact SIIS,IZGATEWAY,IZGATEWAY,onboarding
+ok,OK OSIIS,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+or,OR ALERT,AL9997,AL9997,onboarding
+pa,PA SIIS,PASIIS,PADOH,onboarding
+ph,PA PHIL,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+pr,PR PRIR,IZGATEWAY,IZGATEWAY,onboarding
+pt1,DEVELOPMENT,IZGW,IZGW,onboarding
+pt2,DEVELOPMENT,IZGW,IZGW,onboarding
+pw,PI - Palau,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+reject,DEVELOPMENT,IZGW,IZGW,onboarding
+ri,RI CAIR,IZ Gateway,RI88200909,onboarding
+sc,SC SCI,IZGATEWAY-AART,IZGATEWAY-AART,onboarding
+sd,SD SDIIS,IZGATEWAY,IZGATEWAY,onboarding
+test,DEVELOPMENT,,,onboarding
+tn,TN TennIIS,IZGATEWAY,IZGATEWAY,onboarding
+tx,TX ImmTrac,1117537000,1117537000,onboarding
+ut,UT USIIS,208,PP098,onboarding
+va,VA VIIS,1st,1st,onboarding
+va_s,VA VIIS,IZGATEWAY,IZGATEWAY,onboarding
+vi,U.S. Virgin Islands,IZGY,IZGY,onboarding
+vt,VT IMR,,,onboarding
+wa,WA WAIIS,IZGATEWAY,IZGATEWAY,onboarding
+wi,WI WIR,42342,42342,onboarding
+wv,WV WVSIIS,IZGATEWAY,IZGATEWAY,onboarding
+wy,WY WyIR,IZGATEWAY,IZGATEWAY,onboarding
