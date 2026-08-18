@@ -68,38 +68,53 @@ in `verify-domain/index.ts`; default disabled, `logger.warn` emitted when active
 documented in `src/.env.template`. `NODE_ENV` alone is not a reliable production guard in
 every deploy config, so the explicit opt-in is required.
 
-### D3 — `useTypes` stored as a DynamoDB String Set (SS)  *(REVISED — aligned to IGDD-3140)*
+### D3 — `useTypes` and `environments` both stored as DynamoDB Sets (SS / NS)
+*(REVISED — coordinated with the Hub's model, `izgw-hub` branch `IGDD-3257`)*
 
-**Decision:** persist `ApiKeyCredential.useTypes` (and `environments`) as a deduped
-**DynamoDB String Set (`SS`)**, matching the canonical IGDD-3140 storage decision. In the
-SDK v3 `DynamoDBDocumentClient`, that means passing a native JS `Set` (`new Set(params.useTypes)`)
-— the marshaller emits `SS` directly; there is no `docClient.createSet` in v3 (that's an
-AWS SDK v2 DocumentClient method and does not exist on this client — an earlier autofix
+**Decision:** persist `ApiKeyCredential.useTypes` as a deduped **DynamoDB String Set
+(`SS`)** and `ApiKeyCredential.environments` as a deduped **DynamoDB Number Set (`NS`)**.
+Both attributes use a native DynamoDB Set rather than a List for the same reason: a Set
+enforces uniqueness at the storage layer, so a bug upstream can't silently persist
+duplicate use-types or environment ids the way a List would silently accept them. This is
+a coordinated, cross-service change — the Hub's own `ApiKeyCredential.java` model moves
+`environments` from `List<Integer>` to `Set<Integer>` in lockstep (izgw-hub, IGDD-3257),
+matching its pre-existing `Set<String> useTypes` field. **Both sides must ship together**:
+a console write of an `NS` against a Hub still expecting `List<Integer>` (or vice versa)
+will fail the Hub's Enhanced Client deserialization on every read of that row.
+
+In the SDK v3 `DynamoDBDocumentClient`, persisting either Set means passing a native JS
+`Set` (`new Set(params.useTypes)` / `new Set(params.environments)`) — the marshaller emits
+`SS`/`NS` directly from the element type; there is no `docClient.createSet` in v3 (that's
+an AWS SDK v2 DocumentClient method and does not exist on this client — an earlier autofix
 attempt called it and crashed every `POST /api/apikeys` with `TypeError:
 dynamodDbDocClient.createSet is not a function` before this fix). On read, both attributes
-are unmarshalled via `Array.from(item.X as Iterable<string>)`, which handles a native `Set`
-or a legacy `Array` alike, and `useTypes` values are further validated via
-`filter(isValidUseType)`. `useTypes` is a server-side property (Hub reads it by `jti`),
-**not** a JWT claim. `SS` is safe for both attributes because callers guarantee non-empty:
-`useTypes` is required non-empty at create (§5.3), and `environments` is now guarded the
-same way — `POST /api/apikeys` already rejected empty `environments`, and `/renew` now
-returns 409 rather than passing an existing credential's empty `environments` straight
-through (an empty `SS` is not a legal DynamoDB value; as a List this previously wrote
-silently rather than failing loudly).
+are unmarshalled via `Array.from(item.X as Iterable<...>, ...)`, which handles a native
+`Set` or a legacy `Array` alike (tolerating any interim rows written as a List during this
+branch's development); `useTypes` values are further validated via `filter(isValidUseType)`
+and `environments` elements are coerced via `Number` (defends against any interim rows with
+string elements). Neither attribute is a JWT claim — both are server-side properties the
+Hub reads by `jti` at routing time. Both Sets are safe because callers guarantee non-empty:
+`useTypes` is required non-empty at create (§5.3), and `environments` is guarded the same
+way — `POST /api/apikeys` already rejects empty `environments`, and `/renew` 409s rather
+than passing an existing credential's empty `environments` through (an empty Set is not a
+legal DynamoDB value).
 
-> **Superseded approach:** this branch originally persisted `useTypes` and `environments`
-> as a deduped **List** (the lib-dynamodb v3 DocumentClient returns Sets as native JS
-> `Set`s with no unmarshal-to-array option, and the interim ER diagram showed `+List
-> useTypes`). IGDD-3140 makes `SS` canonical, so the shipped List implementation was
-> migrated to `SS` for these two attributes.
+> **History:** this branch originally persisted both `useTypes` and `environments` as a
+> deduped List with string elements. IGDD-3140 made `useTypes` canonically `SS`. A
+> subsequent pass generalized that to `environments` too, but with the wrong element type
+> (string, not Integer) — a mismatch against the Hub's `List<Integer>` model at the time,
+> caught and corrected to a plain `List<Integer>`-matching List of Number. That, in turn,
+> was superseded by this revision once the decision was made to move `environments` to a
+> Number Set outright (matching `useTypes`'s Set-based uniqueness guarantee), coordinated
+> with an equivalent change on the Hub side.
 
-> **Caveat — `Jurisdiction.allowedUseTypes` is not covered by this decision.** IGDD-3140's
-> `SS` decision is about the *credential*-level attributes above. A jurisdiction's
-> `allowedUseTypes` must be able to be **empty** (empty = the DENY-ALL policy state), and a
-> DynamoDB String Set cannot be empty, so that attribute cannot use `SS` as-is. Storage for
-> the jurisdiction-side attribute needs to stay a List (or represent deny-all by attribute
-> absence, which is how the console's read path already treats it); resolve this with the
-> IGDD-3140 owner before migrating anything beyond the two credential attributes above.
+> **Caveat — `Jurisdiction.allowedUseTypes` is not covered by the `useTypes` SS decision.**
+> IGDD-3140's `SS` decision is about the *credential*-level `useTypes` attribute above. A
+> jurisdiction's `allowedUseTypes` must be able to be **empty** (empty = the DENY-ALL policy
+> state), and a DynamoDB String Set cannot be empty, so that attribute cannot use `SS` as-is.
+> Storage for the jurisdiction-side attribute needs to stay a List (or represent deny-all by
+> attribute absence, which is how the console's read path already treats it); resolve this
+> with the IGDD-3140 owner before migrating anything beyond `useTypes`.
 
 ### D4 — Expiry (and JWT `iat`) are stamped at issuance, not at record creation
 
@@ -171,15 +186,16 @@ the two things that actually mattered:
 If active-key volume genuinely grows into the thousands under one view, true cursor
 pagination can be layered on top of the `LastEvaluatedKey` work already in place.
 
-### D9 — Credential re-key to bare `{jti}`; `environments` List; JWT reduced toward identity-only
+### D9 — Credential re-key to bare `{jti}`; `environments` Number Set; JWT reduced toward identity-only
 
 **Decision:** per the IGDD-3140 design (and reconciled with the Hub's own OpenSpec
 update), the credential sort key changed from `{env}#{jti}` to bare **`{jti}`** — the
 Hub reads a credential directly by `jti` at routing time, with no environment prefix to
 parse. The singular `env` (string) attribute is replaced by **`environments`** (a
-List), so a credential can span multiple environments; standard sender credentials
-still carry exactly one. Creating a multi-environment credential is an **IZG
-Operations-only** capability, enforced server-side in `POST /api/apikeys` (not just
+deduped DynamoDB Number Set — see D3), so a credential can span multiple environments;
+standard sender credentials still carry exactly one. Creating a multi-environment
+credential is an **IZG Operations-only** capability, enforced server-side in
+`POST /api/apikeys` (not just
 hidden in the UI) — a non-admin request for more than one environment is rejected
 (403) even if the caller otherwise has create permission. The JWT payload had its
 numeric `env` claim removed entirely (environment authorization is now a server-side
@@ -306,6 +322,24 @@ Once local DynamoDB was seeded with real sender/jurisdiction rows (including a
 dual-role row carrying both `useTypes` and `allowedUseTypes`), the mock was removed
 entirely — `useOrganizations()` now always calls `/api/jurisdictions`. No trace of the
 mock remains in `.env.template` or the component.
+
+### D18 — `ApiKeyDomain.env` converted from string to number, matching `environments`
+
+**Decision:** `ApiKeyDomain.env` (a separate, console-only table tracking DNS
+domain authorization per `(env, jurisdiction, domain)` — **not** read by the
+Hub, so no cross-service contract applies) was `env: string`, requiring an
+explicit `String(...)` coercion at every write site and a `String(item.env)
+=== String(envId)` comparison on read. Raised in PR review (matching D3's
+`environments` field to the same underlying environment-id concept):
+converted to `env: number` for consistency — `upsertApiKeyDomain`'s param
+type, both write call sites (`POST /api/apikeys`'s DNS-challenge branch,
+`verify-domain`'s authorization branch), and the `fetchAuthorizedApiKeyDomains`
+read/filter path (now `Number(item.env) === envId`) all changed accordingly.
+`GET /api/apikeys/domains` now parses and validates its `envId` query
+parameter as a number (1–5, same range check as the create route) instead of
+passing the raw query string through. Reads still defensively coerce via
+`Number(item.env)` to tolerate any pre-existing rows written while this
+attribute was a String.
 
 ## Risks / Trade-offs
 
