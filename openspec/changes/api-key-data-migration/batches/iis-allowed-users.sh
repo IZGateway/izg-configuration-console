@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # iis-allowed-users.sh — Load IIS AllowedUser records into DynamoDB
 #
 # Reads batches/denormalized/allowed-users-iis.csv and issues one put-item per row.
@@ -35,10 +35,13 @@ fi
 
 echo "Loading IIS AllowedUsers → table: $TABLE"
 
+VALIDATED_ON="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 COUNT=0
 SKIP=1  # skip header
 
 # Columns: env,envId,sender_name,sender_prefix,cert_domain,receiver_destid,receiver_name,use_type,validUntil
+# Note: use_type and validUntil are retained in the CSV for audit/review purposes only;
+# the AllowedUser entity does not store those fields.
 while IFS=, read -r env envId sender_name sender_prefix cert_domain receiver_destid receiver_name use_type validUntil; do
   if [[ $SKIP -eq 1 ]]; then SKIP=0; continue; fi
 
@@ -51,10 +54,9 @@ while IFS=, read -r env envId sender_name sender_prefix cert_domain receiver_des
       \"sortKey\":       {\"S\": \"${SORT_KEY}\"},
       \"principal\":     {\"S\": \"${cert_domain}\"},
       \"organization\":  {\"S\": \"${sender_name}\"},
-      \"useTypes\":      {\"SS\": [\"${use_type}\"]},
-      \"validUntil\":    {\"S\": \"${validUntil}\"},
       \"destinationId\": {\"S\": \"${receiver_destid}\"},
       \"environment\":   {\"N\": \"${envId}\"},
+      \"validatedOn\":   {\"S\": \"${VALIDATED_ON}\"},
       \"enabled\":       {\"BOOL\": true}
     }"
 

@@ -449,7 +449,7 @@ function certAppliesToEnv(pairEnvs, certEnv, targetEnv) {
 }
 
 // Build an AllowedUser PutRequest item with correct DynamoDB types
-function makeAllowedUserItem(envName, destId, cert, useTypesList) {
+function makeAllowedUserItem(envName, destId, cert) {
   const envId = ENV_IDS[envName];
   return {
     PutRequest: {
@@ -458,10 +458,9 @@ function makeAllowedUserItem(envName, destId, cert, useTypesList) {
         sortKey:       s(`${envId}#${destId}#${cert.common_name}`),
         principal:     s(cert.common_name),
         organization:  s(cert.organization),
-        useTypes:      ss(useTypesList),
-        validUntil:    s(cert.validUntil || ''),
         destinationId: s(destId),
         environment:   n(envId),
+        validatedOn:   s(migrationTs),
         enabled:       { BOOL: true },
       },
     },
@@ -484,7 +483,7 @@ for (const env of ENVS) {
     for (const cert of certs) {
       if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
       if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
-      items.push(makeAllowedUserItem(env, destId, cert, ['PUBLIC_HEALTH']));
+      items.push(makeAllowedUserItem(env, destId, cert));
       csvRows.allowedUsersIis.push({
         env,
         envId:           ENV_IDS[env],
@@ -555,7 +554,7 @@ for (const env of ENVS) {
     for (const cert of certs) {
       if (!certAppliesToEnv(pair.environments, cert.environment, env)) continue;
       if (env === 'production' && PRODUCTION_DENY_LIST.has(cert.common_name)) continue;
-      items.push(makeAllowedUserItem(env, destId, cert, [pair.use_type]));
+      items.push(makeAllowedUserItem(env, destId, cert));
       const senderOrg = senderOrgRows.find(r => r.short_id.trim().toLowerCase() === shortId);
       csvRows.allowedUsersProvider.push({
         env,
