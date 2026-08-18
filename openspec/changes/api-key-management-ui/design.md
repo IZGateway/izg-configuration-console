@@ -323,6 +323,24 @@ dual-role row carrying both `useTypes` and `allowedUseTypes`), the mock was remo
 entirely — `useOrganizations()` now always calls `/api/jurisdictions`. No trace of the
 mock remains in `.env.template` or the component.
 
+### D18 — `ApiKeyDomain.env` converted from string to number, matching `environments`
+
+**Decision:** `ApiKeyDomain.env` (a separate, console-only table tracking DNS
+domain authorization per `(env, jurisdiction, domain)` — **not** read by the
+Hub, so no cross-service contract applies) was `env: string`, requiring an
+explicit `String(...)` coercion at every write site and a `String(item.env)
+=== String(envId)` comparison on read. Raised in PR review (matching D3's
+`environments` field to the same underlying environment-id concept):
+converted to `env: number` for consistency — `upsertApiKeyDomain`'s param
+type, both write call sites (`POST /api/apikeys`'s DNS-challenge branch,
+`verify-domain`'s authorization branch), and the `fetchAuthorizedApiKeyDomains`
+read/filter path (now `Number(item.env) === envId`) all changed accordingly.
+`GET /api/apikeys/domains` now parses and validates its `envId` query
+parameter as a number (1–5, same range check as the create route) instead of
+passing the raw query string through. Reads still defensively coerce via
+`Number(item.env)` to tolerate any pre-existing rows written while this
+attribute was a String.
+
 ## Risks / Trade-offs
 
 - **[Mitigated, was a Risk] UI role-gating is not enforcement.** Resolved by D7 —

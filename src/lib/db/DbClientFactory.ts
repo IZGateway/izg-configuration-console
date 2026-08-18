@@ -451,7 +451,7 @@ class EncryptedRepository implements DbClient {
   async upsertApiKeyDomain(params: {
     sortKey: string
     domain: string
-    env: string
+    env: number
     jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string
@@ -475,7 +475,7 @@ class EncryptedRepository implements DbClient {
   }
 
   async fetchAuthorizedApiKeyDomains(
-    envId: string,
+    envId: number,
     jurisdictionId: string
   ): Promise<ApiKeyDomain[]> {
     return await this.repository.fetchAuthorizedApiKeyDomains(envId, jurisdictionId)

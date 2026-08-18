@@ -96,7 +96,7 @@ export default interface ConfigConsoleMutateRepository {
   upsertApiKeyDomain(params: {
     sortKey: string
     domain: string
-    env: string
+    env: number
     jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string

@@ -37,10 +37,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // only meaningful for the multi-env select on the Create form.
     const envIds = envId
       .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
+      .map((s) => Number(s.trim()))
+      .filter((n) => !isNaN(n))
     if (envIds.length === 0) {
       return res.status(400).json({ error: 'envId is required' })
+    }
+    if (envIds.some((n) => n < 1 || n > 5)) {
+      return res.status(400).json({ error: 'envId must each be a number between 1 and 5' })
     }
     if (envIds.length > 1 && !session.user.isAdmin) {
       return res.status(403).json({ error: 'Only administrators may query multiple environments' })

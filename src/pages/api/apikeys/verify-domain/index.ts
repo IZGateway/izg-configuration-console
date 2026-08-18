@@ -232,7 +232,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         dbClient.upsertApiKeyDomain({
           sortKey: domainSortKeys[i],
           domain,
-          env: String(environments[i]),
+          env: environments[i],
           jurisdictionId: String(jurisdictionId),
           status: 'authorized',
           validatedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),

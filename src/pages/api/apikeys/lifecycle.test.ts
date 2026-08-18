@@ -975,9 +975,9 @@ describe('API key authorization (role + tenancy)', () => {
 
     it('returns only domains authorized in every requested environment (intersection)', async () => {
       mockGetServerSession.mockResolvedValue(adminSession)
-      const fetchAuthorizedApiKeyDomains = jest.fn().mockImplementation((envId: string) =>
+      const fetchAuthorizedApiKeyDomains = jest.fn().mockImplementation((envId: number) =>
         Promise.resolve(
-          envId === '4'
+          envId === 4
             ? [{ domain: 'a.example.gov' }, { domain: 'shared.example.gov' }]
             : [{ domain: 'shared.example.gov' }, { domain: 'b.example.gov' }]
         )

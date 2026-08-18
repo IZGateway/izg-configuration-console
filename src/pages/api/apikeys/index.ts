@@ -212,7 +212,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             dbClient.upsertApiKeyDomain({
               sortKey: domainSortKeys[i],
               domain: String(upn),
-              env: String(env),
+              env,
               jurisdictionId: String(jurisdictionId),
               status: 'pending_challenge',
               challengeUuid,

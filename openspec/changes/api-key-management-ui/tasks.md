@@ -213,6 +213,12 @@
       `markApiKeyCredentialViewed` now conditions on `attribute_not_exists(viewedAt)`;
       `token.ts` catches the resulting race and returns the same 410 as the
       synchronous already-viewed case.
+- [x] 11.4 `ApiKeyDomain.env` converted from `string` to `number` (design D18) —
+      raised in PR review, since it's the same environment-id concept as
+      `ApiKeyCredential.environments` (D3). Removed the `String(...)` coercions at
+      both write sites and the DB-layer comparison; `GET /api/apikeys/domains` now
+      parses and validates its `envId` query parameter (1–5) instead of passing the
+      raw string through.
 
 ## 12. Verification
 

@@ -243,7 +243,9 @@ class Dynamo implements DbClient {
       return {
         sortKey: item.sortKey,
         domain: item.domain,
-        env: item.env,
+        // Number(item.env) tolerates any pre-existing row written back when
+        // this attribute was a String.
+        env: Number(item.env),
         jurisdictionId: item.jurisdictionId,
         status: item.status,
         challengeUuid: item.challengeUuid,
@@ -267,7 +269,7 @@ class Dynamo implements DbClient {
   async upsertApiKeyDomain(params: {
     sortKey: string
     domain: string
-    env: string
+    env: number
     jurisdictionId: string
     status: 'pending_challenge' | 'authorized'
     challengeUuid?: string
@@ -383,17 +385,17 @@ class Dynamo implements DbClient {
   }
 
   async fetchAuthorizedApiKeyDomains(
-    envId: string,
+    envId: number,
     jurisdictionId: string
   ): Promise<any[]> {
     const nowMs = Date.now()
     try {
       // Filtering by env/jurisdictionId/authExpiresAt is done in application
-      // code (with String() coercion) rather than in a DynamoDB
+      // code (with Number()/String() coercion) rather than in a DynamoDB
       // FilterExpression, because DynamoDB comparisons are type-strict — if
-      // those attributes were ever hand-entered as Number instead of String,
-      // a `env = :env` expression would silently (and confusingly) exclude
-      // an otherwise-matching item instead of erroring.
+      // those attributes were ever hand-entered as the wrong type, a
+      // `env = :env` expression would silently (and confusingly) exclude an
+      // otherwise-matching item instead of erroring.
       const result = await dynamodDbDocClient.send(
         new QueryCommand({
           TableName: TABLE_NAME,
@@ -408,7 +410,7 @@ class Dynamo implements DbClient {
             : NaN
           return (
             String(item.status) === 'authorized' &&
-            String(item.env) === String(envId) &&
+            Number(item.env) === envId &&
             String(item.jurisdictionId) === String(jurisdictionId) &&
             !isNaN(authExpiresAtMs) &&
             authExpiresAtMs > nowMs
@@ -417,7 +419,7 @@ class Dynamo implements DbClient {
         .map((item) => ({
           sortKey: item.sortKey,
           domain: item.domain,
-          env: item.env,
+          env: Number(item.env),
           jurisdictionId: item.jurisdictionId,
           status: item.status,
           validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
