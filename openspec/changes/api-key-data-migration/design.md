@@ -51,95 +51,47 @@ as running it once.
 
 ## Execution Model
 
-The migration runs automatically at container startup via `run_and_monitor.sh`, the
-bash script that is the container `CMD`. The migration block is inserted in
-`run_and_monitor.sh` after `replace-variable.sh` completes and before `next start`
-launches the Node application — ensuring the database is ready before the application
-begins serving requests.
+The migration is a **one-time ops task** executed manually by the hosting organization
+before or during the deployment of the JWT API Token release. It is not integrated
+into container startup.
 
-The AWS CLI (`aws-cli` package) must be added to the `apk add` line in the runner
-stage of the Dockerfile.
+The `batches/` directory contains everything needed to run the migration:
 
-### Startup Sequence
-
-```
-run_and_monitor.sh
-  ├── start filebeat / metricbeat (if configured)
-  ├── generate SSL / configure nginx / start nginx
-  ├── replace-variable.sh
-  ├── [NEW] run-migration.sh       ← this migration
-  └── start node (next start)
-```
-
-### Migration Lock Protocol (Event entity)
-
-The migration uses DynamoDB's `attribute_not_exists` conditional write as a distributed
-lock. The `Event` entity (managed by `izgw-hub`) serves as the lock and audit record.
-
-**Fixed sort key:** `Migration#api-key-data-migration`
-This key is deterministic so any instance can locate it with a `GetItem`.
-
-**Lock lifecycle:**
-
-| Status | Meaning |
+| Script | Description |
 |---|---|
-| Record absent | Migration has never been attempted — claim it |
-| `IN_PROGRESS` | Another instance is running the migration — wait and poll |
-| `COMPLETED` | Migration finished successfully — skip, proceed to launch |
-| `FAILED` | Previous attempt failed — delete record and retry |
+| `jurisdiction-updates.sh` | 62 `update-item` calls grouped by update pattern; 1 `put-item` for CCUAT |
+| `prefix-corrections.json` | 3 `TransactWriteItems` for Hawaii/Idaho/Nebraska prefix fixes |
+| `senders.sh` | Reads `denormalized/senders.csv`; one `put-item` per sender org |
+| `iis-allowed-users.sh` | Reads `denormalized/allowed-users-iis.csv`; one `put-item` per IIS AllowedUser |
+| `provider-allowed-users.sh` | Reads `denormalized/allowed-users-provider.csv`; one `put-item` per provider AllowedUser |
+| `apikey-domains.sh` | Reads `denormalized/apikey-domains.csv`; one `put-item` per ApiKeyDomain |
 
-**Claim step:** `PutItem` with `ConditionExpression: attribute_not_exists(sortKey)`.
-Written fields: `entityType=Event`, `sortKey`, `name=api-key-data-migration`,
-`started=<ISO timestamp>`, `reportedBy=<hostname>`, `status=IN_PROGRESS`.
+Each script takes `--table <dynamodb-table-name>` and an optional `--profile <aws-profile>`.
+No environment flag is needed — the denormalized CSVs contain rows for all environments,
+and the CC DynamoDB table is shared across environments.
 
-If the conditional write fails (`ConditionalCheckFailedException`), another instance
-owns the lock — this instance reads the existing record and follows the status table above.
+### Execution Order
 
-**Polling:** While status is `IN_PROGRESS`, poll every 15 seconds. Give up (log warning,
-proceed to launch) after 5 minutes. Timeout value is a configurable constant in
-`run-migration.sh`.
+Scripts MUST be run in the following order to satisfy the hub-safety requirement that
+Jurisdiction `allowedUseTypes` are in place before AllowedUser records activate new
+permissions:
 
-**On migration success:** `UpdateItem` sets `status=COMPLETED`, `completed=<ISO timestamp>`.
+1. `aws dynamodb transact-write-items --transact-items file://batches/prefix-corrections.json`
+2. `batches/jurisdiction-updates.sh --table <table>`
+3. `batches/senders.sh --table <table>`
+4. `batches/iis-allowed-users.sh --table <table>`
+5. `batches/provider-allowed-users.sh --table <table>`
+6. `batches/apikey-domains.sh --table <table>`
 
-**On migration failure:** Script catches the error, sets `status=FAILED`, exits non-zero.
-The container will restart (ECS restart policy). Next startup attempt sees `FAILED`,
-deletes the lock record, and retries from the beginning.
-
-### Batch Format
-
-Each batch file contains up to 25 `PutRequest` items in the format required by
-`aws dynamodb batch-write-item`:
-
-```json
-{
-  "izgw-hub": [
-    {
-      "PutRequest": {
-        "Item": {
-          "entityType": { "S": "AllowedUser" },
-          "sortKey":    { "S": "onboarding#az#staging.azova.com" },
-          ...
-        }
-      }
-    }
-  ]
-}
-```
+Steps 4–6 MUST NOT run if steps 1–3 have not completed successfully.
 
 ### Required IAM Permissions
 
-The ECS task role must have the following permissions on the `izgw-hub` table:
+The operator's AWS credentials must have the following permissions on the target table:
 
-- `dynamodb:GetItem` — read lock record and check migration status
-- `dynamodb:PutItem` — claim lock, insert Sender and AllowedUser records
-- `dynamodb:UpdateItem` — backfill Jurisdiction fields, update lock status
-- `dynamodb:DeleteItem` — remove FAILED lock record before retry
-- `dynamodb:BatchWriteItem` — bulk insert of Sender and AllowedUser records
-
-Note: `batch-write-item` only supports `PutRequest` and `DeleteRequest` —
-`UpdateItem` calls for existing Jurisdiction records run as individual
-`aws dynamodb update-item` commands outside the batch loop. The correct AWS
-profile (onboarding vs. production account) must be active before executing.
+- `dynamodb:PutItem` — insert Sender, AllowedUser, and ApiKeyDomain records
+- `dynamodb:UpdateItem` — backfill Jurisdiction fields; prefix corrections
+- `dynamodb:TransactWriteItems` — prefix corrections batch
 
 ---
 
@@ -241,42 +193,61 @@ Fields written:
 
 ---
 
-## Input Files and Their Roles
+## Files and Their Roles
+
+### Generator Script Input Files
+
+The generator (`generate-batches.js`) reads these 3NF source files to produce all
+outputs. They are preserved in git history via prior commits.
 
 | File | Role |
 |---|---|
 | `jurisdiction-allowed-use-types.csv` | `allowedUseTypes` values per jurisdiction; `SKIP` rows excluded |
 | `sender-organizations.csv` | Non-IIS sender names, IDs, and `useTypes` |
 | `certificate-inventory.csv` | Maps cert common names → org, environment(s), sender/jurisdiction |
-| `iis-access-control-pairs.csv` | 647 IIS-to-IIS and IIS-to-DEX AllowedUser source rows |
-| `provider-access-control-pairs.csv` | 136 Provider-to-IIS AllowedUser source rows |
+| `iis-access-control-pairs.csv` | IIS-to-IIS and IIS-to-DEX AllowedUser source rows |
+| `provider-access-control-pairs.csv` | Provider-to-IIS AllowedUser source rows |
 | `jurisdiction-table-current.csv` | Canonical Jurisdiction table export; provides integer `jurisdictionId` keyed by `prefix` |
-| `prod_endpoints.csv` | Secondary reference for CCUAT record and environment-specific destId verification |
-| `onboarding_endpoints.csv` | Secondary reference for onboarding-only destinations |
+
+### Migration Execution Inputs (in `batches/`)
+
+These are the artifacts used directly during migration execution:
+
+| File | Role |
+|---|---|
+| `prefix-corrections.json` | TransactWriteItems for Hawaii/Idaho/Nebraska prefix fixes |
+| `jurisdiction-updates.sh` | 62 `update-item` calls grouped by update pattern; CCUAT `put-item` |
+| `senders.sh` | Reads `denormalized/senders.csv` (15 rows); one `put-item` per sender |
+| `iis-allowed-users.sh` | Reads `denormalized/allowed-users-iis.csv` (1,566 rows) |
+| `provider-allowed-users.sh` | Reads `denormalized/allowed-users-provider.csv` (372 rows) |
+| `apikey-domains.sh` | Reads `denormalized/apikey-domains.csv` (133 rows) |
+| `denormalized/senders.csv` | Denormalized sender records for review and execution |
+| `denormalized/jurisdiction-updates.csv` | Denormalized jurisdiction update records for review |
+| `denormalized/allowed-users-iis.csv` | Denormalized IIS AllowedUser records for review and execution |
+| `denormalized/allowed-users-provider.csv` | Denormalized provider AllowedUser records for review and execution |
+| `denormalized/apikey-domains.csv` | Denormalized ApiKeyDomain records for review and execution |
 
 ---
 
 ## Execution Order
 
-The migration MUST execute its three write phases in the following order to satisfy
-the hub-safety requirement that Jurisdiction `allowedUseTypes` are in place before
+The migration MUST execute its write phases in the following order to satisfy the
+hub-safety requirement that Jurisdiction `allowedUseTypes` are in place before
 AllowedUser records activate new sender permissions:
 
-1. **Jurisdiction `UpdateItem` JSON files** (`batches/jurisdiction-updates/*.json`) — backfill
-   `allowedUseTypes` and `useTypes` on existing records; insert CCUAT.
-2. **Sender `PutItem` batches** — insert new Sender records (ids 100–114).
-3. **AllowedUser `PutItem` batches** — insert access control records; by this point
-   both the receiver Jurisdiction's `allowedUseTypes` and the sender's record exist.
+1. **Prefix corrections** — `aws dynamodb transact-write-items --transact-items file://batches/prefix-corrections.json`
+2. **Jurisdiction updates** — `batches/jurisdiction-updates.sh --table <table>` (backfill `allowedUseTypes`/`useTypes`; insert CCUAT)
+3. **Sender records** — `batches/senders.sh --table <table>` (insert ids 100–114)
+4. **IIS AllowedUsers** — `batches/iis-allowed-users.sh --table <table>`
+5. **Provider AllowedUsers** — `batches/provider-allowed-users.sh --table <table>`
+6. **ApiKeyDomains** — `batches/apikey-domains.sh --table <table>`
 
-`run-migration.sh` MUST enforce this sequence. AllowedUser batches MUST NOT run if
-either of the preceding phases fails.
+Steps 4–6 MUST NOT run if steps 1–3 have not completed successfully.
 
-**Operational note:** AllowedUser records are scoped to the environment prefix
-(`production#...` or `onboarding#...`) determined by the cert's `environment`
-field in `certificate-inventory.csv`. Records with `environment = any` produce
-entries in both environment batch sets. Writing these records to the live
-production table is an immediate access control change — ops should be aware that
-once the production AllowedUser batches run, the new sender principals can connect.
+**Operational note:** AllowedUser records contain both production and onboarding rows
+(scoped by envId in their sort key). Writing these records to the live table is an
+immediate access control change — ops should be aware that once the AllowedUser scripts
+run, the new sender principals can connect.
 
 ---
 
@@ -400,4 +371,4 @@ backfill for Texas.
 | AllowedUser records (IIS-to-IIS + IIS-to-DEX) | ~647 |
 | AllowedUser records (Provider-to-IIS) | ~136 |
 | **Total write operations** | **~908** |
-| **Batch files (25 per batch)** | **~37 per environment** |
+| **Migration scripts** | **6 (jurisdiction-updates.sh + 4 entity scripts + prefix-corrections.json)** |

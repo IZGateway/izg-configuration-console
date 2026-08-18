@@ -137,94 +137,52 @@ created:
     - List of STC Health shared cert exclusions with explanation
   - Write unresolved rows to `unresolved.txt` for ops review
 
-## Phase 2: Pre-generated Batch Files
+## Phase 2: Denormalized CSVs and Execution Scripts
 
-- [ ] 2.1 Run `node generate-batches.js` and review output
-  - Verify counts match estimates in `design.md` (~37 batch files per environment)
+- [x] 2.1 Run `node generate-batches.js` and review output
+  - Verify counts match estimates in `design.md`
   - Review `unresolved.txt` — resolve or document any unresolved entries
-  - Spot-check 3–5 batch files against source CSVs for correctness
-  - Verify split-endpoint routing in output:
+  - Spot-check denormalized CSVs against source data for correctness
+  - Verify split-endpoint routing in `allowed-users-iis.csv`:
     - IIS sender → Maryland uses `md`; provider sender → Maryland uses `md_c`
     - IIS sender → Virginia uses `va_s`; provider sender → Virginia uses `va`
-    - New York `ny_vxu` present in both env batches; `ny_qbp` in onboarding only
-    - `ny_test`, `mi_test`, `nc_test` entries present in onboarding batches only;
-      absent from production batches
-  - Verify ApiKeyDomain batch files present for both environments
-  - Confirm no STC Health shared cert domains appear in ApiKeyDomain batches
-  - Confirm `any`-environment certs appear in both production and onboarding batches
+    - New York `ny_vxu` rows present for both envIds; `ny_qbp` rows for envId=3 only
+    - `ny_test`, `mi_test`, `nc_test` rows present for envId=3 only
+  - Verify `apikey-domains.csv` present with rows for both envIds
+  - Confirm no STC Health shared cert domains appear in `apikey-domains.csv`
+  - Confirm `any`-environment certs produce rows for both envId=1 and envId=3
 
-- [ ] 2.2 Commit pre-generated batch files to branch
-  - `batches/production/` — all production batch JSON files
-  - `batches/onboarding/` — all onboarding batch JSON files
-  - `batches/jurisdiction-updates/` — one JSON file per jurisdiction
-  - `batches/prefix-corrections.json` — prefix correction batch
+- [x] 2.2 Commit denormalized CSVs and execution scripts to branch
+  - `batches/denormalized/` — 5 denormalized CSV files for review and execution
+  - `batches/jurisdiction-updates.sh` — annotated grouped update loops
+  - `batches/prefix-corrections.json` — TransactWriteItems for 3 prefix fixes
+  - `batches/senders.sh`, `iis-allowed-users.sh`, `provider-allowed-users.sh`, `apikey-domains.sh`
 
-## Phase 3: Startup Migration Script (`run-migration.sh`)
+## Phase 3: Ops Runbook
 
-- [ ] 3.1 Write `run-migration.sh` — Event lock acquisition
-  - Attempt `PutItem` on `Event#Migration#api-key-data-migration` with
-    `ConditionExpression: attribute_not_exists(sortKey)`
-  - Write: `entityType=Event`, `name=api-key-data-migration`, `started=<ISO>`,
-    `reportedBy=<hostname>`, `status=IN_PROGRESS`
-  - If `ConditionalCheckFailedException`: read existing record → branch on status:
-    - `COMPLETED` → log "migration already done", exit 0
-    - `IN_PROGRESS` → poll every 15 seconds up to 5 minutes; exit 0 on COMPLETED,
-      log warning and exit 0 on timeout
-    - `FAILED` → delete record, retry from lock acquisition
-  - Define `POLL_INTERVAL_SECONDS=15` and `POLL_TIMEOUT_SECONDS=300` as
-    tunable constants at top of script
+- [ ] 3.1 Write `batches/README.md` — operator execution instructions
+  - Required AWS permissions (PutItem, UpdateItem, TransactWriteItems on target table)
+  - Execution order with exact commands for each step
+  - How to verify each step succeeded before proceeding to the next
+  - How to re-run individual scripts safely (all scripts are idempotent)
+  - Sample `aws dynamodb get-item` verification queries for key records post-migration
+  - Rollback guidance: on-demand backup procedure before execution; restore procedure
 
-- [ ] 3.2 Write migration execution block in `run-migration.sh`
-  - Enforce execution order per hub-safety spec:
-    1. Run `batches/prefix-corrections.json` (prefix fixes, env-agnostic)
-    2. Run `batches/jurisdiction-updates/*.json` files via
-       `for f in ...; do aws dynamodb update-item --cli-input-json file://$f; done`
-    3. Run `batches/${ENV}/senders-*.json` batches
-    4. Run `batches/${ENV}/iis-allowedusers-*.json` batches
-    5. Run `batches/${ENV}/provider-allowedusers-*.json` batches
-    6. Run `batches/${ENV}/apikey-domains-*.json` batches
-  - Abort entire migration on first failure in any phase; do NOT proceed to AllowedUser
-    batches if Jurisdiction or Sender phase fails
-  - On any failure: `UpdateItem` sets `status=FAILED` on the Event record, exit 1
-  - On full success: `UpdateItem` sets `status=COMPLETED`, `completed=<ISO>`, exit 0
-
-- [ ] 3.3 Write `README.md` — manual fallback execution instructions
-  - How to run `run-migration.sh` manually against onboarding or production
-  - How to check Event lock record status with `aws dynamodb get-item`
-  - How to reset a stuck FAILED or IN_PROGRESS lock for a retry
-  - How to re-run individual jurisdiction update files manually
-  - Sample verification queries (`get-item` for key records post-migration)
-
-## Phase 4: Dockerfile Integration
-
-- [ ] 4.1 Add `aws-cli` to the `apk add` line in the Dockerfile runner stage
-  - Verify `aws` binary is available in the container after build
-
-- [ ] 4.2 Copy migration directory into the runner image
-  - Add `COPY --from=builder /app/migrate ./migrate` to Dockerfile runner stage
-  - Make `run-migration.sh` and `jurisdiction-updates.sh` executable
-
-- [ ] 4.3 Wire `run-migration.sh` into `run_and_monitor.sh`
-  - Insert call after `replace-variable.sh` and before `next start`
-  - Pass `ENV` variable (production/onboarding) derived from existing env vars
-  - Log migration start/end to `run_and_monitor.log`
-  - If `run-migration.sh` exits non-zero, exit the container (do not launch console
-    with unmigrated data)
-
-## Phase 5: Local DynamoDB Emulator Validation
+## Phase 4: Local DynamoDB Emulator Validation
 
 Validate the migration against your local DynamoDB emulator using a copy of the
 current table at a known state. No shared environments are touched.
 
-- [ ] 5.1 Seed local DynamoDB instance with a copy of the current table
+- [ ] 4.1 Seed local DynamoDB instance with a copy of the current table
   - Export or seed the `izgw-hub` table into the local emulator
   - Confirm the table exists and is queryable before proceeding
 
-- [ ] 5.2 Run `run-migration.sh` against local emulator
+- [ ] 4.2 Run migration scripts against local emulator
   - Set `AWS_ENDPOINT_URL` (or equivalent) to point to the local emulator
-  - Run the script and capture the output
+  - Run each script in order per the runbook in `batches/README.md`
+  - Capture output from each script
 
-- [ ] 5.3 Verify key records in local emulator post-migration
+- [ ] 4.3 Verify key records in local emulator post-migration
   - Jurisdiction: confirm at least one record has `allowedUseTypes` set
   - Prefix corrections: `get-item` for Hawaii (id=14, prefix=`hi`), Idaho (id=16,
     prefix=`id`), Nebraska (id=32, prefix=`ne`)
@@ -232,22 +190,19 @@ current table at a known state. No shared environments are touched.
   - AllowedUser: confirm at least one IIS-to-IIS pair record exists
   - ApiKeyDomain: confirm at least one record with `status=authorized`
 
-- [ ] 5.4 Verify Event lock record behavior
-  - Confirm `status=COMPLETED`, `completed` timestamp present after first run
-  - Run script a second time — confirm COMPLETED fast-path exits cleanly without
-    re-running any batch writes
+- [ ] 4.4 Verify idempotency
+  - Run all scripts a second time against the same table
+  - Confirm record counts are unchanged (put-item overwrites with identical data)
 
-- [ ] 5.5 Calibrate timeout constants from observed local runtime
-  - Record elapsed time for full migration run
-  - Adjust `POLL_INTERVAL_SECONDS` and `POLL_TIMEOUT_SECONDS` in `run-migration.sh`
-    if needed based on observed timing
+- [ ] 4.5 Record elapsed time for full migration run
+  - Use timing data to set operator expectations in the runbook
 
-## Phase 6: AWS Dev Environment Validation
+## Phase 5: AWS Dev Environment Validation
 
 Validate against the shared dev DynamoDB table in AWS. A backup must be taken before
 any writes so the table can be fully restored if the migration produces unexpected results.
 
-- [ ] 6.1 Take an on-demand DynamoDB backup of `izgw-hub` before migration
+- [ ] 5.1 Take an on-demand DynamoDB backup of `izgw-hub` before migration
   - Via AWS Console: DynamoDB → Tables → `izgw-hub` → Backups → Create backup
   - Or via CLI:
     ```
@@ -257,17 +212,16 @@ any writes so the table can be fully restored if the migration produces unexpect
     ```
   - Confirm backup status is `AVAILABLE` before proceeding
 
-- [ ] 6.2 Run `run-migration.sh` against AWS dev environment
-  - Ensure `AWS_DEFAULT_REGION` and credentials are set for dev account
-  - Run script and capture full output including the report block
-  - Confirm exit code is 0
+- [ ] 5.2 Run migration scripts against AWS dev environment
+  - Ensure `AWS_DEFAULT_REGION` and credentials are set for dev account (cdc profile)
+  - Run each script in order per `batches/README.md`; capture full output
+  - Confirm exit code 0 for each script
 
-- [ ] 6.3 Verify key records in AWS dev post-migration
-  - Repeat the verification checks from 5.3 against the live dev table
-  - Confirm Event lock record is `COMPLETED`
+- [ ] 5.3 Verify key records in AWS dev post-migration
+  - Repeat the verification checks from 4.3 against the live dev table
   - Confirm Hub in dev logs no DynamoDB exceptions or marshalling errors after migration
 
-- [ ] 6.4 Update Jira ticket [IGDD-3258](https://izgateway.atlassian.net/browse/IGDD-3258) with test results
+- [ ] 5.4 Update Jira ticket [IGDD-3258](https://izgateway.atlassian.net/browse/IGDD-3258) with test results
   - Paste migration report output into ticket comment
   - Note any issues found and how they were resolved
   - Confirm backup ARN is recorded in the ticket for rollback reference
