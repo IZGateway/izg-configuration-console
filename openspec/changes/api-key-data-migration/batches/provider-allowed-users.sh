@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# provider-allowed-users.sh — Load Provider AllowedUser records into DynamoDB
+#
+# Reads batches/denormalized/allowed-users-provider.csv and issues one put-item per row.
+# The CSV contains rows for all environments; all rows are loaded regardless of env column
+# (target table is specified explicitly via --table).
+#
+# Usage:
+#   ./provider-allowed-users.sh --table <dynamodb-table-name> [--profile <aws-profile>]
+#
+# Example:
+#   ./provider-allowed-users.sh --table izgateway-dev-test --profile cdc
+#   ./provider-allowed-users.sh --table izgw-hub --profile production
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CSV="${SCRIPT_DIR}/denormalized/allowed-users-provider.csv"
+
+TABLE=""
+PROFILE_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --table)   TABLE="$2";   shift 2 ;;
+    --profile) PROFILE_ARGS=(--profile "$2"); shift 2 ;;
+    *) echo "Unknown argument: $1" >&2; exit 1 ;;
+  esac
+done
+
+if [[ -z "$TABLE" ]]; then
+  echo "Usage: $0 --table <dynamodb-table-name> [--profile <aws-profile>]" >&2
+  exit 1
+fi
+
+echo "Loading Provider AllowedUsers → table: $TABLE"
+
+COUNT=0
+SKIP=1  # skip header
+
+# Columns: env,envId,sender_name,sender_id,cert_domain,receiver_destid,receiver_name,use_type,validUntil
+while IFS=, read -r env envId sender_name sender_id cert_domain receiver_destid receiver_name use_type validUntil; do
+  if [[ $SKIP -eq 1 ]]; then SKIP=0; continue; fi
+
+  SORT_KEY="${envId}#${receiver_destid}#${cert_domain}"
+
+  aws dynamodb put-item "${PROFILE_ARGS[@]}" \
+    --table-name "$TABLE" \
+    --item "{
+      \"entityType\":    {\"S\": \"AllowedUser\"},
+      \"sortKey\":       {\"S\": \"${SORT_KEY}\"},
+      \"principal\":     {\"S\": \"${cert_domain}\"},
+      \"organization\":  {\"S\": \"${sender_name}\"},
+      \"useTypes\":      {\"SS\": [\"${use_type}\"]},
+      \"validUntil\":    {\"S\": \"${validUntil}\"},
+      \"destinationId\": {\"S\": \"${receiver_destid}\"},
+      \"environment\":   {\"N\": \"${envId}\"},
+      \"enabled\":       {\"BOOL\": true}
+    }"
+
+  echo "  PUT AllowedUser/${SORT_KEY}"
+  COUNT=$((COUNT + 1))
+done < "$CSV"
+
+echo "Done. $COUNT Provider AllowedUser records written to $TABLE."
