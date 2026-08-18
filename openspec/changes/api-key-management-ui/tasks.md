@@ -134,13 +134,15 @@
       via the sort key exactly as stored (no reconstruction), so pre-existing
       `{env}#{jti}` rows still resolve; a Hub-side migration is a separate,
       not-yet-scoped concern if the Hub starts reading exclusively by bare `jti`.
-- [x] 7.2 `env` (string) replaced by **`environments`** (DynamoDB String Set, `SS` —
-      matching `useTypes`, see design D3); admin-only (IZG Operations) multi-environment
-      credential creation, **server-enforced** (a non-admin request for >1 environment is
-      403'd even with create permission). `POST /api/apikeys` already rejected empty
-      `environments`; `/renew` now 409s rather than passing an existing credential's
-      `environments` through empty (an empty `SS` is not a legal DynamoDB value). Reads
-      fall back to the legacy singular `env` attribute for un-migrated rows.
+- [x] 7.2 `env` (string) replaced by **`environments`** (a deduped DynamoDB **Number Set**,
+      `NS` — same uniqueness rationale as `useTypes`, and coordinated with an equivalent
+      `List<Integer>` → `Set<Integer>` change on the Hub, see design D3); admin-only (IZG
+      Operations) multi-environment credential creation, **server-enforced** (a non-admin
+      request for >1 environment is 403'd even with create permission). `POST
+      /api/apikeys` already rejected empty `environments`; `/renew` now 409s rather than
+      passing an existing credential's empty `environments` through (an empty `NS` is not
+      a legal DynamoDB value). Reads fall back to the legacy singular `env` attribute for
+      un-migrated rows.
 - [x] 7.3 Renamed `supersedApiKeyCredential` → `supersedeApiKeyCredential` (was a
       misspelling) across the interface, implementation, factory delegate, both test
       files, and the renew route's call site.

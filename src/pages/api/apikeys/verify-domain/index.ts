@@ -53,7 +53,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // from a client-supplied `envId` — otherwise a caller could claim envs its
     // own credential was never created for. `envId` is only used as a fallback
     // when there is no credential to activate (domain-only verification).
-    let environments: string[]
+    let environments: number[]
     let credential: Awaited<ReturnType<typeof dbClient.getApiKeyCredential>> = null
     if (credentialSortKey) {
       credential = await dbClient.getApiKeyCredential(String(credentialSortKey))
@@ -80,7 +80,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (envId === undefined || envId === null) {
         return res.status(400).json({ error: 'envId or sortKey is required' })
       }
-      environments = [String(envId)]
+      environments = [Number(envId)]
     }
 
     // DNS-name authorization is scoped per (env, jurisdiction) pair, so a
@@ -232,7 +232,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         dbClient.upsertApiKeyDomain({
           sortKey: domainSortKeys[i],
           domain,
-          env: environments[i],
+          env: String(environments[i]),
           jurisdictionId: String(jurisdictionId),
           status: 'authorized',
           validatedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
