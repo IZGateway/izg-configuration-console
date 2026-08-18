@@ -40,8 +40,10 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
 ### Credential/JWT model reconciliation (IGDD-3140)
 - Credential re-keyed from `{env}#{jti}` to bare **`{jti}`** — the Hub reads a
   credential directly by `jti` at routing time.
-- `env` (string) replaced by **`environments`** (DynamoDB String Set, `SS`); admin-only
-  (IZG Operations) multi-environment credential creation, server-enforced.
+- `env` (string) replaced by **`environments`** (a deduped DynamoDB Number Set, `NS` —
+  matching `useTypes`'s Set-based uniqueness guarantee, and coordinated with an
+  equivalent `List<Integer>` → `Set<Integer>` change on the Hub — see design D3);
+  admin-only (IZG Operations) multi-environment credential creation, server-enforced.
 - JWT reduced toward identity-only: the `env` claim is removed (environment
   authorization is a server-side property the Hub reads by `jti`). `roles` is
   retained for now, pending confirmation that nothing in izgw-hub/izgw-core reads it.
@@ -145,9 +147,11 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   61 tests total across the two files).
 - **Shared-table contract**: the console and the Hub (`izgw-hub`) read/write the same
   DynamoDB `ApiKeyCredential`/`ApiKeyDomain` rows. Status value `grace_period`,
-  attribute `supersededBy`, the bare-`{jti}` sort key, and the `environments` String Set
-  are all contractual — reconciled with the Hub's own IGDD-3140 OpenSpec update
-  (izgw-hub PR #177).
+  attribute `supersededBy`, the bare-`{jti}` sort key, the `useTypes` String Set, and the
+  `environments` Number Set are all contractual — reconciled with the Hub's own
+  IGDD-3140 OpenSpec update (izgw-hub PR #177) and its `ApiKeyCredential.java` model
+  (izgw-hub branch IGDD-3257, which moves `environments` from `List<Integer>` to
+  `Set<Integer>` in lockstep with this change).
 - **Security**: closes a real IDOR — every apikey route now requires both role and
   jurisdiction ownership, not just an authenticated session (previously any
   authenticated user could revoke/renew/cancel/reveal-token for another

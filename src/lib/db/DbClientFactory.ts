@@ -429,7 +429,7 @@ class EncryptedRepository implements DbClient {
     sortKey: string
     useTypes?: AllowedUseType[]
     jurisdictionId: string
-    environments: string[]
+    environments: number[]
     status: string
     createdOn: Date
     expiresAt?: Date | null
