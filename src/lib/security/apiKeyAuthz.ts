@@ -1,5 +1,7 @@
 import accessLevel from './accesslevel'
 import hasAccessToDestId from '../accesshelper'
+import DbClientFactory from '../db/DbClientFactory'
+import logger from '../../../logger'
 import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessControls'
 
 /**
@@ -46,14 +48,52 @@ export function hasApiKeyPermission(
  * `jurisdictionId`. IZG Operations/Support are global; jurisdiction roles are
  * limited to their assigned jurisdictions (see `hasAccessToDestId`).
  *
- * Never throws: `hasAccessToDestId` throws for a non-admin account with no
- * assigned jurisdictions, which we treat as "no access" rather than letting one
- * misconfigured account 500 the whole request (important for the list filter,
- * where a single bad row must not error the entire response).
+ * Two different identifier spaces have to be bridged here. Credentials, domains
+ * and every `/api/apikeys/*` route carry the **numeric** `jurisdictionId` (e.g.
+ * `1000`), which is the Jurisdiction table's key and what the Hub reads. But
+ * `session.user.jurisdictions` is populated from Okta group membership and holds
+ * lowercased jurisdiction **prefixes** (e.g. `"ainq"`) — see the `jwt` callback in
+ * `pages/api/auth/[...nextauth].ts`. Comparing the numeric id against those
+ * prefixes never matches, so this resolves the id to its jurisdiction's `prefix`
+ * first and compares on that.
+ *
+ * `prefix` is the right field, not `name`: a sender row has
+ * `name = "Audacious Inquiry (operators)"` with `prefix = "AINQ"`, so matching on
+ * `name` would deny a legitimate owner. (Some legacy rows happen to carry the
+ * short code in `name` too, which is why a name-based check appeared to work.)
+ *
+ * `getJurisdiction` memoizes on a process-lifetime cache, and the credential read
+ * paths (`getApiKeyCredential`, `fetchApiKeyCredentials`) already pre-warm it, so
+ * this is normally an in-memory hit rather than a DynamoDB read.
+ *
+ * Deliberately does NOT short-circuit global roles ahead of the lookup: the
+ * IZG-Operations/Support exemption is defined in exactly one place
+ * (`hasAccessToDestId`, which tests the role before it looks at `destId`), and
+ * duplicating that list here would let the two drift apart.
+ *
+ * Fails closed. A jurisdiction with no resolvable `prefix` denies everyone
+ * (loudly logged — all rows are expected to carry one), and `hasAccessToDestId`
+ * throws for a non-admin account with no assigned jurisdictions, which is treated
+ * as "no access" rather than letting one misconfigured account 500 the whole
+ * request (important for the list filter, where a single bad row must not error
+ * the entire response).
  */
-export function ownsJurisdiction(session: any, jurisdictionId: string): boolean {
+export async function ownsJurisdiction(
+  session: any,
+  jurisdictionId: string
+): Promise<boolean> {
   try {
-    return hasAccessToDestId(String(jurisdictionId), session)
+    const dbClient = await DbClientFactory.getDbClient()
+    const jurisdiction = await dbClient.getJurisdiction(String(jurisdictionId))
+    const prefix = jurisdiction?.prefix
+    if (!prefix) {
+      logger.warn('Ownership check denied: jurisdiction has no prefix', {
+        jurisdictionId,
+        operation: 'ownsJurisdiction',
+      })
+      return false
+    }
+    return hasAccessToDestId(String(prefix), session)
   } catch {
     return false
   }
@@ -86,15 +126,17 @@ export type ApiKeyAuthzResult = {
  * guarantee never depends on the earlier optimization having been written
  * correctly.
  */
-export function requireApiKeyAccess(
+export async function requireApiKeyAccess(
   session: any,
   permission: ApiKeyPermission,
   jurisdictionId: string
-): ApiKeyAuthzResult {
+): Promise<ApiKeyAuthzResult> {
+  // Role gate first: a role with no API-key permission at all is rejected without
+  // incurring the jurisdiction lookup below.
   if (!hasApiKeyPermission(session, permission)) {
     return { ok: false, status: 403, error: 'Forbidden - insufficient role' }
   }
-  if (!ownsJurisdiction(session, jurisdictionId)) {
+  if (!(await ownsJurisdiction(session, jurisdictionId))) {
     return {
       ok: false,
       status: 403,
