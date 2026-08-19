@@ -13,6 +13,20 @@ created:
     prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~e8f925b2-a3a7-4310-a5bb-c4d02c1eacc8
   summary: Sender entities spec for api-key-data-migration
 updated:
+  - date: '2026-08-19T19:15:38.440Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~285bfc5d-46f2-4cba-92f5-1c8d8ab1090a
+    summary: >-
+      Add prefix requirement for Okta integration: human-readable mnemonic per
+      sender, full prefix table, scenarios for Okta admin grant and absent
+      prefix
   - date: '2026-08-14T02:48:12.072Z'
     user: boonek
     agent:
@@ -152,6 +166,61 @@ exist in the table (IDs are never reused across the shared namespace).
 - **THEN** the existing record SHALL be updated to reflect the `useTypes` from the
   input data
 - **AND** the existing record's ID SHALL NOT change
+
+### Requirement: Each sender record carries a human-readable prefix for Okta integration
+
+The Configuration Console uses Okta for user authentication. When a user logs in, CC
+fetches a `jurisdictions` array from the Okta userinfo endpoint and stores it in the
+session as `session.user.jurisdictions`. This array contains the **lowercase `prefix`
+values** of the Jurisdiction/Sender records the user is authorized to manage.
+
+Okta group membership is configured by APHL's Okta administrators. The `prefix` value
+on a Sender record is the human-readable token those administrators use to grant and
+verify access — a mnemonic identifier they can inspect and reason about rather than an
+opaque numeric ID. This is the same pattern used for IIS jurisdictions (e.g., `az`,
+`md`, `nv`) and must be extended to sender organizations so that:
+
+- CC users who manage sender API keys can be granted access via Okta group membership
+- Okta administrators can verify correct configuration by reading group names
+- Errors in Okta configuration (wrong sender granted access) are detectable by inspection
+
+Each sender record written by this migration SHALL include a `prefix` field containing
+a short, uppercase, mnemonic identifier unique across all Jurisdiction and Sender
+records. The assigned prefixes are:
+
+| sender_id | Organization | prefix |
+|---|---|---|
+| 100 | eHealth Exchange | `EHEX` |
+| 101 | Docket | `DOCKET` |
+| 102 | Security Risk Solutions | `SRS` |
+| 103 | e-HealthSign | `EHEALTHSIGN` |
+| 104 | Audacious Inquiry (operators) | `AINQ` |
+| 105 | AZOVA | `AZOVA` |
+| 106 | DaVita Physician Solutions | `DAVITA` |
+| 107 | Department of Defense | `DOD` |
+| 108 | DocStation | `DOCSTATION` |
+| 109 | Fond du Lac | `FDL` |
+| 110 | Fresenius Medical Care | `FRESENIUS` |
+| 111 | Mayo Clinic | `MAYO` |
+| 112 | RIISE | `RIISE` |
+| 113 | VAMS | `VAMS` |
+| 114 | Veterans Administration | `VHA` |
+
+#### Scenario: Okta administrator grants a CC user access to a sender
+
+- **WHEN** an Okta administrator adds a user to an Okta group associated with sender
+  prefix `VHA`
+- **THEN** CC's `session.user.jurisdictions` for that user SHALL include `vha`
+  (lowercase of the prefix)
+- **AND** CC SHALL permit that user to manage API keys for the Veterans Administration
+  sender record
+
+#### Scenario: Sender prefix is absent from a record
+
+- **WHEN** a Sender record in DynamoDB has no `prefix` attribute
+- **THEN** CC CANNOT associate Okta group membership with that sender
+- **AND** users cannot be granted scoped access to that sender via Okta — they would
+  require admin-level access instead
 
 
 ### Requirement: Migration is idempotent
