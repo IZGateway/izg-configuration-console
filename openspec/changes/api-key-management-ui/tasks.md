@@ -5,7 +5,7 @@
 > an Expired status, RBAC UI gating **and server-side enforcement**, full IGDD-3140
 > credential/JWT model reconciliation, global domain exclusivity, a duplicate-scope
 > guardrail, an expired-key re-issue flow, and a round of code-review hardening. See
-> design.md for the decisions (D1–D17).
+> design.md for the decisions (D1–D19).
 
 ## 1. Revoke / Cancel Split
 
@@ -34,8 +34,9 @@
       (Popover + active-count badge + Clear all). Environment = deploy-scoped
       (`getAllowedEnvironmentValues`); Status = fixed enum (Active / Ready for
       Validation / Grace Period / Expired / Revoked / Cancelled); Organization =
-      `/api/jurisdictions` matched by `jurisdictionId` (full list — intentionally NOT
-      filtered to senders-only; see §11.6 for where that filter does apply).
+      `/api/jurisdictions` matched by `jurisdictionId`, **scoped to the orgs the caller
+      owns** (§11.5) but deliberately NOT restricted to senders — see §11.6 and design
+      D19 for why the two lists differ.
 - [x] 2.2 Filters compose with the search text input. **Client-side** (see §3 —
       decided against server-side pagination for current scale).
 - [x] 2.3 Keys grid defaults to sorting by created-time descending, so a just-created
@@ -96,8 +97,10 @@
       separate izgw-hub ticket, not this repo.)
 - [x] 5.6 Create dialog's Organization dropdown filtered to **senders only** (rows
       with non-empty `useTypes`, including dual-role rows) — a submitter credential
-      cannot be issued to a destination-only jurisdiction. Scoped to the Create dialog
-      only; the dashboard's Organization *filter* intentionally still lists everything.
+      cannot be issued to a destination-only jurisdiction. The sender restriction is
+      scoped to the Create dialog only; the dashboard's Organization *filter* still
+      lists non-senders (both lists are now ownership-scoped — see §11.5 and design D19
+      for why sender-restriction applies to one and not the other).
 - [ ] 5.7 `useTypes` as a keys-grid column — not built (explicitly deferred, not a
       priority currently).
 
@@ -219,6 +222,30 @@
       both write sites and the DB-layer comparison; `GET /api/apikeys/domains` now
       parses and validates its `envId` query parameter (1–5) instead of passing the
       raw string through.
+- [x] 11.5 **Jurisdiction ownership fixed to match on `prefix` (design D19)** — a real
+      bug, not a cleanup: `ownsJurisdiction` compared the numeric `jurisdictionId`
+      (e.g. `1000`) against `session.user.jurisdictions`, which holds Okta-derived
+      lowercased jurisdiction **prefixes** (e.g. `"ainq"`). Those never match, so in a
+      real (non-mock) session every Jurisdiction Operations user saw an **empty key
+      list** and got **403 on every mutation for their own org**. Now resolves
+      `jurisdictionId` → `Jurisdiction.prefix` via the memoized `getJurisdiction`
+      (already pre-warmed by the credential read paths) and compares on that;
+      `ownsJurisdiction`/`requireApiKeyAccess` became async (8 call sites), the GET list
+      filter uses `Promise.all` + index-filter. Added `prefix` to the `Jurisdiction`
+      type and to `fetchJurisdictions`'s projection (it was being dropped), and
+      `getJurisdiction` to the `DbClient` interface + `EncryptedRepository` delegate.
+- [x] 11.6 **Both jurisdiction-bearing UI lists scoped to owned orgs (design D19)** —
+      the Create dialog's Organization dropdown and the dashboard's Organization filter
+      both previously listed every jurisdiction system-wide, so a scoped role could pick
+      an org it doesn't own and only hit the 403 after completing the whole create flow
+      (DNS challenge included). Shared `ownsJurisdictionForUi` helper mirrors the server
+      check; the Create dialog keeps its additional senders-only restriction, the filter
+      deliberately does not.
+- [x] 11.7 Keys-grid empty state made filter-aware — was a bare `'No rows'`, which left
+      "this org has no keys yet" (a legitimate pre-create check, and why the Organization
+      filter lists orgs with no keys) indistinguishable from something having gone wrong.
+      Now distinguishes no-credentials-at-all, org-filter-only, org-plus-other-filters,
+      and other-filters-only. Audit Log tab message unchanged.
 
 ## 12. Verification
 

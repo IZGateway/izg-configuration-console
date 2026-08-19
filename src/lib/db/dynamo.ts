@@ -206,6 +206,10 @@ class Dynamo implements DbClient {
         sortKey: item.sortKey,
         name: item.name || item.sortKey,
         description: item.description || item.name || item.sortKey,
+        // Short code (e.g. "AINQ") — the identifier Okta group membership is
+        // keyed on, so it's what jurisdiction-ownership checks compare against.
+        // Distinct from `name`/`description`; projected deliberately, not for display.
+        prefix: item.prefix,
         // Use-type policy fields (IGDD-3140). Read robustly whether stored as a
         // DynamoDB List or a String Set (both are iterable once unmarshalled),
         // filtered to the known enum. allowedUseTypes = jurisdiction/destination

@@ -57,7 +57,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Role + tenancy (fix IDOR): the caller must own the jurisdiction of the
     // credential being renewed. Authoritative gate, checked before the status
     // check so a non-owner learns nothing about the target credential's state.
-    const authz = requireApiKeyAccess(session, 'canRenewApiKey', oldCredential.jurisdictionId)
+    const authz = await requireApiKeyAccess(session, 'canRenewApiKey', oldCredential.jurisdictionId)
     if (!authz.ok) {
       return res.status(authz.status).json({ error: authz.error })
     }
