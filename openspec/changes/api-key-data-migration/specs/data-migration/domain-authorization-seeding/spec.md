@@ -12,7 +12,20 @@ created:
   prompt_uri: >-
     prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
   summary: New spec for ApiKeyDomain seeding from certificate inventory
-updated: []
+updated:
+  - date: '2026-08-19T20:57:36.035Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~973380b8-145a-4895-afce-0b486c67e2b8
+    summary: >-
+      Remove unresolved.txt reference; STC exclusion is handled in CSV
+      pre-processing; Remove unresolved report reference for missing validUntil
 change_request: api-key-data-migration
 ticket: IGDD-3258
 ---
@@ -87,8 +100,8 @@ documented in the `sender-entities` spec.
 
 - **WHEN** the cert `common_name` is one of `izgateway.stchealthops.com`,
   `izgateway2.stchealthops.com`, or `epicenter.stchome.com`
-- **THEN** no `ApiKeyDomain` record is written; a warning entry is written to
-  `migrate/unresolved.txt` identifying the cert and the STC limitation
+- **THEN** no `ApiKeyDomain` record is written; these certs are excluded from the
+  input CSV and produce no output
 
 ### Requirement: ApiKeyDomain environment mapping follows cert inventory conventions
 
@@ -115,7 +128,7 @@ each cert. This column is required so `authExpiresAt` is set accurately rather t
 defaulting to migration timestamp + 1 year.
 
 Certs whose `validUntil` is blank or absent SHALL use the default (migration timestamp
-+ 1 year) and SHALL emit a warning in the unresolved report.
++ 1 year).
 
 ### Requirement: ApiKeyDomain seeding runs after Sender and Jurisdiction records are written
 

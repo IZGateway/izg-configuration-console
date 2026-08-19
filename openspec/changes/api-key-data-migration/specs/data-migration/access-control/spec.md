@@ -13,6 +13,21 @@ created:
     prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~e8f925b2-a3a7-4310-a5bb-c4d02c1eacc8
   summary: Access control spec for api-key-data-migration
 updated:
+  - date: '2026-08-19T20:56:54.937Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~973380b8-145a-4895-afce-0b486c67e2b8
+    summary: >-
+      Remove stale-record detection and --remove flag overclaims; scripts do
+      blind put-item writes; Clarify idempotency: put-item overwrites in place,
+      no read-before-write; Scope back report to what scripts actually emit;
+      Simplify successful-run scenario to match actual script output
   - date: '2026-08-13T15:01:54.252Z'
     user: boonek
     agent:
@@ -90,31 +105,8 @@ reflecting the current set of permissions as recorded in Salesforce.
 
 - **WHEN** the migration runs and an `AllowedUser` record already exists that matches
   an entry in the input data
-- **THEN** that record SHALL be confirmed present and no duplicate SHALL be created
-
-### Requirement: Stale access control records are flagged, not silently removed
-
-The migration SHALL NOT automatically delete `AllowedUser` records that exist in
-DynamoDB but are absent from the input data without explicit operator confirmation.
-
-Records that are present in DynamoDB but not in the input data SHALL be reported as
-candidates for removal so that an operator can review them before any deletions occur.
-
-#### Scenario: AllowedUser record not in input data
-
-- **WHEN** the migration runs and an `AllowedUser` record exists in DynamoDB that has
-  no corresponding entry in the input data
-- **THEN** that record SHALL remain in DynamoDB unchanged
-- **AND** the migration SHALL include that record in a "candidates for removal" section
-  of its output report
-
-#### Scenario: Operator-confirmed removal mode
-
-- **WHEN** the migration is invoked with an explicit flag authorizing removal of stale
-  records
-- **THEN** `AllowedUser` records present in DynamoDB but absent from the input data
-  SHALL be removed
-- **AND** each removed record SHALL be listed in the output report
+- **THEN** that record SHALL be overwritten in place (put-item is unconditional); no
+  duplicate SHALL be created
 
 ### Requirement: Migration is idempotent
 
@@ -130,13 +122,11 @@ without creating duplicate `AllowedUser` records.
 ### Requirement: Migration produces an execution report
 
 Upon completion the migration SHALL emit a summary report identifying:
-- the number of `AllowedUser` records created
-- the number of `AllowedUser` records confirmed already present (no change needed)
-- the number of DynamoDB records flagged as candidates for removal (absent from input)
+- the number of `AllowedUser` records written
 - any records that could not be written, and the reason
 
-#### Scenario: Successful run with stale records detected
+#### Scenario: Successful run
 
-- **WHEN** the migration completes and some DynamoDB records were not in the input data
-- **THEN** the report SHALL include a "candidates for removal" section listing those records
+- **WHEN** the migration completes
+- **THEN** the report SHALL list the count of records written and any failures
 - **AND** the exit status SHALL indicate success if no write errors occurred

@@ -13,6 +13,20 @@ created:
     prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~e8f925b2-a3a7-4310-a5bb-c4d02c1eacc8
   summary: Jurisdiction entities spec for api-key-data-migration
 updated:
+  - date: '2026-08-19T20:57:18.369Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~973380b8-145a-4895-afce-0b486c67e2b8
+    summary: >-
+      Reframe unresolved scenario to match update-item failure logging; note
+      missing-record limitation; Scope back report to what scripts actually
+      emit; Simplify successful-run scenario
   - date: '2026-08-14T03:37:50.357Z'
     user: boonek
     agent:
@@ -124,12 +138,18 @@ feature.
 - **THEN** that Jurisdiction's record in DynamoDB SHALL have `allowedUseTypes` set to
   the values from the input data
 
-#### Scenario: Jurisdiction missing from input data
+#### Scenario: Jurisdiction record update fails
 
-- **WHEN** the migration runs and a Jurisdiction record exists in DynamoDB but has
-  no corresponding entry in the input data
-- **THEN** that record SHALL NOT be modified
-- **AND** the migration SHALL report that Jurisdiction as unresolved in its output log
+- **WHEN** the migration runs and a `update-item` call for a Jurisdiction fails
+  (e.g. due to a permissions error or transient DynamoDB failure)
+- **THEN** that failure SHALL be logged to stderr with a `FAILED:` prefix identifying
+  the Jurisdiction ID
+- **AND** the migration SHALL continue processing remaining records
+
+**Note:** DynamoDB `update-item` will create a new item if the target key does not
+exist, so a missing Jurisdiction record will not produce a failure — it will be
+silently created with only the attributes set by the migration. This is a known
+limitation: the migration does not detect or report pre-existing missing records.
 
 ### Requirement: Migration is idempotent
 
@@ -156,12 +176,10 @@ regardless of whether they appear in the input data.
 
 Upon completion the migration SHALL emit a summary report that identifies:
 - the number of Jurisdiction records updated
-- the number of Jurisdiction records skipped (already correct or not in input)
-- any records that could not be resolved or that produced errors
+- any records that could not be updated, and the reason
 
-#### Scenario: Successful run with partial coverage
+#### Scenario: Successful run
 
-- **WHEN** the migration completes and some Jurisdictions were in the input data and
-  some were not
-- **THEN** the report SHALL list updated records and unresolved records separately
+- **WHEN** the migration completes
+- **THEN** the report SHALL list the count of records updated and any failures
 - **AND** the exit status SHALL indicate success if no write errors occurred
