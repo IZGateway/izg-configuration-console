@@ -37,7 +37,7 @@ echo "Loading senders → table: $TABLE"
 COUNT=0
 SKIP=1  # skip header
 
-while IFS=, read -r sender_id canonical_name use_types; do
+while IFS=, read -r sender_id prefix canonical_name use_types; do
   if [[ $SKIP -eq 1 ]]; then SKIP=0; continue; fi
 
   # Build StringSet for use_types (pipe-separated in CSV)
@@ -52,10 +52,11 @@ while IFS=, read -r sender_id canonical_name use_types; do
       \"sortKey\":          {\"S\": \"${sender_id}\"},
       \"jurisdictionId\":   {\"N\": \"${sender_id}\"},
       \"jurisdictionName\": {\"S\": \"${canonical_name}\"},
+      \"prefix\":           {\"S\": \"${prefix}\"},
       \"useTypes\":         {\"SS\": ${USE_TYPES_JSON}}
     }"
 
-  echo "  PUT Jurisdiction/${sender_id} — ${canonical_name}"
+  echo "  PUT Jurisdiction/${sender_id} — ${canonical_name} (${prefix})"
   COUNT=$((COUNT + 1))
 done < "$CSV"
 
