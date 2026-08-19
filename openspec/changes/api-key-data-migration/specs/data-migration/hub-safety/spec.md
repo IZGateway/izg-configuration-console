@@ -9,11 +9,22 @@ created:
   llm:
     name: claude-sonnet-4.6
     version: '4.6'
-  prompt_uri: >-
-    prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~hub-safety-spec
+  prompt_uri: 'prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~hub-safety-spec'
   summary: Hub safety spec for api-key-data-migration
 change_request: api-key-data-migration
 ticket: IGDD-3258
+updated:
+  - date: '2026-08-19T18:50:37.981Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~9f494a77-5afc-40d4-9a0b-daf4f380fea7
+    summary: Add operation logging and no-abort requirements to hub-safety spec
 ---
 ## Purpose
 
@@ -139,6 +150,49 @@ running Hub instance on next cache refresh.
 - **THEN** those new AllowedUser records SHALL be present in the cache
 - **AND** the Hub SHALL begin enforcing the new access permissions on subsequent
   connection attempts by the corresponding principals
+
+### Requirement: Migration scripts log each operation result to stdout/stderr
+
+Each migration script SHALL log the outcome of every DynamoDB operation to the
+console so that operators can monitor progress and diagnose failures from Docker
+container log output.
+
+#### Scenario: Successful DynamoDB operation
+
+- **WHEN** a `put-item` or `update-item` call completes successfully
+- **THEN** the script SHALL write a line to stdout in the form:
+  `  OK:     <operation> <entityType>/<key>`
+- **AND** the running success count SHALL be incremented
+
+#### Scenario: Failed DynamoDB operation
+
+- **WHEN** a `put-item` or `update-item` call returns a non-zero exit code
+- **THEN** the script SHALL write a line to stderr in the form:
+  `  FAILED: <operation> <entityType>/<key> (rc=<exit-code>)`
+- **AND** the script SHALL continue processing remaining rows — it SHALL NOT abort
+- **AND** the running failure count SHALL be incremented
+
+#### Scenario: Script completes
+
+- **WHEN** a script finishes processing all rows
+- **THEN** it SHALL write a summary line to stdout in the form:
+  `Done. <N> <entity> records written to <table>. Failures: <F>.`
+- **AND** this summary SHALL be visible in container log output regardless of
+  whether any individual operations failed
+
+### Requirement: Migration scripts do not abort on individual operation failures
+
+The migration scripts SHALL use `set -uo pipefail` (not `set -euo pipefail`).
+The `-e` flag SHALL NOT be set, so that a single failed AWS CLI call does not
+terminate the entire script. Each operation's success or failure SHALL be handled
+explicitly via `if/else` around the `aws dynamodb` call.
+
+#### Scenario: One DynamoDB write fails mid-script
+
+- **WHEN** one `put-item` or `update-item` call fails (e.g., due to a transient
+  throttle or a permissions error on a single item)
+- **THEN** the script SHALL log the failure and continue to the next row
+- **AND** all remaining rows SHALL be attempted
 
 ### Requirement: Migration order minimizes authorization disruption
 

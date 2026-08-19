@@ -12,7 +12,7 @@
 #   ./apikey-domains.sh --table izgateway-dev-test --profile cdc
 #   ./apikey-domains.sh --table izgw-hub --profile production
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CSV="${SCRIPT_DIR}/denormalized/apikey-domains.csv"
@@ -37,6 +37,7 @@ echo "Loading ApiKeyDomains → table: $TABLE"
 
 VALIDATED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 COUNT=0
+FAILURES=0
 SKIP=1  # skip header
 
 # Columns: env,envId,domain,organization,sender_type,entityId,entityName,status,authExpiresAt
@@ -45,7 +46,7 @@ while IFS=, read -r env envId domain organization sender_type entityId entityNam
 
   SORT_KEY="${envId}#${entityId}#${domain}"
 
-  aws dynamodb put-item "${PROFILE_ARGS[@]}" \
+  if aws dynamodb put-item "${PROFILE_ARGS[@]}" \
     --table-name "$TABLE" \
     --item "{
       \"entityType\":   {\"S\": \"ApiKeyDomain\"},
@@ -57,10 +58,13 @@ while IFS=, read -r env envId domain organization sender_type entityId entityNam
       \"validatedAt\":  {\"S\": \"${VALIDATED_AT}\"},
       \"authExpiresAt\":{\"S\": \"${authExpiresAt}\"},
       \"requestedBy\":  {\"S\": \"migration\"}
-    }"
-
-  echo "  PUT ApiKeyDomain/${SORT_KEY}"
-  COUNT=$((COUNT + 1))
+    }"; then
+    echo "  OK:     PUT ApiKeyDomain/${SORT_KEY}"
+    COUNT=$((COUNT + 1))
+  else
+    echo "  FAILED: PUT ApiKeyDomain/${SORT_KEY} (rc=$?)" >&2
+    FAILURES=$((FAILURES + 1))
+  fi
 done < "$CSV"
 
-echo "Done. $COUNT ApiKeyDomain records written to $TABLE."
+echo "Done. $COUNT ApiKeyDomain records written to $TABLE. Failures: $FAILURES."

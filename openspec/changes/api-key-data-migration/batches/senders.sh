@@ -11,7 +11,7 @@
 #   ./senders.sh --table izgateway-dev-test --profile cdc
 #   ./senders.sh --table izgw-hub --profile production
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CSV="${SCRIPT_DIR}/denormalized/senders.csv"
@@ -35,6 +35,7 @@ fi
 echo "Loading senders → table: $TABLE"
 
 COUNT=0
+FAILURES=0
 SKIP=1  # skip header
 
 while IFS=, read -r sender_id prefix canonical_name use_types; do
@@ -45,7 +46,7 @@ while IFS=, read -r sender_id prefix canonical_name use_types; do
   USE_TYPES_JSON=$(printf '"%s",' "${UT_ARRAY[@]}")
   USE_TYPES_JSON="[${USE_TYPES_JSON%,}]"
 
-  aws dynamodb put-item "${PROFILE_ARGS[@]}" \
+  if aws dynamodb put-item "${PROFILE_ARGS[@]}" \
     --table-name "$TABLE" \
     --item "{
       \"entityType\":       {\"S\": \"Jurisdiction\"},
@@ -54,10 +55,13 @@ while IFS=, read -r sender_id prefix canonical_name use_types; do
       \"jurisdictionName\": {\"S\": \"${canonical_name}\"},
       \"prefix\":           {\"S\": \"${prefix}\"},
       \"useTypes\":         {\"SS\": ${USE_TYPES_JSON}}
-    }"
-
-  echo "  PUT Jurisdiction/${sender_id} — ${canonical_name} (${prefix})"
-  COUNT=$((COUNT + 1))
+    }"; then
+    echo "  OK:     PUT Jurisdiction/${sender_id} — ${canonical_name} (${prefix})"
+    COUNT=$((COUNT + 1))
+  else
+    echo "  FAILED: PUT Jurisdiction/${sender_id} — ${canonical_name} (rc=$?)" >&2
+    FAILURES=$((FAILURES + 1))
+  fi
 done < "$CSV"
 
-echo "Done. $COUNT sender records written to $TABLE."
+echo "Done. $COUNT sender records written to $TABLE. Failures: $FAILURES."

@@ -12,7 +12,7 @@
 #   ./provider-allowed-users.sh --table izgateway-dev-test --profile cdc
 #   ./provider-allowed-users.sh --table izgw-hub --profile production
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CSV="${SCRIPT_DIR}/denormalized/allowed-users-provider.csv"
@@ -37,6 +37,7 @@ echo "Loading Provider AllowedUsers → table: $TABLE"
 
 VALIDATED_ON="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 COUNT=0
+FAILURES=0
 SKIP=1  # skip header
 
 # Columns: env,envId,sender_name,sender_id,cert_domain,receiver_destid,receiver_name,use_type,validUntil
@@ -47,7 +48,7 @@ while IFS=, read -r env envId sender_name sender_id cert_domain receiver_destid 
 
   SORT_KEY="${envId}#${receiver_destid}#${cert_domain}"
 
-  aws dynamodb put-item "${PROFILE_ARGS[@]}" \
+  if aws dynamodb put-item "${PROFILE_ARGS[@]}" \
     --table-name "$TABLE" \
     --item "{
       \"entityType\":    {\"S\": \"AllowedUser\"},
@@ -58,10 +59,13 @@ while IFS=, read -r env envId sender_name sender_id cert_domain receiver_destid 
       \"environment\":   {\"N\": \"${envId}\"},
       \"validatedOn\":   {\"S\": \"${VALIDATED_ON}\"},
       \"enabled\":       {\"BOOL\": true}
-    }"
-
-  echo "  PUT AllowedUser/${SORT_KEY}"
-  COUNT=$((COUNT + 1))
+    }"; then
+    echo "  OK:     PUT AllowedUser/${SORT_KEY}"
+    COUNT=$((COUNT + 1))
+  else
+    echo "  FAILED: PUT AllowedUser/${SORT_KEY} (rc=$?)" >&2
+    FAILURES=$((FAILURES + 1))
+  fi
 done < "$CSV"
 
-echo "Done. $COUNT Provider AllowedUser records written to $TABLE."
+echo "Done. $COUNT Provider AllowedUser records written to $TABLE. Failures: $FAILURES."
