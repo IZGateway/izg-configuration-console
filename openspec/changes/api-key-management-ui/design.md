@@ -341,6 +341,78 @@ passing the raw query string through. Reads still defensively coerce via
 `Number(item.env)` to tolerate any pre-existing rows written while this
 attribute was a String.
 
+### D19 — Jurisdiction ownership is matched on `prefix`; both org lists are ownership-scoped
+
+**The bug.** `ownsJurisdiction` compared the **numeric** `jurisdictionId` (e.g. `1000`)
+against `session.user.jurisdictions`. But that session field is populated from Okta's
+userinfo response (`pages/api/auth/[...nextauth].ts`) and holds lowercased jurisdiction
+**prefixes** (e.g. `"ainq"`) — the same claim the rest of the app feeds to
+`hasAccessToDestId`. Two different identifier spaces, so the comparison never matched. In
+a real session (as opposed to the tests' hand-built ones) every Jurisdiction Operations
+user therefore saw an **empty key list** and got **403 on every create/revoke/renew/
+cancel/token-reveal for their own organization**. IZG Operations was unaffected, because
+`hasAccessToDestId` short-circuits global roles before it looks at the id — which is why
+this survived review.
+
+**Why the tests didn't catch it.** Every authz test constructed a session whose values
+already matched the ids it targeted (`jurisdictions: ['1']` against `jurisdictionId: '1'`),
+so the mismatch was structurally invisible. The tests encoded the same wrong assumption as
+the code. Fixed by moving the fixtures to realistic shapes (`jurisdictions: ['ainq']` +
+a `getJurisdiction` returning `prefix: 'AINQ'`) and adding a regression block that uses
+deliberately non-overlapping values — verified to fail against the old comparison, with 3
+of 5 new tests catching it including the empty-list symptom.
+
+**Decision: match on `prefix`, not `name` and not `jurisdictionId`.** `Jurisdiction`
+carries all three as distinct fields (confirmed against the Hub's own model, which
+documents `prefix` as *"the prefix to use for destinations managed by this jurisdiction"*).
+`name` is wrong: a sender row has `name = "Audacious Inquiry (operators)"` with
+`prefix = "AINQ"`, so a name-based check would deny a legitimate owner. Some legacy rows
+happen to carry the short code in `name` as well, which is what made a name-based check
+*appear* to work on existing data — a trap worth naming explicitly. `prefix` is present on
+all existing jurisdictions and is being added for the new sender rows, and is unique, so no
+fallback is needed (a missing `prefix` fails closed with a warning rather than guessing).
+
+**Implementation.** `ownsJurisdiction` resolves `jurisdictionId` → `prefix` through
+`getJurisdiction`, which memoizes on a process-lifetime cache that the credential read
+paths (`getApiKeyCredential`, `fetchApiKeyCredentials`) already pre-warm — so the check is
+normally an in-memory hit, and the list path costs no extra reads. That made
+`ownsJurisdiction`/`requireApiKeyAccess` async (8 call sites gained an `await`; the GET list
+filter uses `Promise.all` + index-filter since `Array.filter` can't take an async
+predicate). Global roles are deliberately **not** short-circuited ahead of the lookup: the
+IZG-Operations/Support exemption stays defined in exactly one place (`hasAccessToDestId`),
+rather than being duplicated where it could drift. Supporting gaps closed along the way:
+`prefix` was missing from the `Jurisdiction` type and was being silently dropped by
+`fetchJurisdictions`'s projection, and `getJurisdiction` was implemented on `Dynamo` but
+never declared on the `DbClient` interface.
+
+**Decision: scope both org lists to owned jurisdictions, but sender-restrict only one.**
+`/api/jurisdictions` is intentionally unscoped server-side (other features consume it), so
+scoping happens in the UI via a shared `ownsJurisdictionForUi` helper mirroring the server
+check. Applies to both the Create dialog's Organization dropdown and the dashboard's
+Organization filter — previously both listed every jurisdiction system-wide, so a scoped
+role could pick an org it doesn't own and only discover the 403 after completing the entire
+multi-step create flow, DNS challenge included. This is UI affordance only; the server-side
+check (D7) remains the authoritative gate.
+
+The two lists differ on senders, deliberately, because they answer different questions:
+- **Create** is forward-looking policy ("what may I issue?") → senders only, since a
+  submitter credential cannot be issued to a destination-only jurisdiction.
+- **Filter** is backward-looking data ("what am I looking at?") → not sender-restricted.
+  `useTypes` is mutable policy while credentials are durable records, so the two drift: with
+  IGDD-3258 seeding still pending, and given an org can be de-registered as a sender after
+  keys were issued, a sender-restricted filter would hide organizations whose keys are
+  visibly sitting in the grid.
+
+Filter options also stay sourced from the full owned-jurisdictions list rather than being
+derived from the loaded rows. Row-derived options were considered — they'd scope for free
+off the already-server-scoped response and never offer an option that yields nothing — but
+rejected: "does this organization have any keys yet?" is a legitimate question (exactly the
+pre-create check the D12 duplicate guardrail exists to support), and an empty result is the
+answer to it. Row-derived options can't express that, and an org's *absence* from the
+dropdown is ambiguous (no keys? lost access? no such org?). Instead the grid's empty state
+was made filter-aware — "No API keys for {Org}." rather than a bare "No rows" — so the empty
+result reads as the answer rather than as something having gone wrong.
+
 ## Risks / Trade-offs
 
 - **[Mitigated, was a Risk] UI role-gating is not enforcement.** Resolved by D7 —

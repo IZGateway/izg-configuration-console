@@ -444,6 +444,10 @@ class EncryptedRepository implements DbClient {
     return await this.repository.fetchJurisdictions()
   }
 
+  async getJurisdiction(jurisdictionId: string): Promise<Jurisdiction | null> {
+    return await this.repository.getJurisdiction(jurisdictionId)
+  }
+
   async getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null> {
     return await this.repository.getApiKeyDomain(sortKey)
   }
