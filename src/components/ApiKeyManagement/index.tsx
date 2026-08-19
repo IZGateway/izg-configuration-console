@@ -52,6 +52,7 @@ import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import useRoleAccess from '../../lib/security/useRoleAccess'
+import hasAccessToDestId from '../../lib/accesshelper'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
   ALLOWED_USE_TYPES,
@@ -1577,12 +1578,27 @@ function CreateKeyDialog({
   // excluded: a submitter credential can't be issued to a destination-only org.
   // NOTE: in an environment where no senders are seeded, this list is empty by
   // design (see IGDD-3140 seeding / Ticket 2).
+  //
+  // Also scoped to organizations this caller actually owns (mirrors the
+  // server-side `ownsJurisdiction` check in POST /api/apikeys) — IZG Operations
+  // is global, other roles are limited to `session.user.jurisdictions`. Without
+  // this, a scoped role could pick an org it doesn't own, complete the entire
+  // multi-step create flow (including a DNS challenge), and only discover the
+  // 403 on final submit; the server-side check remains the authoritative gate.
   const senderOrganizations = useMemo(
     () =>
       Array.isArray(jurisdictions)
-        ? jurisdictions.filter((j) => (j.useTypes?.length ?? 0) > 0)
+        ? jurisdictions.filter((j) => {
+            if ((j.useTypes?.length ?? 0) === 0) return false
+            if (!session) return false
+            try {
+              return hasAccessToDestId(String(j.jurisdictionId), session)
+            } catch {
+              return false
+            }
+          })
         : [],
-    [jurisdictions]
+    [jurisdictions, session]
   )
 
   const [jurisdictionId, setJurisdictionId] = useState<string>('')
