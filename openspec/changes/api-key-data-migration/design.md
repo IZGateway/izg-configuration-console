@@ -1,6 +1,19 @@
 ---
 schema_version: '1.0'
 updated:
+  - date: '2026-08-19T19:08:50.208Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~dbfafc92-a2b9-4dc0-9f04-26feb7491567
+    summary: >-
+      Add Deployment Model section: CC image swap, nginx status page, tee output
+      pattern
   - date: '2026-08-15T03:59:36.061Z'
     user: boonek
     agent:
@@ -46,6 +59,93 @@ The migration is **idempotent**: Jurisdiction `UpdateItem` calls are additive (t
 only set the new fields); Sender and AllowedUser `PutItem` calls are safe to re-run
 (overwrite with identical data). Running the migration twice produces the same result
 as running it once.
+
+---
+
+## Deployment Model
+
+The migration is delivered as a **Docker image that temporarily replaces the IZ Gateway
+Configuration Console (CC) image** in an existing ECS Service. APHL changes a single
+image tag in the existing CC Terraform — no new task definitions, IAM roles, VPC
+configuration, or ECS Services are needed. The deployment is a total image swap; all
+other CC task definition fields (IAM role, environment variables, VPC, ALB target group,
+health check path) remain unchanged.
+
+### Why this model
+
+- APHL can execute a Terraform tweak against an existing resource but cannot create new
+  Terraform resources quickly. Reusing the CC task definition eliminates that bottleneck.
+- The CC task definition already carries the correct IAM role (DynamoDB write access to
+  `izgw-hub`) and all environment variables (including table name) that the scripts need.
+  No additional configuration is required from APHL.
+- The CC ALB already has a health check configured. The migration container must satisfy
+  that health check to prevent ECS from restarting it mid-migration.
+
+### Base Image
+
+The migration image is built `FROM` the same base image used by the CC — the IZ Gateway
+base image that includes nginx, filebeat, metricbeat, and the AWS CLI. This ensures:
+
+- nginx is available to serve the status report after migration completes
+- The AWS CLI version matches what CC uses
+- The IAM credential chain (ECS task role via instance metadata) works identically
+
+### Container Lifecycle
+
+```
+[container starts]
+        │
+        ▼
+entrypoint.sh runs migration scripts in order (1–6),
+each script tees its output to /var/www/html/index.html
+        │
+        ▼
+entrypoint.sh appends overall pass/fail summary + timestamp
+to /var/www/html/index.html
+        │
+        ▼
+exec nginx -g 'daemon off;'
+        │
+        ▼
+[ECS health checks pass — container stays alive]
+[APHL views status page via ALB URL]
+[APHL verifies CloudWatch logs]
+[APHL reverts image tag to CC image — migration complete]
+```
+
+### Status Report Page
+
+The migration produces its own status report as a side effect of execution. Each
+script's stdout and stderr are piped through `tee -a` to
+`/var/www/html/index.html` in execution order. The file is wrapped in `<pre>` and
+`</pre>` so browsers render it legibly without any CSS.
+
+The status page provides:
+- Script headers showing which script is running
+- `OK:` lines for each successful DynamoDB write
+- `FAILED:` lines for any failed writes (with exit code)
+- Per-script summary lines (`Done. N records written. Failures: F.`)
+- Overall summary line with total counts and any failures
+- Completion timestamp
+
+CloudWatch Logs receives the same output stream and is the authoritative record.
+
+### Table Name
+
+The target DynamoDB table name is read from the environment variable already present in
+the CC task definition (the same variable CC uses for its own DynamoDB access). No
+changes to the task definition environment variables are needed.
+
+### Failure Behavior
+
+Individual DynamoDB operation failures are logged but do not abort the script (see
+hub-safety spec). The container continues to nginx after all scripts complete regardless
+of individual failures. APHL should check the status page and CloudWatch for any
+`FAILED:` lines before declaring the migration successful.
+
+If the migration must be re-run (all scripts are idempotent), APHL redeploys the
+migration image. Successful records are silently overwritten with identical data;
+only previously failed records are net-new writes.
 
 ---
 

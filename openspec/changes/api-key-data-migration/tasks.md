@@ -3,6 +3,19 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
+  - date: '2026-08-19T19:09:18.796Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.80
+    llm:
+      name: claude-sonnet-4.6
+      version: '4.6'
+    prompt_uri: >-
+      prompt:/github-copilot/6b36fcb8-6019-41de-8218-f2e836b132e7/~dbfafc92-a2b9-4dc0-9f04-26feb7491567
+    summary: >-
+      Replace Phase 3 ops runbook with Docker migration image phase (Dockerfile,
+      entrypoint.sh, README, smoke test, ECR push)
   - date: '2026-08-18T12:57:53.436Z'
     user: boonek
     agent:
@@ -158,15 +171,43 @@ created:
   - `batches/prefix-corrections.json` — TransactWriteItems for 3 prefix fixes
   - `batches/senders.sh`, `iis-allowed-users.sh`, `provider-allowed-users.sh`, `apikey-domains.sh`
 
-## Phase 3: Ops Runbook
+## Phase 3: Docker Migration Image
 
-- [ ] 3.1 Write `batches/README.md` — operator execution instructions
-  - Required AWS permissions (PutItem, UpdateItem, TransactWriteItems on target table)
-  - Execution order with exact commands for each step
-  - How to verify each step succeeded before proceeding to the next
-  - How to re-run individual scripts safely (all scripts are idempotent)
+Build the migration container image that will temporarily replace the CC image in
+the ECS Service.
+
+- [ ] 3.1 Write `Dockerfile` in the change directory
+  - `FROM` the same base image tag used by the current CC image
+  - `COPY` the `batches/` directory into the image
+  - `COPY` `entrypoint.sh` as the container entrypoint
+  - Ensure the image does not start CC or Hub application processes
+
+- [ ] 3.2 Write `entrypoint.sh`
+  - Write `<pre>` header to `/var/www/html/index.html`
+  - Run each of the 6 migration steps in order, piping `2>&1 | tee -a /var/www/html/index.html`
+  - Read table name from the same environment variable CC uses
+  - After all scripts complete, append overall pass/fail summary and UTC timestamp
+    to `/var/www/html/index.html`
+  - Write `</pre>` footer to `/var/www/html/index.html`
+  - `exec nginx -g 'daemon off;'`
+
+- [ ] 3.3 Write `batches/README.md` — operator execution runbook
+  - Describes the CC image swap deployment model
+  - Step-by-step instructions: take DynamoDB backup → deploy migration image →
+    monitor CloudWatch → view status page → verify key records → revert to CC image
+  - How to re-run (redeploy migration image — all scripts are idempotent)
   - Sample `aws dynamodb get-item` verification queries for key records post-migration
-  - Rollback guidance: on-demand backup procedure before execution; restore procedure
+  - Rollback guidance: restore from on-demand backup taken before migration
+
+- [ ] 3.4 Build and smoke-test the image locally
+  - Build with `docker build`
+  - Run locally with `--env` overrides pointing at local DynamoDB emulator
+  - Confirm status page renders in browser with correct `<pre>` wrapping
+  - Confirm nginx health check path returns 200
+
+- [ ] 3.5 Push image to ECR and record image tag in the change directory
+  - Tag with the IGDD-3258 ticket number and date (e.g., `igdd-3258-20260819`)
+  - Record the full ECR image URI in `batches/README.md` for APHL reference
 
 ## Phase 4: Local DynamoDB Emulator Validation
 
