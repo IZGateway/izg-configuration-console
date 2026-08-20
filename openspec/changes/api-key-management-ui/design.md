@@ -14,17 +14,19 @@ OpenSpec update (izgw-hub PR #177) reconciles the same contract from its side.
 ## Goals / Non-Goals
 
 **Goals:**
-- Functional Filters (Environment, Status, Organization) — client-side interim.
+- Functional Filters (Environment, Status, Organization) — client-side interim, with the
+  Organization list scoped to the orgs the caller owns (D19).
 - Distinct revoke vs. cancel operations.
 - Dev-only DNS bypass that cannot run in production.
 - Use Types captured, validated, and carried through renew; Create-form narrowed to a
   sender's registered use types.
 - Expiry/`Expired`/`Grace Period`/`Revoked` semantics that match the Hub.
 - **Server-side authorization**: role + jurisdiction-ownership enforcement on every
-  API route, not just UI gating.
+  API route, not just UI gating — matched on the jurisdiction's `prefix`, the identifier
+  Okta group membership is actually keyed on (D19).
 - **Credential/JWT model reconciled with IGDD-3140**: bare-`{jti}` re-key,
-  `environments` List (+ admin multi-env), identity-only JWT, apex DNS challenge,
-  global domain exclusivity.
+  `environments` as a DynamoDB Number Set (+ admin multi-env), `useTypes` as a String Set
+  (D3), identity-only JWT, apex DNS challenge, global domain exclusivity.
 - Duplicate-scope guardrail and an expired-key re-issue flow.
 
 **Non-Goals (deferred / separate work):**
@@ -385,6 +387,45 @@ rather than being duplicated where it could drift. Supporting gaps closed along 
 `fetchJurisdictions`'s projection, and `getJurisdiction` was implemented on `Dynamo` but
 never declared on the `DbClient` interface.
 
+**Consequences of putting `getJurisdiction` on the authz path.** Two properties of that
+method were previously harmless — it only fed a display field (`jurisdictionDescription`) —
+but became load-bearing once `prefix` started deciding access. Both were raised in review
+and fixed here:
+
+- **Cache misses are no longer memoized.** `jurisdictionsCache` is a plain `Map` on a
+  process-wide singleton (`DbClientFactory.defaultClient`) with no TTL and no invalidation
+  path anywhere in the console — the existing db-refresh utility only refreshes *Hub*
+  instances. The old code cached `result.Item || null` behind a `.has()` guard, so a lookup
+  that missed pinned "this jurisdiction does not exist" for the lifetime of the process.
+  With `prefix` now gating access, that meant an organization locked out until the next
+  redeploy, with no operator remedy — and the realistic trigger is precisely the IGDD-3258
+  backfill, which creates sender rows and populates `prefix` on existing ones. Misses now
+  return `null` without being stored, and the read guard is a truthy check rather than
+  `.has()` (either alone defeats the bug). Hits are still cached, deliberately: that is the
+  property the list path relies on to avoid N reads. A `prefix` *edit* therefore still
+  requires a restart to be observed — accepted, since prefixes are tied to Okta group
+  naming and change at migration cadence, and the failure direction is a fail-closed
+  lockout rather than a fail-open grant (access itself is governed by Okta group membership,
+  which propagates on the 30-minute session TTL, not by the prefix).
+  *This is the same class of issue flagged to the Hub on izgw-hub PR #180, where
+  `JurisdictionService` caches for 60 minutes and does not refresh on a hit — except the
+  Hub's at least expires and has an operator-triggerable `refresh()`.*
+- **`getJurisdiction` now normalizes its result.** It returned the raw DynamoDB item typed
+  `Promise<any>`, while `fetchJurisdictions` applied the `name`/`description` fallbacks and
+  coerced `useTypes`/`allowedUseTypes` through `Array.from(...).filter(isValidUseType)`.
+  Declaring the method on the interface as `Promise<Jurisdiction | null>` (done in this
+  change) made that a promise the implementation did not keep — `Promise<any>` is assignable
+  to anything, so TypeScript could not catch it, and a caller reading `useTypes` would get a
+  native `Set` rather than the `AllowedUseType[]` the type advertises now that these persist
+  as DynamoDB String Sets. A shared `mapJurisdictionItem` is now used by both methods. Side
+  effect, and an improvement: `jurisdictionDescription` picks up the
+  `description → name → sortKey` fallback, so the two read paths no longer render
+  differently for a row missing `description`.
+
+`fetchApiKeyCredentials` was also reading `jurisdictionsCache` directly to build its rows,
+which coupled it to exactly the caching semantics above; it now builds a map from the
+resolved `getJurisdiction` results, so it stays correct independent of caching policy.
+
 **Decision: scope both org lists to owned jurisdictions, but sender-restrict only one.**
 `/api/jurisdictions` is intentionally unscoped server-side (other features consume it), so
 scoping happens in the UI via a shared `ownsJurisdictionForUi` helper mirroring the server
@@ -443,7 +484,7 @@ result reads as the answer rather than as something having gone wrong.
 ## Migration Plan
 
 Shipped incrementally on this branch (lint + tsc + node-env tests green at each step;
-61 apikey-specific tests as of the latest change). **Rollback:** revert the PR; there is
+69 apikey-specific tests as of the latest change). **Rollback:** revert the PR; there is
 no destructive data migration — cancel retains records, grace/successor values are
 forward-compatible with legacy `grace`/`superseded` still accepted on revoke, and reads
 fall back to legacy `env`/`{env}#{jti}` shapes for pre-existing rows. The credential

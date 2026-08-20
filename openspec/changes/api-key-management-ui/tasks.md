@@ -246,6 +246,20 @@
       filter lists orgs with no keys) indistinguishable from something having gone wrong.
       Now distinguishes no-credentials-at-all, org-filter-only, org-plus-other-filters,
       and other-filters-only. Audit Log tab message unchanged.
+- [x] 11.8 `getJurisdiction` hardened now that it feeds the ownership check (design D19,
+      both raised in review). (a) **Misses are no longer cached** — the memo has no TTL and
+      no invalidation path, so caching `null` behind the old `.has()` guard pinned "does not
+      exist" for the process lifetime, which with `prefix` gating access meant an org locked
+      out until redeploy, triggered precisely by the IGDD-3258 backfill. Hits stay cached
+      (the list path depends on it); a `prefix` edit still needs a restart, accepted and
+      documented. (b) **Result is now normalized** via a shared `mapJurisdictionItem` used
+      by both `getJurisdiction` and `fetchJurisdictions` — it previously returned the raw
+      item as `Promise<any>`, so the `Promise<Jurisdiction | null>` interface signature
+      added in §11.5 was a promise the implementation didn't keep (a caller reading
+      `useTypes` got a native `Set`, not `AllowedUseType[]`). Also stopped
+      `fetchApiKeyCredentials` reaching into `jurisdictionsCache` directly. 3 new tests in
+      `dynamo.apikeyLifecycle.test.ts` (hit cached / miss not cached / normalization),
+      with the miss test verified to fail against the original implementation.
 
 ## 12. Verification
 
@@ -253,7 +267,7 @@
       unused-`eslint-disable` warnings remain in `dynamo.ts` and elsewhere, unchanged
       by this work).
 - [x] 12.2 Node-env tests pass — `pages/api/apikeys/lifecycle.test.ts` +
-      `lib/db/dynamo.apikeyLifecycle.test.ts`, **61 tests** (up from the original 23;
+      `lib/db/dynamo.apikeyLifecycle.test.ts`, **69 tests** (up from the original 23;
       covers authz role/tenancy gating, multi-env, global domain exclusivity, the
       re-issue and duplicate-scope flows, and this round's atomicity/status-guard
       fixes). Full-project jest run shows no collateral damage in any node-env suite;

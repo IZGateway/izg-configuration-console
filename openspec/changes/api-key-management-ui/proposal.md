@@ -153,7 +153,7 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   exclusivity); `cancelApiKeyCredential` (soft cancel); `issuedAt` on the credential;
   `canCancelApiKey` in the access matrix; node-env tests
   (`pages/api/apikeys/lifecycle.test.ts`, `lib/db/dynamo.apikeyLifecycle.test.ts`,
-  61 tests total across the two files).
+  69 tests total across the two files).
 - **Shared-table contract**: the console and the Hub (`izgw-hub`) read/write the same
   DynamoDB `ApiKeyCredential`/`ApiKeyDomain` rows. Status value `grace_period`,
   attribute `supersededBy`, the bare-`{jti}` sort key, the `useTypes` String Set, and the

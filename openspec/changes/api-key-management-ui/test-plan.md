@@ -8,7 +8,7 @@ hardening, pagination) to include Use Types, the credential/JWT model reconcilia
 server-side RBAC, global domain exclusivity, and several product guardrails. See
 `design.md` (decisions D1–D18) for the reasoning behind any behavior below.
 
-**Out of scope for this manual pass** (already covered by the 61 automated
+**Out of scope for this manual pass** (already covered by the 69 automated
 node-env tests in `lifecycle.test.ts` / `dynamo.apikeyLifecycle.test.ts`, and not
 practical to exercise by hand): concurrent-write race conditions (D15, D16),
 DynamoDB pagination past the 1MB page limit (D8), and the `ConditionalCheckFailedException`
