@@ -151,8 +151,8 @@ environment.
 ### Requirement: Credentials are identified by a bare `jti`, and may span multiple environments
 
 The credential's DynamoDB sort key MUST be the bare credential `jti`, with environment
-membership stored as an `environments` attribute (a deduped DynamoDB String Set, see
-design D3) rather than encoded in the key.
+membership stored as an `environments` attribute (a deduped DynamoDB Number Set, `NS` —
+see design D3) rather than encoded in the key.
 
 #### Scenario: New credentials are keyed by bare jti
 
