@@ -26,7 +26,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     // Role + tenancy: only list authorized domains for a jurisdiction the
     // caller owns.
-    const authz = requireApiKeyAccess(session, 'canListApiKeys', jurisdictionId)
+    const authz = await requireApiKeyAccess(session, 'canListApiKeys', jurisdictionId)
     if (!authz.ok) {
       return res.status(authz.status).json({ error: authz.error })
     }

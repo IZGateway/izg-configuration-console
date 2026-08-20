@@ -12,6 +12,30 @@
 const mockGetServerSession = jest.fn()
 const mockGetDbClient = jest.fn()
 
+// Jurisdiction-ownership checks bridge two identifier spaces: routes/credentials
+// carry the numeric `jurisdictionId`, while `session.user.jurisdictions` holds the
+// lowercased jurisdiction PREFIXES that Okta group membership is keyed on. So
+// `ownsJurisdiction` resolves the id to its jurisdiction's `prefix` via
+// `getJurisdiction` before comparing. Every route that authorizes therefore needs
+// that method on the db client, so it's defaulted in the factory mock below —
+// individual tests only supply their own when the prefix mapping is the thing
+// under test.
+//
+// Fixture mapping: jurisdiction '1' -> 'AINQ' (the one `jurOpsSession` owns);
+// every other id gets a distinct `JUR<id>` prefix so it is deterministically NOT
+// owned by a scoped caller.
+const testJurisdictionPrefix = (jurisdictionId: string) =>
+  String(jurisdictionId) === '1' ? 'AINQ' : `JUR${jurisdictionId}`
+
+const defaultGetJurisdiction = (jurisdictionId: string) =>
+  Promise.resolve({
+    jurisdictionId: Number(jurisdictionId),
+    sortKey: String(jurisdictionId),
+    name: `Jurisdiction ${jurisdictionId}`,
+    description: `Jurisdiction ${jurisdictionId} description`,
+    prefix: testJurisdictionPrefix(jurisdictionId),
+  })
+
 jest.mock('next-auth', () => ({
   __esModule: true,
   getServerSession: (...args: unknown[]) => mockGetServerSession(...args),
@@ -28,7 +52,13 @@ jest.mock('../api-middleware-helper', () => ({
 
 jest.mock('../../../lib/db/DbClientFactory', () => ({
   __esModule: true,
-  default: { getDbClient: (...args: unknown[]) => mockGetDbClient(...args) },
+  default: {
+    getDbClient: async (...args: unknown[]) => {
+      const client = (await mockGetDbClient(...args)) ?? {}
+      // Spread the test's own client last so it can override getJurisdiction.
+      return { getJurisdiction: defaultGetJurisdiction, ...client }
+    },
+  },
 }))
 
 jest.mock('../../../../logger', () => ({
@@ -658,12 +688,17 @@ describe('API key authorization (role + tenancy)', () => {
   const izgSupportSession = {
     user: { email: 'support@example.com', role: 'IZG Support' },
   }
-  // Jurisdiction Operations scoped to jurisdiction '1' only.
+  // Jurisdiction Operations scoped to jurisdiction '1' only. Note this holds the
+  // jurisdiction's PREFIX ('ainq', lowercased), not its numeric id — that is the
+  // shape Okta actually puts in the session (see the `jwt` callback in
+  // pages/api/auth/[...nextauth].ts), and `testJurisdictionPrefix` maps
+  // jurisdiction '1' to 'AINQ'. Targets below use jurisdictionId '99', which maps
+  // to 'JUR99' and is therefore not owned.
   const jurOpsSession = {
     user: {
       email: 'jurops@example.com',
       role: 'Jurisdiction Operations',
-      jurisdictions: ['1'],
+      jurisdictions: ['ainq'],
     },
   }
 
@@ -725,6 +760,155 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(getApiKeyCredential).not.toHaveBeenCalled()
+    })
+  })
+
+  // Regression coverage for the identifier-space mismatch between the session and
+  // the credential. `session.user.jurisdictions` holds lowercased jurisdiction
+  // PREFIXES from Okta ('ainq'); credentials/routes carry the numeric
+  // `jurisdictionId` ('1000'). An implementation that compares the session against
+  // the numeric id — or against the jurisdiction's `name` instead of its `prefix`
+  // — denies every legitimate owner while still passing the tests above, because
+  // those construct sessions whose values already match the ids they target.
+  // These tests use deliberately non-overlapping values so that cannot happen.
+  describe('tenancy gate — numeric jurisdictionId is resolved to its prefix', () => {
+    // Session owns 'ainq'; the target credential's numeric id is 1000, and that
+    // jurisdiction's stored prefix is 'AINQ' with an unrelated long-form name.
+    const prefixOwnerSession = {
+      user: {
+        email: 'sender@example.com',
+        role: 'Jurisdiction Operations',
+        jurisdictions: ['ainq'],
+      },
+    }
+    const jurisdiction1000 = {
+      jurisdictionId: 1000,
+      sortKey: '1000',
+      name: 'Audacious Inquiry (operators)',
+      description: 'Audacious Inquiry LLC',
+      prefix: 'AINQ',
+    }
+
+    it('authorizes a revoke when the session prefix matches the jurisdiction prefix', async () => {
+      mockGetServerSession.mockResolvedValue(prefixOwnerSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1000' })
+      const revokeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const getJurisdiction = jest.fn().mockResolvedValue(jurisdiction1000)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        revokeApiKeyCredential,
+        getJurisdiction,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: 'jti-1000' }), res)
+
+      expect(res.statusCode).toBe(200)
+      expect(revokeApiKeyCredential).toHaveBeenCalled()
+      // The lookup must be keyed on the credential's numeric jurisdictionId.
+      expect(getJurisdiction).toHaveBeenCalledWith('1000')
+    })
+
+    it('denies when the session matches the jurisdiction NAME but not its prefix', async () => {
+      // Guards specifically against matching on `name`: this session would be
+      // authorized by a name-based check and must still be refused.
+      mockGetServerSession.mockResolvedValue({
+        user: {
+          email: 'nameonly@example.com',
+          role: 'Jurisdiction Operations',
+          jurisdictions: ['audacious inquiry (operators)'],
+        },
+      })
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1000' })
+      const revokeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        revokeApiKeyCredential,
+        getJurisdiction: jest.fn().mockResolvedValue(jurisdiction1000),
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: 'jti-1000' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('denies when the session matches the numeric jurisdictionId but not the prefix', async () => {
+      // Guards against the original bug: comparing the raw numeric id.
+      mockGetServerSession.mockResolvedValue({
+        user: {
+          email: 'numeric@example.com',
+          role: 'Jurisdiction Operations',
+          jurisdictions: ['1000'],
+        },
+      })
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1000' })
+      const revokeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        revokeApiKeyCredential,
+        getJurisdiction: jest.fn().mockResolvedValue(jurisdiction1000),
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: 'jti-1000' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('fails closed when the jurisdiction row carries no prefix', async () => {
+      mockGetServerSession.mockResolvedValue(prefixOwnerSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1000' })
+      const revokeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        revokeApiKeyCredential,
+        getJurisdiction: jest
+          .fn()
+          .mockResolvedValue({ ...jurisdiction1000, prefix: undefined }),
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: 'jti-1000' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('scopes the GET list by resolved prefix, not by numeric id', async () => {
+      mockGetServerSession.mockResolvedValue(prefixOwnerSession)
+      const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
+        { sortKey: 'a', jurisdictionId: '1000', status: 'active' },
+        { sortKey: 'b', jurisdictionId: '2000', status: 'active' },
+      ])
+      mockGetDbClient.mockResolvedValue({
+        fetchApiKeyCredentials,
+        getJurisdiction: jest.fn().mockImplementation((id: string) =>
+          Promise.resolve(
+            String(id) === '1000'
+              ? jurisdiction1000
+              : { jurisdictionId: 2000, prefix: 'OTHER', name: 'Other Org' }
+          )
+        ),
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('GET'), res)
+
+      expect(res.statusCode).toBe(200)
+      const returned = res.body as Array<{ jurisdictionId: string }>
+      expect(returned).toHaveLength(1)
+      expect(returned[0].jurisdictionId).toBe('1000')
     })
   })
 

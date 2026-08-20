@@ -60,6 +60,12 @@ export default interface ConfigConsoleFetchRepository {
   fetchApiKeyCredentials(): Promise<ApiKeyCredential[]>
   getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null>
   fetchJurisdictions(): Promise<Jurisdiction[]>
+  /**
+   * Fetch a single jurisdiction by its numeric id. Memoized for the life of the
+   * client, so repeated calls (e.g. the per-credential ownership check in
+   * `lib/security/apiKeyAuthz`) are in-memory hits rather than DynamoDB reads.
+   */
+  getJurisdiction(jurisdictionId: string): Promise<Jurisdiction | null>
   getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null>
   fetchAuthorizedApiKeyDomains(
     envId: number,

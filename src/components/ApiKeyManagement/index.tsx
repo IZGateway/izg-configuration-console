@@ -52,6 +52,7 @@ import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import useRoleAccess from '../../lib/security/useRoleAccess'
+import hasAccessToDestId from '../../lib/accesshelper'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
   ALLOWED_USE_TYPES,
@@ -133,6 +134,36 @@ function formatDate(value: string | Date | null | undefined): string {
   const d = typeof value === 'string' ? new Date(value) : value
   if (isNaN(d.getTime())) return '—'
   return d.toLocaleDateString()
+}
+
+// Client-side mirror of the server's `ownsJurisdiction` check
+// (lib/security/apiKeyAuthz), used to scope jurisdiction-bearing UI lists: the
+// Create dialog's Organization dropdown and the dashboard's Organization filter.
+//
+// Matched on `prefix` (the jurisdiction's short code, e.g. "AINQ") because that
+// is what Okta group membership — and therefore `session.user.jurisdictions` — is
+// keyed on. NOT `jurisdictionId` (numeric, a different identifier space) and NOT
+// `name` (the long form, e.g. "Audacious Inquiry (operators)"). IZG
+// Operations/Support are global and short-circuit inside `hasAccessToDestId`.
+//
+// Fails closed: no session, no prefix, or a throw (non-admin with no assigned
+// jurisdictions) all mean "not owned". This is UI scoping only — the API routes
+// remain the authoritative gate.
+type SessionLike =
+  | { user?: { role?: string; jurisdictions?: string[] } }
+  | null
+  | undefined
+
+function ownsJurisdictionForUi(
+  jurisdiction: Jurisdiction,
+  session: SessionLike
+): boolean {
+  if (!session || !jurisdiction.prefix) return false
+  try {
+    return hasAccessToDestId(String(jurisdiction.prefix), session)
+  } catch {
+    return false
+  }
 }
 
 // A credential's raw environment id is a number, or, for legacy rows, a
@@ -1577,12 +1608,25 @@ function CreateKeyDialog({
   // excluded: a submitter credential can't be issued to a destination-only org.
   // NOTE: in an environment where no senders are seeded, this list is empty by
   // design (see IGDD-3140 seeding / Ticket 2).
+  //
+  // Also scoped to organizations this caller actually owns (mirrors the
+  // server-side `ownsJurisdiction` check in POST /api/apikeys) — IZG Operations
+  // is global, other roles are limited to `session.user.jurisdictions`. Without
+  // this, a scoped role could pick an org it doesn't own, complete the entire
+  // multi-step create flow (including a DNS challenge), and only discover the
+  // 403 on final submit; the server-side check remains the authoritative gate.
+  //
+  // See `ownsJurisdictionForUi` for why this matches on `prefix`. A row with no
+  // prefix is excluded rather than shown-and-then-403'd on submit.
   const senderOrganizations = useMemo(
     () =>
       Array.isArray(jurisdictions)
-        ? jurisdictions.filter((j) => (j.useTypes?.length ?? 0) > 0)
+        ? jurisdictions.filter(
+            (j) =>
+              (j.useTypes?.length ?? 0) > 0 && ownsJurisdictionForUi(j, session)
+          )
         : [],
-    [jurisdictions]
+    [jurisdictions, session]
   )
 
   const [jurisdictionId, setJurisdictionId] = useState<string>('')
@@ -2303,7 +2347,7 @@ function RenewSuccessDialog({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ApiKeyManagement() {
-  const { status: sessionStatus } = useSession()
+  const { status: sessionStatus, data: session } = useSession()
 
   // Role-based UI gating (IGDD-2708). useRoleAccess returns the page-scoped
   // access object for the current role, or undefined/{} when the role has no
@@ -2350,17 +2394,25 @@ export default function ApiKeyManagement() {
   // Organization options are the jurisdictions themselves: value = jurisdictionId
   // (matched against each row's jurisdictionId), label = the description. Sourced
   // from /api/jurisdictions so the list is complete and page-independent.
+  //
+  // Scoped to jurisdictions this caller owns (see `ownsJurisdictionForUi`).
+  // /api/jurisdictions is deliberately unscoped server-side (it serves other
+  // features too), and GET /api/apikeys already scopes the rows themselves — so
+  // without this an unowned org would be offered here and just filter the grid to
+  // nothing. Unlike the Create dropdown this list is NOT restricted to senders:
+  // filtering is about what's in the grid, and a dual-role org can hold keys.
   const organizationOptions = useMemo<FilterOption[]>(
     () =>
       Array.isArray(jurisdictions)
         ? jurisdictions
+            .filter((j) => ownsJurisdictionForUi(j, session))
             .map((j) => ({
               value: String(j.jurisdictionId),
               label: j.description || j.name || String(j.jurisdictionId),
             }))
             .sort((a, b) => a.label.localeCompare(b.label))
         : [],
-    [jurisdictions]
+    [jurisdictions, session]
   )
 
   const [tabValue, setTabValue] = useState(0)
@@ -2419,6 +2471,28 @@ export default function ApiKeyManagement() {
       }),
     [apiKeys, search, filters]
   )
+
+  // An empty grid is a real answer, not a dead end — "this organization has no
+  // keys yet" is exactly what someone checks before creating one (and why the
+  // Organization filter deliberately lists every owned org, including those with
+  // no keys). A bare "No rows" leaves the user to guess whether that's the
+  // answer or something went wrong, so name the reason.
+  const noRowsMessage = useMemo(() => {
+    if (apiKeys.length === 0) {
+      return 'No API keys yet.'
+    }
+    const orgLabel = filters.organization
+      ? organizationOptions.find((o) => o.value === filters.organization)?.label
+      : undefined
+    const hasOtherFilters = !!(filters.environment || filters.status || search)
+    if (orgLabel && !hasOtherFilters) {
+      return `No API keys for ${orgLabel}.`
+    }
+    if (orgLabel) {
+      return `No API keys for ${orgLabel} match the current filters.`
+    }
+    return 'No API keys match the current filters.'
+  }, [apiKeys.length, filters, search, organizationOptions])
 
   const handleView = useCallback((key: ApiKey) => setViewTarget(key), [])
   const handleRevoke = useCallback((key: ApiKey) => setRevokeTarget(key), [])
@@ -2782,7 +2856,7 @@ export default function ApiKeyManagement() {
               }}
             >
               <Typography variant="body2" sx={{ color: palette.greyText }}>
-                {tabValue === 1 ? 'Audit log coming soon.' : 'No rows'}
+                {tabValue === 1 ? 'Audit log coming soon.' : noRowsMessage}
               </Typography>
             </Box>
           ),

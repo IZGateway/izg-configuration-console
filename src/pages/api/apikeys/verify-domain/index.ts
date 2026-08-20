@@ -34,7 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // pending credential, so it is gated on the mint capability
     // (`canCreateApiKey`); a caller may only authorize/activate domains for a
     // jurisdiction they own.
-    const authz = requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
+    const authz = await requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
     if (!authz.ok) {
       return res.status(authz.status).json({ error: authz.error })
     }
