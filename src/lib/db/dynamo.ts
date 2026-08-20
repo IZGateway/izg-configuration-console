@@ -11,6 +11,7 @@ import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
 import type { AllowedUseType } from '../type/AllowedUseType'
+import type { Jurisdiction } from '../type/Jurisdiction'
 import { isValidUseType } from '../type/AllowedUseType'
 import { asyncRequestContext } from '../Context'
 import os from 'os'
@@ -157,38 +158,86 @@ class Dynamo implements DbClient {
     const result = await dynamodDbDocClient.send(new QueryCommand(params))
     return await this.convertResponseToDestinations(result.Items || [])
   }
-  private jurisdictionsCache = new Map<string, any>()
+  private jurisdictionsCache = new Map<string, Jurisdiction>()
 
   getTableName(): string {
     return TABLE_NAME
   }
 
-  async getJurisdiction(jurisdictionId: string): Promise<any> {
-    if (!this.jurisdictionsCache.has(jurisdictionId)) {
-      const params: GetCommandInput = {
-        TableName: TABLE_NAME,
-        Key: {
-          entityType: 'Jurisdiction',
-          sortKey: `${jurisdictionId}`,
-        },
-      }
-      try {
-        const result = await dynamodDbDocClient.send(new GetCommand(params))
-        this.jurisdictionsCache.set(jurisdictionId, result.Item || null)
-      } catch (error) {
-        logger.error('Error fetching jurisdiction from DynamoDB', {
-          jurisdictionId,
-          tableName: TABLE_NAME,
-          entityType: 'Jurisdiction',
-          errorMessage: error.message,
-          errorType: error.name,
-          stack: error.stack,
-          operation: 'getJurisdiction',
-        })
-        throw error
-      }
+  /**
+   * Normalize a raw DynamoDB Jurisdiction item into a `Jurisdiction`. Shared by
+   * `getJurisdiction` and `fetchJurisdictions` so both return the same shape —
+   * previously only the latter normalized, so a caller reading `useTypes` off
+   * `getJurisdiction`'s result got the raw attribute (a native `Set`, since these
+   * are persisted as DynamoDB String Sets) rather than the `AllowedUseType[]` the
+   * type promises, and missed the `name`/`description` fallbacks.
+   */
+  private mapJurisdictionItem(item: Record<string, any>): Jurisdiction {
+    return {
+      jurisdictionId: item.jurisdictionId,
+      sortKey: item.sortKey,
+      name: item.name || item.sortKey,
+      description: item.description || item.name || item.sortKey,
+      // Short code (e.g. "AINQ") — the identifier Okta group membership is
+      // keyed on, so it's what jurisdiction-ownership checks compare against.
+      // Distinct from `name`/`description`; projected deliberately, not for display.
+      prefix: item.prefix,
+      // Use-type policy fields (IGDD-3140). Read robustly whether stored as a
+      // DynamoDB List or a String Set (both are iterable once unmarshalled),
+      // filtered to the known enum. allowedUseTypes = jurisdiction/destination
+      // policy; useTypes = sender/submitter capability. Absent → undefined.
+      allowedUseTypes: item.allowedUseTypes
+        ? Array.from(item.allowedUseTypes as Iterable<string>).filter(isValidUseType)
+        : undefined,
+      useTypes: item.useTypes
+        ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+        : undefined,
+      createdBy: item.createdBy,
+      createdOn: item.createdOn,
+    } as Jurisdiction
+  }
+
+  async getJurisdiction(jurisdictionId: string): Promise<Jurisdiction | null> {
+    const cached = this.jurisdictionsCache.get(jurisdictionId)
+    if (cached) {
+      return cached
     }
-    return this.jurisdictionsCache.get(jurisdictionId)
+    const params: GetCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'Jurisdiction',
+        sortKey: `${jurisdictionId}`,
+      },
+    }
+    try {
+      const result = await dynamodDbDocClient.send(new GetCommand(params))
+      if (!result.Item) {
+        // Deliberately NOT cached. This cache has no TTL and no invalidation, so
+        // caching a miss would pin the "does not exist" answer for the lifetime of
+        // the process — and a jurisdiction that is absent now may well exist a
+        // moment later (the IGDD-3258 seeding/backfill adds sender rows and
+        // populates `prefix` on existing ones). Since `prefix` drives the
+        // ownership check in lib/security/apiKeyAuthz, a cached miss would lock an
+        // organization out until the next redeploy, with no operator remedy. A
+        // repeated read for a genuinely missing jurisdiction is the cheaper
+        // trade-off.
+        return null
+      }
+      const jurisdiction = this.mapJurisdictionItem(result.Item)
+      this.jurisdictionsCache.set(jurisdictionId, jurisdiction)
+      return jurisdiction
+    } catch (error) {
+      logger.error('Error fetching jurisdiction from DynamoDB', {
+        jurisdictionId,
+        tableName: TABLE_NAME,
+        entityType: 'Jurisdiction',
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'getJurisdiction',
+      })
+      throw error
+    }
   }
 
   async fetchJurisdictions(): Promise<any[]> {
@@ -201,24 +250,7 @@ class Dynamo implements DbClient {
     }
     try {
       const result = await dynamodDbDocClient.send(new QueryCommand(params))
-      return (result.Items || []).map((item) => ({
-        jurisdictionId: item.jurisdictionId,
-        sortKey: item.sortKey,
-        name: item.name || item.sortKey,
-        description: item.description || item.name || item.sortKey,
-        // Use-type policy fields (IGDD-3140). Read robustly whether stored as a
-        // DynamoDB List or a String Set (both are iterable once unmarshalled),
-        // filtered to the known enum. allowedUseTypes = jurisdiction/destination
-        // policy; useTypes = sender/submitter capability. Absent → undefined.
-        allowedUseTypes: item.allowedUseTypes
-          ? Array.from(item.allowedUseTypes as Iterable<string>).filter(isValidUseType)
-          : undefined,
-        useTypes: item.useTypes
-          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
-          : undefined,
-        createdBy: item.createdBy,
-        createdOn: item.createdOn,
-      }))
+      return (result.Items || []).map((item) => this.mapJurisdictionItem(item))
     } catch (error) {
       logger.error('Error fetching jurisdictions', {
         errorMessage: error.message,
@@ -1402,19 +1434,25 @@ class Dynamo implements DbClient {
       return []
     }
 
-    // Resolve each DISTINCT jurisdiction exactly once. getJurisdiction memoizes,
-    // but mapping over every credential concurrently would still fire duplicate
-    // reads before the cache is populated — so pre-warm the distinct set first,
-    // then build rows from the cache (one read per jurisdiction, not per key).
+    // Resolve each DISTINCT jurisdiction exactly once (one read per jurisdiction,
+    // not per key — mapping over every credential concurrently would fire
+    // duplicate reads before the memo is populated). Rows are then built from
+    // these resolved values rather than by reaching back into
+    // `jurisdictionsCache`, so this does not depend on what that cache chooses to
+    // memoize — notably, `getJurisdiction` deliberately does not cache misses.
     const distinctJurisdictionIds = [
       ...new Set(items.map((item) => item.jurisdictionId as string)),
     ]
-    await Promise.all(
-      distinctJurisdictionIds.map((id) => this.getJurisdiction(id))
+    const jurisdictionsById = new Map(
+      await Promise.all(
+        distinctJurisdictionIds.map(
+          async (id) => [id, await this.getJurisdiction(id)] as const
+        )
+      )
     )
 
     return items.map((item) => {
-      const jurisdiction = this.jurisdictionsCache.get(item.jurisdictionId)
+      const jurisdiction = jurisdictionsById.get(item.jurisdictionId)
       return {
         jti: item.jti as string,
         sortKey: item.sortKey as string,

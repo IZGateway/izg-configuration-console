@@ -65,6 +65,15 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   `canListApiKeys` permission (any role with real access can find the page), rather
   than the narrower `isAdmin` flag that hid it from Jurisdiction Operations despite
   their having full server-side access.
+- **Ownership is matched on the jurisdiction's `prefix`** (design D19). The tenancy gate
+  originally compared the numeric `jurisdictionId` against `session.user.jurisdictions`,
+  which holds Okta-derived jurisdiction prefixes — two different identifier spaces, so it
+  never matched. In a real session that locked every Jurisdiction Operations user out of
+  their own organization (empty key list, 403 on every action); global IZG roles were
+  unaffected, which is why it escaped review. Both the Create dialog's Organization
+  dropdown and the dashboard's Organization filter are now scoped to owned orgs as well,
+  so a scoped role can no longer complete an entire create flow against an org it doesn't
+  own only to be refused on submit.
 
 ### Product guardrails
 - **Duplicate-scope warning**: creating a key whose (environment + use types) exactly
@@ -144,7 +153,7 @@ Scope grew well beyond the original four gap-closers. Delivered on this branch:
   exclusivity); `cancelApiKeyCredential` (soft cancel); `issuedAt` on the credential;
   `canCancelApiKey` in the access matrix; node-env tests
   (`pages/api/apikeys/lifecycle.test.ts`, `lib/db/dynamo.apikeyLifecycle.test.ts`,
-  61 tests total across the two files).
+  69 tests total across the two files).
 - **Shared-table contract**: the console and the Hub (`izgw-hub`) read/write the same
   DynamoDB `ApiKeyCredential`/`ApiKeyDomain` rows. Status value `grace_period`,
   attribute `supersededBy`, the bare-`{jti}` sort key, the `useTypes` String Set, and the
