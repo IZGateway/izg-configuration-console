@@ -37,7 +37,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // Tenancy scoping (fix enumeration/IDOR): a caller only sees credentials
       // for jurisdictions they own. IZG roles are global; jurisdiction roles are
       // limited to their assigned jurisdictions.
-      const scoped = result.filter((c) => ownsJurisdiction(session, c.jurisdictionId))
+      //
+      // `ownsJurisdiction` is async (it resolves each jurisdiction's prefix), and
+      // Array.filter can't take an async predicate — so resolve all decisions
+      // first, then filter by index. `fetchApiKeyCredentials` has already
+      // pre-warmed the jurisdiction cache for every distinct jurisdiction in this
+      // result set, so these are in-memory hits, not N DynamoDB reads.
+      const ownedFlags = await Promise.all(
+        result.map((c) => ownsJurisdiction(session, c.jurisdictionId))
+      )
+      const scoped = result.filter((_, i) => ownedFlags[i])
 
       return res.status(200).json(scoped)
     } catch (error) {
@@ -63,7 +72,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({ error: 'jurisdictionId, environments (non-empty array), and upn are required' })
       }
       // Role + tenancy: a caller may only create keys for a jurisdiction they own.
-      const authz = requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
+      const authz = await requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
       if (!authz.ok) {
         return res.status(authz.status).json({ error: authz.error })
       }
@@ -286,7 +295,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // jurisdiction. This is the authoritative gate, evaluated right before
       // acting on the credential — checked before the status check so a
       // non-owner learns nothing about the target credential's state.
-      const authz = requireApiKeyAccess(session, 'canRevokeApiKey', credential.jurisdictionId)
+      const authz = await requireApiKeyAccess(session, 'canRevokeApiKey', credential.jurisdictionId)
       if (!authz.ok) {
         return res.status(authz.status).json({ error: authz.error })
       }
@@ -370,7 +379,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
       // Role + tenancy (fix IDOR): the caller must own the credential's
       // jurisdiction. Authoritative gate, evaluated right before acting on it.
-      const authz = requireApiKeyAccess(session, 'canCancelApiKey', credential.jurisdictionId)
+      const authz = await requireApiKeyAccess(session, 'canCancelApiKey', credential.jurisdictionId)
       if (!authz.ok) {
         return res.status(authz.status).json({ error: authz.error })
       }

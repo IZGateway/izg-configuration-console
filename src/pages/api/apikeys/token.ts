@@ -47,7 +47,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // jurisdiction — otherwise any authorized user could reveal another
     // jurisdiction's token. Authoritative gate, evaluated right before the
     // token is reconstructed.
-    const authz = requireApiKeyAccess(session, 'canCreateApiKey', credential.jurisdictionId)
+    const authz = await requireApiKeyAccess(session, 'canCreateApiKey', credential.jurisdictionId)
     if (!authz.ok) {
       return res.status(authz.status).json({ error: authz.error })
     }

@@ -8,6 +8,12 @@ export interface Jurisdiction extends DbAudit {
   sortKey?: string
   name: string
   description: string
+  // Short code for this jurisdiction (e.g. "AINQ", "EHEX"), distinct from both
+  // `name` ("Audacious Inquiry (operators)") and `description`. This is the
+  // identifier Okta group membership is keyed on: `session.user.jurisdictions`
+  // holds lowercased prefixes, so `prefix` — NOT `name` or `jurisdictionId` —
+  // is what an ownership check compares against (see lib/security/apiKeyAuthz).
+  prefix?: string
   // JURISDICTION (destination/receiver) role policy — IGDD-3140 spec
   // `Jurisdiction.allowedUseTypes`: the use-type categories this jurisdiction
   // accepts as a destination. An empty array means DENY-ALL. Optional until the

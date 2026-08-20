@@ -268,4 +268,67 @@ describe('Dynamo API key lifecycle (IGDD-2707)', () => {
       expect(result.every((r) => r.jurisdictionDescription === 'Dup')).toBe(true)
     })
   })
+
+  // `getJurisdiction`'s memo has no TTL and no invalidation, and it now feeds the
+  // ownership check in lib/security/apiKeyAuthz (a jurisdiction's `prefix` decides
+  // access). Caching a MISS would therefore pin "this jurisdiction does not exist"
+  // for the lifetime of the process — locking an organization out until redeploy
+  // once the IGDD-3258 backfill creates the row or populates its `prefix`.
+  describe('getJurisdiction caching', () => {
+    // A fresh instance per test: the memo is per-Dynamo-instance and the shared
+    // `dynamo` above has already cached entries from the suites before this one.
+    it('caches a hit — a second read issues no further DynamoDB call', async () => {
+      const client = new Dynamo()
+      mockSend.mockResolvedValue({
+        Item: { jurisdictionId: 1000, sortKey: '1000', name: 'AINQ', prefix: 'AINQ' },
+      })
+
+      const first = await client.getJurisdiction('1000')
+      const second = await client.getJurisdiction('1000')
+
+      expect(first?.prefix).toBe('AINQ')
+      expect(second?.prefix).toBe('AINQ')
+      expect(mockSend).toHaveBeenCalledTimes(1)
+    })
+
+    it('does NOT cache a miss — a later read sees a jurisdiction created since', async () => {
+      const client = new Dynamo()
+      // Absent on first read (pre-backfill), present on the next.
+      mockSend
+        .mockResolvedValueOnce({})
+        .mockResolvedValueOnce({
+          Item: { jurisdictionId: 2000, sortKey: '2000', name: 'NEW', prefix: 'NEWORG' },
+        })
+
+      const before = await client.getJurisdiction('2000')
+      const after = await client.getJurisdiction('2000')
+
+      expect(before).toBeNull()
+      // Would be `null` forever if the miss had been memoized.
+      expect(after?.prefix).toBe('NEWORG')
+      expect(mockSend).toHaveBeenCalledTimes(2)
+    })
+
+    it('normalizes the item the same way fetchJurisdictions does', async () => {
+      const client = new Dynamo()
+      // useTypes arrives as a native Set (DynamoDB String Set) and `description`
+      // is absent — both must be normalized, not passed through raw.
+      mockSend.mockResolvedValue({
+        Item: {
+          jurisdictionId: 3000,
+          sortKey: '3000',
+          name: 'SOMEORG',
+          prefix: 'SOMEORG',
+          useTypes: new Set(['PATIENT', 'BOGUS']),
+        },
+      })
+
+      const jurisdiction = await client.getJurisdiction('3000')
+
+      // Array, not a Set — and filtered to the known enum.
+      expect(jurisdiction?.useTypes).toEqual(['PATIENT'])
+      // description falls back to name when absent.
+      expect(jurisdiction?.description).toBe('SOMEORG')
+    })
+  })
 })
