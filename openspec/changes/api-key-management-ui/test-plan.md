@@ -214,15 +214,16 @@ org it owns and one it does not.
 
 ## 8. Cancel
 
-- [ ] 8.1 On a **Ready for Validation** key (pending DNS challenge), click **Cancel key**.
+- [X] 8.1 On a **Ready for Validation** key (pending DNS challenge), click **Cancel key**.
       Confirm the dialog/toast wording says "cancelled" (not "removed" or "deleted").
-- [ ] 8.2 Confirm the cancelled row disappears from the default Keys view but reappears
+- [X] 8.2 Confirm the cancelled row disappears from the default Keys view but reappears
       when Status = Cancelled is selected (§1.7), and shows `cancelledBy`/`cancelledAt`.
-- [ ] 8.3 Confirm Cancel is **not offered** on Active or Grace Period keys — only Revoke
+- [X] 8.3 Confirm Cancel is **not offered** on Active or Grace Period keys — only Revoke
       is available there (§7.2 is the mirror check).
-- [ ] 8.4 As `jurisdictionops@mail.com`, attempt to cancel a pending credential belonging to a
+- [!] 8.4 As `jurisdictionops@mail.com`, attempt to cancel a pending credential belonging to a
       jurisdiction it does not own — confirm 403.
-
+  - This is an issue!  I was able to Cancel something I didn't own.  Should this user even see those keys?
+  - I added this ticket: https://izgateway.atlassian.net/browse/IGDD-3342
 ---
 
 ## 9. Expired key & Re-issue
@@ -231,68 +232,85 @@ org it owns and one it does not.
 > data is a key whose `expiresAt` has already passed, or by adjusting system/test clock
 > data if your environment supports it.
 
-- [ ] 9.1 Confirm a key past its `expiresAt` (with no grace period involved) shows status
+- [X] 9.1 Confirm a key past its `expiresAt` (with no grace period involved) shows status
       **Expired** in the grid.
-- [ ] 9.2 For a renewed key: confirm the Grace-Period-vs-Expired-vs-Revoked precedence —
+  - I had created an API Key with a script with an expired date.
+  - ** One issue though, the database field status still said active.
+- [X] 9.2 For a renewed key: confirm the Grace-Period-vs-Expired-vs-Revoked precedence —
       if the hard expiry (`exp`) falls at or before the grace-period end, it shows
       **Expired**, not Revoked, once the grace window would otherwise have ended.
-- [ ] 9.3 On an Expired key, click **Re-issue key**. Confirm the dialog looks like Renew
+  - Paul's steps to test
+  - On Aug 24, create a key that expires on Aug 24 at 10am
+  - On Aug 24, renew the key
+  - On Aug 24 10am, check that the original key now shows as expired. It did show as expired!
+- [X] 9.3 On an Expired key, click **Re-issue key**. Confirm the dialog looks like Renew
       (prefilled, read-only fields) but is labeled **Re-issue**.
-- [ ] 9.4 Confirm re-issue creates a **brand-new** credential (fresh key ID, `now + 1
+- [X] 9.4 Confirm re-issue creates a **brand-new** credential (fresh key ID, `now + 1
       year` expiry — no continuity with the old key's expiry) and leaves the old expired
       key completely untouched (no status change, no grace period).
-- [ ] 9.5 If the domain's own DNS authorization has also lapsed, confirm re-issue routes
+- [X] 9.5 If the domain's own DNS authorization has also lapsed, confirm re-issue routes
       through the DNS challenge first, same as a brand-new domain (§3). If the domain
       authorization is still valid, confirm it issues immediately with no DNS step.
-- [ ] 9.6 Confirm Revoked and Cancelled keys offer **no** lifecycle action at all — no
+  - I confirmed both: DNS auth had lapsed and when DNS auth is valid, it issues immediately
+- [X] 9.6 Confirm Revoked and Cancelled keys offer **no** lifecycle action at all — no
       Renew, no Re-issue.
 
 ---
 
 ## 10. Duplicate-scope guardrail
 
-- [ ] 10.1 Create a key for organization/domain X with environment E and use type(s) U.
+- [X] 10.1 Create a key for organization/domain X with environment E and use type(s) U.
       Then start Create Key again for the **same** organization, domain, environment(s),
       and use type(s) while the first key is still Active.
-- [ ] 10.2 Confirm a warning appears recommending **Renew** instead, but does not block
+- [X] 10.2 Confirm a warning appears recommending **Renew** instead, but does not block
       the action.
-- [ ] 10.3 Click through anyway ("Create Anyway" on the second attempt) — confirm it
+- [X & !] 10.3 Click through anyway ("Create Anyway" on the second attempt) — confirm it
       succeeds and a second, genuinely duplicate-scope key is created.
-- [ ] 10.4 Change just the environment or just a use type from the existing active key's
+  - It did, but it did not recognize that the domain authorization had already been done.  Should this be considered a bug?
+  - Ticket I created: https://izgateway.atlassian.net/browse/IGDD-3341
+- [X] 10.4 Change just the environment or just a use type from the existing active key's
       scope — confirm **no** warning appears (only an *exact* scope match triggers it).
-
+  - This worked fine
 ---
 
 ## 11. Global domain exclusivity
 
-- [ ] 11.1 As `jurisdictionops@mail.com`, verify (or create-and-verify) domain `shared-test.example.gov`
+- [X] 11.1 As `jurisdictionops@mail.com`, verify (or create-and-verify) domain `shared-test.example.gov`
       for its own jurisdiction. Confirm success.
-- [ ] 11.2 As a **different** jurisdiction (switch accounts, or use another
+  - Note, we may want to use a domain where we can control the TXT record - we can't do that with shared-test.example.gov
+- [!] 11.2 As a **different** jurisdiction (switch accounts, or use another
       Jurisdiction-Operations login), attempt to create a key with `dnsChoice: other` for
       the **same** domain `shared-test.example.gov`. Confirm it is refused immediately
       (before any DNS challenge is issued) — a domain already owned by another
       jurisdiction is rejected up front.
+  - This seems to be a real issue.  I created shared-test.example.giv with user: jurisdictionops@mail.com, then I tried with my user, and it allowed the duplicate.
+  - I created this bug ticket for it: https://izgateway.atlassian.net/browse/IGDD-3340
 - [ ] 11.3 Attempt to push a second jurisdiction's TXT record through to actual
       verification for that same domain (if reachable) — confirm the authoritative claim
       at verify-time also refuses it, even if the DNS TXT check itself would have passed.
+  - Isn't this an invalid scenario if 11.2 works as intended?
 - [ ] 11.4 As the **original owning** jurisdiction, re-verify the same domain again (e.g.
       to add a new environment) — confirm this succeeds (idempotent for the true owner),
       and the newly requested environment gets authorized.
+  - I can't test that quite yet.
 
 ---
 
 ## 12. Role-based access control (RBAC)
 
-- [ ] 12.1 Log in as **IZG Support** or **Jurisdiction Support** (Account #3). Confirm
+- [X] 12.1 Log in as **IZG Support** or **Jurisdiction Support** (Account #3). Confirm
       the API Key Management nav link is **not shown** at all.
-- [ ] 12.2 If you can reach `/apikeys` directly by URL as Account #3, confirm the page
+  - Logged in with jurisdictionsupport@mail.com
+- [X & !] 12.2 If you can reach `/apikeys` directly by URL as Account #3, confirm the page
       does not function / actions are unavailable — and directly hitting an API route
       (e.g. `GET /api/apikeys` via devtools) returns **403**.
-- [ ] 12.3 Log in as **`jurisdictionops@mail.com`** (Account #2, Jurisdiction Operations).
+  - The page shows up empty, unusable, and I see the 403 error in debug tools, but don't we want to not show the page at all?
+  - I create this ticket for it: https://izgateway.atlassian.net/browse/IGDD-3339
+- [X] 12.3 Log in as **`jurisdictionops@mail.com`** (Account #2, Jurisdiction Operations).
       Confirm `GET /api/apikeys` (the Keys grid) shows **only** credentials for
       jurisdiction(s) this account owns — not the full list. An **empty** grid here is a
       failure, not a pass, if the account owns an org that has keys (see §12.4a).
-- [ ] 12.4 As `jurisdictionops@mail.com`, confirm **both** jurisdiction-bearing lists are
+- [X] 12.4 As `jurisdictionops@mail.com`, confirm **both** jurisdiction-bearing lists are
       scoped to organizations this account owns:
       - **Create Key → Organization** dropdown: only owned sender orgs, not every sender
         org system-wide. This closes a gap where a scoped role could previously pick an
@@ -302,7 +320,7 @@ org it owns and one it does not.
         see §1.4), not every jurisdiction in the system.
       (If a second jurisdiction-scoped account with a *different* owned org is available,
       switch to it and confirm both lists change accordingly.)
-- [ ] 12.4a **Prefix-matching regression check** — the highest-value step in this section.
+- [X] 12.4a **Prefix-matching regression check** — the highest-value step in this section.
       Ownership is matched on the jurisdiction's **prefix** (e.g. `AINQ`), which is what
       Okta group membership is keyed on — not the numeric `jurisdictionId` and not the
       long-form `name`. Using `jurisdictionops@mail.com`, pick an owned org whose prefix
@@ -312,45 +330,111 @@ org it owns and one it does not.
       keys succeeds. A regression presents as an **empty key list plus 403 on every action
       for the account's own org** — and note it would NOT reproduce under an IZG Operations
       login, since global roles bypass the ownership comparison entirely.
-- [ ] 12.5 As `jurisdictionops@mail.com`, confirm Create/Revoke/Renew/Cancel controls are visible for
+- [X] 12.5 As `jurisdictionops@mail.com`, confirm Create/Revoke/Renew/Cancel controls are visible for
       owned jurisdictions but that attempting the same actions against a **different**
       jurisdiction's credential (via direct API call) is refused with 403 — and confirm
       the 403 happens **before** any credential-status detail is returned (ownership is
       checked first, so a non-owner can't learn a credential's state).
-- [ ] 12.6 Confirm the nav link **is** visible for Jurisdiction Operations (it follows
+  - I got it to work by running these in the browser's debug session in its console:
+      This one got the expected 403:
+
+      await (await fetch('/api/apikeys', {
+         method: 'DELETE',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ sortKey: 'cb272bc7-a1a5-41ef-ab5f-28a95c57a052' })
+      })).json().then(b => console.log(b))
+
+      This one succeeded as expected:
+
+      await (await fetch('/api/apikeys', {
+         method: 'DELETE',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ sortKey: '24e86969-d4ca-4d74-b648-f0f66f580ee9' })
+      })).json().then(b => console.log(b))
+
+      ALSO Ran:
+      const FOREIGN_SORTKEY = 'cb272bc7-a1a5-41ef-ab5f-28a95c57a052'
+      const FOREIGN_JUR = '1001'
+      const MY_JUR = '1000'
+
+      const call = async (label, method, url, body) => {
+      const r = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      })
+      console.log(label, r.status, await r.json().catch(() => ({})))
+      }
+
+      // revoke, cancel, view-token: jurisdiction is derived from the STORED credential
+      await call('revoke ', 'PATCH',  '/api/apikeys',       { sortKey: FOREIGN_SORTKEY, reason: 'test' })
+      await call('cancel ', 'DELETE', '/api/apikeys',       { sortKey: FOREIGN_SORTKEY })
+      await call('token  ', 'POST',   '/api/apikeys/token', { sortKey: FOREIGN_SORTKEY })
+
+      // THE key case: foreign credential + MY OWN jurisdictionId in the body.
+      // If the body value were trusted, this would succeed. It must still 403.
+      await call('renew  ', 'POST', '/api/apikeys/renew', { oldSortKey: FOREIGN_SORTKEY, jurisdictionId: MY_JUR })
+
+      // create is the one route where jurisdictionId legitimately comes from the body
+      await call('create ', 'POST', '/api/apikeys', {
+      jurisdictionId: FOREIGN_JUR, environments: [1], upn: 'idor-test.example.org',
+      dnsChoice: 'other', useTypes: ['PATIENT'],
+      })
+
+- [X] 12.6 Confirm the nav link **is** visible for Jurisdiction Operations (it follows
       `canListApiKeys`, not the coarser admin-only flag).
-- [ ] 12.7 (If an account is available) Log in as an unmapped role (IZG Program / CDC
+  - Yes, I can see the nav link to API keys
+- [X] 12.7 (If an account is available) Log in as an unmapped role (IZG Program / CDC
       Program / CDC CISO). Confirm no API Key access anywhere — deny-by-default.
-- [ ] 12.8 As Account #1 (IZG Operations), confirm it can see and act on **every**
+  - I was not able to see API Keys UI options when logging in as a generic user
+- [X] 12.8 As Account #1 (IZG Operations), confirm it can see and act on **every**
       jurisdiction's credentials (global access), including multi-environment creation
       (§4), and that its Create Key Organization dropdown lists **every** sender org
       (unlike a scoped role in 12.4).
-
+  - I used account izgoperations@mail.com to verify this.  Looks good.
 ---
 
 ## 13. Use Types
 
-- [ ] 13.1 Attempt to create a key with **no** use type selected — confirm the form
+- [X] 13.1 Attempt to create a key with **no** use type selected — confirm the form
       blocks submission (client-side) and, if bypassed via direct API call, the server
       returns 400.
-- [ ] 13.2 Renew or re-issue a key — confirm the new credential **inherits** the previous
+  - I used this in the browser debug console:
+    - await (await fetch('/api/apikeys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+            jurisdictionId: '1',
+            environments: [2],
+            upn: 'test.example.gov',
+            dnsChoice: 'other',
+            useTypes: []
+            })
+      })).json().then(b => console.log(b))
+      0q4va38vzi7jv.js:5  POST https://dev.console.izgateway.org/api/apikeys 400 (Bad Request)
+      window.fetch @ 0q4va38vzi7jv.js:5
+      await in window.fetch
+      (anonymous) @ VM120:1
+      VM120:11 {error: 'useTypes must be a non-empty array'}
+
+- [X] 13.2 Renew or re-issue a key — confirm the new credential **inherits** the previous
       credential's use types automatically (not re-prompted).
-- [ ] 13.3 Confirm use types are **not** visible anywhere in the issued JWT (decode the
+- [X] 13.3 Confirm use types are **not** visible anywhere in the issued JWT (decode the
       token from §5/§3 and check the payload) — they're a server-side property only.
 
 ---
 
 ## 14. Regression / sanity checks
 
-- [ ] 14.1 Confirm no `env` or `environment` numeric claim appears in a decoded JWT
+- [X] 14.1 Confirm no `env` or `environment` numeric claim appears in a decoded JWT
       payload (identity-only JWT — see design D9).
-- [ ] 14.2 Confirm a credential's Environment column renders correctly for both a
+- [X] 14.2 Confirm a credential's Environment column renders correctly for both a
       single-environment and a multi-environment credential.
-- [ ] 14.3 Spot-check the Audit Log tab loads without error (still a stub — not expected
+- [X] 14.3 Spot-check the Audit Log tab loads without error (still a stub — not expected
       to show detailed history yet, per Deferred items).
-- [ ] 14.4 General smoke: navigate away from and back to the API Key Management page,
+- [X] 14.4 General smoke: navigate away from and back to the API Key Management page,
       confirm the grid reloads correctly and no console errors appear in devtools.
-- [ ] 14.5 Confirm no browser console errors/warnings appear across the full pass above
+- [X] 14.5 Confirm no browser console errors/warnings appear across the full pass above
       (beyond expected dev-only bypass warnings).
 
 ---
