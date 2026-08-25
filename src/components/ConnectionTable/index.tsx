@@ -442,8 +442,9 @@ const ConnectionsTable = (props) => {
   const updateRow = useCallback(
     (row) => {
       const updatedEndpointStatus = endpointStatuses.map((x) => {
-        if (x.destId === row.destId) {
+        if (x.destId === row.destId && x.destTypeId === row.destTypeId) {
           return {
+            ...x,
             ...row,
           }
         } else {
