@@ -424,6 +424,15 @@ class EncryptedRepository implements DbClient {
     return await this.repository.supersedeApiKeyCredential(params)
   }
 
+  async markApiKeyCredentialReissued(params: {
+    sortKey: string
+    reissuedBy: string
+    reissuedAt: string
+    reissuedAs: string
+  }): Promise<void> {
+    return await this.repository.markApiKeyCredentialReissued(params)
+  }
+
   async createApiKeyCredential(params: {
     jti: string
     sortKey: string

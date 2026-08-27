@@ -67,7 +67,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
 
-      const { jurisdictionId, environments, upn, description, dnsChoice, useTypes } = req.body
+      const { jurisdictionId, environments, upn, description, dnsChoice, useTypes, reissuedFrom } = req.body
       if (!jurisdictionId || !Array.isArray(environments) || environments.length === 0 || !upn) {
         return res.status(400).json({ error: 'jurisdictionId, environments (non-empty array), and upn are required' })
       }
@@ -111,6 +111,83 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const domainSortKeys = envIds.map((env) => `${env}#${jurisdictionId}#${upn}`)
       const now = new Date()
       const createdBy = session.user.email || 'unknown'
+      // Bare jti — the Hub reads a credential by jti alone at routing time, and
+      // env membership is a stored attribute, not part of the key. Generated
+      // once, up front, so every branch below (existing/other,
+      // immediate/challenge) shares the same value — needed by the re-issue
+      // guard immediately below, which must know the successor's jti before
+      // any credential actually exists.
+      const jti = crypto.randomUUID()
+      const sortKey = jti
+
+      // Re-issue (IGDD-3140 Q8): `reissuedFrom` is the sortKey of the EXPIRED
+      // credential this request is replacing. Re-issue deliberately never
+      // transitions that credential's `status` (D13 — an expired key has
+      // nothing to overlap with, so it's otherwise left untouched), which
+      // means — unlike renew — there is no status-based guard against the
+      // same expired credential being re-issued more than once (confirmed by
+      // manual testing: repeated clicks each minted an independent Active
+      // successor). This atomic conditional write on `reissuedAs` is the only
+      // thing that closes that gap, and — same ordering fix as renew
+      // (test-plan §6.8) — MUST run before any credential is created: a
+      // losing or repeated attempt fails here and creates nothing.
+      if (reissuedFrom) {
+        const oldCredential = await dbClient.getApiKeyCredential(String(reissuedFrom))
+        if (!oldCredential) {
+          return res.status(404).json({ error: 'Credential being re-issued was not found' })
+        }
+        if (oldCredential.jurisdictionId !== String(jurisdictionId)) {
+          return res.status(403).json({ error: 'Forbidden - not authorized for this jurisdiction' })
+        }
+        try {
+          await dbClient.markApiKeyCredentialReissued({
+            sortKey: String(reissuedFrom),
+            reissuedBy: createdBy,
+            reissuedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+            reissuedAs: jti,
+          })
+        } catch (error) {
+          if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+            return res.status(409).json({ error: 'This key has already been re-issued' })
+          }
+          throw error
+        }
+      }
+
+      // Shared by both dnsChoice branches below: issues the credential
+      // immediately as Active whenever the domain is already authorized (and
+      // unexpired) for every requested environment — whether the caller
+      // picked it from the "existing" dropdown, or it turns out to already be
+      // authorized despite being typed manually via "Other" (IGDD-3341:
+      // typing an already-authorized domain via "Other" used to always
+      // restart a redundant 7-day DNS challenge instead of recognizing prior
+      // authorization).
+      const issueActiveCredential = async () => {
+        const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
+        await dbClient.createApiKeyCredential({
+          jti,
+          sortKey,
+          jurisdictionId: String(jurisdictionId),
+          environments: envIds,
+          status: 'active',
+          createdOn: now,
+          expiresAt,
+          createdBy,
+          description: description ? String(description) : undefined,
+          domain: String(upn),
+          useTypes,
+        })
+
+        logger.info('API key created for already-authorized domain', {
+          jti,
+          sortKey,
+          createdBy,
+          dnsChoice,
+          operation: 'createApiKeyCredential',
+        })
+
+        return res.status(201).json({ jti, sortKey })
+      }
 
       if (dnsChoice === 'existing') {
         const domainRecords = await Promise.all(
@@ -130,35 +207,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           })
         }
 
-        const jti = crypto.randomUUID()
-        const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-        // Credentials are keyed by bare jti (not env-prefixed): the Hub reads
-        // a credential by jti alone at routing time, and env membership is a
-        // stored attribute, not part of the key. jti is a UUID, so this is
-        // already globally unique without a prefix.
-        const sortKey = jti
-        await dbClient.createApiKeyCredential({
-          jti,
-          sortKey,
-          jurisdictionId: String(jurisdictionId),
-          environments: envIds,
-          status: 'active',
-          createdOn: now,
-          expiresAt,
-          createdBy,
-          description: description ? String(description) : undefined,
-          domain: String(upn),
-          useTypes,
-        })
-
-        logger.info('API key created for existing authorized domain', {
-          jti,
-          sortKey,
-          createdBy,
-          operation: 'createApiKeyCredential',
-        })
-
-        return res.status(201).json({ jti, sortKey })
+        return issueActiveCredential()
       }
 
       // dnsChoice === 'other' — early, non-authoritative exclusivity check:
@@ -176,14 +225,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
+      // The domain may already be fully authorized for this jurisdiction even
+      // though it was typed here rather than picked from the "existing"
+      // dropdown (e.g. re-entering a domain used by an earlier key) —
+      // recognize that instead of unconditionally restarting a DNS challenge.
+      const domainRecords = await Promise.all(
+        domainSortKeys.map((sk) => dbClient.getApiKeyDomain(sk))
+      )
+      const alreadyAuthorized = envIds.every((_, i) => {
+        const rec = domainRecords[i]
+        return (
+          rec?.status === 'authorized' &&
+          rec?.authExpiresAt &&
+          new Date(rec.authExpiresAt) > now
+        )
+      })
+      if (alreadyAuthorized) {
+        return issueActiveCredential()
+      }
+
       // create the credential row up front as ready_for_validation. No
       // expiry is set yet: the key is not "issued" until DNS ownership is
       // verified, and exp is stamped at activation (verify-domain) so it is
       // computed from issuance.
-      const jti = crypto.randomUUID()
-      // Bare jti — see the 'existing' branch above for why.
-      const sortKey = jti
-
       await dbClient.createApiKeyCredential({
         jti,
         sortKey,
@@ -200,11 +264,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // The DNS TXT challenge proves ownership of the domain itself (record
       // placed at the domain APEX, DigiCert-style — not a `_izg-verify.`
       // subdomain), which is env-independent — so one challenge/UUID covers
-      // every environment the credential targets. Reuse
-      // any still-pending challenge found on the first environment's row; a
-      // fresh UUID is (re)applied to every environment's ApiKeyDomain row so
-      // they all resolve together on the next verify-domain call.
-      const firstDomainRecord = await dbClient.getApiKeyDomain(domainSortKeys[0])
+      // every environment the credential targets. Reuse any still-pending
+      // challenge found on the first environment's row (already fetched
+      // above); a fresh UUID is (re)applied to every environment's
+      // ApiKeyDomain row so they all resolve together on the next
+      // verify-domain call.
+      const firstDomainRecord = domainRecords[0]
       const hasPendingChallenge =
         firstDomainRecord?.status === 'pending_challenge' &&
         firstDomainRecord?.challengeExpiresAt &&
