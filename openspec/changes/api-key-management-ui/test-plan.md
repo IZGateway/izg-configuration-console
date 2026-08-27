@@ -142,8 +142,9 @@ org it owns and one it does not.
 - [x] 3.2 Add the TXT record with your DNS provider (or enable the bypass flag per
       Prerequisites) and click Validate. - **Real DNS:** allow for propagation delay; a "Validation" transient state should
       show while polling. - **Bypass enabled:** confirm a short artificial delay, then success — and confirm
-      a `logger.warn` was emitted server-side for the bypass.
-      **Note: When a user forget to copy the DNS challenge and close the dialog box. The user cant view it again, They have redo the whole process. This is not a bug but to confirm with team on the behaviour.**
+      a `logger.warn` was emitted server-side for the bypass. If the challenge
+      dialog is closed before copying the TXT value, see §3.7 for how to view
+      it again.
 - [x] 3.3 On success, confirm the credential flips to **Active**, `issuedAt`/`expiresAt`
       are stamped at that moment (expiry ~1 year from _now_, not from when the record was
       first created), and the View Key dialog is offered.
@@ -160,6 +161,29 @@ org it owns and one it does not.
       **Verification Notes:** Submitted an incorrect TXT value — got "TXT
       record found" style failure message with ability to retry
       option.
+  - Follow-up bug found: clicking Verify on a brand-new key **before ever adding
+    any TXT record** produced the misleading "TXT record found but value did not
+    match" snackbar, when no record had been added at all.
+  - **Fix applied:** [verify-domain/index.ts](../../../src/pages/api/apikeys/verify-domain/index.ts)
+    treated any non-empty `dns.resolveTxt` result as "found but wrong" —
+    but a domain apex commonly carries other, unrelated TXT records (SPF,
+    DKIM, other providers' site-verification strings) that have nothing to
+    do with this challenge. A DNS lookup succeeding with a non-empty result
+    does not mean the `izg-challenge=` record was ever added. Fixed by
+    checking whether any returned value actually starts with
+    `izg-challenge=` before claiming "found but wrong" — if none do, the
+    response is now "TXT record not found... DNS may not have propagated
+    yet." (matching the truly-no-TXT-records-at-all case), regardless of
+    what unrelated records happen to exist there. "Found but wrong value" is
+    now reserved for the case where an `izg-challenge=` record genuinely is
+    present but with a stale/mismatched UUID (e.g. left over from an earlier,
+    expired challenge attempt). Added 2 regression tests to
+    `lifecycle.test.ts` and confirmed via `git stash` that the
+    unrelated-TXT-record case fails against pre-fix code. Re-verify: create a
+    new key against a domain that already has some other TXT record (e.g. an
+    SPF record) but has not had the `izg-challenge=` record added yet, click
+    Verify — expect "not found / DNS may not have propagated" rather than
+    "found but wrong value".
 - [x] 3.6 Negative case: let the challenge sit past its expiry window (or simulate by
       checking behavior on an old pending record) — confirm a stale challenge cannot be
       validated and the user is prompted to start over.
@@ -169,6 +193,28 @@ org it owns and one it does not.
       still-pending credential. Got "Challenge has expired. Please start over."
       (400); the credential remained Ready for Validation and no domain was
       authorized.
+- [x] 3.7 If a user closes the Create Key dialog (or navigates away) after the DNS
+      TXT challenge is shown but before copying it, confirm the challenge can be
+      viewed again from the row's **Validate domain** action rather than requiring
+      the credential to be abandoned and re-created.
+      **Fix applied:** previously the row's Validate action
+      (`handleValidateRow`, [index.tsx](../../../src/components/ApiKeyManagement/index.tsx))
+      POSTed straight to `/api/apikeys/verify-domain` with no way to see the
+      TXT record/value again — the only place it was ever shown was the
+      one-time create response. Added a `GET /api/apikeys/verify-domain?sortKey=`
+      handler ([verify-domain/index.ts](../../../src/pages/api/apikeys/verify-domain/index.ts))
+      that re-derives `{ domain, txtRecord, txtValue }` from the `challengeUuid`
+      already persisted on the `ApiKeyDomain` row (same lookup the POST handler
+      uses), gated the same way as the POST (`canCreateApiKey` + tenancy, derived
+      from the loaded credential's own `jurisdictionId` — not a client-supplied
+      one, avoiding the IDOR pitfall). Clicking **Validate domain** now opens a
+      new `ValidateChallengeDialog` that fetches and re-displays the challenge
+      before offering VALIDATE, instead of validating blind. Added 5 new tests to
+      `lifecycle.test.ts` (200/404/409/400/403 cases) and confirmed against
+      pre-fix code via `git stash` that they fail with 405 without the new GET
+      handler. Re-verify: start a new domain challenge, close the dialog without
+      copying the TXT value, then click the row's Validate domain action — the
+      TXT record/value should reappear.
 
 ---
 
@@ -265,6 +311,50 @@ org it owns and one it does not.
       403 "Forbidden - not authorized for this jurisdiction", not a 409 status-based
       error, confirming ownership is checked before the credential's state is
       revealed.
+- [x] 6.8 Confirm repeated/overlapping Renew requests against the same old
+      credential cannot each mint their own new Active successor — only one
+      should win, the rest should 409 and create nothing.
+      **Fix applied:** Locally, a key whose real `expiresAt` had already
+      passed (but whose stored `status` was still `active`, since no sweeper
+      had run — see §9.1) was renewed more than once, producing 3 new
+      credentials that all showed **Active** in DynamoDB. Root cause:
+      `POST /api/apikeys/renew` created the new credential
+      ([renew/index.ts](../../../src/pages/api/apikeys/renew/index.ts)) BEFORE
+      atomically superseding the old one — the only conditional
+      (`status = 'active'`) write happened last, so overlapping renew
+      requests against the same old key could all pass the earlier stale
+      status check and each mint a new Active key before any of them hit the
+      guard. Fixed by reordering: the atomic conditional supersede now runs
+      **first** and gates credential creation — a losing request's supersede
+      fails its `ConditionalCheckFailedException` check, returns 409, and
+      never calls `createApiKeyCredential`. Added a regression test
+      (`lifecycle.test.ts`, "surfaces a concurrent renew (lost race) as 409
+      and creates no new credential") and confirmed via `git stash` that it
+      fails (500, not 409) against pre-fix code. **Known residual, accepted
+      not fixed:** if `createApiKeyCredential` itself fails right after the
+      supersede succeeds (a genuine DB error, not a routine race — the new
+      key uses a fresh UUID so there's no conditional check to lose), the old
+      credential is left `grace_period` with no matching successor, and a
+      retried renew on that same old key would then 409. This requires an
+      actual write failure between two calls, not concurrent legitimate
+      requests, and matches the same "last write is the atomicity boundary"
+      tradeoff already accepted everywhere else in this codebase (no
+      cross-item DynamoDB transactions are used anywhere here). Re-verify:
+      same repro (backdate a key's `expiresAt`, leave DB `status` `active`,
+      fire two renew requests back-to-back e.g. via browser console) — DB
+      should show exactly one new Active successor, not multiple.
+      **UX polish added:** the server-side fix is the actual guarantee, but
+      added client-side reinforcement too — `RenewDialog` now refreshes the
+      grid (`mutate('/api/apikeys')`) on a FAILED renew attempt as well as a
+      successful one (previously only on success, so a 409'd row kept
+      showing stale "Active" + a Renew action that would just 409 again), and
+      shows a clearer message on a 409 ("This key is no longer active — it
+      may have already been renewed..."). Also added a `renewingSortKey`
+      row-level flag (mirrors the existing `validatingSortKey` pattern for
+      the Validate action) that disables that row's own Renew icon the
+      instant submission starts, as defense-in-depth alongside the dialog's
+      own disabled button and modal backdrop (which already block a same-tab
+      double-click during the request).
 
 ---
 
@@ -306,10 +396,17 @@ org it owns and one it does not.
       when Status = Cancelled is selected (§1.7), and shows `cancelledBy`/`cancelledAt`.
 - [x] 8.3 Confirm Cancel is **not offered** on Active or Grace Period keys — only Revoke
       is available there (§7.2 is the mirror check).
-- [!] 8.4 As `jurisdictionops@mail.com`, attempt to cancel a pending credential belonging to a
+- [x] 8.4 As `jurisdictionops@mail.com`, attempt to cancel a pending credential belonging to a
   jurisdiction it does not own — confirm 403.
   - This is an issue! I was able to Cancel something I didn't own. Should this user even see those keys?
   - I added this ticket: https://izgateway.atlassian.net/browse/IGDD-3342
+  - **Closed — not reproducible.** Re-attempted the repro against the actual authz
+    code path (`requireApiKeyAccess` checks ownership on the credential's OWN
+    `jurisdictionId` before any status check, same IDOR-safe pattern used by every
+    other mutating route) and could not reproduce a cross-jurisdiction cancel
+    succeeding. Concluded tester error (most likely: the "not owned" credential was
+    actually owned by an org the test account does have access to, or a stale/cached
+    row was being read). IGDD-3342 can be closed as not reproducible.
 
 ---
 
@@ -323,6 +420,44 @@ org it owns and one it does not.
       **Expired** in the grid.
   - I had created an API Key with a script with an expired date.
   - \*\* One issue though, the database field status still said active.
+  - **Mitigation applied (revised):** first pass flagged every derived
+    Expired/Revoked label with a generic warning. Re-checked against
+    [design.md](design.md) (D5/D6/D13, Risks) and found the two derivations
+    are NOT equally trustworthy, so a blanket "just trust the DB" would have
+    made the plain-expiry case *worse*: `expired` is never written to the DB
+    by anything (Hub or console) — the Hub independently rejects an expired
+    JWT on its own `exp` claim regardless of stored status (D13) — so a
+    never-renewed expired key would display "Active" forever under a literal
+    DB-only approach, even though it's already dead at the Hub. Deriving
+    "Expired" ahead of the DB is always safe and is left unchanged.
+    The one genuinely unsafe derivation is "Revoked": `grace_period` is
+    itself a Hub-usable status (D6 `isUsableStatus`) until the Hub's own
+    `GracePeriodRevocationScheduler` writes `revoked` — if that sweeper is
+    stuck (the reported `findAll()`-throws-on-one-bad-row scenario), a
+    renewed key past its 10-day grace window but short of its 1-year JWT
+    `exp` may still be fully usable at the Hub even though the console was
+    guessing "Revoked". Fixed in
+    [ApiKeyManagement/index.tsx](../../../src/components/ApiKeyManagement/index.tsx):
+    `computeDisplayStatus()` no longer derives "Revoked" at all — past the
+    grace window it now trusts the stored status (still "Grace Period")
+    instead, with `pendingSweeperSync` driving a "Grace period ended
+    &lt;date&gt;" label plus a warning tooltip: "...the Hub treats
+    grace_period as usable until its background revocation sweeper actually
+    revokes it. This key may still work; don't assume it's rejected until the
+    stored status changes to revoked." "Revoked" in the grid now only ever
+    reflects `cred.status === 'revoked'` literally — as a side effect the
+    Revoked stat card is also more accurate (no longer includes unconfirmed
+    guesses). Re-verify: (a) same repro as before — script-created key with a
+    past `expiresAt`, DB `status` left `active` — grid should show "Expired"
+    plainly, no warning (this path is trustworthy); (b) a renewed key whose
+    `graceExpiresAt` has passed but `expiresAt` (JWT `exp`) has not, with DB
+    `status` left `grace_period` — grid should show "Grace period ended
+    &lt;date&gt;" with a warning icon, NOT "Revoked".
+  - **Hub-side root cause ticketed separately.** The console-side mitigation above
+    only stops the UI from asserting a DB state that may not exist — it doesn't fix
+    the actual reported defect (the Hub's `findAll()` on the credentials table
+    throwing on one malformed row and silently killing the whole grace-revocation
+    sweep). A separate ticket has been filed to address that on the `izgw-hub` side.
 - [x] 9.2 For a renewed key: confirm the Grace-Period-vs-Expired-vs-Revoked precedence —
       if the hard expiry (`exp`) falls at or before the grace-period end, it shows
       **Expired**, not Revoked, once the grace window would otherwise have ended.
@@ -341,6 +476,38 @@ year` expiry — no continuity with the old key's expiry) and leaves the old exp
   - I confirmed both: DNS auth had lapsed and when DNS auth is valid, it issues immediately
 - [x] 9.6 Confirm Revoked and Cancelled keys offer **no** lifecycle action at all — no
       Renew, no Re-issue.
+- [x] 9.7 Confirm repeated Re-issue clicks on the same Expired credential cannot each
+      mint their own new Active successor — only the first should succeed; later
+      attempts should be refused and the row should stop offering Re-issue at all.
+      **Fix applied:** unlike Renew, Re-issue reuses the generic create endpoint
+      (`POST /api/apikeys`) with **no reference to the old credential** — the server
+      had no way to tell a re-issue apart from an unrelated brand-new key creation,
+      and re-issue deliberately never changes the old credential's `status` (D13:
+      an expired key has nothing to overlap with), so there was no possible guard at
+      all. Confirmed by manual testing: repeated Re-issue clicks on the same expired
+      test key produced multiple independent Active successors, verified directly
+      in DynamoDB (no `supersededBy`/relationship between them — each one a fully
+      separate credential). Fixed by adding a new `reissuedAs` field
+      ([ApiKeyCredential.ts](../../../src/lib/type/ApiKeyCredential.ts)) and an
+      atomic conditional write, `markApiKeyCredentialReissued`
+      ([dynamo.ts](../../../src/lib/db/dynamo.ts),
+      `ConditionExpression: attribute_not_exists(reissuedAs)`). The client now
+      sends `reissuedFrom: <old sortKey>` on the re-issue request
+      ([index.tsx](../../../src/components/ApiKeyManagement/index.tsx),
+      `ReissueDialog`), and the create route
+      ([apikeys/index.ts](../../../src/pages/api/apikeys/index.ts)) runs the
+      conditional write on the old credential **before** creating the new one —
+      same "guard-first" ordering as the Renew fix (§6.8) — so a repeated attempt
+      404s/403s/409s and creates nothing. The row's Re-issue action is now also
+      hidden once `reissuedAs` is set (shows "Expired \<date\> — re-issued"
+      instead), so the UI stops offering an action that would now always fail, and
+      is disabled during submission (mirrors Renew's `renewingSortKey` pattern).
+      Added 4 regression tests to `lifecycle.test.ts` (success + 409 lost-race +
+      404 missing + 403 cross-jurisdiction) and confirmed via `git stash` that all
+      4 fail against pre-fix code. Re-verify: create a fresh expired key, click
+      Re-issue, then click it again (or repeat via the API directly) — the second
+      attempt should fail cleanly and the row should show "re-issued", not offer
+      the action again.
 
 ---
 
@@ -351,10 +518,23 @@ year` expiry — no continuity with the old key's expiry) and leaves the old exp
       and use type(s) while the first key is still Active.
 - [x] 10.2 Confirm a warning appears recommending **Renew** instead, but does not block
       the action.
-- [X & !] 10.3 Click through anyway ("Create Anyway" on the second attempt) — confirm it
+- [x] 10.3 Click through anyway ("Create Anyway" on the second attempt) — confirm it
   succeeds and a second, genuinely duplicate-scope key is created.
   - It did, but it did not recognize that the domain authorization had already been done. Should this be considered a bug?
   - Ticket I created: https://izgateway.atlassian.net/browse/IGDD-3341
+  - **Fix applied:** the `dnsChoice: 'other'` create path
+    ([apikeys/index.ts](../../../src/pages/api/apikeys/index.ts)) only had the
+    "check if already authorized, skip the challenge" logic on the `'existing'`
+    dnsChoice branch — `'other'` always started a fresh DNS challenge even when
+    every requested environment was already authorized for that domain. Fixed by
+    running the same authorization check on the `'other'` branch too (after the
+    pre-existing cross-jurisdiction exclusivity check, which had to stay first to
+    avoid changing that behavior) — if every environment is already authorized, it
+    now issues the credential immediately instead of re-challenging; if only some
+    are, it still starts a challenge as before. Added 2 regression tests to
+    `lifecycle.test.ts` covering both cases. Re-verify: repeat the original repro
+    (Create Anyway on a domain/env combo already DNS-authorized) — should issue
+    immediately with no DNS challenge step.
 - [x] 10.4 Change just the environment or just a use type from the existing active key's
       scope — confirm **no** warning appears (only an _exact_ scope match triggers it).
   - This worked fine
@@ -366,21 +546,84 @@ year` expiry — no continuity with the old key's expiry) and leaves the old exp
 - [x] 11.1 As `jurisdictionops@mail.com`, verify (or create-and-verify) domain `shared-test.example.gov`
       for its own jurisdiction. Confirm success.
   - Note, we may want to use a domain where we can control the TXT record - we can't do that with shared-test.example.gov
-- [!] 11.2 As a **different** jurisdiction (switch accounts, or use another
+- [x] 11.2 As a **different** jurisdiction (switch accounts, or use another
   Jurisdiction-Operations login), attempt to create a key with `dnsChoice: other` for
   the **same** domain `shared-test.example.gov`. Confirm it is refused immediately
   (before any DNS challenge is issued) — a domain already owned by another
   jurisdiction is rejected up front.
   - This seems to be a real issue. I created shared-test.example.giv with user: jurisdictionops@mail.com, then I tried with my user, and it allowed the duplicate.
   - I created this bug ticket for it: https://izgateway.atlassian.net/browse/IGDD-3340
-- [ ] 11.3 Attempt to push a second jurisdiction's TXT record through to actual
+  - **Re-tested — confirmed working, not reproducible.** The second attempt was
+    correctly refused with the "already authorized for another organization"
+    warning. This confirms the original failure was a test-setup artifact, not a
+    code bug: `getDomainOwner` (the create-time exclusivity check,
+    [index.ts:185](../../../src/pages/api/apikeys/index.ts)) only finds an owner
+    once `claimDomainOwnership` has actually run — which only happens on a
+    **successful DNS verification** ([verify-domain/index.ts](../../../src/pages/api/apikeys/verify-domain/index.ts)),
+    never at create time. On the first attempt, the domain likely hadn't been
+    verified with a real, controlled TXT record yet, so no ownership claim
+    existed for the second attempt to collide with. Once §11.1 is a genuinely
+    completed verification, this check works as shown here. IGDD-3340 can be
+    closed as not reproducible. See §11.5 for a related, intentional edge case
+    this surfaced (concurrent pending challenges on an *unclaimed* domain).
+- [x] 11.3 Attempt to push a second jurisdiction's TXT record through to actual
       verification for that same domain (if reachable) — confirm the authoritative claim
       at verify-time also refuses it, even if the DNS TXT check itself would have passed.
   - Isn't this an invalid scenario if 11.2 works as intended?
-- [ ] 11.4 As the **original owning** jurisdiction, re-verify the same domain again (e.g.
+  - **Not invalid — order matters.** §11.2 only blocks a brand-new create
+    attempt made *after* a claim already exists. This step instead reproduces
+    the §11.5 ordering: Org B starts (and leaves pending) its own challenge on
+    an *unclaimed* domain, Org A then independently creates+verifies+claims
+    the same domain, and only then does Org B's still-pending challenge get
+    pushed through to verification. Verified: with `ALLOW_DNS_VERIFY_BYPASS`,
+    Org B's own DNS check trivially "passes" (the bypass always fakes a match
+    against whichever challengeUuid is stored for the credential being
+    verified), but `claimDomainOwnership` still refused it with 409 "This
+    domain is already authorized for another organization" since Org A had
+    already claimed the domain — confirming the atomic ownership claim, not
+    the DNS check, is the true authoritative gate. Org B's credential stayed
+    `ready_for_validation`, never flipped to Active.
+- [x] 11.4 As the **original owning** jurisdiction, re-verify the same domain again (e.g.
       to add a new environment) — confirm this succeeds (idempotent for the true owner),
       and the newly requested environment gets authorized.
   - I can't test that quite yet.
+  - **Verified.** As the same jurisdiction that already owned the domain
+    (from §11.3), created a second key for the same domain but a different,
+    not-yet-authorized environment — went through a fresh DNS challenge (per-env
+    authorization) and verified successfully. `claimDomainOwnership` re-ran for
+    the same domain but succeeded because it was the same `jurisdictionId`
+    re-claiming (the idempotent `attribute_not_exists(sortKey) OR
+    jurisdictionId = :jurisdictionId` condition in
+    [dynamo.ts](../../../src/lib/db/dynamo.ts)) — the new environment was
+    authorized and the credential went Active, with the domain ownership
+    record unchanged (still a single owner, not duplicated).
+- [x] 11.5 **By-design, not a bug — confirmed by code trace 2026-08-26.** If a
+      domain is only in `ready_for_validation`/`pending_challenge` for Org A (i.e.
+      Org A hasn't completed DNS verification yet), Org B can start its **own**
+      independent `dnsChoice: other` challenge for that exact same domain, and it
+      will succeed (a distinct credential + `ApiKeyDomain` row + `challengeUuid`,
+      not blocked or merged with Org A's).
+      **Why this is safe, not a gap:** the create-time exclusivity check
+      (`getDomainOwner`, [index.ts:185](../../../src/pages/api/apikeys/index.ts))
+      only finds an owner once `claimDomainOwnership` has run — which only
+      happens at a **successful** verification, never at create/challenge time.
+      `dynamo.ts` documents this explicitly: `getDomainOwner` "must never write,
+      since doing so would let a domain be 'reserved' by merely starting a create
+      request, without ever proving DNS ownership." The `ApiKeyDomain`
+      pending-challenge row is also keyed per-jurisdiction
+      (`${env}#${jurisdictionId}#${domain}`), so Org B's lookup never even sees
+      Org A's pending row. The actual security boundary is entirely at **verify
+      time**: `verify-domain` checks the real DNS TXT record for the caller's
+      *own* random `challengeUuid`, which only a genuine DNS owner can ever place
+      there — Org B's parallel challenge can never complete unless Org B truly
+      controls that domain's DNS, at which point they'd be the rightful owner
+      anyway. Whichever org proves real ownership first wins
+      `claimDomainOwnership`'s atomic conditional write (already covered by the
+      "claims ownership... unclaimed" / "409s... already claimed" tests in
+      `lifecycle.test.ts`); the loser's credential is left permanently unable to
+      verify (wrong `challengeUuid` — will never match real DNS) until cancelled.
+      Once the real owner verifies, `getDomainOwner` immediately starts blocking
+      any further attempts by other orgs, per §11.2. No code change made.
 
 ---
 
@@ -389,11 +632,25 @@ year` expiry — no continuity with the old key's expiry) and leaves the old exp
 - [x] 12.1 Log in as **IZG Support** or **Jurisdiction Support** (Account #3). Confirm
       the API Key Management nav link is **not shown** at all.
   - Logged in with jurisdictionsupport@mail.com
-- [X & !] 12.2 If you can reach `/apikeys` directly by URL as Account #3, confirm the page
+- [x] 12.2 If you can reach `/apikeys` directly by URL as Account #3, confirm the page
   does not function / actions are unavailable — and directly hitting an API route
   (e.g. `GET /api/apikeys` via devtools) returns **403**.
   - The page shows up empty, unusable, and I see the 403 error in debug tools, but don't we want to not show the page at all?
   - I create this ticket for it: https://izgateway.atlassian.net/browse/IGDD-3339
+  - **Fix applied:** [pages/apikeys/index.tsx](../../../src/pages/apikeys/index.tsx) had
+    no page-level guard at all — `ApiKeyManagement`'s own `useRoleAccess()` usage only
+    hid the Create/Revoke/Renew/Cancel buttons, never the page itself, so any
+    authenticated role could reach the URL and see the (empty/403'd) screen. Added
+    [ApiKeyAccessGuard.tsx](../../../src/components/ApiKeyAccessGuard.tsx), mirroring
+    the existing `AdminGuard` pattern (`api-doc.tsx`, `adminoperations/index.tsx`) but
+    keyed on `canListApiKeys` from the same `useRoleAccess()` object the page already
+    computes, rather than `session.user.isAdmin` — this keeps non-admin roles that
+    legitimately have API-key access (e.g. Jurisdiction Operations, §12.6) working,
+    while any role without `canListApiKeys` is now redirected to `/manageconnections`
+    before the page renders. Wired into `pages/apikeys/index.tsx` via
+    `export default ApiKeyAccessGuard(ApiKeys)`. Re-verify: log in as Account #3
+    (IZG Support / Jurisdiction Support) and navigate to `/apikeys` directly — expect
+    an immediate redirect to Manage Connections, not the empty grid.
 - [x] 12.3 Log in as **`jurisdictionops@mail.com`** (Account #2, Jurisdiction Operations).
       Confirm `GET /api/apikeys` (the Keys grid) shows **only** credentials for
       jurisdiction(s) this account owns — not the full list. An **empty** grid here is a
