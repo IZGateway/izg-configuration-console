@@ -1,0 +1,70 @@
+{
+  "TransactItems": [
+    {
+      "Update": {
+        "TableName": "izgw-hub",
+        "Key": {
+          "entityType": {
+            "S": "Jurisdiction"
+          },
+          "sortKey": {
+            "S": "14"
+          }
+        },
+        "UpdateExpression": "SET #prefix = :prefix",
+        "ExpressionAttributeNames": {
+          "#prefix": "prefix"
+        },
+        "ExpressionAttributeValues": {
+          ":prefix": {
+            "S": "hi"
+          }
+        }
+      }
+    },
+    {
+      "Update": {
+        "TableName": "izgw-hub",
+        "Key": {
+          "entityType": {
+            "S": "Jurisdiction"
+          },
+          "sortKey": {
+            "S": "16"
+          }
+        },
+        "UpdateExpression": "SET #prefix = :prefix",
+        "ExpressionAttributeNames": {
+          "#prefix": "prefix"
+        },
+        "ExpressionAttributeValues": {
+          ":prefix": {
+            "S": "id"
+          }
+        }
+      }
+    },
+    {
+      "Update": {
+        "TableName": "izgw-hub",
+        "Key": {
+          "entityType": {
+            "S": "Jurisdiction"
+          },
+          "sortKey": {
+            "S": "32"
+          }
+        },
+        "UpdateExpression": "SET #prefix = :prefix",
+        "ExpressionAttributeNames": {
+          "#prefix": "prefix"
+        },
+        "ExpressionAttributeValues": {
+          ":prefix": {
+            "S": "ne"
+          }
+        }
+      }
+    }
+  ]
+}

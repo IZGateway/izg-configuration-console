@@ -42,5 +42,8 @@ test-results
 playwright-report
 /docker/
 
+# Local metadata index files (md-csv-mcp)
+.meta/
+
 # Claude Code agent worktrees (nested repo checkouts, not source content)
 .claude/worktrees/
