@@ -1,7 +1,8 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # jurisdiction-updates.sh
 #
-# Sets allowedUseTypes (and useTypes for IIS senders) on all Jurisdiction records.
+# Sets allowedUseTypes (and useTypes for IIS senders) on existing Jurisdiction records
+# and creates the missing CCUAT (id=64) Jurisdiction record.
 # useTypes=PUBLIC_HEALTH marks a jurisdiction as an IIS-to-IIS sender.
 #
 # Usage: TABLE=izgw-hub bash jurisdiction-updates.sh
@@ -131,5 +132,17 @@ for ID in 55; do
   fi
 done
 
-echo "Done. $COUNT Jurisdiction records updated in $TABLE. Failures: $FAILURES."
+# CCUAT (id=64) is not present in existing Jurisdiction exports; create/update it.
+if aws dynamodb update-item --table-name "$TABLE" \
+  --key '{"entityType":{"S":"Jurisdiction"},"sortKey":{"S":"64"}}' \
+  --update-expression 'SET jurisdictionId = :jid, #d = :desc, #n = :name, prefix = :p, allowedUseTypes = :aut' \
+  --expression-attribute-names '{"#d":"description","#n":"name"}' \
+  --expression-attribute-values '{":jid":{"N":"64"},":desc":{"S":"CCUAT"},":name":{"S":"CCUAT"},":p":{"S":"ccuat"},":aut":{"SS":["PATIENT","PROVIDER","PUBLIC_HEALTH"]}}'; then
+  echo "  OK:     UPDATE Jurisdiction/64"
+  COUNT=$((COUNT + 1))
+else
+  echo "  FAILED: UPDATE Jurisdiction/64 (rc=$?)" >&2
+  FAILURES=$((FAILURES + 1))
+fi
 
+echo "Done. $COUNT Jurisdiction records written/updated in $TABLE. Failures: $FAILURES."
