@@ -29,4 +29,11 @@ export interface ApiKeyCredential extends DbAudit {
   // Soft-cancel audit fields (set when a ready_for_validation request is cancelled)
   cancelledBy?: string
   cancelledAt?: Date | null
+  // Set once this (terminal, Expired) credential has been re-issued — the
+  // successor's jti. Unlike renew, re-issue does not transition `status`
+  // (D13: an expired key has nothing to overlap with, so it's left
+  // otherwise untouched) — this is the ONLY marker that a re-issue has
+  // already happened, so it doubles as the guard against re-issuing the
+  // same expired credential more than once (see `markApiKeyCredentialReissued`).
+  reissuedAs?: string
 }
