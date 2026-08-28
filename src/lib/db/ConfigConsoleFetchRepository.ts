@@ -8,6 +8,9 @@ import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
+import type { ApiKeyCredential } from '../type/ApiKeyCredential'
+import type { Jurisdiction } from '../type/Jurisdiction'
+import type { ApiKeyDomain } from '../type/ApiKeyDomain'
 
 export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
@@ -54,4 +57,18 @@ export default interface ConfigConsoleFetchRepository {
     environment: number,
     destinationId: string
   ): Promise<AllowedUserAudit[]>
+  fetchApiKeyCredentials(): Promise<ApiKeyCredential[]>
+  getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null>
+  fetchJurisdictions(): Promise<Jurisdiction[]>
+  /**
+   * Fetch a single jurisdiction by its numeric id. Memoized for the life of the
+   * client, so repeated calls (e.g. the per-credential ownership check in
+   * `lib/security/apiKeyAuthz`) are in-memory hits rather than DynamoDB reads.
+   */
+  getJurisdiction(jurisdictionId: string): Promise<Jurisdiction | null>
+  getApiKeyDomain(sortKey: string): Promise<ApiKeyDomain | null>
+  fetchAuthorizedApiKeyDomains(
+    envId: number,
+    jurisdictionId: string
+  ): Promise<ApiKeyDomain[]>
 }
