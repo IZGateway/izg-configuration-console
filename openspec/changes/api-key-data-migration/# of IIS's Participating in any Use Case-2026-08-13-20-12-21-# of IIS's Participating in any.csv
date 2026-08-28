@@ -1,0 +1,69 @@
+Organization Name,IIS Vendor,IIS to IIS Data Exchange,Provider to IIS Data Exchange,Consumer Access Data Exchange,IIS to CDC Data Reporting,Last Activity,State/Jurisdiction
+Wyoming,STChealth,true,true,true,true,9/19/2023,Wyoming
+Alaska,STChealth,true,true,true,true,7/13/2026,Alaska
+Utah,Awardee Developed - UT USIIS,true,true,true,false,10/12/2022,Utah
+New Jersey,Awardee Developed - NJ NJIIS,true,true,true,false,7/13/2026,New Jersey
+North Dakota,Awardee Developed - Blue Cross Blue Shield,true,true,true,false,,North Dakota
+Missouri,Envision Technology Partners,true,true,true,true,,Missouri
+Maine,Gainwell Technologies,false,true,true,false,5/22/2023,Maine
+Idaho,Gainwell Technologies,false,true,true,false,5/19/2026,Idaho
+Minnesota,,false,true,true,false,6/14/2026,Minnesota
+Maricopa County- Arizona,STChealth,true,true,false,true,,Maricopa County- Arizona
+South Dakota,STChealth,true,true,false,true,,South Dakota
+Michigan,STChealth,true,true,false,false,7/21/2023,Michigan
+Washington,STChealth,true,true,false,false,5/19/2026,Washington
+West Virginia,STChealth,true,true,false,true,11/16/2023,West Virginia
+Puerto Rico,STChealth,true,true,false,true,,Puerto Rico
+Montana,STChealth,false,true,false,true,,Montana
+Mississippi,STChealth,true,true,false,true,10/24/2022,Mississippi
+Tennessee,STChealth,true,true,false,false,,Tennessee
+Ohio,STChealth,true,true,false,false,9/19/2023,Ohio
+Arizona,STChealth,true,true,false,true,6/17/2026,Arizona
+Louisiana,STChealth,true,true,false,true,,Louisiana
+Indiana,STChealth,true,true,false,true,7/21/2026,Indiana
+District of Columbia,STChealth,true,true,false,true,,District of Columbia
+Virginia,STChealth,true,true,false,false,5/29/2026,Virginia
+Houston - Texas,Deloitte,true,true,false,false,,Houston - Texas
+San Antonio - Texas,Deloitte,true,true,false,false,,San Antonio - Texas
+Texas,Deloitte,true,true,false,false,2/14/2023,Texas
+Virgin Islands U.S.,Optimoz,true,true,false,true,,Virgin Islands U.S.
+Vermont,Awardee Developed - VT IMR,false,true,false,false,8/1/2023,Vermont
+Chicago - Illinois,Awardee Developed - IL I-CARE,true,true,false,false,,Chicago - Illinois
+Illinois,Awardee Developed - IL I-CARE,true,true,false,false,,Illinois
+Florida,Awardee Developed - FL SHOTS,true,true,false,false,5/29/2026,Florida
+Alabama,Awardee Developed - AL ImmPRINT,true,false,false,false,4/17/2023,Alabama
+Massachusetts,SSG,false,true,false,false,,Massachusetts
+New York City - New York State,Awardee Developed - HLN NY CIR,true,true,false,true,5/29/2026,New York City - New York State
+Rhode Island,Awardee Developed - HLN,true,true,false,false,10/3/2022,Rhode Island
+Pennsylvania,Envision Technology Partners,true,true,false,true,1/30/2023,Pennsylvania
+Hawaii,Envision Technology Partners,false,false,false,false,,Hawaii
+Kentucky,Envision Technology Partners,true,true,false,true,8/4/2026,Kentucky
+Kansas,Envision Technology Partners,true,true,false,false,6/17/2026,Kansas
+Connecticut,Envision Technology Partners,true,true,false,true,10/24/2022,Connecticut
+Arkansas,Envision Technology Partners,true,true,false,true,2/21/2023,Arkansas
+New Hampshire,Envision Technology Partners,false,true,false,true,,New Hampshire
+Delaware,Envision Technology Partners,true,true,false,true,5/19/2026,Delaware
+Colorado,Envision Technology Partners,true,true,false,false,7/27/2026,Colorado
+Pennsylvania - Philadelphia,Envision Technology Partners,true,true,false,true,5/11/2026,Pennsylvania - Philadelphia
+South Carolina,Envision Technology Partners,false,false,false,false,,South Carolina
+Oklahoma,Envision Technology Partners,true,true,false,true,7/13/2026,Oklahoma
+Nevada,Envision Technology Partners,true,true,false,true,8/4/2026,Nevada
+New Mexico,Envision Technology Partners,true,true,false,true,7/19/2022,New Mexico
+Marshall Islands - PI,Envision Technology Partners,true,false,false,true,6/30/2026,Marshall Islands - PI
+Palau - PI,Envision Technology Partners,true,false,false,true,,Palau - PI
+N. Mariana Islands - PI,Envision Technology Partners,true,false,false,true,,N. Mariana Islands - PI
+Micronesia - PI,Envision Technology Partners,true,false,false,true,,Micronesia - PI
+Guam - PI,Envision Technology Partners,true,false,false,true,,Guam - PI
+American Samoa - PI,Envision Technology Partners,true,false,false,true,,American Samoa - PI
+LA County - California,Gainwell Technologies,false,true,false,true,,LA County - California
+Oregon,Gainwell Technologies,true,true,false,false,10/18/2022,Oregon
+Wisconsin,Gainwell Technologies,true,true,false,false,11/8/2022,Wisconsin
+New York State,Gainwell Technologies,false,true,false,false,7/21/2026,New York State
+California,Gainwell Technologies,false,true,false,true,9/27/2023,California
+Maryland,Gainwell Technologies,true,true,false,false,1/18/2023,Maryland
+Iowa,Gainwell Technologies,false,true,false,false,6/17/2026,Iowa
+Georgia,Gainwell Technologies,false,true,false,false,3/1/2023,Georgia
+Nebraska,Gainwell Technologies,false,true,false,false,,Nebraska
+North Carolina,Gainwell Technologies,false,true,false,false,8/10/2026,North Carolina
+Test IIS 1,,false,false,false,false,,Test IIS 1
+Test IIS 2,,false,true,false,false,,Test IIS 2

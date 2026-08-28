@@ -1,0 +1,134 @@
+env,envId,domain,organization,sender_type,entityId,entityName,status,authExpiresAt
+production,1,securityrs.com,Security Risk Solutions Inc.,ops,102,Security Risk Solutions,authorized,2027-07-02
+production,1,ehealthsign.com,e-HealthSign LLC,ops,103,e-HealthSign,authorized,2027-07-21
+production,1,IZGTesting.ehealthsign.com,e-HealthSign LLC,ops,103,e-HealthSign,authorized,2027-07-21
+production,1,tyoung.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-08-04
+production,1,mstankiewicz.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-08-13
+production,1,pcahill.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-07-24
+production,1,amoody.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-04-20
+production,1,weckels.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-02-12
+production,1,ppatel.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-11-19
+production,1,kboone.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-11-05
+production,1,akanuri.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-09-30
+production,1,ebrock.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-09-30
+production,1,bwilliams.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-10-01
+production,1,hl-iispia-ha-e.njdoh.net,Department of Health State of New Jersey,jurisdiction,34,NJ NJIIS,authorized,2027-01-06
+production,1,soa.alertiis.org,Oregon ALERT IIS,jurisdiction,41,OR ALERT,authorized,2027-07-28
+production,1,dpprod1.health.ny.gov,New York State Department of Health,jurisdiction,37,NY NYSIIS,authorized,2027-07-30
+production,1,soa4.health.ny.gov,New York State Department of Health,jurisdiction,37,NY NYSIIS,authorized,2027-07-30
+production,1,prod.ndiis.org,Blue Cross Blue Shield of North Dakota,jurisdiction,31,ND SIIS,authorized,2026-09-02
+production,1,cdc-izg-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health,jurisdiction,51,RI CAIR,authorized,2027-07-21
+production,1,state.mn.us,Minnesota Department of Health,jurisdiction,26,MN MIIC,authorized,2027-08-06
+production,1,nesiis-dhhs-prod.ne.gov,DHHS Nebraska,jurisdiction,32,NE NESIIS,authorized,2027-06-24
+production,1,izg.immunize.nyc,New York City Department of Health,jurisdiction,38,NYC CIR,authorized,2027-01-07
+production,1,www.mdimmunet.org,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene,jurisdiction,23,MD IMMUNET,authorized,2027-06-08
+production,1,immtrac.dshs.texas.gov,Texas Department of State Health Services,jurisdiction,55,TX ImmTrac,authorized,2027-05-26
+production,1,icarehl7.dph.illinois.gov,Illinois Department of Public Health,jurisdiction,17,IL I-CARE,authorized,2027-06-03
+production,1,cair.cdph.ca.gov,California Immunization Registry,jurisdiction,7,CA CAIR,authorized,2027-04-23
+production,1,integrationengine.mihin.org,Michigan Health Information Network Shared Services,jurisdiction,25,MI MCIR,authorized,2027-03-24
+production,1,ncir2.ncdhhs.gov,North Carolina Department of Health and Human Services,jurisdiction,30,NCIR,authorized,2027-06-16
+production,1,miis.massimmunize.org,Massachusetts Department of Public Health,jurisdiction,22,MA MIIS,authorized,2027-02-09
+production,1,miis-cert.massimmunize.org,Massachusetts Department of Public Health,jurisdiction,22,MA MIIS,authorized,2027-02-04
+production,1,viirs.optimoz.com,Optimoz Inc.,jurisdiction,56,U.S. Virgin Islands,authorized,2026-11-21
+production,1,hco.optimoz.com,Optimoz Inc.,jurisdiction,56,U.S. Virgin Islands,authorized,2026-11-21
+production,1,dhswir.org,Wisconsin Department of Health Services,jurisdiction,61,WI WIR,authorized,2026-12-15
+production,1,flshotsizgateway.flshots.com,Florida Department of Health,jurisdiction,12,FL SHOTS,authorized,2026-12-02
+production,1,iris.dhw.idaho.gov,Idaho Department of Health and Welfare,jurisdiction,16,ID IRIS,authorized,2026-08-15
+production,1,usiisapps.utah.gov,Utah Department of Health and Human Services,jurisdiction,57,UT USIIS,authorized,2026-10-08
+production,1,immpact.maine.gov,Maine Immunization Information System,jurisdiction,24,ME ImmPact2,authorized,2026-10-10
+production,1,PA-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,43,PA SIIS,authorized,2027-06-16
+production,1,AR-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,5,AR WebIZ,authorized,2027-05-25
+production,1,AS-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,44,PI - American Samoa,authorized,2027-05-25
+production,1,CNMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,48,PI - PI N Mariana Islands,authorized,2027-05-25
+production,1,CO-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,8,CO CIIS,authorized,2027-05-25
+production,1,CT-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,9,CT WiZ,authorized,2027-05-25
+production,1,DE-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,11,DE DelVAX,authorized,2027-05-25
+production,1,FSM-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,45,PI - Federated States of Micronesia,authorized,2027-05-25
+production,1,Guam-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,47,PI - PI Guam,authorized,2027-05-25
+production,1,KS-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,19,KS WebIZ,authorized,2027-05-25
+production,1,KY-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,20,KY KYIR,authorized,2027-05-25
+production,1,MO-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,27,MO ShowMeVax,authorized,2027-05-25
+production,1,NV-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,36,NV WebIZ,authorized,2027-05-25
+production,1,NH-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,33,NH VaxNH,authorized,2027-05-25
+production,1,NM-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,35,NM NMSIIS,authorized,2027-05-25
+production,1,OK-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,40,OK OSIIS,authorized,2027-05-25
+production,1,Palau-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,46,PI - Palau,authorized,2027-05-25
+production,1,Philly-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,42,PA PHIL,authorized,2027-05-25
+production,1,RMI-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,49,PI - Republic of the Marshall Islands,authorized,2027-05-25
+production,1,SC-prod.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,52,SC SCI,authorized,2027-05-25
+production,1,riise.cdc.gov,Division of Global Migration Health (DGMH),sender,112,RIISE,authorized,2027-04-02
+production,1,integration.vams.cdc.gov,Centers for Disease Control and Prevention,sender,113,VAMS,authorized,2027-02-20
+production,1,vac10accessgwprd01.va.gov,Veterans Data Integration and Federation Enterprise Platform,sender,114,Veterans Administration,authorized,2026-12-16
+production,1,cernerspaces.com,Cerner Corporation,sender,114,Veterans Administration,authorized,2027-01-16
+production,1,docstation.co,DocStation Inc.,sender,108,DocStation,authorized,2027-08-06
+production,1,fdlrez.com,Fond du lac Human Services,sender,109,Fond du Lac,authorized,2027-06-24
+production,1,davita.com,DaVita Inc,sender,106,DaVita Physician Solutions,authorized,2027-06-19
+production,1,azova.com,Azova Inc.,sender,105,AZOVA,authorized,2026-12-11
+production,1,prod.mayo.qvera.com,Qvera LLC.,sender,111,Mayo Clinic,authorized,2026-11-04
+production,1,dockethealth.com,DOCKET HEALTH INC.,sender,101,Docket,authorized,2027-02-10
+production,1,iris-prod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,sender,110,Fresenius Medical Care,authorized,2026-09-09
+production,1,prod-izgateway.adph.state.al.us,Alabama Department of Public Health,jurisdiction,4,AL ImmPRINT,authorized,2027-04-08
+onboarding,3,securityrs.com,Security Risk Solutions Inc.,ops,102,Security Risk Solutions,authorized,2027-07-02
+onboarding,3,ehealthsign.com,e-HealthSign LLC,ops,103,e-HealthSign,authorized,2027-07-21
+onboarding,3,IZGTesting.ehealthsign.com,e-HealthSign LLC,ops,103,e-HealthSign,authorized,2027-07-21
+onboarding,3,clinics-sit.olympus-tst.com,Centers for Disease Control and Prevention,sender,113,VAMS,authorized,2027-03-06
+onboarding,3,tyoung.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-08-04
+onboarding,3,mstankiewicz.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-08-13
+onboarding,3,pcahill.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-07-24
+onboarding,3,amoody.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-04-20
+onboarding,3,cicd.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-03-31
+onboarding,3,weckels.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2027-02-12
+onboarding,3,ppatel.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-11-19
+onboarding,3,kboone.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-11-05
+onboarding,3,akanuri.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-09-30
+onboarding,3,ebrock.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-09-30
+onboarding,3,bwilliams.testing.izgateway.org,Audacious Inquiry LLC,ops,104,Audacious Inquiry (operators),authorized,2026-10-01
+onboarding,3,njiis-stage.doh.nj.gov,Department of Health State of New Jersey,jurisdiction,34,NJ NJIIS,authorized,2027-08-25
+onboarding,3,soa-test.alertiis.org,Oregon ALERT IIS,jurisdiction,41,OR ALERT,authorized,2026-11-21
+onboarding,3,test.ndiis.org,Blue Cross Blue Shield of North Dakota,jurisdiction,31,ND SIIS,authorized,2027-07-28
+onboarding,3,cdc-izg-onboarding-client-certificate.kidsnet.health.ri.gov,Rhode Island Department of Health,jurisdiction,51,RI CAIR,authorized,2027-08-07
+onboarding,3,miic-jboss-test.web.health.state.mn.us,Minnesota Department of Health,jurisdiction,26,MN MIIC,authorized,2027-08-06
+onboarding,3,testnesiis-dhhs-test.ne.gov,DHHS Nebraska,jurisdiction,32,NE NESIIS,authorized,2026-12-18
+onboarding,3,izg-onboarding.immunize.nyc,New York City Department of Health,jurisdiction,38,NYC CIR,authorized,2027-03-03
+onboarding,3,immutest.health.maryland.gov,Cntr. for Immunization - MD Dept.of Health & Mental Hygiene,jurisdiction,23,MD IMMUNET,authorized,2027-02-15
+onboarding,3,uat-immtrac.dshs.state.tx.us,Texas Department of State Health Services,jurisdiction,55,TX ImmTrac,authorized,2027-05-08
+onboarding,3,icarehl7test.dph.illinois.gov,Illinois Department of Public Health,jurisdiction,17,IL I-CARE,authorized,2027-04-14
+onboarding,3,cairstaging.cdph.ca.gov,California Immunization Registry,jurisdiction,7,CA CAIR,authorized,2027-04-23
+onboarding,3,integrationengine-preprod.mihin.org,Michigan Health Information Network Shared Services,jurisdiction,25,MI MCIR,authorized,2027-04-01
+onboarding,3,ncir2-uat.ncdhhs.gov,North Carolina Department of Health and Human Services,jurisdiction,30,NCIR,authorized,2026-12-04
+onboarding,3,training.dhswir.org,Wisconsin Department of Health Services,jurisdiction,61,WI WIR,authorized,2026-12-12
+onboarding,3,flshotsizgatewaydev.flshots.com,Florida Department of Health,jurisdiction,12,FL SHOTS,authorized,2026-12-02
+onboarding,3,irisdev.dhw.idaho.gov,Idaho Department of Health and Welfare,jurisdiction,16,ID IRIS,authorized,2026-08-15
+onboarding,3,usiisonboarding.utah.gov,Utah Department of Health and Human Services,jurisdiction,57,UT USIIS,authorized,2026-10-08
+onboarding,3,medev.ir.hhs-ctp.net,Maine Immunization Information System,jurisdiction,24,ME ImmPact2,authorized,2026-11-14
+onboarding,3,PA-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,43,PA SIIS,authorized,2027-06-16
+onboarding,3,AR-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,5,AR WebIZ,authorized,2027-05-25
+onboarding,3,AS-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,44,PI - American Samoa,authorized,2027-05-25
+onboarding,3,CNMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,48,PI - PI N Mariana Islands,authorized,2027-05-25
+onboarding,3,CO-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,8,CO CIIS,authorized,2027-05-25
+onboarding,3,CT-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,9,CT WiZ,authorized,2027-05-25
+onboarding,3,DE-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,11,DE DelVAX,authorized,2027-05-25
+onboarding,3,FSM-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,45,PI - Federated States of Micronesia,authorized,2027-05-25
+onboarding,3,Guam-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,47,PI - PI Guam,authorized,2027-05-25
+onboarding,3,KS-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,19,KS WebIZ,authorized,2027-05-25
+onboarding,3,KY-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,20,KY KYIR,authorized,2027-05-25
+onboarding,3,MO-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,27,MO ShowMeVax,authorized,2027-05-25
+onboarding,3,NV-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,36,NV WebIZ,authorized,2027-05-25
+onboarding,3,NH-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,33,NH VaxNH,authorized,2027-05-25
+onboarding,3,NM-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,35,NM NMSIIS,authorized,2027-05-25
+onboarding,3,OK-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,40,OK OSIIS,authorized,2027-05-25
+onboarding,3,Palau-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,46,PI - Palau,authorized,2027-05-25
+onboarding,3,Philly-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,42,PA PHIL,authorized,2027-05-25
+onboarding,3,RMI-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,49,PI - Republic of the Marshall Islands,authorized,2027-05-25
+onboarding,3,SC-test.izgateway.envisiontechnology.com,Envision Technology Partners Inc.,jurisdiction,52,SC SCI,authorized,2027-05-25
+onboarding,3,riisetest.cdc.gov,Division of Global Migration Health (DGMH),sender,112,RIISE,authorized,2027-04-13
+onboarding,3,vac10accessgwsqa01.va.gov,Veterans Data Integration and Federation Enterprise Platform,sender,114,Veterans Administration,authorized,2026-12-16
+onboarding,3,preprodcernerspaces.com,Cerner Corporation,sender,114,Veterans Administration,authorized,2027-05-08
+onboarding,3,docstation.co,DocStation Inc.,sender,108,DocStation,authorized,2027-08-06
+onboarding,3,test.davita.com,DaVita Inc,sender,106,DaVita Physician Solutions,authorized,2027-06-16
+onboarding,3,staging.azova.com,Azova Inc.,sender,105,AZOVA,authorized,2026-12-09
+onboarding,3,test.mayo.qvera.com,Qvera LLC.,sender,111,Mayo Clinic,authorized,2026-11-13
+onboarding,3,beta.dockethealth.com,DOCKET HEALTH INC.,sender,101,Docket,authorized,2027-02-05
+onboarding,3,ehealthexchange.org,Healtheway Inc.,sender,100,eHealth Exchange,authorized,2026-09-09
+onboarding,3,iris-nonprod.freseniusmedicalcare.com,Fresenius Medical Care Holdings Inc.,sender,110,Fresenius Medical Care,authorized,2026-09-09
+onboarding,3,test-izgateway.adph.state.al.us,Alabama Department of Public Health,jurisdiction,4,AL ImmPRINT,authorized,2027-04-08
