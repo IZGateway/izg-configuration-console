@@ -360,6 +360,38 @@ describe('API key lifecycle guards', () => {
       expect(createApiKeyCredential).not.toHaveBeenCalled()
       expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
     })
+
+    it('surfaces a concurrent renew (lost race) as 409 and creates no new credential (IGDD test-plan §6.8)', async () => {
+      // Both requests' pre-check reads see `active` (neither has written
+      // anything yet) — the race is only actually decided by which one's
+      // conditional supersede lands first. Simulates the loser.
+      const getApiKeyCredential = jest.fn().mockResolvedValue({
+        status: 'active',
+        domain: 'stored.example.gov',
+        environments: [2],
+        expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+      })
+      const conditionalError = Object.assign(new Error('conditional'), {
+        name: 'ConditionalCheckFailedException',
+      })
+      const supersedeApiKeyCredential = jest.fn().mockRejectedValue(conditionalError)
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        createApiKeyCredential,
+        supersedeApiKeyCredential,
+      })
+
+      const res = createRes()
+      await renewHandler(createReq('POST', baseBody), res)
+
+      expect(res.statusCode).toBe(409)
+      // The critical assertion: supersede is called (and lost) BEFORE any new
+      // credential would be minted, so a losing request creates nothing —
+      // this is what actually closes the "3 active keys from repeated renew"
+      // bug (previously createApiKeyCredential ran first, unconditionally).
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
   })
 
   describe('create — POST /api/apikeys (useTypes validation)', () => {
@@ -503,6 +535,242 @@ describe('API key lifecycle guards', () => {
       expect(res.statusCode).toBe(202)
       expect(createApiKeyCredential).toHaveBeenCalledTimes(1)
     })
+
+    it('issues the credential immediately for dnsChoice "other" when the domain is already authorized (IGDD-3341)', async () => {
+      // A domain typed manually via "Other" that turns out to already be
+      // authorized for this jurisdiction+env must be treated the same as
+      // picking it from the "existing" dropdown — not sent through a
+      // redundant new DNS challenge.
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      const getDomainOwner = jest.fn().mockResolvedValue('1')
+      const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const upsertApiKeyDomain = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyDomain,
+        getDomainOwner,
+        createApiKeyCredential,
+        upsertApiKeyDomain,
+      })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('POST', {
+          ...validBody,
+          jurisdictionId: '1',
+          dnsChoice: 'other',
+          useTypes: ['PATIENT'],
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(201)
+      expect(createApiKeyCredential).toHaveBeenCalledTimes(1)
+      expect(createApiKeyCredential.mock.calls[0][0].status).toBe('active')
+      // No challenge is started — the domain was already proven.
+      expect(upsertApiKeyDomain).not.toHaveBeenCalled()
+      const body = res.body as { jti: string; sortKey: string }
+      expect(body.sortKey).toBe(body.jti)
+    })
+
+    it('still starts a DNS challenge for dnsChoice "other" when only some requested environments are already authorized', async () => {
+      // Multi-env is admin-only (server-enforced) — use an admin session so
+      // the 2-environment request reaches the authorization check at all.
+      mockGetServerSession.mockResolvedValue({
+        user: { email: 'admin@example.com', role: 'IZG Operations', isAdmin: true },
+      })
+      const getApiKeyDomain = jest
+        .fn()
+        .mockResolvedValueOnce({
+          status: 'authorized',
+          authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        })
+        .mockResolvedValueOnce(null)
+      const getDomainOwner = jest.fn().mockResolvedValue('1')
+      const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      const upsertApiKeyDomain = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyDomain,
+        getDomainOwner,
+        createApiKeyCredential,
+        upsertApiKeyDomain,
+      })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('POST', {
+          ...validBody,
+          jurisdictionId: '1',
+          environments: [4, 5],
+          dnsChoice: 'other',
+          useTypes: ['PATIENT'],
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(202)
+      expect(createApiKeyCredential.mock.calls[0][0].status).toBe('ready_for_validation')
+    })
+  })
+
+  describe('create — POST /api/apikeys re-issue guard (reissuedFrom)', () => {
+    const reissueBody = {
+      jurisdictionId: '1',
+      environments: [5],
+      upn: 'immunize.example.gov',
+      dnsChoice: 'existing',
+      reissuedFrom: '5#old-expired',
+      useTypes: ['PATIENT'],
+    }
+
+    it('marks the old credential re-issued and creates the new one', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status: 'active' })
+      const markApiKeyCredentialReissued = jest.fn().mockResolvedValue(undefined)
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        getApiKeyDomain,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(201)
+      expect(markApiKeyCredentialReissued).toHaveBeenCalledTimes(1)
+      expect(markApiKeyCredentialReissued.mock.calls[0][0].sortKey).toBe('5#old-expired')
+      expect(createApiKeyCredential).toHaveBeenCalledTimes(1)
+      // The successor jti recorded on the old credential must be the SAME
+      // jti as the credential that actually got created.
+      expect(markApiKeyCredentialReissued.mock.calls[0][0].reissuedAs).toBe(
+        createApiKeyCredential.mock.calls[0][0].jti
+      )
+    })
+
+    it('409s a repeated/concurrent re-issue attempt and creates no new credential', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status: 'active' })
+      const conditionalError = Object.assign(new Error('conditional'), {
+        name: 'ConditionalCheckFailedException',
+      })
+      const markApiKeyCredentialReissued = jest.fn().mockRejectedValue(conditionalError)
+      // The reissue write now runs immediately before the create it gates,
+      // not before the domain-authorization lookup (a harmless read) — so
+      // getApiKeyDomain IS called on the way to the guard. The guarantee
+      // that actually matters is that a losing/repeated attempt creates no
+      // new credential.
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        getApiKeyDomain,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(409)
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('does NOT mark the old credential re-issued when the domain turns out not authorized (no dangling reissuedAs on failure)', async () => {
+      // PR-feedback regression: previously the guard write ran unconditionally
+      // before this check, so a losing domain-authorization check here would
+      // have already marked the old credential "re-issued" with no successor
+      // ever created — a permanently stuck state with no way to retry short
+      // of manual DB surgery.
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status: 'active' })
+      const markApiKeyCredentialReissued = jest.fn().mockResolvedValue(undefined)
+      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'pending_challenge' })
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        getApiKeyDomain,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(400)
+      expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it.each(['revoked', 'cancelled'])(
+      '409s re-issuing a %s credential without touching the guard write, domain lookups, or credential creation',
+      async (status) => {
+        const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status })
+        const markApiKeyCredentialReissued = jest.fn()
+        const getApiKeyDomain = jest.fn()
+        const createApiKeyCredential = jest.fn()
+        mockGetDbClient.mockResolvedValue({
+          getApiKeyCredential,
+          markApiKeyCredentialReissued,
+          getApiKeyDomain,
+          createApiKeyCredential,
+        })
+
+        const res = createRes()
+        await apikeysHandler(createReq('POST', reissueBody), res)
+
+        expect(res.statusCode).toBe(409)
+        expect(res.body).toEqual({
+          error: 'A revoked or cancelled credential cannot be re-issued',
+        })
+        expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+        expect(getApiKeyDomain).not.toHaveBeenCalled()
+        expect(createApiKeyCredential).not.toHaveBeenCalled()
+      }
+    )
+
+    it('returns 404 when the credential being re-issued does not exist', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue(null)
+      const markApiKeyCredentialReissued = jest.fn()
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(404)
+      expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('403s when the credential being re-issued belongs to a different jurisdiction', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '99', status: 'active' })
+      const markApiKeyCredentialReissued = jest.fn()
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
   })
 
   describe('verify-domain — activation is bound to the verified domain', () => {
@@ -631,6 +899,72 @@ describe('API key lifecycle guards', () => {
       // than silently activating on the stale authorization.
       expect(res.statusCode).toBe(404)
       expect(updateApiKeyCredentialStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('verify-domain — GET re-views a still-pending challenge (IGDD test-plan §3.7)', () => {
+    const pendingCredential = {
+      status: 'ready_for_validation',
+      domain: 'immunize.example.gov',
+      jurisdictionId: '1',
+      environments: [5],
+    }
+
+    it('returns the TXT record/value for a caller-owned pending credential', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ ...pendingCredential })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'pending_challenge',
+        challengeUuid: 'challenge-uuid-123',
+        challengeExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, getApiKeyDomain })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('GET', {}, { sortKey: '5#cred-jti' }), res)
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toEqual({
+        domain: 'immunize.example.gov',
+        txtRecord: 'immunize.example.gov',
+        txtValue: 'izg-challenge=challenge-uuid-123',
+      })
+    })
+
+    it('returns 404 when the credential does not exist', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue(null)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('GET', {}, { sortKey: '5#missing' }), res)
+
+      expect(res.statusCode).toBe(404)
+    })
+
+    it('returns 409 without reading domain records when the credential is not awaiting validation', async () => {
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ ...pendingCredential, status: 'active' })
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('GET', {}, { sortKey: '5#cred-jti' }), res)
+
+      expect(res.statusCode).toBe(409)
+    })
+
+    it('returns 400 when the pending challenge has expired', async () => {
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ ...pendingCredential })
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'pending_challenge',
+        challengeUuid: 'challenge-uuid-123',
+        challengeExpiresAt: new Date(Date.now() - 86_400_000).toISOString(),
+      })
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, getApiKeyDomain })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('GET', {}, { sortKey: '5#cred-jti' }), res)
+
+      expect(res.statusCode).toBe(400)
     })
   })
 
@@ -1008,6 +1342,24 @@ describe('API key authorization (role + tenancy)', () => {
       expect(getApiKeyDomain).not.toHaveBeenCalled()
     })
 
+    it('403s GET verify-domain (re-view challenge) for a credential in a non-owned jurisdiction', async () => {
+      mockGetServerSession.mockResolvedValue(jurOpsSession)
+      const getApiKeyCredential = jest.fn().mockResolvedValue({
+        status: 'ready_for_validation',
+        jurisdictionId: '99',
+        domain: 'stored.example.gov',
+        environments: [5],
+      })
+      const getApiKeyDomain = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, getApiKeyDomain })
+
+      const res = createRes()
+      await verifyDomainHandler(createReq('GET', {}, { sortKey: '5#cred-jti' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(getApiKeyDomain).not.toHaveBeenCalled()
+    })
+
     it('403s GET domains for a non-owned jurisdiction', async () => {
       mockGetServerSession.mockResolvedValue(jurOpsSession)
       const fetchAuthorizedApiKeyDomains = jest.fn()
@@ -1304,6 +1656,72 @@ describe('API key authorization (role + tenancy)', () => {
       expect(res.statusCode).toBe(409)
       expect(upsertApiKeyDomain).not.toHaveBeenCalled()
       expect(updateApiKeyCredentialStatus).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('verify-domain — distinguishes "no record" from "wrong value"', () => {
+    const pendingDomainRecord = {
+      status: 'pending_challenge',
+      challengeUuid: 'chal-uuid',
+      challengeExpiresAt: new Date(Date.now() + 86_400_000),
+    }
+    const credential = {
+      sortKey: 'cred-jti',
+      status: 'ready_for_validation',
+      domain: 'immunize.example.gov',
+      jurisdictionId: '1',
+      environments: [5],
+    }
+
+    beforeEach(() => {
+      mockGetServerSession.mockResolvedValue(authedSession)
+    })
+
+    it('reports "not found" (not "found but wrong") when the apex has no izg-challenge record at all, even if unrelated TXT records exist', async () => {
+      // SPF-style unrelated TXT record — present at the apex, but not ours.
+      mockResolveTxt.mockResolvedValue([['v=spf1 include:_spf.example.com ~all']])
+      const getApiKeyCredential = jest.fn().mockResolvedValue(credential)
+      const getApiKeyDomain = jest.fn().mockResolvedValue(pendingDomainRecord)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, getApiKeyDomain })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'cred-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toEqual({
+        verified: false,
+        error: 'TXT record not found at immunize.example.gov. DNS may not have propagated yet.',
+      })
+    })
+
+    it('reports "found but wrong value" only when an actual izg-challenge record is present with a stale/mismatched UUID', async () => {
+      mockResolveTxt.mockResolvedValue([['izg-challenge=stale-uuid-from-old-challenge']])
+      const getApiKeyCredential = jest.fn().mockResolvedValue(credential)
+      const getApiKeyDomain = jest.fn().mockResolvedValue(pendingDomainRecord)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, getApiKeyDomain })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'cred-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toEqual({
+        verified: false,
+        error: 'TXT record found but value did not match. Expected: izg-challenge=chal-uuid',
+      })
     })
   })
 })

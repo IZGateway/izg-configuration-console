@@ -1464,6 +1464,7 @@ class Dynamo implements DbClient {
         revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
         cancelledBy: item.cancelledBy as string | undefined,
         cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
+        reissuedAs: item.reissuedAs as string | undefined,
         // Falls back to the legacy singular `env` attribute for rows written
         // before the environments-list migration, so existing credentials
         // don't lose their environment on read. `environments` is a deduped
@@ -1512,6 +1513,7 @@ class Dynamo implements DbClient {
         revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
         cancelledBy: item.cancelledBy as string | undefined,
         cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
+        reissuedAs: item.reissuedAs as string | undefined,
         // Falls back to the legacy singular `env` attribute for rows written
         // before the environments-list migration, so existing credentials
         // don't lose their environment on read. `environments` is a deduped
@@ -1728,6 +1730,58 @@ class Dynamo implements DbClient {
         errorType: error.name,
         stack: error.stack,
         operation: 'supersedeApiKeyCredential',
+      })
+      throw error
+    }
+  }
+
+  /**
+   * Marks an expired credential as re-issued, atomically — the ONLY guard
+   * against the same expired credential being re-issued more than once,
+   * since re-issue (unlike renew) deliberately never changes `status`
+   * (D13). Must run BEFORE the successor credential is created (same
+   * ordering fix as `supersedeApiKeyCredential`/renew): a losing concurrent
+   * or repeated re-issue attempt fails this conditional write first and
+   * never reaches `createApiKeyCredential`.
+   */
+  async markApiKeyCredentialReissued(params: {
+    sortKey: string
+    reissuedBy: string
+    reissuedAt: string
+    reissuedAs: string
+  }): Promise<void> {
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
+      UpdateExpression:
+        'SET #reissuedAs = :reissuedAs, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
+      ExpressionAttributeNames: {
+        '#reissuedAs': 'reissuedAs',
+        '#updatedBy': 'updatedBy',
+        '#updatedOn': 'updatedOn',
+      },
+      ExpressionAttributeValues: {
+        ':reissuedAs': params.reissuedAs,
+        ':updatedBy': params.reissuedBy,
+        ':updatedOn': params.reissuedAt,
+      },
+      ConditionExpression:
+        'attribute_exists(entityType) AND attribute_exists(sortKey) AND attribute_not_exists(reissuedAs)',
+    })
+    try {
+      await dynamodDbDocClient.send(command)
+      logger.info('ApiKeyCredential marked re-issued', {
+        sortKey: params.sortKey,
+        reissuedAs: params.reissuedAs,
+        operation: 'markApiKeyCredentialReissued',
+      })
+    } catch (error) {
+      logger.error('Error marking ApiKeyCredential re-issued', {
+        sortKey: params.sortKey,
+        errorMessage: error.message,
+        errorType: error.name,
+        stack: error.stack,
+        operation: 'markApiKeyCredentialReissued',
       })
       throw error
     }

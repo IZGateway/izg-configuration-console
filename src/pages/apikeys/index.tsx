@@ -3,6 +3,7 @@ import Container from '../../components/Container'
 import AppHeaderBar from '../../components/AppHeader'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import ApiKeyManagement from '../../components/ApiKeyManagement'
+import ApiKeyAccessGuard from '../../components/ApiKeyAccessGuard'
 
 const ApiKeys = () => {
   return (
@@ -15,4 +16,4 @@ const ApiKeys = () => {
   )
 }
 
-export default ApiKeys
+export default ApiKeyAccessGuard(ApiKeys)
