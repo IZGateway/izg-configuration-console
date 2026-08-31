@@ -117,6 +117,12 @@ export default interface ConfigConsoleMutateRepository {
     graceExpiresAt: string
     supersededBy: string
   }): Promise<void>
+  markApiKeyCredentialReissued(params: {
+    sortKey: string
+    reissuedBy: string
+    reissuedAt: string
+    reissuedAs: string
+  }): Promise<void>
   createApiKeyCredential(params: {
     jti: string
     sortKey: string
