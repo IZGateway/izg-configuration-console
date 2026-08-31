@@ -128,9 +128,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // same expired credential being re-issued more than once (confirmed by
       // manual testing: repeated clicks each minted an independent Active
       // successor). This atomic conditional write on `reissuedAs` is the only
-      // thing that closes that gap, and — same ordering fix as renew
-      // (test-plan §6.8) — MUST run before any credential is created: a
-      // losing or repeated attempt fails here and creates nothing.
+      // thing that closes that gap.
+      //
+      // Existence/ownership/terminal-state checks below are pure reads, safe
+      // to run now — but the actual write is deferred (`markReissuedIfNeeded`,
+      // called from `issueActiveCredential` and again right before the
+      // ready_for_validation create further down) until immediately before
+      // whichever create is actually about to succeed. PR feedback caught
+      // that writing it here unconditionally, before the
+      // unauthorizedEnv/cross-jurisdiction-domain checks below, could mark
+      // the old credential "re-issued" and then fail one of those checks —
+      // leaving it permanently stuck with no successor and no way to retry
+      // short of manual DB surgery. Same guard-adjacent-to-its-create
+      // discipline already used for renew (test-plan §6.8), just pushed
+      // later here since re-issue has more can-fail steps in between.
       if (reissuedFrom) {
         const oldCredential = await dbClient.getApiKeyCredential(String(reissuedFrom))
         if (!oldCredential) {
@@ -139,6 +150,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         if (oldCredential.jurisdictionId !== String(jurisdictionId)) {
           return res.status(403).json({ error: 'Forbidden - not authorized for this jurisdiction' })
         }
+        // The UI never offers Re-issue on a revoked/cancelled key, but that's
+        // client-side only — a direct API call must be refused server-side
+        // too, since revoked especially usually means compromised/
+        // decommissioned, and re-issuing from it would carry its scope
+        // forward with no re-verification. Deliberately NOT checking for
+        // 'expired' here: expiry is a DERIVED display status (test-plan
+        // §9.1), not a stored one — a naturally expired key's stored
+        // `status` is normally still 'active' since nothing sweeps it, so
+        // requiring status==='expired' would incorrectly block the common
+        // real case.
+        if (oldCredential.status === 'revoked' || oldCredential.status === 'cancelled') {
+          return res.status(409).json({
+            error: 'A revoked or cancelled credential cannot be re-issued',
+          })
+        }
+      }
+
+      const markReissuedIfNeeded = async (): Promise<{
+        status: number
+        error: string
+      } | null> => {
+        if (!reissuedFrom) return null
         try {
           await dbClient.markApiKeyCredentialReissued({
             sortKey: String(reissuedFrom),
@@ -146,9 +179,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             reissuedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
             reissuedAs: jti,
           })
+          return null
         } catch (error) {
           if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
-            return res.status(409).json({ error: 'This key has already been re-issued' })
+            return { status: 409, error: 'This key has already been re-issued' }
           }
           throw error
         }
@@ -163,6 +197,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // restart a redundant 7-day DNS challenge instead of recognizing prior
       // authorization).
       const issueActiveCredential = async () => {
+        const reissueError = await markReissuedIfNeeded()
+        if (reissueError) {
+          return res.status(reissueError.status).json({ error: reissueError.error })
+        }
         const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
         await dbClient.createApiKeyCredential({
           jti,
@@ -248,6 +286,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // expiry is set yet: the key is not "issued" until DNS ownership is
       // verified, and exp is stamped at activation (verify-domain) so it is
       // computed from issuance.
+      const reissueError = await markReissuedIfNeeded()
+      if (reissueError) {
+        return res.status(reissueError.status).json({ error: reissueError.error })
+      }
       await dbClient.createApiKeyCredential({
         jti,
         sortKey,

@@ -660,7 +660,15 @@ describe('API key lifecycle guards', () => {
         name: 'ConditionalCheckFailedException',
       })
       const markApiKeyCredentialReissued = jest.fn().mockRejectedValue(conditionalError)
-      const getApiKeyDomain = jest.fn()
+      // The reissue write now runs immediately before the create it gates,
+      // not before the domain-authorization lookup (a harmless read) — so
+      // getApiKeyDomain IS called on the way to the guard. The guarantee
+      // that actually matters is that a losing/repeated attempt creates no
+      // new credential.
+      const getApiKeyDomain = jest.fn().mockResolvedValue({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      })
       const createApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getApiKeyCredential,
@@ -673,11 +681,60 @@ describe('API key lifecycle guards', () => {
       await apikeysHandler(createReq('POST', reissueBody), res)
 
       expect(res.statusCode).toBe(409)
-      // The critical assertion: the guard is checked BEFORE any DNS-domain
-      // lookup or credential creation, so a losing attempt touches neither.
-      expect(getApiKeyDomain).not.toHaveBeenCalled()
       expect(createApiKeyCredential).not.toHaveBeenCalled()
     })
+
+    it('does NOT mark the old credential re-issued when the domain turns out not authorized (no dangling reissuedAs on failure)', async () => {
+      // PR-feedback regression: previously the guard write ran unconditionally
+      // before this check, so a losing domain-authorization check here would
+      // have already marked the old credential "re-issued" with no successor
+      // ever created — a permanently stuck state with no way to retry short
+      // of manual DB surgery.
+      const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status: 'active' })
+      const markApiKeyCredentialReissued = jest.fn().mockResolvedValue(undefined)
+      const getApiKeyDomain = jest.fn().mockResolvedValue({ status: 'pending_challenge' })
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        markApiKeyCredentialReissued,
+        getApiKeyDomain,
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('POST', reissueBody), res)
+
+      expect(res.statusCode).toBe(400)
+      expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it.each(['revoked', 'cancelled'])(
+      '409s re-issuing a %s credential without touching the guard write, domain lookups, or credential creation',
+      async (status) => {
+        const getApiKeyCredential = jest.fn().mockResolvedValue({ jurisdictionId: '1', status })
+        const markApiKeyCredentialReissued = jest.fn()
+        const getApiKeyDomain = jest.fn()
+        const createApiKeyCredential = jest.fn()
+        mockGetDbClient.mockResolvedValue({
+          getApiKeyCredential,
+          markApiKeyCredentialReissued,
+          getApiKeyDomain,
+          createApiKeyCredential,
+        })
+
+        const res = createRes()
+        await apikeysHandler(createReq('POST', reissueBody), res)
+
+        expect(res.statusCode).toBe(409)
+        expect(res.body).toEqual({
+          error: 'A revoked or cancelled credential cannot be re-issued',
+        })
+        expect(markApiKeyCredentialReissued).not.toHaveBeenCalled()
+        expect(getApiKeyDomain).not.toHaveBeenCalled()
+        expect(createApiKeyCredential).not.toHaveBeenCalled()
+      }
+    )
 
     it('returns 404 when the credential being re-issued does not exist', async () => {
       const getApiKeyCredential = jest.fn().mockResolvedValue(null)
