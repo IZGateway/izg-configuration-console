@@ -1,0 +1,67 @@
+## Why
+
+Cutting a release today runs `create-release-branch.yml`, which depends on a third-party
+action (`hoangvvo/gitflow-workflow-action`), has no rollback if a step fails partway, and
+relies on `deploy.yml` reacting to the `release/**` branch push to build and push images —
+so a release can trigger two separate, uncoordinated image builds. `izg-transformation-ui`
+(IGDD-2397's reference implementation) already replaced this with a single, auditable,
+self-contained pipeline. Porting the same model here removes the third-party dependency,
+adds automatic rollback on failure, and generates release notes and version bumps without
+manual bookkeeping.
+
+## What Changes
+
+- Add `release.yml` (standard release, triggered from `develop`) and `hotfix.yml`
+  (triggered from a `hotfix/*` branch), both thin `workflow_dispatch` wrappers around a new
+  reusable `_release_common.yml`.
+- `_release_common.yml` implements the full release, in order: validate inputs and branch
+  state before any side effects; create (or reuse, for hotfix) the release branch; generate
+  a Keep-a-Changelog-style `RELEASE_NOTES.md` entry from merged PR titles since the last
+  semver tag; bump `package.json`/lockfile to the release version; run quality gates (lint,
+  type-check, `npm test` with `continue-on-error`, and a hard-failing
+  `npm audit --audit-level=high`); build and push one Docker image to GHCR, AWS ECR (dev),
+  and APHL ECR; merge the release branch to `main`; create the semver Git tag; publish a
+  GitHub Release (draft on dry-run); merge back to `develop` with the next version bumped
+  (standard releases only); and clean up (revert merges, delete tags/branches) anything the
+  same run created if any step fails.
+- **BREAKING**: `RELEASE_NOTES.md` moves from the current hand-written
+  `## Release vX.Y.Z` + manual IGDD-ticket bullets to an auto-generated
+  `## [X.Y.Z] - YYYY-MM-DD` entry listing merged PR titles. Entries for releases cut before
+  this change keep their existing format.
+- Add `scan-ecr-image.yml`, an advisory Inspector2 vulnerability scan that runs after a real
+  (non-dry-run) release, reusing `IZGateway/izg-dependency-scripts`'s
+  `ecr-scan-report.yml`. A scan failure or empty result never blocks a release.
+- **BREAKING**: Remove `create-release-branch.yml`. Cutting a release no longer has a manual
+  gitflow-action entry point — use `release.yml` or `hotfix.yml`'s `workflow_dispatch`
+  inputs instead.
+- **BREAKING**: Trim `deploy.yml` — drop the push-to-`release/**` trigger and the APHL-ECR
+  push job, since `_release_common.yml` now owns both. Pushing a `release/**` branch no
+  longer builds or pushes an image from `deploy.yml`.
+- Update `.github/WORKFLOW_TRIGGERS.md` and `.github/WORKFLOW_SCHEDULE.md` to document the
+  new pipeline, mirroring the documentation already written for `izg-transformation-ui`.
+
+## Capabilities
+
+### New Capabilities
+- `release-automation`: The end-to-end behavior of cutting a standard or hotfix release —
+  input validation, release-branch and tag management, release-notes generation, quality
+  gates, multi-registry image publishing, failure rollback, and the advisory vulnerability
+  scan.
+
+### Modified Capabilities
+(none — no existing spec covers CI/CD release behavior)
+
+## Impact
+
+- New: `.github/workflows/release.yml`, `.github/workflows/hotfix.yml`,
+  `.github/workflows/_release_common.yml`, `.github/workflows/scan-ecr-image.yml`
+- Removed: `.github/workflows/create-release-branch.yml`
+- Modified: `.github/workflows/deploy.yml`, `.github/WORKFLOW_TRIGGERS.md`,
+  `.github/WORKFLOW_SCHEDULE.md`, `RELEASE_NOTES.md` (format going forward)
+- External prerequisites, owned outside this change:
+  - `RELEASE_AUTOMATION_APP_ID` / `RELEASE_AUTOMATION_APP_KEY` secrets and the GitHub App
+    installed on this repo (user confirmed they will handle this).
+  - `AWS_ROLE_ARN` repo variable and an OIDC IAM role (`inspector2:ListFindings`,
+    `inspector2:ListCoverage`) for the Inspector2 scan.
+  - APHL ECR credentials/registry secrets, expected to already exist since `deploy.yml`
+    references them today.
