@@ -39,6 +39,47 @@ release — if a release branch for that version already exists.
   `1.2` or `1.2.0-rc1`)
 - **THEN** the run fails during validation before any side effect occurs
 
+### Requirement: Release version must be newer than the latest release
+A release run SHALL be rejected before any side effect if the requested release version is
+not strictly greater (by semantic version ordering) than the highest existing semver tag.
+When an explicit next-app-version is supplied for a standard release, it SHALL also be
+rejected if it is not strictly greater than the release version.
+
+#### Scenario: Release version not newer than the latest tag
+- **WHEN** the latest existing tag is `v1.18.0` and a release is triggered with version
+  `1.17.0` or `1.18.0`
+- **THEN** the run fails during validation before any side effect occurs
+
+#### Scenario: Supplied app version not newer than the release version
+- **WHEN** a standard release for version `1.19.0` is triggered with an explicit next-app
+  version of `1.19.0` or lower
+- **THEN** the run fails during validation before any side effect occurs
+
+### Requirement: A hotfix release runs from a branch dedicated to that version
+A hotfix release run SHALL be rejected before any side effect unless the triggering branch
+is named exactly `hotfix/<release-version>` and that branch's history descends from the
+configured main branch.
+
+#### Scenario: Hotfix branch name does not match the release version
+- **WHEN** a hotfix release for version `1.15.1` is triggered from a branch named
+  `hotfix/1.15.0` or `hotfix-1.15.1`
+- **THEN** the run fails during validation before any side effect occurs
+
+#### Scenario: Hotfix branch does not descend from main
+- **WHEN** a hotfix release is triggered from a branch named `hotfix/1.15.1` that was not
+  created from the main branch
+- **THEN** the run fails during validation before any side effect occurs
+
+### Requirement: An unrecognized release type is rejected
+A release run SHALL be rejected before any side effect if its release-type is anything
+other than the two recognized values (standard, hotfix), rather than being treated as one
+of them by default.
+
+#### Scenario: Unsupported release type supplied
+- **WHEN** a release run is invoked with a release-type value that is neither "standard"
+  nor "hotfix"
+- **THEN** the run fails during validation before any side effect occurs
+
 ### Requirement: Release notes are generated from merged pull requests
 On every release run, an entry SHALL be added to `RELEASE_NOTES.md` listing the titles of
 pull requests merged since the previous semver tag, dated with the run date and headed by
@@ -79,16 +120,26 @@ prevent the release from completing.
 - **THEN** the release run continues to the remaining steps
 - **AND** the test failure is visible in the run's log or summary
 
-### Requirement: A dry run performs no persistent side effect
-When a release is run in dry-run mode, no Docker image SHALL be pushed to any registry, no
-branch SHALL be merged, and any created GitHub Release SHALL be marked as a draft. All
-validation and quality-gate steps SHALL still execute.
+### Requirement: A dry run skips registry publication and the vulnerability scan
+When a release is run in dry-run mode, no Docker image SHALL be pushed to any registry, and
+the post-release vulnerability scan SHALL NOT run. Every other effect of a real release —
+branch creation, the release-notes and version-bump commits, the merge to the main branch,
+the semver tag, the merge back to the develop branch, and the GitHub Release — SHALL still
+occur, except that the GitHub Release SHALL be marked as a draft instead of published. A
+dry run is a rehearsal of the full release, not a no-op: running one against real `main`
+and `develop` leaves real branches, commits, a tag, and a draft release behind that must be
+cleaned up like any other completed release.
 
-#### Scenario: Dry run does not publish
+#### Scenario: Dry run builds but does not publish an image
 - **WHEN** a release is triggered with dry-run enabled
 - **THEN** the Docker image is built but not pushed to any registry
-- **AND** no merge to the main or develop branch occurs
-- **AND** any GitHub Release created is a draft
+- **AND** the post-release vulnerability scan does not run
+
+#### Scenario: Dry run still performs the branch, tag, and version changes
+- **WHEN** a release is triggered with dry-run enabled
+- **THEN** the release branch, notes commit, version-bump commit, merge to main, semver
+  tag, and merge back to develop all occur exactly as in a real release
+- **AND** the created GitHub Release is a draft rather than published
 
 ### Requirement: A successful real release publishes to every configured registry
 A successful, non-dry-run release SHALL push the built image to the GitHub Container

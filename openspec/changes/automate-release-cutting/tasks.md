@@ -10,12 +10,17 @@
       `fetch-depth: 0`, Node 24 setup, npm registry auth for `@izgateway`, and Git identity
       configuration. Verify the job has no syntax errors via the same `yaml.safe_load`
       check.
-- [ ] 1.3 Implement the validate step per `specs/release-automation/spec.md` — Requirements
-      "Standard releases only run from the develop branch", "Hotfix releases only run from
-      a hotfix branch", and "Release version must be well-formed and unused". Verify by
-      reading the step logic against each spec scenario (branch mismatch, existing tag,
-      existing release branch, malformed version each produce a failure before any other
-      step runs).
+- [ ] 1.3 Implement the validate step per `specs/release-automation/spec.md` —
+      Requirements "Standard releases only run from the develop branch", "Hotfix releases
+      only run from a hotfix branch", "Release version must be well-formed and unused",
+      "Release version must be newer than the latest release", "A hotfix release runs from
+      a branch dedicated to that version" (exact `hotfix/<release-version>` name, checked
+      via string comparison, and ancestry from `main`, checked via `git merge-base
+      --is-ancestor`), and "An unrecognized release type is rejected". Verify by reading
+      the step logic against each spec scenario (branch mismatch, existing tag, existing
+      release branch, malformed version, non-newer version, non-newer app-version,
+      mismatched/non-descending hotfix branch, and unknown release-type each produce a
+      failure before any other step runs).
 - [ ] 1.4 Implement release-branch creation (standard) / reuse (hotfix) per design.md
       Decisions, pushing with the App token. Verify the step only runs
       `if: inputs.release-type == 'standard'`.
@@ -36,16 +41,20 @@
       successful standard release advances develop to the next version".
 - [ ] 1.9 Implement registry logins (GHCR always; AWS ECR dev and APHL ECR skipped when
       `dry-run` is true; APHL also skipped when `skip-aphl` is true) and image-tag
-      computation, keeping this repo's image name `izg-configuration-console` and APHL tag
-      prefix `izgw-cc-`. Verify against spec Requirements "A dry run performs no
-      persistent side effect" and "A successful real release publishes to every configured
-      registry" (including the APHL-skip scenario).
+      computation, publishing only plain semver tags and `latest` (no legacy
+      `{version}-{run_number}` aliases), keeping this repo's image name
+      `izg-configuration-console` and APHL tag prefix `izgw-cc-`. Verify against spec
+      Requirements "A dry run skips registry publication and the vulnerability scan" and
+      "A successful real release publishes to every configured registry" (including the
+      APHL-skip scenario).
 - [ ] 1.10 Implement the single Docker build/push step (`push: ${{ inputs.dry-run ==
       false }}`) using this repo's `Dockerfile` and build args (`BUILD_ID`, `NPM_TOKEN`).
       Verify the tags passed match the computed tag list from 1.9.
 - [ ] 1.11 Implement merge-to-main, semver tag creation, and GitHub Release creation
-      (`draft: ${{ inputs.dry-run == true }}`). Verify against spec Requirement "A dry run
-      performs no persistent side effect" (draft release, no merge on dry-run).
+      (`draft: ${{ inputs.dry-run == true }}`), all running unconditionally regardless of
+      `dry-run` (only the `draft` flag depends on it). Verify against spec Requirement "A
+      dry run skips registry publication and the vulnerability scan" — specifically the
+      "Dry run still performs the branch, tag, and version changes" scenario.
 - [ ] 1.12 Implement merge-back-to-develop with the version bump from 1.8 for standard
       releases only, leaving develop's version untouched for hotfixes. Verify against spec
       Requirement "A successful standard release advances develop to the next version"
@@ -71,14 +80,20 @@
       documenting the hotfix branch-creation steps (branch from `main`, PR fixes into it,
       then run this workflow), matching `izg-transformation-ui`'s convention. Verify with
       the `yaml.safe_load` check.
+- [ ] 2.3 Add a shared `concurrency` block (e.g. group `release-${{ github.repository }}`,
+      `cancel-in-progress: false`) to both `release.yml` and `hotfix.yml` so a standard and
+      a hotfix release can never run at the same time. Verify both files use the identical
+      group expression.
 
 ## 3. Vulnerability scan integration
 
 - [ ] 3.1 Create `.github/workflows/scan-ecr-image.yml` with a `wait-for-inspector2-scan`
       job (continue-on-error) and a `scan-report` job that calls
-      `IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1`,
-      targeting the `izg-configuration-console` ECR repository. Verify with the
-      `yaml.safe_load` check.
+      `IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1` with
+      `ecr-repository: izg-configuration-console` and `gh-pkg-name: izgw-cc` (matching the
+      `izgw-cc-` APHL tag prefix). Verify with the `yaml.safe_load` check and by confirming
+      all four required inputs of `ecr-scan-report.yml` (`ecr-repository`, `image-tag`,
+      `gh-pkg-name`, `release-date`) are supplied.
 - [ ] 3.2 Wire `scan-ecr-image.yml` into `_release_common.yml` as a sibling job
       (`needs: release`, `if: inputs.dry-run == false`), granting `id-token: write` /
       `contents: read`, and propagate `id-token: write` up through `release.yml` and
@@ -112,11 +127,31 @@
 
 ## 6. End-to-end verification
 
-- [ ] 6.1 Trigger `release.yml` once with `dry-run: true` from `develop` using a throwaway
-      version number, per design.md's Migration Plan. Verify the run: passes validation,
-      generates the App token, builds (but does not push) the image, creates a draft
-      GitHub Release, and performs no merge to `main`/`develop` and no branch/tag left
-      behind.
-- [ ] 6.2 Confirm `npm run code-quality-check` passes locally with the new/edited workflow
+- [ ] 6.1 Confirm `main` and `develop` branch protection has been relaxed to match
+      `izg-transformation-ui` (no required approving review) and the release App is
+      installed with the permissions listed in design.md, before running anything in this
+      section. Verify via `gh api repos/IZGateway/izg-configuration-console/branches/main/protection`
+      and the equivalent for `develop` returning no required-review rule.
+- [ ] 6.2 Trigger `release.yml` once with `dry-run: true` from `develop`, using a version
+      genuinely newer than the latest tag, per design.md's Migration Plan. Verify the run:
+      passes validation, generates the App token, pushes the release branch, commits
+      release notes and the version bump, merges to `main`, creates the semver tag, merges
+      back to `develop`, builds but does not push the image, skips the vulnerability scan,
+      and creates a **draft** GitHub Release. Then manually delete the test tag, revert the
+      two merge commits, delete the release branch, and delete the draft release.
+- [ ] 6.3 Trigger `hotfix.yml` once with `dry-run: true` from a real `hotfix/<version>`
+      branch created off `main`, using a version newer than the latest tag. Verify the run
+      behaves like 6.2 except `develop`'s version is left unchanged and the hotfix branch
+      is not deleted. Clean up the same way as 6.2 (except keep or delete the hotfix branch
+      as appropriate).
+- [ ] 6.4 Verify each strict-validation failure scenario from
+      `specs/release-automation/spec.md` produces a validation failure with no side
+      effects: version not newer than latest tag, app-version not newer than release
+      version, hotfix branch name mismatch, hotfix branch not descended from main, and an
+      unrecognized release-type.
+- [ ] 6.5 Verify concurrency: trigger `release.yml` twice in quick succession (or
+      `release.yml` and `hotfix.yml` together) and confirm the second run queues behind the
+      first via the shared concurrency group rather than running in parallel.
+- [ ] 6.6 Confirm `npm run code-quality-check` passes locally with the new/edited workflow
       files present (no application code changed, so this should be a no-op check that
       nothing else broke).
