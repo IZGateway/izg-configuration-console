@@ -39,6 +39,16 @@ manual bookkeeping.
   longer builds or pushes an image from `deploy.yml`.
 - Update `.github/WORKFLOW_TRIGGERS.md` and `.github/WORKFLOW_SCHEDULE.md` to document the
   new pipeline, mirroring the documentation already written for `izg-transformation-ui`.
+- `release.yml` and `hotfix.yml` share a Git-level concurrency group (`cancel-in-progress:
+  false`) so standard and hotfix releases always serialize rather than run concurrently.
+- The validate step also rejects a release version that is not newer than the latest tag,
+  an app-version not newer than the release version, a hotfix branch that doesn't exactly
+  match `hotfix/<release-version>` or doesn't descend from `main`, and any release-type
+  other than `standard`/`hotfix` — beyond `izg-transformation-ui`'s format/existence-only
+  checks.
+- Only plain semver tags and `latest` are published to each registry; the legacy
+  `{version}-{run_number}` / `-release` / `-snapshot` tag formats from today's `deploy.yml`
+  are not carried forward (confirmed nothing depends on them).
 
 ## Capabilities
 
@@ -60,7 +70,13 @@ manual bookkeeping.
   `.github/WORKFLOW_SCHEDULE.md`, `RELEASE_NOTES.md` (format going forward)
 - External prerequisites, owned outside this change:
   - `RELEASE_AUTOMATION_APP_ID` / `RELEASE_AUTOMATION_APP_KEY` secrets and the GitHub App
-    installed on this repo (user confirmed they will handle this).
+    installed on this repo, with `contents: write`, `packages: write`, `pull-requests:
+    read`, `id-token: write`, and `workflows: write` permissions (user confirmed they will
+    handle this).
+  - `main` and `develop` branch protection on this repo relaxed to match
+    `izg-transformation-ui` (drop the required-approving-review rule) — confirmed this
+    repo currently requires 1 approving review on both branches, which the reference
+    pipeline's direct pushes/merges cannot satisfy (user confirmed they will handle this).
   - `AWS_ROLE_ARN` repo variable and an OIDC IAM role (`inspector2:ListFindings`,
     `inspector2:ListCoverage`) for the Inspector2 scan.
   - APHL ECR credentials/registry secrets, expected to already exist since `deploy.yml`

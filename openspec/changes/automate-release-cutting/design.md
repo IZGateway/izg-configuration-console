@@ -15,6 +15,17 @@ See `proposal.md` - Why for motivation. Relevant current state:
   `security-updates.yml`), unlike `izg-transformation-ui`'s plain `npm ci`.
 - This repo does not yet have `scan-ecr-image.yml`, `RELEASE_AUTOMATION_APP_ID`/`KEY`
   secrets, or an `AWS_ROLE_ARN` OIDC role — these are new prerequisites for this change.
+- Unlike `izg-transformation-ui` (no branch protection on either branch), this repo's
+  `main` and `develop` both currently require one approving PR review. The reference
+  pipeline pushes and merges directly with an App token, which cannot succeed against a
+  reviewed-PR-required branch. Austin will relax `main`/`develop` protection on this repo
+  to match `izg-transformation-ui` (drop the required-review rule) as a prerequisite, so no
+  bypass/ruleset logic is needed in the workflows themselves.
+- A prior draft of this design incorrectly assumed dry-run in the reference pipeline is a
+  no-op. Re-reading `_release_common.yml` shows only the registry logins/image push are
+  gated on `dry-run == false`; the branch, notes/version commits, merge to main, tag, and
+  merge back to develop all run unconditionally, and the GitHub Release is created as a
+  draft rather than skipped. This design follows that behavior exactly — see Decisions.
 
 ## Goals / Non-Goals
 
@@ -47,11 +58,64 @@ it duplicates ~15 steps and lets the two paths drift out of sync.
 **GitHub App token for all git-mutating steps.**
 A short-lived token from `actions/create-github-app-token`
 (`RELEASE_AUTOMATION_APP_ID`/`RELEASE_AUTOMATION_APP_KEY`) is used for checkout and all
-pushes, merges, tags, and reverts. Alternative considered: the default `GITHUB_TOKEN` —
-rejected because it cannot push commits that modify workflow files and its commits don't
-trigger other workflows, both of which the release path needs (the branch it pushes to may
-later need its own CI to run). The user owns installing this App on the repo as a
-prerequisite outside this change.
+pushes, merges, tags, and reverts, with permissions `contents: write`, `packages: write`,
+`pull-requests: read`, `id-token: write`, and `workflows: write` (the last one is not
+present in `izg-transformation-ui`'s App, but is added defensively here: a merge into
+`main`/`develop` can include a prior PR's changes to `.github/workflows/*.yml`, and GitHub
+rejects such a push without that permission). Alternative considered: the default
+`GITHUB_TOKEN` — rejected because it cannot push commits that modify workflow files and its
+commits don't trigger other workflows, both of which the release path needs. This design
+also depends on `main`/`develop` protection being relaxed to match `izg-transformation-ui`
+(see Context) — the App token decision alone does not solve pushing to a
+reviewed-PR-required branch. The user owns installing the App and relaxing branch
+protection as prerequisites outside this change.
+
+**Dry-run mirrors the reference pipeline exactly — it is a rehearsal, not a no-op.**
+Per spec Requirement "A dry run skips registry publication and the vulnerability scan,"
+dry-run only skips the registry push and the scan; every git mutation still happens.
+Alternative considered: gating the branch/merge/tag/notes/version-bump steps on dry-run
+too, so a dry run is fully side-effect-free — rejected as new scope beyond parity with
+`izg-transformation-ui`, and because it would require re-deriving safe versions of steps
+(like the merge-back-to-develop version bump) that the reference never designed to be
+skippable. Consequence: exercising dry-run against real `main`/`develop` consumes a real
+version number and leaves a real tag, merge commits, and a draft release that must be
+manually cleaned up afterward — see Migration Plan.
+
+**Reject expanding failure rollback to registry images or hotfix-branch history.**
+Cleanup (Decisions below) reverts/deletes only Git branches, merge commits, tags, and the
+GitHub Release — matching `izg-transformation-ui` exactly. Alternative considered:
+also deleting pushed images/tags from GHCR/ECR/APHL on failure, and reverting commits
+pushed onto a pre-existing hotfix branch — rejected. Deleting a published image is riskier
+than leaving it (something may have already pulled it, and ECR tags are not guaranteed
+mutable), and a hotfix branch is often shared with other engineers' fixes-in-progress;
+rewriting its history out from under them on a failed release run is more disruptive than
+leaving the failed attempt's commits for manual review. This is `izg-transformation-ui`'s
+own documented, accepted limitation, not an oversight being ported forward unnoticed.
+
+**Reject decoupling the vulnerability scan into an independent workflow run.**
+The scan runs as a sibling job (`needs: release`) inside the same workflow run, matching
+`izg-transformation-ui`. Alternative considered: having the release job `gh workflow run`
+(or dispatch via API) `scan-ecr-image.yml` as a fully separate run, so a scan failure can
+never make the overall Actions run show red — rejected. This workflow is not a required
+status check anywhere (it is `workflow_dispatch`-only), so a red overall run is cosmetic,
+not a functional blocker; decoupling would add `actions: write` permission, a dispatch
+step, and no reliable way to link back to the triggering release run, for a purely
+cosmetic gain.
+
+**Strict validation beyond format/existence checks.**
+The validate step also rejects: a release version that is not strictly newer than the
+latest existing tag, an explicit app-version that is not strictly newer than the release
+version, a hotfix branch whose name doesn't exactly match `hotfix/<release-version>` or
+that doesn't descend from the main branch, and any release-type other than
+`standard`/`hotfix`. This goes beyond `izg-transformation-ui`'s validation (format and
+non-existence only) — accepted as low-risk, low-cost checks that catch real operator
+mistakes (e.g., cutting a release with an accidentally-lower version, or hotfixing off the
+wrong branch) before any side effect occurs.
+
+**No legacy image-tag aliases.**
+Only plain semver tags and `latest` are published (per Decisions above on naming) — the
+`{version}-{run_number}` and `-release`/`-snapshot` suffix formats from today's `deploy.yml`
+are not carried forward. Confirmed nothing outside this repo pins to those formats.
 
 **Same reusable `scan-ecr-image.yml`, invoked as a sibling job.**
 `_release_common.yml` calls `scan-ecr-image.yml` with `needs: release`, gated on
@@ -85,11 +149,13 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
 
 ## Risks / Trade-offs
 
-- **[Risk]** The GitHub App may not be installed / secrets may not resolve on this repo
-  yet, so the first real run fails at the "Generate Release Automation App Token" step.
-  → **Mitigation**: exercise `release.yml` in dry-run mode first; dry-run still runs
-  validation and the app-token step, surfacing this failure with no persistent side
-  effects to clean up.
+- **[Risk]** The GitHub App may not be installed, its secrets may not resolve on this repo,
+  or `main`/`develop` protection may not yet be relaxed, so the first real run fails at the
+  App-token step or at the first protected push.
+  → **Mitigation**: exercise `release.yml` in dry-run mode first — this still exercises the
+  App-token step and the first protected push (the release-branch push), surfacing either
+  failure early. Note this is not side-effect-free (see the dry-run Decision above): a
+  dry-run failure partway through still needs the same cleanup as any failed run.
 - **[Risk]** `izg-dependency-scripts` may not have granted this repo access to call its
   reusable `ecr-scan-report.yml` workflow yet.
   → **Mitigation**: the scan runs as a sibling job (`needs: release`) — its failure does
@@ -114,13 +180,22 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
    same PR as the `deploy.yml` trim and the `create-release-branch.yml` removal, so there
    is never a window with two competing release entry points.
 2. Before relying on the new pipeline for a real release, run `release.yml` once in
-   dry-run mode from `develop` with a throwaway version to confirm: the App token step
-   succeeds, quality gates pass, the image builds, and `RELEASE_NOTES.md`/`PR_CHANGES.txt`
-   generation behaves as expected. Dry-run performs no push or merge, so nothing needs to
-   be undone afterward.
+   dry-run mode from `develop` with a version genuinely newer than the latest tag (required
+   by the new strict version-ordering check), to confirm: the App token step succeeds,
+   quality gates pass, the image builds, and `RELEASE_NOTES.md`/`PR_CHANGES.txt` generation
+   behaves as expected. **Dry-run still creates real state** — a release branch, notes and
+   version-bump commits, a merge to `main`, a semver tag, a merge back to `develop`, and a
+   draft GitHub Release. Plan to manually delete the test tag, revert the two merge
+   commits, delete the release branch, and delete the draft release afterward. Because the
+   next real release must be newer than whatever tag currently exists, leaving a test tag
+   in place would force the next real release past that placeholder version — clean up
+   before cutting the next real release.
 3. This is a CI/tooling-only change — no application runtime or data migration. Rollback
-   is a plain revert of the PR, since all changes are workflow and documentation files.
-4. External prerequisites (GitHub App installation, `AWS_ROLE_ARN` + OIDC IAM role,
-   `izg-dependency-scripts` cross-repo workflow access) are owned outside this change and
-   must be confirmed working via the dry-run in step 2 before this pipeline is used for an
-   actual production release.
+   of the workflow/documentation changes themselves is a plain revert of the PR.
+4. Relax branch protection on `main` and `develop` to match `izg-transformation-ui` (drop
+   the required-approving-review rule) before the first dry-run — the release pipeline
+   cannot push or merge against a protected branch otherwise.
+5. External prerequisites (GitHub App installation with the permissions listed under
+   Decisions, `AWS_ROLE_ARN` + OIDC IAM role, `izg-dependency-scripts` cross-repo workflow
+   access) are owned outside this change and must be confirmed working via the dry-run in
+   step 2 before this pipeline is used for an actual production release.
