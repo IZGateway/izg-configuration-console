@@ -6,6 +6,11 @@ import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
+import {
+  assertSafeDestinationUrl,
+  isBlockedAddress,
+  UnsafeDestinationUriError,
+} from '../security/destinationUriGuard'
 
 type UserContext = {
   name?: string
@@ -112,6 +117,47 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
       setHostnameIfNull(destination)
     )
 
+    // SSRF guard: destUri can come from the request body, so the outbound
+    // target must be validated before any socket is opened.
+    try {
+      await assertSafeDestinationUrl(destIdURL)
+    } catch (error) {
+      if (!(error instanceof UnsafeDestinationUriError)) {
+        throw error
+      }
+      logger.warn('Rejected unsafe connection test target', {
+        destId: destination.destId,
+        destUrl: destination.destUri,
+        hostname: destIdURL.hostname,
+        port: destIdURL.port,
+        protocol: destIdURL.protocol,
+        userId: user.email,
+        reason: error.message,
+        operation: 'reject_connection_test_target',
+      })
+      return {
+        connectionTestResult: {
+          ...connectionTestResult,
+          destId: destination.destId || 'unknown',
+          destUrl: destIdURL.hostname || 'unknown',
+          destType: destination.destinationType?.type || 'unknown',
+          jurisdictionDescription:
+            destination.jurisdiction?.description || 'unknown',
+          testResults: [
+            {
+              name: '',
+              detail: `No tests were run because the requested destination's URL is not a permitted test target.`,
+              status: TestStatus.FAIL,
+              order: -1,
+              message: error.message,
+              type: '',
+            },
+          ],
+        },
+        numberOfTests,
+      }
+    }
+
     const connectionTestRequest: ConnectionTestRequest = {
       ip: '',
       port: +destIdURL.port || DEFAULT_PORT,
@@ -214,7 +260,31 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
         skipTests = true
       }
       if (TestSuite[test] === 'dns') {
-        connectionTestRequest.ip = result[0]?.detail
+        const resolvedIp = result[0]?.detail
+        // Re-check the address the later tests will actually dial: the guard's
+        // lookup and this one are separate resolutions, so a rebinding answer
+        // could otherwise slip a private address through.
+        if (
+          result[0]?.status === TestStatus.PASS &&
+          isBlockedAddress(resolvedIp)
+        ) {
+          logger.warn('Rejected unsafe resolved address for connection test', {
+            destId: destination.destId,
+            hostname: connectionTestRequest.url.hostname,
+            resolvedIp,
+            userId: user.email,
+            operation: 'reject_connection_test_target',
+          })
+          testResults[testResults.length - 1] = {
+            ...result[0],
+            status: TestStatus.FAIL,
+            message: `${connectionTestRequest.url.hostname} resolves to a reserved or private address and cannot be tested.`,
+            detail: '',
+          }
+          skipTests = true
+        } else {
+          connectionTestRequest.ip = resolvedIp
+        }
       }
       logger.debug(`Finished test number ${testCounter} : ${TestSuite[test]}`)
     }
