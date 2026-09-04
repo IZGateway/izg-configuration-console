@@ -113,8 +113,44 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // env membership is a stored attribute, not part of the key.
     const newSortKey = newJti
 
+    // Supersede the old key FIRST, gated on its own atomic conditional write
+    // (expectedStatus: 'active') — this, not the stale read above, is what
+    // actually prevents a race: two overlapping renew requests (concurrent,
+    // or just several fast clicks before the grid reflects the first one's
+    // result) can both pass the `oldCredential.status !== 'active'` pre-check
+    // above, since neither has written anything yet. Running the conditional
+    // supersede BEFORE minting a new credential means only the request that
+    // wins that race can proceed to create one; the loser gets a 409 here and
+    // creates nothing. (Previously this ran last, after the new credential
+    // had already been created — so every overlapping request could mint its
+    // own "Active" successor before any of them hit the guard.)
+    try {
+      await dbClient.supersedeApiKeyCredential({
+        sortKey: oldSortKey,
+        renewedBy,
+        renewedAt,
+        graceExpiresAt: graceExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        supersededBy: newJti,
+      })
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ConditionalCheckFailedException') {
+        return res.status(409).json({ error: 'Only active credentials can be renewed' })
+      }
+      throw error
+    }
+
     // Create the new key record. The JWT itself is never generated/persisted
     // here — it's regenerated on demand, once, via POST /api/apikeys/token.
+    //
+    // Residual gap (accepted, not fixed here): if this write fails after the
+    // supersede above already succeeded, the old credential is left
+    // `grace_period`/`supersededBy: newJti` with no matching new credential —
+    // and since it's no longer `active`, a retried renew on the same old key
+    // would 409. This requires an actual DB error on this specific write
+    // (a fresh UUID key, so no conditional check to lose), not a routine
+    // concurrent-request race, and matches the same "last write is the
+    // atomicity boundary" tradeoff already accepted everywhere else in this
+    // codebase (no cross-item DynamoDB transactions are used anywhere here).
     await dbClient.createApiKeyCredential({
       jti: newJti,
       sortKey: newSortKey,
@@ -128,16 +164,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       domain,
       // Carry the sender's use-type scope forward to the renewed credential.
       useTypes: oldCredential.useTypes,
-    })
-
-    // Transition the old key to grace: both old and new remain valid until
-    // graceExpiresAt so dependent systems can roll over without disruption.
-    await dbClient.supersedeApiKeyCredential({
-      sortKey: oldSortKey,
-      renewedBy,
-      renewedAt,
-      graceExpiresAt: graceExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
-      supersededBy: newJti,
     })
 
     logger.info('API key renewed', {

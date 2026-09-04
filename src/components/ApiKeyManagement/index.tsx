@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import useSWR, { mutate } from 'swr'
 import {
   Alert,
@@ -116,6 +116,20 @@ interface ApiKey {
   jurisdictionId: string
   domain: string | null
   status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | 'Cancelled' | string
+  // The record's actual persisted `status`, alongside the (possibly derived)
+  // display `status` above. See `pendingSweeperSync`.
+  rawStatus: string
+  // True only for the one case where "Grace Period" is displayed even though
+  // the 10-business-day grace window has structurally ended: the Hub treats
+  // `grace_period` as usable (D6 `isUsableStatus`) until its own
+  // GracePeriodRevocationScheduler actually flips the stored status to
+  // `revoked`, so claiming "Revoked" ahead of that write would assert a DB
+  // state that may not be true yet — the credential can still work
+  // (design.md Risks: "an aged-out key stays Hub-usable until its JWT exp").
+  // Deliberately NOT set for "Expired": the Hub independently rejects an
+  // expired JWT on its own `exp` claim regardless of DB status (D13), so
+  // deriving Expired ahead of any sweeper is always safe (test-plan §9.1).
+  pendingSweeperSync: boolean
   created: string
   // Raw ISO timestamp alongside the locale-formatted `created` display string,
   // so the grid can sort chronologically — the formatted string has no time
@@ -128,6 +142,11 @@ interface ApiKey {
   graceExpiresAt: string | null
   expiresAtRaw: string | null
   viewed: boolean
+  // Set once this (Expired) credential has already been re-issued — gates
+  // the row's Re-issue action so it can't be offered again (the underlying
+  // guard is server-side/atomic; this just keeps the UI from inviting an
+  // action that will now always 409). See test-plan re-issue guard.
+  reissuedAs: string | undefined
 }
 
 function formatDate(value: string | Date | null | undefined): string {
@@ -180,7 +199,70 @@ function envDisplayName(raw: number | string): string {
   return ENV_DISPLAY_NAMES[code] ?? code
 }
 
+// Derives the display status from expiry/grace timestamps rather than always
+// waiting on the Hub's own writes — but the two derivable outcomes are NOT
+// equally trustworthy ahead of the DB (design.md D5/D6/D13, Risks):
+//
+//  - "Expired" is always safe to derive immediately: the Hub independently
+//    rejects an expired JWT on its own `exp` claim regardless of what's
+//    stored (D13), so there is no scenario where the console says Expired
+//    but the credential still works.
+//  - "Revoked" is NOT safe to derive: `grace_period` is itself a Hub-usable
+//    status (D6 `isUsableStatus`) for as long as it's stored — only the
+//    Hub's own GracePeriodRevocationScheduler actually ends that by writing
+//    `revoked`. If that sweeper is stuck (e.g. failing to parse an unrelated
+//    row and bailing out entirely — test-plan §9.1), a key past its 10-day
+//    grace window but short of its JWT `exp` may still be fully usable at
+//    the Hub even though nothing has revoked it yet. So this case trusts the
+//    stored status (still "Grace Period") instead of asserting "Revoked",
+//    and flags it via `pendingSweeperSync` so the UI can say the window has
+//    ended without claiming a DB state that may not exist.
+function computeDisplayStatus(
+  cred: ApiKeyCredential
+): { status: string; pendingSweeperSync: boolean } {
+  const now = Date.now()
+  const exp = cred.expiresAt ? new Date(cred.expiresAt).getTime() : null
+  const graceEnd = cred.graceExpiresAt ? new Date(cred.graceExpiresAt).getTime() : null
+
+  // Explicit terminal stored statuses always win — a user revoke/cancel or
+  // a grace-period sweeper that has already persisted the final status.
+  if (cred.status === 'revoked') return { status: 'Revoked', pendingSweeperSync: false }
+  if (cred.status === 'cancelled') return { status: 'Cancelled', pendingSweeperSync: false }
+  if (cred.status === 'expired') return { status: 'Expired', pendingSweeperSync: false }
+
+  // Renewed key in/past its grace period. The JWT `exp` caps effective
+  // validity, so the effective grace end is min(graceExpiresAt, exp).
+  if (graceEnd !== null) {
+    const effectiveGraceEnd = exp !== null ? Math.min(graceEnd, exp) : graceEnd
+    if (now < effectiveGraceEnd) return { status: 'Grace Period', pendingSweeperSync: false }
+    if (exp !== null && exp <= graceEnd) {
+      // The JWT itself has expired first — safe, see comment above.
+      return { status: 'Expired', pendingSweeperSync: false }
+    }
+    // Grace window has structurally elapsed but the JWT hasn't — do not
+    // assert "Revoked" ahead of the sweeper; trust the stored status.
+    return { status: 'Grace Period', pendingSweeperSync: true }
+  }
+
+  // Non-renewed key past its hard expiry — safe, see comment above.
+  if (exp !== null && now >= exp) {
+    return { status: 'Expired', pendingSweeperSync: false }
+  }
+
+  if (cred.status === 'ready_for_validation') {
+    return { status: 'Ready for Validation', pendingSweeperSync: false }
+  }
+  if (cred.status === 'active') return { status: 'Active', pendingSweeperSync: false }
+  return {
+    status: cred.status
+      ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
+      : cred.status,
+    pendingSweeperSync: false,
+  }
+}
+
 function toRow(cred: ApiKeyCredential): ApiKey {
+  const { status, pendingSweeperSync } = computeDisplayStatus(cred)
   return {
     id: cred.jti,
     keyId: cred.jti,
@@ -201,41 +283,9 @@ function toRow(cred: ApiKeyCredential): ApiKey {
     // schemaless. Falling back to '—' keeps this a renderable string so the
     // grid (and the search filter's `.toLowerCase()`) never crashes on it.
     jurisdiction: cred.jurisdictionDescription ?? cred.jurisdictionId ?? '—',
-    status: (() => {
-      const now = Date.now()
-      const exp = cred.expiresAt ? new Date(cred.expiresAt).getTime() : null
-      const graceEnd = cred.graceExpiresAt
-        ? new Date(cred.graceExpiresAt).getTime()
-        : null
-
-      // Explicit terminal stored statuses always win — a user revoke/cancel or
-      // a grace-period sweeper that has already persisted the final status.
-      if (cred.status === 'revoked') return 'Revoked'
-      if (cred.status === 'cancelled') return 'Cancelled'
-      if (cred.status === 'expired') return 'Expired'
-
-      // Renewed key in/past its grace period. The JWT `exp` caps effective
-      // validity, so the effective grace end is min(graceExpiresAt, exp). We
-      // derive the same Expired/Revoked split the sweeper will persist so the
-      // UI is correct without waiting for it:
-      //   expiry first (exp <= graceEnd) → Expired
-      //   10-day window first            → Revoked
-      if (graceEnd !== null) {
-        const effectiveGraceEnd = exp !== null ? Math.min(graceEnd, exp) : graceEnd
-        if (now < effectiveGraceEnd) return 'Grace Period'
-        if (exp !== null && exp <= graceEnd) return 'Expired'
-        return 'Revoked'
-      }
-
-      // Non-renewed key past its hard expiry.
-      if (exp !== null && now >= exp) return 'Expired'
-
-      if (cred.status === 'ready_for_validation') return 'Ready for Validation'
-      if (cred.status === 'active') return 'Active'
-      return cred.status
-        ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
-        : cred.status
-    })(),
+    status,
+    rawStatus: cred.status,
+    pendingSweeperSync,
     created: formatDate(cred.createdOn),
     createdOnRaw: (() => {
       if (!cred.createdOn) return null
@@ -260,6 +310,7 @@ function toRow(cred: ApiKeyCredential): ApiKey {
       return isNaN(d.getTime()) ? null : d.toISOString()
     })(),
     viewed: !!cred.viewedAt,
+    reissuedAs: cred.reissuedAs,
   }
 }
 
@@ -449,17 +500,40 @@ function StatusCell({ row }: { row: ApiKey }) {
   }
   if (status === 'Grace Period') {
     return (
-      <Typography variant="body2" sx={{ color: palette.warning ?? '#ed6c02' }}>
-        {row.graceExpiresAt
-          ? `Grace period expires on ${row.graceExpiresAt}`
-          : 'Grace Period'}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <Typography variant="body2" sx={{ color: palette.warning ?? '#ed6c02' }}>
+          {row.graceExpiresAt
+            ? row.pendingSweeperSync
+              ? `Grace period ended ${row.graceExpiresAt}`
+              : `Grace period expires on ${row.graceExpiresAt}`
+            : 'Grace Period'}
+        </Typography>
+        {row.pendingSweeperSync && <GraceSweeperOverdueIndicator rawStatus={row.rawStatus} />}
+      </Box>
     )
   }
   return (
     <Typography variant="body2" sx={{ color: palette.greyText }}>
       {status}
     </Typography>
+  )
+}
+
+// Surfaced only when `pendingSweeperSync` is set (see its definition on
+// `ApiKey`) — the 10-day grace window has structurally ended, but the stored
+// status is still `grace_period` (`rawStatus`) rather than `revoked`. Unlike
+// Expired, that's not something the console can safely assert on its own —
+// `grace_period` is itself a Hub-usable status until its own background
+// sweeper flips it, so the credential may genuinely still work
+// (test-plan §9.1).
+function GraceSweeperOverdueIndicator({ rawStatus }: { rawStatus: string }) {
+  return (
+    <Tooltip
+      arrow
+      title={`The 10-business-day grace window has ended, but the stored status is still "${rawStatus}" — the Hub treats grace_period as usable until its background revocation sweeper actually revokes it. This key may still work; don't assume it's rejected until the stored status changes to revoked.`}
+    >
+      <WarningAmberIcon sx={{ fontSize: 16, color: palette.warning ?? '#ed6c02' }} />
+    </Tooltip>
   )
 }
 
@@ -509,6 +583,8 @@ function ActionCell({
   onValidate,
   onRevealToken,
   validating,
+  renewing,
+  reissuing,
   canRevoke,
   canRenew,
   canCancel,
@@ -522,6 +598,8 @@ function ActionCell({
   onValidate: (key: ApiKey) => void
   onRevealToken: (key: ApiKey) => void
   validating: boolean
+  renewing: boolean
+  reissuing: boolean
   canRevoke: boolean
   canRenew: boolean
   canCancel: boolean
@@ -544,10 +622,25 @@ function ActionCell({
 
   if (row.status === 'Expired') {
     // Expired keys can be re-issued (Q8): a fresh key, same scope, no grace
-    // overlap. Gated on the renew capability. Without it, just show the date.
+    // overlap. Gated on the renew capability. Unlike renew, re-issue never
+    // changes this row's own `status` (D13 — nothing to overlap with a dead
+    // key), so `reissuedAs` is the only signal that it's already been used —
+    // hide the action once set, rather than leaving an action that would now
+    // just 409 every time.
+    if (row.reissuedAs) {
+      return (
+        <Typography variant="body2" sx={{ color: palette.greyText }}>
+          {row.expires ? `Expired ${row.expires} — re-issued` : 'Expired — re-issued'}
+        </Typography>
+      )
+    }
     return canRenew ? (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton title="Re-issue key" onClick={() => onReissue(row)}>
+        <ActionIconButton
+          title={reissuing ? 'Re-issue in progress…' : 'Re-issue key'}
+          onClick={() => onReissue(row)}
+          disabled={reissuing}
+        >
           <AutorenewIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
       </Box>
@@ -614,7 +707,11 @@ function ActionCell({
         </ActionIconButton>
       )}
       {canRenew && (
-        <ActionIconButton title="Renew key" onClick={() => onRenew(row)}>
+        <ActionIconButton
+          title={renewing ? 'Renewal in progress…' : 'Renew key'}
+          onClick={() => onRenew(row)}
+          disabled={renewing}
+        >
           <AutorenewIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
       )}
@@ -1056,10 +1153,17 @@ function RenewDialog({
   apiKey,
   onClose,
   onRenewed,
+  onSubmittingChange,
 }: {
   apiKey: ApiKey | null
   onClose: () => void
   onRenewed: (sortKey: string, jurisdiction: string) => void
+  // Mirrors this row's in-flight state up to the parent so the row's OWN
+  // Renew icon can be disabled the instant submission starts (defense in
+  // depth alongside the dialog's own disabled button + modal backdrop, and
+  // the server-side atomic guard that's the real enforcement — see
+  // test-plan §6.8).
+  onSubmittingChange?: (sortKey: string, submitting: boolean) => void
 }) {
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -1084,6 +1188,7 @@ function RenewDialog({
     }
     setSubmitting(true)
     setError(null)
+    onSubmittingChange?.(apiKey.sortKey, true)
     try {
       // The server derives the renewed key's environment(s) from the
       // credential being renewed — it is not sent from the client.
@@ -1100,7 +1205,18 @@ function RenewDialog({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Failed to renew key')
+        // The row's cached status may be stale here — e.g. this credential
+        // was already renewed by another session/tab, or lost the atomic
+        // race to a concurrent renew request (test-plan §6.8, server-side
+        // guaranteed by `supersedeApiKeyCredential`'s conditional write).
+        // Refresh so the grid stops offering a Renew action that would just
+        // 409 again, instead of only refreshing on the success path.
+        mutate('/api/apikeys')
+        throw new Error(
+          res.status === 409
+            ? 'This key is no longer active — it may have already been renewed. Close this dialog to see its current status.'
+            : body.error || 'Failed to renew key'
+        )
       }
       const { sortKey } = await res.json()
       const jurisdiction = apiKey.jurisdiction
@@ -1111,6 +1227,7 @@ function RenewDialog({
       setError(err instanceof Error ? err.message : 'Failed to renew key')
     } finally {
       setSubmitting(false)
+      onSubmittingChange?.(apiKey.sortKey, false)
     }
   }
 
@@ -1197,10 +1314,15 @@ function ReissueDialog({
   apiKey,
   onClose,
   onReissued,
+  onSubmittingChange,
 }: {
   apiKey: ApiKey | null
   onClose: () => void
   onReissued: (sortKey: string, jurisdiction: string) => void
+  // Mirrors this row's in-flight state up to the parent (see RenewDialog's
+  // identical prop) so the row's OWN Re-issue icon can be disabled the
+  // instant submission starts.
+  onSubmittingChange?: (sortKey: string, submitting: boolean) => void
 }) {
   const [step, setStep] = useState<ReissueStep>('confirm')
   const [description, setDescription] = useState('')
@@ -1250,6 +1372,7 @@ function ReissueDialog({
     }
     setSubmitting(true)
     setError(null)
+    onSubmittingChange?.(apiKey.sortKey, true)
     try {
       // Is the domain still authorized (and unexpired) for every one of the
       // key's environments? /api/apikeys/domains returns exactly the
@@ -1273,11 +1396,24 @@ function ReissueDialog({
           useTypes,
           description: description.trim() || undefined,
           dnsChoice: stillAuthorized ? 'existing' : 'other',
+          // Lets the server enforce "re-issue at most once" atomically — see
+          // markApiKeyCredentialReissued. Without this the server has no way
+          // to tell this apart from an unrelated brand-new key creation.
+          reissuedFrom: apiKey.sortKey,
         }),
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error(body.error || 'Failed to re-issue key')
+        // The row's cached state may be stale — e.g. this expired key was
+        // already re-issued (by this dialog on an earlier click, or another
+        // session/tab). Refresh so the grid stops offering a Re-issue action
+        // that would just 409 again.
+        mutate('/api/apikeys')
+        throw new Error(
+          res.status === 409
+            ? 'This key has already been re-issued. Close this dialog to see its current status.'
+            : body.error || 'Failed to re-issue key'
+        )
       }
       if (stillAuthorized) {
         // 201 — a fresh active key was issued immediately.
@@ -1298,6 +1434,7 @@ function ReissueDialog({
       setError(err instanceof Error ? err.message : 'Failed to re-issue key')
     } finally {
       setSubmitting(false)
+      onSubmittingChange?.(apiKey.sortKey, false)
     }
   }
 
@@ -1495,6 +1632,173 @@ function ReissueDialog({
       actions={
         <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
           {actionsByStep[step]}
+          <Button
+            variant="outlined"
+            onClick={handleClose}
+            sx={{ flex: 1, borderRadius: '50px', fontWeight: 700, py: 1.5 }}
+          >
+            CLOSE
+          </Button>
+        </Box>
+      }
+    />
+  )
+}
+
+type ValidateStep = 'loading' | 'challenge' | 'error'
+
+// Row-level "Validate domain" action for a Ready for Validation credential.
+// Previously this fired straight off a blind POST to /verify-domain with no
+// way to see the TXT record/value again — if the challenge shown at create
+// time was never copied (dialog closed early, page refreshed, etc.) the
+// credential was effectively stuck, since nothing re-displayed it (test-plan
+// §3.7). This re-fetches the still-pending challenge from persisted state
+// (GET /verify-domain) before offering VALIDATE, so it can always be viewed
+// again. Submit behavior (success/failure snackbar + row refresh) is
+// otherwise unchanged from before — that's still owned by the caller-supplied
+// `onValidate`.
+function ValidateChallengeDialog({
+  apiKey,
+  onClose,
+  onValidate,
+}: {
+  apiKey: ApiKey | null
+  onClose: () => void
+  onValidate: (key: ApiKey) => Promise<void>
+}) {
+  const [step, setStep] = useState<ValidateStep>('loading')
+  const [verifying, setVerifying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [challenge, setChallenge] = useState<{
+    txtRecord: string
+    txtValue: string
+  } | null>(null)
+
+  useEffect(() => {
+    if (!apiKey) return
+    let cancelled = false
+    setStep('loading')
+    setError(null)
+    setChallenge(null)
+    ;(async () => {
+      try {
+        const res = await fetch(
+          `/api/apikeys/verify-domain?sortKey=${encodeURIComponent(apiKey.sortKey)}`
+        )
+        const body = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) {
+          setError(body.error || 'Unable to load the DNS challenge for this key.')
+          setStep('error')
+          return
+        }
+        setChallenge({ txtRecord: body.txtRecord, txtValue: body.txtValue })
+        setStep('challenge')
+      } catch {
+        if (!cancelled) {
+          setError('Network error while loading the DNS challenge.')
+          setStep('error')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [apiKey])
+
+  if (!apiKey) return null
+
+  const handleClose = () => {
+    setStep('loading')
+    setVerifying(false)
+    setError(null)
+    setChallenge(null)
+    onClose()
+  }
+
+  const handleSubmit = async () => {
+    setVerifying(true)
+    try {
+      await onValidate(apiKey)
+    } finally {
+      setVerifying(false)
+      handleClose()
+    }
+  }
+
+  const primaryBtnSx = {
+    flex: 1,
+    borderRadius: '50px',
+    backgroundColor: palette.primary,
+    fontWeight: 700,
+    py: 1.5,
+    '&:hover': { backgroundColor: palette.primaryDark },
+  }
+
+  const loadingContent = (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+      <CircularProgress size={28} />
+    </Box>
+  )
+
+  const challengeContent = challenge && (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Typography variant="body2">
+        Add the following DNS TXT record at your DNS provider to prove
+        ownership of this domain, then validate:
+      </Typography>
+      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
+        </Typography>
+      </Box>
+      <Alert severity="info" sx={{ borderRadius: '8px' }}>
+        DNS changes may take up to 48 hours to propagate.
+      </Alert>
+    </Box>
+  )
+
+  const errorContent = (
+    <Alert severity="error" sx={{ borderRadius: '8px' }}>
+      {error}
+    </Alert>
+  )
+
+  const stepTitle: Record<ValidateStep, string> = {
+    loading: 'Verify Domain Ownership',
+    challenge: 'Verify Domain Ownership',
+    error: 'Unable to Load Challenge',
+  }
+
+  const stepContent: Record<ValidateStep, React.ReactNode> = {
+    loading: loadingContent,
+    challenge: challengeContent,
+    error: errorContent,
+  }
+
+  return (
+    <CustomDialogBox
+      open={!!apiKey}
+      onClose={handleClose}
+      maxWidth="sm"
+      title={
+        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+          {stepTitle[step]}
+        </Typography>
+      }
+      content={stepContent[step]}
+      actions={
+        <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
+          {step === 'challenge' && (
+            <Button
+              variant="contained"
+              onClick={handleSubmit}
+              disabled={verifying}
+              sx={primaryBtnSx}
+            >
+              {verifying ? 'VALIDATING...' : 'VALIDATE'}
+            </Button>
+          )}
           <Button
             variant="outlined"
             onClick={handleClose}
@@ -2381,6 +2685,8 @@ export default function ApiKeyManagement() {
   const jurisdictions = useOrganizations(sessionStatus)
 
   const [validatingSortKey, setValidatingSortKey] = useState<string | null>(null)
+  const [renewingSortKey, setRenewingSortKey] = useState<string | null>(null)
+  const [reissuingSortKey, setReissuingSortKey] = useState<string | null>(null)
 
   const apiKeys: ApiKey[] = useMemo(
     () =>
@@ -2428,6 +2734,7 @@ export default function ApiKeyManagement() {
   const [cancelTarget, setCancelTarget] = useState<ApiKey | null>(null)
   const [renewTarget, setRenewTarget] = useState<ApiKey | null>(null)
   const [reissueTarget, setReissueTarget] = useState<ApiKey | null>(null)
+  const [validateTarget, setValidateTarget] = useState<ApiKey | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createdToken, setCreatedToken] = useState<string | null>(null)
   const [snackbar, setSnackbar] = useState<{
@@ -2504,6 +2811,17 @@ export default function ApiKeyManagement() {
   const handleCancel = useCallback((key: ApiKey) => setCancelTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
   const handleReissue = useCallback((key: ApiKey) => setReissueTarget(key), [])
+  const handleValidateClick = useCallback((key: ApiKey) => setValidateTarget(key), [])
+  const handleRenewSubmittingChange = useCallback(
+    (sortKey: string, submitting: boolean) =>
+      setRenewingSortKey(submitting ? sortKey : null),
+    []
+  )
+  const handleReissueSubmittingChange = useCallback(
+    (sortKey: string, submitting: boolean) =>
+      setReissuingSortKey(submitting ? sortKey : null),
+    []
+  )
 
   const confirmRevoke = useCallback(async (reason?: string) => {
     if (!revokeTarget) return
@@ -2730,9 +3048,11 @@ export default function ApiKeyManagement() {
             onCancel={handleCancel}
             onRenew={handleRenew}
             onReissue={handleReissue}
-            onValidate={handleValidateRow}
+            onValidate={handleValidateClick}
             onRevealToken={handleRevealToken}
             validating={validatingSortKey === (params.row as ApiKey).sortKey}
+            renewing={renewingSortKey === (params.row as ApiKey).sortKey}
+            reissuing={reissuingSortKey === (params.row as ApiKey).sortKey}
             canRevoke={canRevoke}
             canRenew={canRenew}
             canCancel={canCancel}
@@ -2746,9 +3066,11 @@ export default function ApiKeyManagement() {
       handleCancel,
       handleRenew,
       handleReissue,
-      handleValidateRow,
+      handleValidateClick,
       handleRevealToken,
       validatingSortKey,
+      renewingSortKey,
+      reissuingSortKey,
       canRevoke,
       canRenew,
       canCancel,
@@ -2904,11 +3226,18 @@ export default function ApiKeyManagement() {
         apiKey={renewTarget}
         onClose={() => setRenewTarget(null)}
         onRenewed={handleRenewed}
+        onSubmittingChange={handleRenewSubmittingChange}
       />
       <ReissueDialog
         apiKey={reissueTarget}
         onClose={() => setReissueTarget(null)}
         onReissued={handleReissued}
+        onSubmittingChange={handleReissueSubmittingChange}
+      />
+      <ValidateChallengeDialog
+        apiKey={validateTarget}
+        onClose={() => setValidateTarget(null)}
+        onValidate={handleValidateRow}
       />
       <CreateKeyDialog
         open={createDialogOpen}

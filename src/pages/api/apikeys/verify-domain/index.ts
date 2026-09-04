@@ -16,8 +16,76 @@ const DNS_VERIFY_BYPASS_ENABLED =
   process.env.ALLOW_DNS_VERIFY_BYPASS === 'true'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
+  if (req.method === 'GET') {
+    try {
+      const session = await getServerSession(req, res, authOptions)
+      if (!session || !session.user) {
+        return res.status(401).json({ error: 'Unauthorized - Please login' })
+      }
+      const { sortKey } = req.query
+      if (!sortKey || typeof sortKey !== 'string') {
+        return res.status(400).json({ error: 'sortKey is required' })
+      }
+
+      const dbClient = await DbClientFactory.getDbClient()
+      const credential = await dbClient.getApiKeyCredential(sortKey)
+      if (!credential) {
+        return res.status(404).json({ error: 'API key not found' })
+      }
+      // Role + tenancy (fix IDOR, matches token.ts): derive jurisdictionId from
+      // the loaded credential rather than trusting a client-supplied one, so a
+      // caller can't pair another jurisdiction's sortKey with its own
+      // jurisdictionId to pass the ownership check.
+      const authz = await requireApiKeyAccess(session, 'canCreateApiKey', credential.jurisdictionId)
+      if (!authz.ok) {
+        return res.status(authz.status).json({ error: authz.error })
+      }
+      if (credential.status !== 'ready_for_validation') {
+        return res.status(409).json({ error: 'Credential is not awaiting validation' })
+      }
+      if (!credential.domain) {
+        return res.status(404).json({ error: 'No pending challenge found for this domain' })
+      }
+
+      // Re-derive the TXT record/value from persisted state instead of
+      // requiring the caller to have copied it when the credential was first
+      // created — it's never returned again after that initial response
+      // (test-plan §3.7). Same lookup the POST handler below uses to find the
+      // shared challenge UUID.
+      const domainSortKeys = credential.environments.map(
+        (env) => `${env}#${credential.jurisdictionId}#${credential.domain}`
+      )
+      const domainRecords = await Promise.all(
+        domainSortKeys.map((sk) => dbClient.getApiKeyDomain(sk))
+      )
+      const challengeRecord = domainRecords.find((rec) => rec?.challengeUuid)
+      if (!challengeRecord) {
+        return res.status(404).json({ error: 'No pending challenge found for this domain' })
+      }
+      if (
+        challengeRecord.challengeExpiresAt &&
+        new Date() > new Date(challengeRecord.challengeExpiresAt)
+      ) {
+        return res.status(400).json({ error: 'Challenge has expired. Please start over.' })
+      }
+
+      return res.status(200).json({
+        domain: credential.domain,
+        txtRecord: credential.domain,
+        txtValue: `izg-challenge=${challengeRecord.challengeUuid}`,
+      })
+    } catch (error) {
+      logger.error('Error fetching pending DNS challenge', {
+        operation: 'getPendingDnsChallenge',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
+    res.setHeader('Allow', ['GET', 'POST'])
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
   }
 
@@ -199,6 +267,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const match = values.includes(expected)
 
     if (!match) {
+      // The apex commonly carries other, unrelated TXT records (SPF, DKIM,
+      // other providers' site-verification strings) — resolveTxt succeeding
+      // with a non-empty result does NOT mean our challenge record was ever
+      // added. Only call it "found but wrong" if something claiming to BE an
+      // izg-challenge record is actually present (e.g. a stale UUID from a
+      // prior, expired challenge); otherwise it simply hasn't been added yet.
+      const hasChallengeAttempt = values.some((v) => v.startsWith('izg-challenge='))
+      if (!hasChallengeAttempt) {
+        return res.status(200).json({
+          verified: false,
+          error: `TXT record not found at ${txtHost}. DNS may not have propagated yet.`,
+        })
+      }
       return res.status(200).json({
         verified: false,
         error: `TXT record found but value did not match. Expected: ${expected}`,
