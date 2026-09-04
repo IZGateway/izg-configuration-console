@@ -52,7 +52,8 @@ import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import useRoleAccess from '../../lib/security/useRoleAccess'
-import hasAccessToDestId from '../../lib/accesshelper'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { can } from '../../lib/security/policy'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
   ALLOWED_USE_TYPES,
@@ -155,34 +156,36 @@ function formatDate(value: string | Date | null | undefined): string {
   return d.toLocaleDateString()
 }
 
-// Client-side mirror of the server's `ownsJurisdiction` check
-// (lib/security/apiKeyAuthz), used to scope jurisdiction-bearing UI lists: the
-// Create dialog's Organization dropdown and the dashboard's Organization filter.
+// Client-side mirror of the server's `can()` check (lib/security/policy), used
+// to scope jurisdiction-bearing UI lists: the Create dialog's Organization
+// dropdown and the dashboard's Organization filter.
+//
+// MUST evaluate permission and reach from the SAME held role, exactly like the
+// server does. This used to call the reach-only `hasAccessToDestId`, which
+// returns true for every jurisdiction as soon as ANY held role has global
+// reach — regardless of whether that role (or any role) actually grants
+// `capability`. That is the exact escalation shape `policy.ts` exists to
+// prevent: a user holding `IZG Support` (global reach, no apikeys
+// permissions) alongside a jurisdiction-scoped role saw every organization in
+// this dropdown, not just their own, even though the server-side call
+// correctly rejected acting on the ones outside their scope. Caught during
+// manual testing of the escalation account.
 //
 // Matched on `prefix` (the jurisdiction's short code, e.g. "AINQ") because that
 // is what Okta group membership — and therefore `session.user.jurisdictions` — is
 // keyed on. NOT `jurisdictionId` (numeric, a different identifier space) and NOT
-// `name` (the long form, e.g. "Audacious Inquiry (operators)"). IZG
-// Operations/Support are global and short-circuit inside `hasAccessToDestId`.
+// `name` (the long form, e.g. "Audacious Inquiry (operators)").
 //
-// Fails closed: no session, no prefix, or a throw (non-admin with no assigned
-// jurisdictions) all mean "not owned". This is UI scoping only — the API routes
-// remain the authoritative gate.
-type SessionLike =
-  | { user?: { role?: string; jurisdictions?: string[] } }
-  | null
-  | undefined
-
+// Fails closed: no session or no prefix means "not owned". This is UI scoping
+// only — the API routes remain the authoritative gate.
 function ownsJurisdictionForUi(
   jurisdiction: Jurisdiction,
-  session: SessionLike
+  session: unknown,
+  capability: keyof ApiKeyManagementPageAccessControl
 ): boolean {
   if (!session || !jurisdiction.prefix) return false
-  try {
-    return hasAccessToDestId(String(jurisdiction.prefix), session)
-  } catch {
-    return false
-  }
+  return can(subjectOf(session), 'apikeys', capability, jurisdiction.prefix)
+    .allowed
 }
 
 // A credential's raw environment id is a number, or, for legacy rows, a
@@ -1913,12 +1916,12 @@ function CreateKeyDialog({
   // NOTE: in an environment where no senders are seeded, this list is empty by
   // design (see IGDD-3140 seeding / Ticket 2).
   //
-  // Also scoped to organizations this caller actually owns (mirrors the
-  // server-side `ownsJurisdiction` check in POST /api/apikeys) — IZG Operations
-  // is global, other roles are limited to `session.user.jurisdictions`. Without
-  // this, a scoped role could pick an org it doesn't own, complete the entire
-  // multi-step create flow (including a DNS challenge), and only discover the
-  // 403 on final submit; the server-side check remains the authoritative gate.
+  // Also scoped to organizations this caller can actually create a key for
+  // (mirrors the server-side `can()` check in POST /api/apikeys, gated on
+  // `canCreateApiKey` specifically — not just reach). Without this, a scoped
+  // role could pick an org it doesn't own, complete the entire multi-step
+  // create flow (including a DNS challenge), and only discover the 403 on
+  // final submit; the server-side check remains the authoritative gate.
   //
   // See `ownsJurisdictionForUi` for why this matches on `prefix`. A row with no
   // prefix is excluded rather than shown-and-then-403'd on submit.
@@ -1927,7 +1930,8 @@ function CreateKeyDialog({
       Array.isArray(jurisdictions)
         ? jurisdictions.filter(
             (j) =>
-              (j.useTypes?.length ?? 0) > 0 && ownsJurisdictionForUi(j, session)
+              (j.useTypes?.length ?? 0) > 0 &&
+              ownsJurisdictionForUi(j, session, 'canCreateApiKey')
           )
         : [],
     [jurisdictions, session]
@@ -2701,17 +2705,18 @@ export default function ApiKeyManagement() {
   // (matched against each row's jurisdictionId), label = the description. Sourced
   // from /api/jurisdictions so the list is complete and page-independent.
   //
-  // Scoped to jurisdictions this caller owns (see `ownsJurisdictionForUi`).
-  // /api/jurisdictions is deliberately unscoped server-side (it serves other
-  // features too), and GET /api/apikeys already scopes the rows themselves — so
-  // without this an unowned org would be offered here and just filter the grid to
-  // nothing. Unlike the Create dropdown this list is NOT restricted to senders:
+  // Scoped to jurisdictions this caller can list keys for (see
+  // `ownsJurisdictionForUi`, gated on `canListApiKeys`). /api/jurisdictions is
+  // deliberately unscoped server-side (it serves other features too), and
+  // GET /api/apikeys already scopes the rows themselves — so without this an
+  // unowned org would be offered here and just filter the grid to nothing.
+  // Unlike the Create dropdown this list is NOT restricted to senders:
   // filtering is about what's in the grid, and a dual-role org can hold keys.
   const organizationOptions = useMemo<FilterOption[]>(
     () =>
       Array.isArray(jurisdictions)
         ? jurisdictions
-            .filter((j) => ownsJurisdictionForUi(j, session))
+            .filter((j) => ownsJurisdictionForUi(j, session, 'canListApiKeys'))
             .map((j) => ({
               value: String(j.jurisdictionId),
               label: j.description || j.name || String(j.jurisdictionId),

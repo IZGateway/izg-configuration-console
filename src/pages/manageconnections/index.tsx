@@ -61,7 +61,7 @@ export const getServerSideProps = withRequestContext(
       return { redirect: { destination: '/api/auth/signin', permanent: false } }
     }
     const endpointStatuses = await fetchEndpointStatus(
-      session.user.role,
+      session.user.roles,
       session.user.jurisdictions
     )
 

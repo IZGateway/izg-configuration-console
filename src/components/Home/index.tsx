@@ -94,7 +94,7 @@ function HomeComponent() {
                       Manage Connections
                     </Button>
                   </Link>
-                  {isOperationsRole(session?.user.role) && (
+                  {isOperationsRole(session?.user.roles) && (
                     <Link href="/api-doc">
                       <Button
                         variant="outlined"

@@ -326,6 +326,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       domain,
       environments,
       validatedBy: session.user.email,
+      grantedBy: authz.grantedBy,
       operation: 'verifyDomain',
     })
 
