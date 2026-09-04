@@ -6,10 +6,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { isValidUseType } from '../../../lib/type/AllowedUseType'
 import {
+  canActOnJurisdiction,
   hasApiKeyPermission,
-  ownsJurisdiction,
   requireApiKeyAccess,
 } from '../../../lib/security/apiKeyAuthz'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -35,18 +36,34 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Tenancy scoping (fix enumeration/IDOR): a caller only sees credentials
-      // for jurisdictions they own. IZG roles are global; jurisdiction roles are
-      // limited to their assigned jurisdictions.
+      // for jurisdictions they own.
       //
-      // `ownsJurisdiction` is async (it resolves each jurisdiction's prefix), and
-      // Array.filter can't take an async predicate — so resolve all decisions
-      // first, then filter by index. `fetchApiKeyCredentials` has already
-      // pre-warmed the jurisdiction cache for every distinct jurisdiction in this
-      // result set, so these are in-memory hits, not N DynamoDB reads.
-      const ownedFlags = await Promise.all(
-        result.map((c) => ownsJurisdiction(session, c.jurisdictionId))
+      // The permission and the jurisdiction are checked together, per role, by
+      // `canActOnJurisdiction` — the same gate the mutating routes use. It must
+      // NOT be split into "does any role grant canListApiKeys?" plus "does any
+      // role reach this jurisdiction?": that would let a globally-scoped role
+      // with no API-key rights (IZG Support) supply the reach while a scoped role
+      // supplies the permission, exposing every organization's credentials.
+      //
+      // Resolved once per DISTINCT jurisdiction rather than once per credential.
+      // `fetchApiKeyCredentials` has already pre-warmed the jurisdiction cache,
+      // so these are in-memory hits either way, but this keeps the work
+      // proportional to jurisdictions rather than to key count.
+      const subject = subjectOf(session)
+      const decisions = new Map<string, boolean>()
+      for (const jurisdictionId of new Set(
+        result.map((c) => String(c.jurisdictionId))
+      )) {
+        const decision = await canActOnJurisdiction(
+          subject,
+          'canListApiKeys',
+          jurisdictionId
+        )
+        decisions.set(jurisdictionId, decision.allowed)
+      }
+      const scoped = result.filter((c) =>
+        decisions.get(String(c.jurisdictionId))
       )
-      const scoped = result.filter((_, i) => ownedFlags[i])
 
       return res.status(200).json(scoped)
     } catch (error) {
@@ -155,6 +172,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           jti,
           sortKey,
           createdBy,
+          grantedBy: authz.grantedBy,
           operation: 'createApiKeyCredential',
         })
 
@@ -239,6 +257,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         challengeUuid,
         jti,
         sortKey,
+        grantedBy: authz.grantedBy,
         operation: 'createApiKeyCredential',
       })
 
@@ -337,6 +356,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         revokedBy,
         revokedAt,
+        grantedBy: authz.grantedBy,
         operation: 'revokeApiKeyCredential',
       })
 
@@ -399,6 +419,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         cancelledBy,
         cancelledAt,
+        grantedBy: authz.grantedBy,
         operation: 'cancelApiKeyCredential',
       })
 

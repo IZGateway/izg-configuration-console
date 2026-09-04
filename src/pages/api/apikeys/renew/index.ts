@@ -146,6 +146,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       newSortKey,
       renewedBy,
       graceExpiresAt: graceExpiresAt.toISOString(),
+      grantedBy: authz.grantedBy,
       operation: 'renewApiKeyCredential',
     })
 

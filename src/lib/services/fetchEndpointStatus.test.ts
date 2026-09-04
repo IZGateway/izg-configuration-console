@@ -72,10 +72,10 @@ describe('fetchEndpointStatus', () => {
       .mockResolvedValueOnce({ data: mockResponseData1 })
       .mockResolvedValueOnce({ data: mockResponseData2 })
 
-    const result = await fetchEndpointStatus('IZG Operations', ['TN', 'MD'])
+    const result = await fetchEndpointStatus(['IZG Operations'], ['TN', 'MD'])
 
     expect(mockedIZGHubStatusHistoryEndpoint).toHaveBeenCalledWith('https://fake.org')
-    expect(mockedIsOperationsRole).toHaveBeenCalledWith('IZG Operations')
+    expect(mockedIsOperationsRole).toHaveBeenCalledWith(['IZG Operations'])
     expect(mockedAxios.get).toHaveBeenCalledTimes(2)
     expect(mockedAxios.get).toHaveBeenCalledWith('https://fake1.hub.org', {
       httpsAgent: expect.any(Object),

@@ -94,6 +94,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('API key token viewed', {
       sortKey: credential.sortKey,
       viewedBy: session.user.email,
+      grantedBy: authz.grantedBy,
       operation: 'viewApiKeyToken',
     })
 
