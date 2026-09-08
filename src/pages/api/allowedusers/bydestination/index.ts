@@ -73,13 +73,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized' })
       }
 
-      const isAdmin = isOperationsRole(session.user.role)
+      const isAdmin = isOperationsRole(session.user.roles)
       const destinations = session.user.jurisdictions || []
 
       logger.info('Fetching allowed users by destination', {
         isAdmin,
         destinationsCount: destinations.length,
-        userRole: session.user.role,
+        userRoles: session.user.roles,
         operation: 'fetchAllowedUsersByDestination',
         httpMethod: req.method,
         endpoint: req.url,

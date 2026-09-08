@@ -1,147 +1,147 @@
-import accessLevel from './accesslevel'
-import hasAccessToDestId from '../accesshelper'
 import DbClientFactory from '../db/DbClientFactory'
 import logger from '../../../logger'
+import { subjectOf, type AuthzSubject } from './authzsubject'
+import {
+  ANY_JURISDICTION,
+  can,
+  mergePageAccess,
+  type Decision,
+} from './policy'
 import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessControls'
 
 /**
- * Server-side authorization for the `/api/apikeys/*` routes (IGDD-2707 P1).
+ * Server-side authorization for the `/api/apikeys/*` routes.
  *
- * The UI already gates the API Key Management screen via `useRoleAccess()`, but
- * UI gating is not a security boundary — the API routes previously checked only
- * that the caller was authenticated (`getServerSession`), so any signed-in user
- * could act on any jurisdiction's credentials. These helpers re-derive the same
- * role matrix server-side (role gate) and reuse the existing jurisdiction
- * ownership primitive (tenancy gate) so both layers are enforced on the server.
+ * This module is the *impure adapter*: it resolves a jurisdiction id to its
+ * prefix (a DynamoDB read) and shapes results into HTTP status/error pairs. The
+ * decision itself is made by `can()` in `policy.ts`, which is pure.
+ *
+ * The UI gates the API Key Management screen too, but UI gating is not a security
+ * boundary — these routes are.
  */
 
 export type ApiKeyPermission = keyof ApiKeyManagementPageAccessControl
 
 /**
- * Resolve the API-key access controls for a session's role — the server-side
- * equivalent of `useRoleAccess()` for the `/apikeys` page. Roles that are not
- * present in the access matrix (IZG Program, CDC Program, CDC CISO) resolve to
- * `undefined`, which every caller treats as deny-by-default.
+ * Resolve the API-key flags for a session — the server-side equivalent of
+ * `useRoleAccess()` for the `/apikeys` page.
+ *
+ * This is a "what"-only check with no jurisdiction, so a plain union across held
+ * roles is correct. It backs `hasApiKeyPermission`, which several routes call as
+ * an early exit before the authoritative gate; unioning here is what stops a
+ * multi-role user being rejected by that pre-check before ever reaching it.
  */
 export function getApiKeyAccess(
-  session: any
-): ApiKeyManagementPageAccessControl | undefined {
-  const role = session?.user?.role
-  if (!role) return undefined
-  return accessLevel[role]?.apikeys
+  session: unknown
+): Partial<ApiKeyManagementPageAccessControl> | undefined {
+  const subject = subjectOf(session)
+  if (subject.roles.length === 0) return undefined
+  return mergePageAccess(subject, 'apikeys')
 }
 
 /**
- * True only if the session's role explicitly grants the given API-key
- * permission. Deny-by-default: a missing session, missing role, unmapped role,
- * or unset flag all return `false`.
+ * True if any held role grants the permission, ignoring tenancy.
+ *
+ * Deny-by-default: a missing session, no recognized role, or an unset flag all
+ * return false. NOT sufficient on its own for anything that touches a specific
+ * credential — pair it with `canActOnJurisdiction`, or just use
+ * `requireApiKeyAccess`.
  */
 export function hasApiKeyPermission(
-  session: any,
+  session: unknown,
   permission: ApiKeyPermission
 ): boolean {
   return Boolean(getApiKeyAccess(session)?.[permission])
 }
 
+/** Resolve a jurisdiction id to its short prefix. Throws on infrastructure failure. */
+async function prefixOf(jurisdictionId: string): Promise<string | null> {
+  const dbClient = await DbClientFactory.getDbClient()
+  const jurisdiction = await dbClient.getJurisdiction(String(jurisdictionId))
+  return jurisdiction?.prefix ?? null
+}
+
 /**
- * True if the session may act on a credential (or domain) owned by
- * `jurisdictionId`. IZG Operations/Support are global; jurisdiction roles are
- * limited to their assigned jurisdictions (see `hasAccessToDestId`).
+ * The single authorization decision for "may this caller do X to this
+ * jurisdiction's data?".
  *
- * Two different identifier spaces have to be bridged here. Credentials, domains
- * and every `/api/apikeys/*` route carry the **numeric** `jurisdictionId` (e.g.
- * `1000`), which is the Jurisdiction table's key and what the Hub reads. But
- * `session.user.jurisdictions` is populated from Okta group membership and holds
- * lowercased jurisdiction **prefixes** (e.g. `"ainq"`) — see the `jwt` callback in
- * `pages/api/auth/[...nextauth].ts`. Comparing the numeric id against those
- * prefixes never matches, so this resolves the id to its jurisdiction's `prefix`
- * first and compares on that.
+ * Every tenancy-paired caller goes through here, so the one-role-at-a-time rule
+ * in `policy.ts` is implemented once rather than re-derived per route. The
+ * permission-only helper `ownsJurisdiction` that used to exist is gone: it let a
+ * caller check reach without a permission, which is half of the mistake this
+ * design prevents.
  *
- * `prefix` is the right field, not `name`: a sender row has
- * `name = "Audacious Inquiry (operators)"` with `prefix = "AINQ"`, so matching on
- * `name` would deny a legitimate owner. (Some legacy rows happen to carry the
- * short code in `name` too, which is why a name-based check appeared to work.)
- *
- * `getJurisdiction` memoizes on a process-lifetime cache, and the credential read
- * paths (`getApiKeyCredential`, `fetchApiKeyCredentials`) already pre-warm it, so
- * this is normally an in-memory hit rather than a DynamoDB read.
- *
- * Deliberately does NOT short-circuit global roles ahead of the lookup: the
- * IZG-Operations/Support exemption is defined in exactly one place
- * (`hasAccessToDestId`, which tests the role before it looks at `destId`), and
- * duplicating that list here would let the two drift apart.
- *
- * Fails closed. A jurisdiction with no resolvable `prefix` denies everyone
- * (loudly logged — all rows are expected to carry one), and `hasAccessToDestId`
- * throws for a non-admin account with no assigned jurisdictions, which is treated
- * as "no access" rather than letting one misconfigured account 500 the whole
- * request (important for the list filter, where a single bad row must not error
- * the entire response).
+ * Fails closed in every direction, but loudly. A jurisdiction with no resolvable
+ * prefix denies everyone (warn), and an infrastructure failure denies too but
+ * logs at error level — previously a swallowed `catch { return false }` made a
+ * DynamoDB outage indistinguishable from a legitimate deny, so the symptom was
+ * an empty list with nothing alerting.
  */
-export async function ownsJurisdiction(
-  session: any,
+export async function canActOnJurisdiction(
+  subject: AuthzSubject,
+  permission: ApiKeyPermission,
   jurisdictionId: string
-): Promise<boolean> {
+): Promise<Decision> {
+  let prefix: string | null
   try {
-    const dbClient = await DbClientFactory.getDbClient()
-    const jurisdiction = await dbClient.getJurisdiction(String(jurisdictionId))
-    const prefix = jurisdiction?.prefix
-    if (!prefix) {
-      logger.warn('Ownership check denied: jurisdiction has no prefix', {
-        jurisdictionId,
-        operation: 'ownsJurisdiction',
-      })
-      return false
-    }
-    return hasAccessToDestId(String(prefix), session)
-  } catch {
-    return false
+    prefix = await prefixOf(jurisdictionId)
+  } catch (error) {
+    logger.error('Authorization could not resolve jurisdiction', {
+      jurisdictionId,
+      operation: 'canActOnJurisdiction',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    })
+    return { allowed: false }
   }
+
+  if (!prefix) {
+    logger.warn('Ownership check denied: jurisdiction has no prefix', {
+      jurisdictionId,
+      operation: 'canActOnJurisdiction',
+    })
+    return { allowed: false }
+  }
+
+  return can(subject, 'apikeys', permission, prefix)
 }
 
 // Flat shape (not a discriminated union) so `status`/`error` are unconditionally
-// typed and readable at call sites without relying on control-flow narrowing —
-// callers only ever read them after checking `!ok`, but they don't need to be
-// undefined on the `ok: true` path.
+// typed and readable at call sites without relying on control-flow narrowing.
 export type ApiKeyAuthzResult = {
   ok: boolean
   status: number
   error: string
+  /** Role that authorized the request, when ok. Log this on mutating routes. */
+  grantedBy?: string
 }
 
 /**
- * Single combined role + tenancy gate for a request acting on one credential
- * or domain. This is the one call every mutating/sensitive `/api/apikeys/*`
- * handler should make immediately before touching that resource, so the two
- * checks can't drift apart (e.g. a route that only remembers the role check
- * and forgets ownership, or vice versa) as routes are added or edited.
- *
- * Routes that already know `jurisdictionId` up front (create, verify-domain,
- * domains) can call this once, right after validating required fields. Routes
- * that only learn `jurisdictionId` after loading a credential by `sortKey`
- * (revoke, cancel, token reveal, renew) may still keep an earlier standalone
- * `hasApiKeyPermission` check to skip an unnecessary DB read for a role with
- * zero API-key permissions — but this call remains the authoritative gate
- * evaluated right before the credential is read out or mutated, so that
- * guarantee never depends on the earlier optimization having been written
- * correctly.
+ * The combined role + tenancy gate. Call this immediately before touching a
+ * credential or domain, so the two checks cannot drift apart as routes are added.
  */
 export async function requireApiKeyAccess(
-  session: any,
+  session: unknown,
   permission: ApiKeyPermission,
   jurisdictionId: string
 ): Promise<ApiKeyAuthzResult> {
-  // Role gate first: a role with no API-key permission at all is rejected without
-  // incurring the jurisdiction lookup below.
-  if (!hasApiKeyPermission(session, permission)) {
+  const subject = subjectOf(session)
+
+  // Cheap prefilter: skip the DynamoDB read for a caller that no held role could
+  // ever allow. Valid because the union is a superset of any single role's
+  // permissions, so this can only reject callers the real check would also
+  // reject. ANY_JURISDICTION states plainly that tenancy is skipped on purpose.
+  if (!can(subject, 'apikeys', permission, ANY_JURISDICTION).allowed) {
     return { ok: false, status: 403, error: 'Forbidden - insufficient role' }
   }
-  if (!(await ownsJurisdiction(session, jurisdictionId))) {
+
+  const decision = await canActOnJurisdiction(subject, permission, jurisdictionId)
+  if (!decision.allowed) {
     return {
       ok: false,
       status: 403,
       error: 'Forbidden - not authorized for this jurisdiction',
     }
   }
-  return { ok: true, status: 200, error: '' }
+
+  return { ok: true, status: 200, error: '', grantedBy: decision.grantedBy }
 }

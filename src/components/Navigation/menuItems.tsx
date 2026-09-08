@@ -63,6 +63,11 @@ export const menuItems: MenuItem[] = [
     // permission rather than the narrower IZG-Operations-only isAdmin flag —
     // otherwise those users could use the page but never find it in the nav.
     adminOnly: false,
-    isVisible: (role) => !!accessLevel[role ?? '']?.apikeys?.canListApiKeys,
+    // Visible if ANY held role can list keys. A "what"-only check with no
+    // jurisdiction, so unioning across roles is correct here.
+    isVisible: (roles) =>
+      (roles ?? []).some(
+        (role) => !!accessLevel[role]?.apikeys?.canListApiKeys
+      ),
   },
 ]

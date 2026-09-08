@@ -14,9 +14,13 @@ import {
   defaultChangeRequestPageAccessControl,
   defaultHistoryPageAccessControl,
 } from './defaultaccesslevels'
-import { PageControls } from '../accesslevel'
+import { RoleAccess } from '../accesslevel'
 
-const IZGSupportAccess: PageControls = {
+const IZGSupportAccess: RoleAccess = {
+  // IZG Support sees every jurisdiction (was: hardcoded in accesshelper.ts).
+  // Note it holds NO apikeys permissions — global reach without API-key rights is
+  // exactly why reach must be evaluated per role, never merged. See policy.ts.
+  globalTenancy: true,
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
     canRunConnectionTest: true,

@@ -62,7 +62,48 @@ describe('next-auth jwt callback — audit session identity (IGDD-2223)', () => 
     expect(meta.sessionUser.jti).toBe('ID.xyz')
     expect(meta.sessionUser.userId).toBe('00uABC')
     expect(meta.groups).toEqual(['izg-ops'])
-    expect('role' in meta).toBe(true)
+    // The snapshot records the FULL role set, not a single role: permissions are
+    // a union across held roles, so logging one would make "which role
+    // authorized this?" unanswerable after the fact. `izg-ops` is not a mapped
+    // group name, so it resolves to no roles — the point here is that the field
+    // is present and is an array.
+    expect('roles' in meta).toBe(true)
+    expect(Array.isArray(meta.roles)).toBe(true)
+    expect('role' in meta).toBe(false)
+  })
+
+  it('merges groups from profile, id_token, access_token and userinfo', async () => {
+    const encode = (payload: unknown) =>
+      Buffer.from(JSON.stringify(payload)).toString('base64url')
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        jurisdictions: ['AZ'],
+        groups: ['Jurisdiction Support'],
+      }),
+    }) as unknown as typeof fetch
+
+    const token = await jwt({
+      token: {},
+      account: {
+        providerAccountId: '00uABC',
+        id_token: `h.${encode({ auth_time: 1, jti: 'ID.x', groups: ['IZG Support'] })}.s`,
+        provider: 'okta',
+        access_token: `h.${encode({ groups: ['Jurisdiction Operations'] })}.s`,
+      },
+      profile: { id: 'pid', groups: ['IZG Operations'] },
+    })
+
+    // One group from each of the four sources must survive the union.
+    expect([...token.groups].sort()).toEqual([
+      'IZG Operations',
+      'IZG Support',
+      'Jurisdiction Operations',
+      'Jurisdiction Support',
+    ])
+    // Jurisdictions still resolve, and are lowercased.
+    expect(token.jurisdictions).toEqual(['az'])
   })
 
   it('preserves an existing sessionId on subsequent calls without account', async () => {
