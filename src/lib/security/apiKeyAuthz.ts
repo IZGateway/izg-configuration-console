@@ -2,6 +2,7 @@ import accessLevel from './accesslevel'
 import hasAccessToDestId from '../accesshelper'
 import DbClientFactory from '../db/DbClientFactory'
 import logger from '../../../logger'
+import { logAccessDenied } from './accessDeniedAudit'
 import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessControls'
 
 /**
@@ -36,11 +37,24 @@ export function getApiKeyAccess(
  * permission. Deny-by-default: a missing session, missing role, unmapped role,
  * or unset flag all return `false`.
  */
+// Emits an AccessDenied audit event on denial — only call this as a
+// per-request gate. Never call it inside a loop/row-filter (like
+// `ownsJurisdiction` below), or an authorized caller's normal request will
+// emit a phantom "denied" event per row it doesn't own.
 export function hasApiKeyPermission(
   session: any,
   permission: ApiKeyPermission
 ): boolean {
-  return Boolean(getApiKeyAccess(session)?.[permission])
+  const allowed = Boolean(getApiKeyAccess(session)?.[permission])
+  if (!allowed) {
+    logAccessDenied({
+      reason: `insufficient role for ${permission}`,
+      user: session?.user?.email,
+      role: session?.user?.role,
+      permission,
+    })
+  }
+  return allowed
 }
 
 /**
@@ -137,6 +151,13 @@ export async function requireApiKeyAccess(
     return { ok: false, status: 403, error: 'Forbidden - insufficient role' }
   }
   if (!(await ownsJurisdiction(session, jurisdictionId))) {
+    logAccessDenied({
+      reason: 'not authorized for this jurisdiction',
+      user: session?.user?.email,
+      role: session?.user?.role,
+      permission,
+      jurisdictionId,
+    })
     return {
       ok: false,
       status: 403,

@@ -8,6 +8,7 @@ import withMiddleware from '../../api-middleware-helper'
 import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../../lib/IZGHubStatusHistoryEndpoint'
 import { asyncRequestContext } from '../../../../lib/Context'
+import { logAccessDenied } from '../../../../lib/security/accessDeniedAudit'
 
 /**
  * @swagger
@@ -39,6 +40,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const context = asyncRequestContext.getStore()
   const allowedRoles = ['IZG Operations', 'Jurisdiction Operations']
   if (!allowedRoles.includes(context?.session?.user?.role)) {
+    logAccessDenied({
+      reason: 'role not permitted to reset circuit breaker',
+      url: req.url,
+      method: req.method,
+      user: context?.user,
+      role: context?.session?.user?.role,
+    })
     return res.status(401).send('unauthorized')
   }
 

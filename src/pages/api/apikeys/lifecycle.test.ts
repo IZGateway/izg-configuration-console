@@ -85,6 +85,7 @@ jest.mock('dns/promises', () => ({
 }))
 
 import type { NextApiRequest, NextApiResponse } from 'next'
+import logger from '../../../../logger'
 import apikeysHandler from './index'
 import renewHandler from './renew/index'
 import verifyDomainHandler from './verify-domain/index'
@@ -1072,7 +1073,7 @@ describe('API key authorization (role + tenancy)', () => {
       expect(revokeApiKeyCredential).not.toHaveBeenCalled()
     })
 
-    it('403s GET list for IZG Support', async () => {
+    it('403s GET list for IZG Support and logs exactly one AccessDenied event', async () => {
       mockGetServerSession.mockResolvedValue(izgSupportSession)
       const fetchApiKeyCredentials = jest.fn()
       mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
@@ -1082,6 +1083,19 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+
+      // Regression coverage for the RBAC-rejection audit gap (IGDD spike): a
+      // genuine permission denial must produce exactly one structured
+      // AccessDenied event.
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(1)
+      expect(deniedCalls[0][1]).toMatchObject({
+        eventType: 'AccessDenied',
+        role: 'IZG Support',
+        permission: 'canListApiKeys',
+      })
     })
 
     it('403s token reveal for IZG Support (before any DB read)', async () => {
@@ -1260,6 +1274,15 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(1)
+      expect(deniedCalls[0][1]).toMatchObject({
+        eventType: 'AccessDenied',
+        reason: 'not authorized for this jurisdiction',
+      })
     })
 
     it('403s DELETE cancel of a credential in a non-owned jurisdiction', async () => {
@@ -1377,7 +1400,7 @@ describe('API key authorization (role + tenancy)', () => {
   })
 
   describe('GET list scoping — only owned jurisdictions are returned', () => {
-    it("filters the list to the caller's jurisdictions", async () => {
+    it("filters the list to the caller's jurisdictions without logging phantom AccessDenied events", async () => {
       mockGetServerSession.mockResolvedValue(jurOpsSession)
       const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
         { sortKey: '5#a', jurisdictionId: '1', status: 'active' },
@@ -1393,6 +1416,16 @@ describe('API key authorization (role + tenancy)', () => {
       const returned = res.body as Array<{ jurisdictionId: string }>
       expect(returned).toHaveLength(2)
       expect(returned.every((c) => c.jurisdictionId === '1')).toBe(true)
+
+      // Regression guard: the '99' row is filtered out by the per-row tenancy
+      // predicate (ownsJurisdiction/hasAccessToDestId), which is NOT a
+      // rejection gate — it must not emit an AccessDenied event per unowned
+      // row, or a normal authorized list view would look like a security
+      // incident in the audit trail.
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(0)
     })
 
     it('returns all credentials for a global IZG Operations caller', async () => {
