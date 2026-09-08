@@ -8,6 +8,7 @@ import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
 import {
   assertSafeDestinationUrl,
+  assertSafeRawDestinationUri,
   isBlockedAddress,
   UnsafeDestinationUriError,
 } from '../security/destinationUriGuard'
@@ -120,6 +121,9 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
     // SSRF guard: destUri can come from the request body, so the outbound
     // target must be validated before any socket is opened.
     try {
+      // Judge the raw URI first: setHostnameIfNull rewrites schemes with an
+      // empty authority (file://, data:) into an https URL, hiding them.
+      assertSafeRawDestinationUri(destination?.destUri)
       await assertSafeDestinationUrl(destIdURL)
     } catch (error) {
       if (!(error instanceof UnsafeDestinationUriError)) {

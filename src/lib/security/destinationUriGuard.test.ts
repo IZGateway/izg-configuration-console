@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 import {
+  assertSafeRawDestinationUri,
+  isBlockedHostname,
   assertSafeDestinationUrl,
   isBlockedAddress,
   UnsafeDestinationUriError,
@@ -59,6 +61,66 @@ describe('isBlockedAddress', () => {
 
   it('fails closed for non-IP input', () => {
     expect(isBlockedAddress('not-an-ip')).toBe(true)
+  })
+})
+
+describe('assertSafeRawDestinationUri', () => {
+  // Regression: schemes with an empty authority used to survive the guard,
+  // because setHostnameIfNull rewrote them into https before it ran.
+  it.each([
+    'file:///etc/passwd',
+    'file://localhost/etc/passwd',
+    'data:text/plain,hello',
+    'gopher://example.com/',
+    'tftp://example.com/',
+    'ftp://example.com/',
+    'mailto:someone@example.com',
+    'javascript:alert(1)',
+  ])('rejects the raw URI %s', (raw) => {
+    expect(() => assertSafeRawDestinationUri(raw)).toThrow(
+      UnsafeDestinationUriError
+    )
+  })
+
+  it.each([
+    'https://example.com/hub',
+    'http://example.com',
+    '/dev/IISService', // relative - resolved against the hub base later
+    '',
+    undefined,
+  ])('allows %s through to the main guard', (raw) => {
+    expect(() => assertSafeRawDestinationUri(raw)).not.toThrow()
+  })
+})
+
+describe('isBlockedHostname', () => {
+  it.each([
+    'db.internal',
+    'host.ec2.internal',
+    'x.compute.internal',
+    'fileserver.corp',
+    'pc.home',
+    'smtp.mail',
+    'nas.lan',
+  ])('blocks the internal name %s', (host) => {
+    expect(isBlockedHostname(host)).toBe(true)
+  })
+
+  // Guards against over-broad suffix matching on real public domains.
+  it.each([
+    'example.com',
+    'mdexample.net',
+    'internal.example.com',
+    'local.example.com',
+    'corp.cdc.gov',
+    'mail.google.com',
+    'myinternal.com',
+    'thelan.org',
+    'homestead.com',
+    'mailchimp.com',
+    'dev.console.izgateway.org',
+  ])('does not block the public name %s', (host) => {
+    expect(isBlockedHostname(host)).toBe(false)
   })
 })
 

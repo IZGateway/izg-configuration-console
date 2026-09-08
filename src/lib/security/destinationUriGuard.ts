@@ -112,8 +112,13 @@ const isBlockedIpv6 = (ip: string): boolean => {
  * file or an internal resolver knows about comes back with zero addresses.
  * Those names have to be rejected by name instead.
  *
- * Covers RFC 6761 / RFC 8375 special-use names plus the common internal
- * suffixes used by mDNS and cloud private zones.
+ * Covers RFC 6761 / RFC 8375 special-use names, the strings ICANN permanently
+ * withheld from delegation as high-risk (.corp, .home, .mail), and the
+ * conventional suffixes used by mDNS, home routers and cloud private zones.
+ *
+ * None of these can ever be a real public destination: they are either
+ * reserved by standard or undelegatable, so no jurisdiction endpoint can
+ * legitimately live under one.
  */
 const BLOCKED_HOST_SUFFIXES = [
   'localhost',
@@ -122,6 +127,10 @@ const BLOCKED_HOST_SUFFIXES = [
   '.internal',
   '.intranet',
   '.home.arpa',
+  '.home',
+  '.corp',
+  '.mail',
+  '.lan',
   '.test',
   '.invalid',
   '.localdomain',
@@ -143,6 +152,37 @@ export const isBlockedAddress = (ip: string): boolean => {
     return isBlockedIpv6(ip)
   }
   return true // not an IP literal at all - fail closed
+}
+
+/**
+ * Validates the destination URI exactly as it was supplied, before any
+ * hostname-defaulting happens.
+ *
+ *
+ * This check cannot be folded into {@link assertSafeDestinationUrl}. A URI like
+ * `file:///etc/passwd` has an empty hostname, so the caller's "prepend the hub
+ * host if there isn't one" step rewrites it into `https://file:///etc/passwd` -
+ * an https URL with hostname `file`. The dangerous scheme is gone by then and
+ * the protocol check would pass, so the raw value has to be judged first.
+ *
+ * A URI that does not parse as absolute is a relative path, resolved against
+ * the trusted hub base later; those are left to the main guard.
+ */
+export const assertSafeRawDestinationUri = (rawDestUri?: string): void => {
+  if (!rawDestUri) {
+    return
+  }
+  let parsed: URL
+  try {
+    parsed = new URL(rawDestUri)
+  } catch {
+    return // relative URI
+  }
+  if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+    throw new UnsafeDestinationUriError(
+      `Protocol "${parsed.protocol}" is not permitted. Only http and https destinations can be tested.`
+    )
+  }
 }
 
 /**
