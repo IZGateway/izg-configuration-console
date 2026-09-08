@@ -9,6 +9,12 @@
 // The request-context/logging middleware is stubbed to a pass-through so the
 // raw handlers can be exercised directly.
 
+// These tests exercise the real requireApiKeyAccess/hasApiKeyPermission gate
+// (only the db client + session are mocked), so the feature-wide kill switch
+// (apiKeyAuthz.ts isApiKeyManagementEnabled, default false) must be explicitly
+// enabled here or every route would 403 regardless of role/ownership fixtures.
+process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'true'
+
 const mockGetServerSession = jest.fn()
 const mockGetDbClient = jest.fn()
 
