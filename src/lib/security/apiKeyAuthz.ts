@@ -18,14 +18,31 @@ import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessContro
 export type ApiKeyPermission = keyof ApiKeyManagementPageAccessControl
 
 /**
+ * Release flag (IGDD-3444, per the Feature Flag Strategy), independent of
+ * role. The feature is still short several planned pieces (filters, audit
+ * log, test coverage — see the OpenSpec change), so this lets ops fully
+ * hide/disable it for every role — including IZG/Jurisdiction Operations, who
+ * otherwise have full access — via a runtime env var (no rebuild: read at
+ * request time, unlike a `NEXT_PUBLIC_` var which would be inlined into the
+ * client bundle at build time). Defaults to disabled so a missing/unset var
+ * never accidentally exposes an unfinished feature. Remove this flag and the
+ * branch it guards once the feature has launched.
+ */
+export function isApiKeyManagementEnabled(): boolean {
+  return process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED === 'true'
+}
+
+/**
  * Resolve the API-key access controls for a session's role — the server-side
  * equivalent of `useRoleAccess()` for the `/apikeys` page. Roles that are not
  * present in the access matrix (IZG Program, CDC Program, CDC CISO) resolve to
- * `undefined`, which every caller treats as deny-by-default.
+ * `undefined`, which every caller treats as deny-by-default. Also `undefined`
+ * for every role while the feature-wide kill switch is off.
  */
 export function getApiKeyAccess(
   session: any
 ): ApiKeyManagementPageAccessControl | undefined {
+  if (!isApiKeyManagementEnabled()) return undefined
   const role = session?.user?.role
   if (!role) return undefined
   return accessLevel[role]?.apikeys
