@@ -1,5 +1,19 @@
 # Release Notes
 
+## Release v1.18.0
+
+- IGDD-3444 — Add environment variable to be able to turn off/on API Key Feature
+- IGDD-3341 — Creating a new API key for a domain that has an existing API key does not recognize the TXT validation has already occurred
+- IGDD-3184 — API Key Management (Config Console) - follow-up work
+- IGDD-3337 — Snackbar contains incorrect message when clicking 'verify' on a new api key when txt record doesn't exist
+- IGDD-3286 — Config Console: intermittent "not valid JSON" page failures from DPoP verification crash and startup race
+- IGDD-3107 — Add revoke and renew key feature on cc UI
+- IGDD-3106 — Add create key feature on cc UI
+- IGDD-2709 — Update Roles and Access Definitions for API Key Management
+- IGDD-2276 — Display issue upon scheduling a maintenance period needs correction
+- IGDD-2272 — Add Circuit Breaker Reset and Database Refresh capabilities to CC for Admin Users
+- IGDD-2126 — End point url on connections table isnt updated after updating and deploying url change through edit workflow
+
 ## Release v1.17.0
 
 - IGDD-2223 — Report the user that initiated a log-message action 
