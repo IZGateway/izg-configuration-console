@@ -7,6 +7,7 @@ import { Destination } from '../../../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../../../lib/type/DestinationChangeRequest'
 import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
+import { refreshHubForEnvironment } from '../../../../lib/utils/izghubdbrefresh'
 /**
  * @swagger
  * /api/changerequest/deploye/{id}:
@@ -134,7 +135,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           session.user.name
         ), // log creator info
         dbClient.deleteDestinationChangeRequest(changeRequestId), // log deleter info
-      ]).then((results) => {
+      ]).then(async (results) => {
         enum calls {
           updateDestination = 0,
           createDestinationChangeRequestDeploymentAudit = 1,
@@ -144,6 +145,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           logger.info(
             `Jira change request ${changeRequest.jiraId} deployed successfully`
           )
+          try {
+            const hubRefreshResult = await refreshHubForEnvironment(
+              changeRequest.destType.typeId
+            )
+            logger.info('Signaled hub to refresh after change request deploy', {
+              jiraId: changeRequest.jiraId,
+              destId: changeRequest.destId,
+              destinationType: changeRequest.destType.type,
+              ...hubRefreshResult,
+            })
+          } catch (err) {
+            logger.error(
+              'Failed to signal hub to refresh after change request deploy',
+              {
+                jiraId: changeRequest.jiraId,
+                destId: changeRequest.destId,
+                destinationType: changeRequest.destType.type,
+                error: err.message,
+              }
+            )
+          }
           res.status(200).json('update successful')
           logger.info(
             'Changes for ' +

@@ -43,7 +43,7 @@ const JurisdictionSupportAccess: PageControls = {
     canViewConnectionInfoDetails: true,
     canViewHubStatusHistory: true,
   } as HistoryPageAccessControl,
-  apikeymanagement: {
+  apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
   } as ApiKeyManagementPageAccessControl,
 }

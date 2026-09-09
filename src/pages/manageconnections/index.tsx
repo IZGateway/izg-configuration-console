@@ -80,6 +80,11 @@ export const getServerSideProps = withRequestContext(
 
         return {
           ...endpoint,
+          // Hub's statushistory destUri is a polling cache that lags behind
+          // the destination record until the next scheduled status check
+          // (IGDD-2126); the destination record is updated synchronously on
+          // deploy, so prefer it when available.
+          destUri: destination?.destUri ?? endpoint.destUri,
           hasChangeRequest: !!destinationChangeRequest,
           hasActiveDraft: destinationChangeRequest?.jiraId === null,
           hasActiveMaintenance: hasActiveMaintenance(

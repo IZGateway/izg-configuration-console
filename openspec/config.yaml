@@ -33,12 +33,20 @@ context: |
 
 rules:
   proposal:
-    - State the user-facing or operational problem and why it matters before the solution.
-    - Note impact on auth, jurisdiction scoping, or encrypted fields when relevant — these are security-sensitive.
+    - State the user-facing or operational problem and why it matters before the
+      solution.
+    - Note impact on auth, jurisdiction scoping, or encrypted fields when
+      relevant — these are security-sensitive.
   specs:
     - Use Given/When/Then for behavioral requirements.
-    - Reference existing patterns (withMiddleware, DbClientFactory, ConnectionTestFactory, access matrices) before inventing new ones.
+    - Reference existing patterns (withMiddleware, DbClientFactory,
+      ConnectionTestFactory, access matrices) before inventing new ones.
   design:
-    - Respect existing layer boundaries (middleware → API route → DbClient/EncryptedRepository); read context from AsyncLocalStorage rather than threading user through args.
+    - Respect existing layer boundaries (middleware → API route →
+      DbClient/EncryptedRepository); read context from AsyncLocalStorage rather
+      than threading user through args.
   tasks:
-    - Include lint + type-check + tests (`npm run code-quality-check` and `npm run test`) as verification steps.
+    - Include lint + type-check + tests (`npm run code-quality-check` and `npm
+      run test`) as verification steps.
+githubCopilot:
+  cloudAgent: true
