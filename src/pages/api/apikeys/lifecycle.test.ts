@@ -9,6 +9,14 @@
 // The request-context/logging middleware is stubbed to a pass-through so the
 // raw handlers can be exercised directly.
 
+// These tests exercise the real requireApiKeyAccess/hasApiKeyPermission gate
+// (only the db client + session are mocked), so the feature-wide kill switch
+// (apiKeyAuthz.ts isApiKeyManagementEnabled, default false) must be enabled or
+// every route would 403 regardless of role/ownership fixtures. It is set in
+// jest.setup.js, NOT here: this file sits under `src/pages/`, so Next.js compiles
+// it into a real route and a module-scope `process.env.… = 'true'` would ship in
+// the production server bundle and flip the kill switch on in the container.
+
 const mockGetServerSession = jest.fn()
 const mockGetDbClient = jest.fn()
 
