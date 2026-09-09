@@ -1,16 +1,16 @@
 ## 1. Reusable release workflow core
 
-- [ ] 1.1 Create `.github/workflows/_release_common.yml` as a `workflow_call` reusable
+- [x] 1.1 Create `.github/workflows/_release_common.yml` as a `workflow_call` reusable
       workflow with inputs `release-version`, `app-version`, `release-type`,
       `develop-branch`, `main-branch`, `dry-run`, `skip-aphl`, adapted from
       `izg-transformation-ui`'s version. Verify with
       `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/_release_common.yml'))"`.
-- [ ] 1.2 Add the GitHub App token step (`actions/create-github-app-token` using
+- [x] 1.2 Add the GitHub App token step (`actions/create-github-app-token` using
       `RELEASE_AUTOMATION_APP_ID`/`RELEASE_AUTOMATION_APP_KEY`), checkout with
       `fetch-depth: 0`, Node 24 setup, npm registry auth for `@izgateway`, and Git identity
       configuration. Verify the job has no syntax errors via the same `yaml.safe_load`
       check.
-- [ ] 1.3 Implement the validate step per `specs/release-automation/spec.md` —
+- [x] 1.3 Implement the validate step per `specs/release-automation/spec.md` —
       Requirements "Standard releases only run from the develop branch", "Hotfix releases
       only run from a hotfix branch", "Release version must be well-formed and unused",
       "Release version must be newer than the latest release", "A hotfix release runs from
@@ -21,25 +21,25 @@
       release branch, malformed version, non-newer version, non-newer app-version,
       mismatched/non-descending hotfix branch, and unknown release-type each produce a
       failure before any other step runs).
-- [ ] 1.4 Implement release-branch creation (standard) / reuse (hotfix) per design.md
+- [x] 1.4 Implement release-branch creation (standard) / reuse (hotfix) per design.md
       Decisions, pushing with the App token. Verify the step only runs
       `if: inputs.release-type == 'standard'`.
-- [ ] 1.5 Implement release-notes generation into `RELEASE_NOTES.md` per spec Requirement
+- [x] 1.5 Implement release-notes generation into `RELEASE_NOTES.md` per spec Requirement
       "Release notes are generated from merged pull requests", including the
       no-merged-PRs fallback. Verify by tracing the script against both scenarios in that
       requirement.
-- [ ] 1.6 Implement the `package.json`/lockfile version bump to `release-version` on the
+- [x] 1.6 Implement the `package.json`/lockfile version bump to `release-version` on the
       release branch. Verify the step commits only when the version actually changes
       (skips an empty commit otherwise).
-- [ ] 1.7 Implement quality gates: `npm ci --force` (per design.md — keep `--force`, do
+- [x] 1.7 Implement quality gates: `npm ci --force` (per design.md — keep `--force`, do
       not copy `izg-transformation-ui`'s plain `npm ci`), `npm run code-quality-check`,
       `npm test` with `continue-on-error: true`, and `npm audit --audit-level=high` as a
       hard gate. Verify against spec Requirements "A high or critical vulnerability blocks
       a release" and "Unit test failures do not block a release".
-- [ ] 1.8 Implement app-version computation for standard releases (explicit `app-version`
+- [x] 1.8 Implement app-version computation for standard releases (explicit `app-version`
       input, else auto minor-bump `MAJ.(MIN+1).0`). Verify against spec Requirement "A
       successful standard release advances develop to the next version".
-- [ ] 1.9 Implement registry logins (GHCR always; AWS ECR dev and APHL ECR skipped when
+- [x] 1.9 Implement registry logins (GHCR always; AWS ECR dev and APHL ECR skipped when
       `dry-run` is true; APHL also skipped when `skip-aphl` is true) and image-tag
       computation, publishing only plain semver tags and `latest` (no legacy
       `{version}-{run_number}` aliases), keeping this repo's image name
@@ -47,21 +47,21 @@
       Requirements "A dry run skips registry publication and the vulnerability scan" and
       "A successful real release publishes to every configured registry" (including the
       APHL-skip scenario).
-- [ ] 1.10 Implement the single Docker build/push step (`push: ${{ inputs.dry-run ==
+- [x] 1.10 Implement the single Docker build/push step (`push: ${{ inputs.dry-run ==
       false }}`) using this repo's `Dockerfile` and build args (`BUILD_ID`, `NPM_TOKEN`).
       Verify the tags passed match the computed tag list from 1.9.
-- [ ] 1.11 Implement merge-to-main, semver tag creation, and GitHub Release creation
+- [x] 1.11 Implement merge-to-main, semver tag creation, and GitHub Release creation
       (`draft: ${{ inputs.dry-run == true }}`), all running unconditionally regardless of
       `dry-run` (only the `draft` flag depends on it). Verify against spec Requirement "A
       dry run skips registry publication and the vulnerability scan" — specifically the
       "Dry run still performs the branch, tag, and version changes" scenario.
-- [ ] 1.12 Implement merge-back-to-develop with the version bump from 1.8 for standard
+- [x] 1.12 Implement merge-back-to-develop with the version bump from 1.8 for standard
       releases only, leaving develop's version untouched for hotfixes. Verify against spec
       Requirement "A successful standard release advances develop to the next version"
       (both scenarios).
-- [ ] 1.13 Implement the job summary step listing release type, version, branches,
+- [x] 1.13 Implement the job summary step listing release type, version, branches,
       dry-run/skip-aphl flags, and published image tags.
-- [ ] 1.14 Implement the failure-cleanup step using per-step output gates and `git revert`
+- [x] 1.14 Implement the failure-cleanup step using per-step output gates and `git revert`
       (not force-push) for tag deletion, main-branch revert, develop-branch revert, and
       release-branch deletion (hotfix branches kept, not deleted). Verify against spec
       Requirement "A failed release only reverts what that run created" (both scenarios:
@@ -69,32 +69,32 @@
 
 ## 2. Entry-point workflows
 
-- [ ] 2.1 Create `.github/workflows/release.yml`: `workflow_dispatch` with inputs
+- [x] 2.1 Create `.github/workflows/release.yml`: `workflow_dispatch` with inputs
       `release-version`, `app-version`, `develop-branch`, `main-branch`, `dry-run`,
       `skip-aphl`; calls `_release_common.yml` with `release-type: standard` and
       `secrets: inherit`. Verify with the `yaml.safe_load` check and by confirming every
       input it declares is passed through to `_release_common.yml`.
-- [ ] 2.2 Create `.github/workflows/hotfix.yml`: `workflow_dispatch` with inputs
+- [x] 2.2 Create `.github/workflows/hotfix.yml`: `workflow_dispatch` with inputs
       `release-version`, `develop-branch`, `main-branch`, `dry-run`, `skip-aphl`; calls
       `_release_common.yml` with `release-type: hotfix`. Include a header comment
       documenting the hotfix branch-creation steps (branch from `main`, PR fixes into it,
       then run this workflow), matching `izg-transformation-ui`'s convention. Verify with
       the `yaml.safe_load` check.
-- [ ] 2.3 Add a shared `concurrency` block (e.g. group `release-${{ github.repository }}`,
+- [x] 2.3 Add a shared `concurrency` block (e.g. group `release-${{ github.repository }}`,
       `cancel-in-progress: false`) to both `release.yml` and `hotfix.yml` so a standard and
       a hotfix release can never run at the same time. Verify both files use the identical
       group expression.
 
 ## 3. Vulnerability scan integration
 
-- [ ] 3.1 Create `.github/workflows/scan-ecr-image.yml` with a `wait-for-inspector2-scan`
+- [x] 3.1 Create `.github/workflows/scan-ecr-image.yml` with a `wait-for-inspector2-scan`
       job (continue-on-error) and a `scan-report` job that calls
       `IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1` with
       `ecr-repository: izg-configuration-console` and `gh-pkg-name: izgw-cc` (matching the
       `izgw-cc-` APHL tag prefix). Verify with the `yaml.safe_load` check and by confirming
       all four required inputs of `ecr-scan-report.yml` (`ecr-repository`, `image-tag`,
       `gh-pkg-name`, `release-date`) are supplied.
-- [ ] 3.2 Wire `scan-ecr-image.yml` into `_release_common.yml` as a sibling job
+- [x] 3.2 Wire `scan-ecr-image.yml` into `_release_common.yml` as a sibling job
       (`needs: release`, `if: inputs.dry-run == false`), granting `id-token: write` /
       `contents: read`, and propagate `id-token: write` up through `release.yml` and
       `hotfix.yml`. Verify against spec Requirement "The vulnerability scan never blocks a
@@ -103,10 +103,10 @@
 
 ## 4. Retire the old release pipeline
 
-- [ ] 4.1 Delete `.github/workflows/create-release-branch.yml`. Verify the file no longer
+- [x] 4.1 Delete `.github/workflows/create-release-branch.yml`. Verify the file no longer
       exists and no other workflow references it (`grep -r create-release-branch
       .github/`).
-- [ ] 4.2 Remove the `release/**` push trigger and the APHL-ECR push job from
+- [x] 4.2 Remove the `release/**` push trigger and the APHL-ECR push job from
       `.github/workflows/deploy.yml`, keeping the `pull_request`/`schedule`/
       `workflow_dispatch` triggers and the GHCR/AWS-ECR build and `deploy-dev` job intact.
       Verify with `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/deploy.yml'))"`
@@ -114,12 +114,12 @@
 
 ## 5. Documentation
 
-- [ ] 5.1 Update `.github/WORKFLOW_TRIGGERS.md` to document `release.yml`, `hotfix.yml`,
+- [x] 5.1 Update `.github/WORKFLOW_TRIGGERS.md` to document `release.yml`, `hotfix.yml`,
       `_release_common.yml`, and `scan-ecr-image.yml` (triggers, inputs, the OIDC/
       `AWS_ROLE_ARN` prerequisite), mirroring the equivalent section already written for
       `izg-transformation-ui`. Verify by reading the updated section against the actual
       workflow files from section 1-3.
-- [ ] 5.2 Update `.github/WORKFLOW_SCHEDULE.md`'s "Integration with Other Workflows"
+- [x] 5.2 Update `.github/WORKFLOW_SCHEDULE.md`'s "Integration with Other Workflows"
       section to replace the "Create Release Branch" entry with the new `release.yml`/
       `hotfix.yml` entry points. Verify the removed workflow name no longer appears
       anywhere in the file (`grep create-release-branch .github/WORKFLOW_SCHEDULE.md`
@@ -127,7 +127,7 @@
 
 ## 6. End-to-end verification
 
-- [ ] 6.1 Confirm `main` and `develop` branch protection has been relaxed to match
+- [x] 6.1 Confirm `main` and `develop` branch protection has been relaxed to match
       `izg-transformation-ui` (no required approving review) and the release App is
       installed with the permissions listed in design.md, before running anything in this
       section. Verify via `gh api repos/IZGateway/izg-configuration-console/branches/main/protection`
@@ -152,6 +152,6 @@
 - [ ] 6.5 Verify concurrency: trigger `release.yml` twice in quick succession (or
       `release.yml` and `hotfix.yml` together) and confirm the second run queues behind the
       first via the shared concurrency group rather than running in parallel.
-- [ ] 6.6 Confirm `npm run code-quality-check` passes locally with the new/edited workflow
+- [x] 6.6 Confirm `npm run code-quality-check` passes locally with the new/edited workflow
       files present (no application code changed, so this should be a no-op check that
       nothing else broke).
