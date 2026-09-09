@@ -43,6 +43,27 @@ This spacing ensures:
 
 All workflows support manual triggering via `workflow_dispatch`, which can be initiated from the GitHub Actions UI regardless of schedule.
 
+## Integration with Other Workflows
+
+### Deploy Workflow
+- **Triggered by:** Pull requests to `develop` and manual dispatch
+- **No conflict:** Event-driven and no longer triggered by `release/**` pushes
+
+### Standard and Hotfix Releases
+- **Entry points:** `.github/workflows/release.yml` and `.github/workflows/hotfix.yml`
+- **Triggered by:** Manual dispatch only
+- **Serialization:** Both use the same concurrency group and never run in parallel
+- **Best practice:** Complete security updates before cutting a release
+
+### Advisory Image Scan
+- **File:** `.github/workflows/scan-ecr-image.yml`
+- **Triggered by:** Real releases or manual dispatch
+- **No conflict:** Runs after image publication and does not block the release job
+
+### Gitleaks
+- **Triggered by:** Push and pull request events
+- **No conflict:** Event-driven, not scheduled
+
 ## Recommendations
 
 ### If you need to add new scheduled workflows:
