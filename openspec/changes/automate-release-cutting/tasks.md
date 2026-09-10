@@ -20,7 +20,7 @@
       the step logic against each spec scenario (branch mismatch, existing tag, existing
       release branch, malformed version, non-newer version, non-newer app-version,
       mismatched/non-descending hotfix branch, and unknown release-type each produce a
-      failure before any other step runs).
+      failure before any other step runs). Run `npm run test:release-validation`.
 - [x] 1.4 Implement release-branch creation (standard) / reuse (hotfix) per design.md
       Decisions, pushing with the App token. Verify the step only runs
       `if: inputs.release-type == 'standard'`.
@@ -94,12 +94,11 @@
       `izgw-cc-` APHL tag prefix). Verify with the `yaml.safe_load` check and by confirming
       all four required inputs of `ecr-scan-report.yml` (`ecr-repository`, `image-tag`,
       `gh-pkg-name`, `release-date`) are supplied.
-- [x] 3.2 Wire `scan-ecr-image.yml` into `_release_common.yml` as a sibling job
-      (`needs: release`, `if: inputs.dry-run == false`), granting `id-token: write` /
-      `contents: read`, and propagate `id-token: write` up through `release.yml` and
-      `hotfix.yml`. Verify against spec Requirement "The vulnerability scan never blocks a
-      release" (both scenarios: findings present, scan errors/times out) by confirming the
-      `release` job's own success/failure does not depend on this job.
+- [x] 3.2 Dispatch `scan-ecr-image.yml` as a separate workflow run after a successful,
+      non-dry release. Grant `actions: write` through `release.yml`, `hotfix.yml`, and
+      `_release_common.yml`, and make dispatch failure non-blocking. Verify against spec
+      Requirement "The vulnerability scan never blocks a release" by confirming scan
+      status cannot change the release workflow run's conclusion.
 
 ## 4. Retire the old release pipeline
 
@@ -132,26 +131,59 @@
       installed with the permissions listed in design.md, before running anything in this
       section. Verify via `gh api repos/IZGateway/izg-configuration-console/branches/main/protection`
       and the equivalent for `develop` returning no required-review rule.
-- [ ] 6.2 Trigger `release.yml` once with `dry-run: true` from `develop`, using a version
+- [x] 6.2 Trigger `release.yml` once with `dry-run: true` from `develop`, using a version
       genuinely newer than the latest tag, per design.md's Migration Plan. Verify the run:
       passes validation, generates the App token, pushes the release branch, commits
       release notes and the version bump, merges to `main`, creates the semver tag, merges
       back to `develop`, builds but does not push the image, skips the vulnerability scan,
       and creates a **draft** GitHub Release. Then manually delete the test tag, revert the
       two merge commits, delete the release branch, and delete the draft release.
-- [ ] 6.3 Trigger `hotfix.yml` once with `dry-run: true` from a real `hotfix/<version>`
+- [x] 6.3 Trigger `hotfix.yml` once with `dry-run: true` from a real `hotfix/<version>`
       branch created off `main`, using a version newer than the latest tag. Verify the run
       behaves like 6.2 except `develop`'s version is left unchanged and the hotfix branch
       is not deleted. Clean up the same way as 6.2 (except keep or delete the hotfix branch
       as appropriate).
-- [ ] 6.4 Verify each strict-validation failure scenario from
-      `specs/release-automation/spec.md` produces a validation failure with no side
-      effects: version not newer than latest tag, app-version not newer than release
-      version, hotfix branch name mismatch, hotfix branch not descended from main, and an
-      unrecognized release-type.
-- [ ] 6.5 Verify concurrency: trigger `release.yml` twice in quick succession (or
-      `release.yml` and `hotfix.yml` together) and confirm the second run queues behind the
-      first via the shared concurrency group rather than running in parallel.
 - [x] 6.6 Confirm `npm run code-quality-check` passes locally with the new/edited workflow
       files present (no application code changed, so this should be a no-op check that
       nothing else broke).
+
+## Optional follow-up verification
+
+- Trigger `release.yml` twice in quick succession (or `release.yml` and `hotfix.yml`
+  together) and confirm the second run queues behind the first via the shared concurrency
+  group rather than running in parallel.
+- Confirm the first real release publishes all expected registry tags and its separately
+  dispatched Inspector2 workflow produces the expected report artifact.
+
+## 7. Verification hardening
+
+- [x] 7.1 Move release validation into `.github/scripts/validate-release.sh`, pass
+      workflow inputs through environment variables, and validate configured branch names
+      before using them in Git commands.
+- [x] 7.2 Add `.github/scripts/validate-release.test.sh` covering every strict-validation
+      success and failure path with a temporary local Git remote and no remote side
+      effects.
+- [x] 7.3 Dispatch the advisory scan as a separate non-blocking workflow run. Keep
+      `actions/create-github-app-token@v3` on the `app-id` input. `client-id` is the
+      non-deprecated input, but it needs the GitHub App Client ID, which is a different
+      value from the numeric App ID that `RELEASE_AUTOMATION_APP_ID` holds and that
+      `izg-transformation-ui` also passes to `app-id`. The migration is deferred to a
+      follow-up that first adds a `RELEASE_AUTOMATION_CLIENT_ID` secret.
+- [x] 7.4 Update proposal, design, and workflow documentation to distinguish GitHub App,
+      `GITHUB_TOKEN`, and OIDC permissions and to describe the separate scan run.
+- [x] 7.5 Run the cleanup step on cancellation as well as failure
+      (`if: failure() || cancelled()`), so an operator who cancels a long release run still
+      gets scoped rollback and a cleanup report.
+- [x] 7.6 Stop publishing `latest` to the dev ECR from the release pipeline. The dev ECS
+      task definition pins `container_image_tag = "latest"`
+      (`iz-gateway-terraform/hub/console/terraform.tfvars`), so a release that moves that
+      tag deploys release code into dev on the next task restart. `deploy.yml` keeps
+      ownership of the dev `latest` tag. GHCR keeps `latest` as the release pointer.
+- [x] 7.7 Run `npm run test:release-validation` in `deploy.yml`'s `code-quality-check` job
+      and remove `.github/scripts/*` from the `paths-ignore` list, so a pull request that
+      only edits the validator gets CI coverage.
+- [ ] 7.8 Re-run one `dry-run: true` release after the section 7 edits. The earlier
+      dry-runs (`34393828960`, `34394992439`) both ran at commit `051a7fd`, which still had
+      inline validation, the reusable-workflow scan job, and no scan dispatch. Verify the
+      extracted `validate-release.sh`, the App-token step, and the advisory scan dispatch.
+      Clean up the test tag, merges, branch, and draft release afterward.

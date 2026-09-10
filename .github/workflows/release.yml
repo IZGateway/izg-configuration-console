@@ -36,10 +36,10 @@ on:
         default: false
 
 permissions:
+  actions: write
   contents: write
   packages: write
   pull-requests: read
-  id-token: write
 
 concurrency:
   group: release-${{ github.repository }}

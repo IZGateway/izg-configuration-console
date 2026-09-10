@@ -1,5 +1,5 @@
 # Advisory ECR image vulnerability scan.
-# This workflow can run manually or after a real release.
+# This workflow runs manually or by dispatch from a successful real release.
 
 name: Scan ECR Image
 
@@ -10,13 +10,6 @@ on:
         description: 'Image tag in the izg-configuration-console ECR repository.'
         required: true
         type: string
-  workflow_call:
-    inputs:
-      image-tag:
-        description: 'Image tag in the izg-configuration-console ECR repository.'
-        required: true
-        type: string
-
 permissions:
   id-token: write
   contents: read
