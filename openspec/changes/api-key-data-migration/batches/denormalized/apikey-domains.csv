@@ -30,7 +30,7 @@ production,1,ncir2.ncdhhs.gov,North Carolina Department of Health and Human Serv
 production,1,miis.massimmunize.org,Massachusetts Department of Public Health,jurisdiction,22,MA MIIS,authorized,2027-02-09
 production,1,miis-cert.massimmunize.org,Massachusetts Department of Public Health,jurisdiction,22,MA MIIS,authorized,2027-02-04
 production,1,viirs.optimoz.com,Optimoz Inc.,jurisdiction,56,U.S. Virgin Islands,authorized,2026-11-21
-production,1,hco.optimoz.com,Optimoz Inc.,jurisdiction,56,U.S. Virgin Islands,authorized,2026-11-21
+onboarding,3,hco.optimoz.com,Optimoz Inc.,jurisdiction,56,U.S. Virgin Islands,authorized,2026-11-21
 production,1,dhswir.org,Wisconsin Department of Health Services,jurisdiction,61,WI WIR,authorized,2026-12-15
 production,1,flshotsizgateway.flshots.com,Florida Department of Health,jurisdiction,12,FL SHOTS,authorized,2026-12-02
 production,1,iris.dhw.idaho.gov,Idaho Department of Health and Welfare,jurisdiction,16,ID IRIS,authorized,2026-08-15
