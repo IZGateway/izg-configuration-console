@@ -23,6 +23,21 @@ import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessContro
 export type ApiKeyPermission = keyof ApiKeyManagementPageAccessControl
 
 /**
+ * Release flag (IGDD-3444, per the Feature Flag Strategy), independent of
+ * role. The feature is still short several planned pieces (filters, audit
+ * log, test coverage — see the OpenSpec change), so this lets ops fully
+ * hide/disable it for every role — including IZG/Jurisdiction Operations, who
+ * otherwise have full access — via a runtime env var (no rebuild: read at
+ * request time, unlike a `NEXT_PUBLIC_` var which would be inlined into the
+ * client bundle at build time). Defaults to disabled so a missing/unset var
+ * never accidentally exposes an unfinished feature. Remove this flag and the
+ * branch it guards once the feature has launched.
+ */
+export function isApiKeyManagementEnabled(): boolean {
+  return process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED === 'true'
+}
+
+/**
  * Resolve the API-key flags for a session — the server-side equivalent of
  * `useRoleAccess()` for the `/apikeys` page.
  *
@@ -30,10 +45,14 @@ export type ApiKeyPermission = keyof ApiKeyManagementPageAccessControl
  * roles is correct. It backs `hasApiKeyPermission`, which several routes call as
  * an early exit before the authoritative gate; unioning here is what stops a
  * multi-role user being rejected by that pre-check before ever reaching it.
+ *
+ * Also `undefined` for every role while the feature-wide kill switch
+ * (`isApiKeyManagementEnabled`) is off.
  */
 export function getApiKeyAccess(
   session: unknown
 ): Partial<ApiKeyManagementPageAccessControl> | undefined {
+  if (!isApiKeyManagementEnabled()) return undefined
   const subject = subjectOf(session)
   if (subject.roles.length === 0) return undefined
   return mergePageAccess(subject, 'apikeys')

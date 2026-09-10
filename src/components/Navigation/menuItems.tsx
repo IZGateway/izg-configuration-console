@@ -62,10 +62,15 @@ export const menuItems: MenuItem[] = [
     // apikeys access (its own jurisdiction's keys), so gate on the actual
     // permission rather than the narrower IZG-Operations-only isAdmin flag —
     // otherwise those users could use the page but never find it in the nav.
+    // Also requires the apiKeyManagementEnabled release flag (IGDD-3444),
+    // set server-side per request in the session callback, so the link
+    // disappears for every role while the feature is disabled.
     adminOnly: false,
-    // Visible if ANY held role can list keys. A "what"-only check with no
-    // jurisdiction, so unioning across roles is correct here.
-    isVisible: (roles) =>
+    // Visible if the feature-wide kill switch is on AND any held role can
+    // list keys. A "what"-only role check with no jurisdiction, so unioning
+    // across roles is correct here.
+    isVisible: (roles, session) =>
+      !!session?.apiKeyManagementEnabled &&
       (roles ?? []).some(
         (role) => !!accessLevel[role]?.apikeys?.canListApiKeys
       ),

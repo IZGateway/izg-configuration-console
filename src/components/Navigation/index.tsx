@@ -7,6 +7,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
+import type { Session } from 'next-auth'
 import Cookies from 'js-cookie'
 import {
   Collapse,
@@ -77,10 +78,12 @@ export type MenuItem = {
   adminOnly?: boolean
   // For nav items gated on a specific permission rather than the coarse
   // isAdmin flag (e.g. API Key Management, which Jurisdiction Operations can
-  // also use) — receives ALL roles the user holds, so an item is visible when
-  // any held role grants it. Nav visibility is discoverability only; the API
-  // routes remain the security boundary.
-  isVisible?: (roles: string[] | undefined) => boolean
+  // also use) — receives ALL roles the user holds (so an item is visible when
+  // any held role grants it) and the full session, for flags that live
+  // outside the role matrix (e.g. apiKeyManagementEnabled, the feature-wide
+  // kill switch). Nav visibility is discoverability only; the API routes
+  // remain the security boundary.
+  isVisible?: (roles: string[] | undefined, session?: Session | null) => boolean
 }
 
 const MiniDrawer = () => {
@@ -159,7 +162,7 @@ const MiniDrawer = () => {
           .filter(
             (item) =>
               (!item.adminOnly || session.user.isAdmin) &&
-              (!item.isVisible || item.isVisible(session.user.roles))
+              (!item.isVisible || item.isVisible(session.user.roles, session))
           )
           .map((item: MenuItem, index) => (
             <ListItem

@@ -23,6 +23,8 @@ declare module 'next-auth' {
       /** Jurisdiction prefixes from the Okta userinfo claim, lowercased. */
       jurisdictions: string[]
     }
+    /** Release flag (IGDD-3444) gating the API Key Management nav link/page/APIs for every role. */
+    apiKeyManagementEnabled: boolean
   }
 }
 
