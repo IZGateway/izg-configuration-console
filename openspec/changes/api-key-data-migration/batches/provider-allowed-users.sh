@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # provider-allowed-users.sh — Load Provider AllowedUser records into DynamoDB
 #
 # Reads batches/denormalized/allowed-users-provider.csv and issues one put-item per row.

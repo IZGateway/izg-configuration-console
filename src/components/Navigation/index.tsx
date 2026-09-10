@@ -75,6 +75,10 @@ export type MenuItem = {
   icon: any
   path: string
   adminOnly?: boolean
+  // For nav items gated on a specific permission rather than the coarse
+  // isAdmin flag (e.g. API Key Management, which Jurisdiction Operations can
+  // also use) — receives the session's role, same lookup useRoleAccess uses.
+  isVisible?: (role: string | undefined) => boolean
 }
 
 const MiniDrawer = () => {
@@ -150,7 +154,11 @@ const MiniDrawer = () => {
         }}
       >
         {menuItems
-          .filter((item) => !item.adminOnly || session.user.isAdmin)
+          .filter(
+            (item) =>
+              (!item.adminOnly || session.user.isAdmin) &&
+              (!item.isVisible || item.isVisible(session.user.role))
+          )
           .map((item: MenuItem, index) => (
             <ListItem
               key={item.label}

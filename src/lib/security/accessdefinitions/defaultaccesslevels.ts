@@ -53,6 +53,7 @@ const defaultApiKeyManagementPageAccessControl: ApiKeyManagementPageAccessContro
     canCreateApiKey: false,
     canRevokeApiKey: false,
     canRenewApiKey: false,
+    canCancelApiKey: false,
   }
 
 export {

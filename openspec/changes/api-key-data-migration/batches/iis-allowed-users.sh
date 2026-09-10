@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # iis-allowed-users.sh — Load IIS AllowedUser records into DynamoDB
 #
 # Reads batches/denormalized/allowed-users-iis.csv and issues one put-item per row.
