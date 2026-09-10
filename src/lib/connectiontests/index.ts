@@ -13,6 +13,13 @@ import {
   UnsafeDestinationUriError,
 } from '../security/destinationUriGuard'
 
+/**
+ * Title of the URL validation test. This runs before every other test: if the
+ * destination URL is not a permitted target, it is the only test reported and
+ * nothing is connected to.
+ */
+export const URL_VALIDATION_TEST_NAME = 'Validate destination URL'
+
 type UserContext = {
   name?: string
   email?: string
@@ -149,12 +156,13 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
             destination.jurisdiction?.description || 'unknown',
           testResults: [
             {
-              name: '',
-              detail: `No tests were run because the requested destination's URL is not a permitted test target.`,
+              name: URL_VALIDATION_TEST_NAME,
               status: TestStatus.FAIL,
-              order: -1,
+              order: 1,
               message: error.message,
-              type: '',
+              detail:
+                'No further tests were run. Correct the destination URL and test again.',
+              type: 'urlvalidation',
             },
           ],
         },

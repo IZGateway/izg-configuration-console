@@ -7,19 +7,41 @@ import { promises as dnsPromises } from 'dns'
  * The connection-test endpoint accepts a destination (including its `destUri`)
  * from the request body, so the URI is attacker-controlled even for an
  * authorized user. Every outbound target must therefore be validated here
- * before any socket is opened:
+ * before any socket is opened.
  *
- *  - only http/https (blocks file://, gopher://, tftp://, ftp:// ...)
- *  - no embedded credentials
- *  - port must be on the allowlist (blocks internal port scanning)
- *  - the hostname must not resolve to a private / loopback / link-local /
- *    otherwise-reserved address (blocks pivoting into the VPC and the
- *    169.254.169.254 instance metadata service)
+ * Rules, in order of application:
+ *
+ *  1. https only - never http, and never any other scheme
+ *  2. no query string (no '?' anywhere in the raw URI)
+ *  3. hostname must be an FQDN under an approved TLD
+ *  4. no embedded credentials
+ *  5. port must be on the allowlist (blocks internal port scanning)
+ *  6. every resolved address must be publicly routable (blocks pivoting into
+ *     the VPC and the 169.254.169.254 instance metadata service)
+ *
+ * Rules 1-3 come from the agreed destination URL specification. Rules 4-6 are
+ * retained on top of it: a syntactically perfect URL such as
+ * `https://evil.com/` satisfies rules 1-3 while still resolving to 10.0.0.5,
+ * so rule 6 in particular is what actually closes the SSRF finding.
  */
 
-const ALLOWED_PROTOCOLS = ['https:', 'http:']
+const REQUIRED_SCHEME = 'https:'
+
+/** The raw URI must literally start with this - see assertSafeRawDestinationUri. */
+const REQUIRED_PREFIX = 'https://'
 
 const DEFAULT_ALLOWED_PORTS = [80, 443]
+
+/**
+ * Approved destination hostname pattern: one or more DNS labels followed by an
+ * approved TLD (US government/health domains and US territories).
+ *
+ * This allowlist also does the work of an internal-hostname denylist: bare IP
+ * literals, `localhost`, `db.internal`, `nas.lan` and single-label hosts such
+ * as `izgateway` all fail it, because none end in an approved TLD.
+ */
+const APPROVED_HOSTNAME_PATTERN =
+  /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:gov|net|us|com|health|org|nyc|as|gu|pr|mp|fm)$/
 
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
   ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
@@ -105,44 +127,6 @@ const isBlockedIpv6 = (ip: string): boolean => {
   )
 }
 
-/**
- * Hostnames that must never be tested, regardless of what DNS says.
- *
- * The guard resolves against public DNS, so a name that only a local hosts
- * file or an internal resolver knows about comes back with zero addresses.
- * Those names have to be rejected by name instead.
- *
- * Covers RFC 6761 / RFC 8375 special-use names, the strings ICANN permanently
- * withheld from delegation as high-risk (.corp, .home, .mail), and the
- * conventional suffixes used by mDNS, home routers and cloud private zones.
- *
- * None of these can ever be a real public destination: they are either
- * reserved by standard or undelegatable, so no jurisdiction endpoint can
- * legitimately live under one.
- */
-const BLOCKED_HOST_SUFFIXES = [
-  'localhost',
-  '.localhost',
-  '.local',
-  '.internal',
-  '.intranet',
-  '.home.arpa',
-  '.home',
-  '.corp',
-  '.mail',
-  '.lan',
-  '.test',
-  '.invalid',
-  '.localdomain',
-]
-
-export const isBlockedHostname = (hostname: string): boolean => {
-  const host = hostname.toLowerCase().replace(/\.$/, '') // strip root dot
-  return BLOCKED_HOST_SUFFIXES.some((suffix) =>
-    suffix.startsWith('.') ? host.endsWith(suffix) : host === suffix
-  )
-}
-
 export const isBlockedAddress = (ip: string): boolean => {
   const version = isIP(ip)
   if (version === 4) {
@@ -155,32 +139,53 @@ export const isBlockedAddress = (ip: string): boolean => {
 }
 
 /**
- * Validates the destination URI exactly as it was supplied, before any
- * hostname-defaulting happens.
+ * Validates the destination URI as a raw string, before it is parsed or
+ * resolved. Both checks here are deliberately textual, because parsing
+ * destroys the evidence:
  *
+ *  - `new URL('https:/xyz.com')` silently normalises the single slash away and
+ *    reports protocol `https:` with hostname `xyz.com`, so a parsed check
+ *    cannot tell it apart from a well-formed URL. The spec requires it to fail.
+ *  - `new URL('https://host/x#?a=1')` reports an empty `search`, because the
+ *    '?' sits inside the fragment. The spec forbids '?' anywhere.
  *
- * This check cannot be folded into {@link assertSafeDestinationUrl}. A URI like
- * `file:///etc/passwd` has an empty hostname, so the caller's "prepend the hub
- * host if there isn't one" step rewrites it into `https://file:///etc/passwd` -
- * an https URL with hostname `file`. The dangerous scheme is gone by then and
- * the protocol check would pass, so the raw value has to be judged first.
- *
- * A URI that does not parse as absolute is a relative path, resolved against
- * the trusted hub base later; those are left to the main guard.
+ * A URI that does not parse as absolute is a relative path (for example
+ * `/dev/IISService`). Those are legitimate: the caller resolves them against
+ * the configured hub host, and the resulting absolute URL is validated by
+ * {@link assertSafeDestinationUrl}.
  */
 export const assertSafeRawDestinationUri = (rawDestUri?: string): void => {
   if (!rawDestUri) {
     return
   }
-  let parsed: URL
+
+  const raw = rawDestUri.trim()
+
+  let isAbsolute = true
   try {
-    parsed = new URL(rawDestUri)
+    new URL(raw)
   } catch {
-    return // relative URI
+    isAbsolute = false
   }
-  if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+
+  if (!isAbsolute) {
+    if (raw.includes('?')) {
+      throw new UnsafeDestinationUriError(
+        'Destination URLs must not contain a query string.'
+      )
+    }
+    return // relative path - validated after the hub host is attached
+  }
+
+  if (!raw.toLowerCase().startsWith(REQUIRED_PREFIX)) {
     throw new UnsafeDestinationUriError(
-      `Protocol "${parsed.protocol}" is not permitted. Only http and https destinations can be tested.`
+      `Destination URLs must begin with "${REQUIRED_PREFIX}".`
+    )
+  }
+
+  if (raw.includes('?')) {
+    throw new UnsafeDestinationUriError(
+      'Destination URLs must not contain a query string.'
     )
   }
 }
@@ -193,9 +198,15 @@ export const assertSafeRawDestinationUri = (rawDestUri?: string): void => {
  * connected to, and the DNS test reports the failure to the user as usual.
  */
 export const assertSafeDestinationUrl = async (url: URL): Promise<void> => {
-  if (!ALLOWED_PROTOCOLS.includes(url.protocol)) {
+  if (url.protocol !== REQUIRED_SCHEME) {
     throw new UnsafeDestinationUriError(
-      `Protocol "${url.protocol}" is not permitted. Only http and https destinations can be tested.`
+      `Protocol "${url.protocol}" is not permitted. Destinations must use https.`
+    )
+  }
+
+  if (url.search || url.href.includes('?')) {
+    throw new UnsafeDestinationUriError(
+      'Destination URLs must not contain a query string.'
     )
   }
 
@@ -210,36 +221,25 @@ export const assertSafeDestinationUrl = async (url: URL): Promise<void> => {
     throw new UnsafeDestinationUriError('Destination URL has no hostname.')
   }
 
+  // Bracketed IPv6 literals arrive from URL as "[::1]"
+  const bareHost = hostname.replace(/^\[|\]$/g, '')
+
+  if (!APPROVED_HOSTNAME_PATTERN.test(bareHost)) {
+    throw new UnsafeDestinationUriError(
+      `Destination host "${bareHost}" is not an approved destination hostname. It must be a fully qualified domain name ending in an approved top-level domain.`
+    )
+  }
+
   const allowedPorts = getAllowedPorts()
-  const port = url.port
-    ? Number(url.port)
-    : url.protocol === 'http:'
-      ? 80
-      : 443
+  const port = url.port ? Number(url.port) : 443
   if (!allowedPorts.includes(port)) {
     throw new UnsafeDestinationUriError(
       `Port ${port} is not permitted. Allowed ports: ${allowedPorts.join(', ')}.`
     )
   }
 
-  // Bracketed IPv6 literals arrive from URL as "[::1]"
-  const bareHost = hostname.replace(/^\[|\]$/g, '')
-
-  if (isBlockedHostname(bareHost)) {
-    throw new UnsafeDestinationUriError(
-      `Destination host "${bareHost}" is a local or internal-only name and cannot be tested.`
-    )
-  }
-
-  if (isIP(bareHost)) {
-    if (isBlockedAddress(bareHost)) {
-      throw new UnsafeDestinationUriError(
-        `Destination address ${bareHost} is in a reserved or private range and cannot be tested.`
-      )
-    }
-    return
-  }
-
+  // The hostname pattern rejects IP literals outright, so anything reaching
+  // here is a name that has to be resolved before it can be trusted.
   let addresses: string[]
   try {
     const [v4, v6] = await Promise.all([

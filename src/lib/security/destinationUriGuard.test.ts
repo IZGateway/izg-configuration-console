@@ -3,7 +3,6 @@
  */
 import {
   assertSafeRawDestinationUri,
-  isBlockedHostname,
   assertSafeDestinationUrl,
   isBlockedAddress,
   UnsafeDestinationUriError,
@@ -65,62 +64,46 @@ describe('isBlockedAddress', () => {
 })
 
 describe('assertSafeRawDestinationUri', () => {
-  // Regression: schemes with an empty authority used to survive the guard,
-  // because setHostnameIfNull rewrote them into https before it ran.
+  // Textual checks: parsing would hide these.
+  it('rejects https:/host - URL() silently normalises the missing slash', () => {
+    expect(() => assertSafeRawDestinationUri('https:/xyz.com')).toThrow(
+      UnsafeDestinationUriError
+    )
+  })
+
   it.each([
+    'http://xyz.com',
+    'ftp://xyz.com',
     'file:///etc/passwd',
-    'file://localhost/etc/passwd',
-    'data:text/plain,hello',
     'gopher://example.com/',
     'tftp://example.com/',
-    'ftp://example.com/',
+    'data:text/plain,hello',
     'mailto:someone@example.com',
     'javascript:alert(1)',
-  ])('rejects the raw URI %s', (raw) => {
+  ])('rejects %s for not beginning with https://', (raw) => {
     expect(() => assertSafeRawDestinationUri(raw)).toThrow(
       UnsafeDestinationUriError
     )
   })
 
   it.each([
-    'https://example.com/hub',
-    'http://example.com',
-    '/dev/IISService', // relative - resolved against the hub base later
+    'https://iis.wa.gov/x?a=1',
+    'https://iis.wa.gov/x#?a=1', // '?' in the fragment - url.search would be empty
+    '/dev/IISService?a=1', // relative, but still no query allowed
+  ])('rejects %s for containing a query string', (raw) => {
+    expect(() => assertSafeRawDestinationUri(raw)).toThrow(
+      UnsafeDestinationUriError
+    )
+  })
+
+  it.each([
+    'https://iis.wa.gov/hub',
+    'https://example.com',
+    '/dev/IISService', // relative - resolved against the hub base, checked later
     '',
     undefined,
   ])('allows %s through to the main guard', (raw) => {
     expect(() => assertSafeRawDestinationUri(raw)).not.toThrow()
-  })
-})
-
-describe('isBlockedHostname', () => {
-  it.each([
-    'db.internal',
-    'host.ec2.internal',
-    'x.compute.internal',
-    'fileserver.corp',
-    'pc.home',
-    'smtp.mail',
-    'nas.lan',
-  ])('blocks the internal name %s', (host) => {
-    expect(isBlockedHostname(host)).toBe(true)
-  })
-
-  // Guards against over-broad suffix matching on real public domains.
-  it.each([
-    'example.com',
-    'mdexample.net',
-    'internal.example.com',
-    'local.example.com',
-    'corp.cdc.gov',
-    'mail.google.com',
-    'myinternal.com',
-    'thelan.org',
-    'homestead.com',
-    'mailchimp.com',
-    'dev.console.izgateway.org',
-  ])('does not block the public name %s', (host) => {
-    expect(isBlockedHostname(host)).toBe(false)
   })
 })
 
@@ -131,19 +114,26 @@ describe('assertSafeDestinationUrl', () => {
     dnsMock.__resolve6.mockRejectedValue(new Error('ENOTFOUND'))
   })
 
-  it('allows an https destination resolving to a public address', async () => {
+  it.each([
+    'https://iis.wa.gov/hub',
+    'https://example.com/hub',
+    'https://example.com:443/hub',
+    'https://immunization.health/',
+    'https://a.us/',
+    'https://x.pr/',
+    'https://y.gu/',
+  ])('allows the approved destination %s', async (url) => {
     await expect(
-      assertSafeDestinationUrl(new URL('https://example.com/hub'))
+      assertSafeDestinationUrl(new URL(url))
     ).resolves.toBeUndefined()
   })
 
-  it.each([
-    'file:///etc/passwd',
-    'gopher://example.com/',
-    'tftp://example.com/',
-    'ftp://example.com/',
-  ])('rejects the %s scheme', async (url) => {
-    await expectRejected(url)
+  it('rejects http even though the raw check runs first', async () => {
+    await expectRejected('http://example.com/')
+  })
+
+  it('rejects a query string', async () => {
+    await expectRejected('https://example.com/x?a=1')
   })
 
   it('rejects embedded credentials', async () => {
@@ -154,37 +144,30 @@ describe('assertSafeDestinationUrl', () => {
     await expectRejected('https://example.com:22/')
   })
 
-  it('rejects private IP literals', async () => {
-    await expectRejected('http://169.254.169.254/latest/meta-data/')
-  })
-
-  it('rejects bracketed IPv6 loopback literals', async () => {
-    await expectRejected('https://[::1]/')
-  })
-
-  it('rejects a hostname resolving to a private address', async () => {
-    dnsMock.__resolve4.mockResolvedValue(['10.0.0.5'])
-    await expectRejected('https://internal.example.com/')
-  })
-
-  it('rejects when any resolved address is private', async () => {
-    dnsMock.__resolve4.mockResolvedValue(['93.184.216.34', '192.168.0.7'])
-    await expectRejected('https://rebind.example.com/')
-  })
-
+  // The hostname allowlist subsumes the old internal-name denylist.
   it.each([
     'https://localhost/',
-    'https://localhost:443/',
-    'https://api.localhost/',
-    'https://printer.local/',
     'https://db.internal/',
-    'https://svc.home.arpa/',
-    'https://box.localdomain/',
-    'https://LOCALHOST/',
-  ])('rejects the internal-only name in %s', async (url) => {
-    // public DNS returns nothing for these, so they must be blocked by name
-    dnsMock.__resolve4.mockRejectedValue(new Error('ENOTFOUND'))
+    'https://printer.local/',
+    'https://nas.lan/',
+    'https://fileserver.corp/',
+    'https://izgateway/', // single label
+    'https://example.co.uk/', // TLD not on the approved list
+    'https://example.com./', // trailing dot
+    'https://10.0.0.5/', // IP literal
+    'https://[::1]/', // IPv6 literal
+  ])('rejects the unapproved hostname in %s', async (url) => {
     await expectRejected(url)
+  })
+
+  it('rejects an approved hostname that resolves to a private address', async () => {
+    dnsMock.__resolve4.mockResolvedValue(['10.0.0.5'])
+    await expectRejected('https://evil.com/')
+  })
+
+  it('rejects when any one resolved address is private', async () => {
+    dnsMock.__resolve4.mockResolvedValue(['93.184.216.34', '192.168.0.7'])
+    await expectRejected('https://rebind.com/')
   })
 
   it('allows unresolvable hostnames through for the DNS test to report', async () => {
