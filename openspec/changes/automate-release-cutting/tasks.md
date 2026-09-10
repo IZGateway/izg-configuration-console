@@ -182,8 +182,22 @@
 - [x] 7.7 Run `npm run test:release-validation` in `deploy.yml`'s `code-quality-check` job
       and remove `.github/scripts/*` from the `paths-ignore` list, so a pull request that
       only edits the validator gets CI coverage.
-- [ ] 7.8 Re-run one `dry-run: true` release after the section 7 edits. The earlier
-      dry-runs (`34393828960`, `34394992439`) both ran at commit `051a7fd`, which still had
-      inline validation, the reusable-workflow scan job, and no scan dispatch. Verify the
-      extracted `validate-release.sh`, the App-token step, and the advisory scan dispatch.
-      Clean up the test tag, merges, branch, and draft release afterward.
+- [x] 7.8 Re-run one `dry-run: true` release after the section 7 edits. Done at commit
+      `eb9c031` on throwaway branches `testdevelop` / `testmain`: standard release 1.18.100
+      (run `34507330728`) and hotfix release 1.18.101 (run `34509704178`). Both succeeded.
+      Verified: the extracted `validate-release.sh`, the App-token step, `push: false` with
+      the dry-run tag `izg-configuration-console:1.18.100`, `RELEASE_NOTES.md` on both
+      branches, `testdevelop` advanced to 1.19.0 by the standard release, and the hotfix
+      left `testdevelop` at 1.19.0.
+- [x] 7.9 Delete the GitHub Release by release ID during failure cleanup, not by tag name.
+      Runs `34507330728` and `34509704178` both logged
+      `Release <id> is not yet discoverable by tag` and a final `untagged-<hash>` URL. A
+      draft release holds no tag association, so a lookup by tag cannot find it. Cleanup
+      also deletes the tag before the release, which makes any tag-name lookup fragile. The
+      release ID was already captured and unused.
+- [ ] 7.10 Exercise the paths that the dry-runs could not reach. The dry-runs skipped
+      failure cleanup (`if: failure() || cancelled()` never fired), the advisory scan
+      dispatch (gated on `dry-run == false`), the APHL push, and every registry push. The
+      first real release is the first exercise of all four. To cover cleanup before then,
+      add a temporary `exit 1` to the top of the "Update develop branch" step on a
+      throwaway branch, dispatch a dry-run at 1.18.102, and read the cleanup report.

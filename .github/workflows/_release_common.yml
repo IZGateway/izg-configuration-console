@@ -471,8 +471,12 @@ jobs:
             fi
           fi
 
+          # Delete by release ID, not by tag name. A dry run creates a draft release, and
+          # a draft holds no tag association, so a lookup by tag cannot find it. The tag
+          # is also already deleted above by this point.
           if [[ -n "$GITHUB_RELEASE_ID" ]]; then
-            if gh release delete "v$RELEASE_VERSION" --yes; then
+            if gh api -X DELETE \
+              "repos/${GITHUB_REPOSITORY}/releases/${GITHUB_RELEASE_ID}" --silent; then
               CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Deleted GitHub Release v$RELEASE_VERSION"
             else
               CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to delete GitHub Release v$RELEASE_VERSION"
