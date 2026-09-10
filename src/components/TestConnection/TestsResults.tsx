@@ -34,6 +34,8 @@ const TestsResults = ({ testResults }: testListProps) => {
 
   const tooltipTexts = {
     dns: 'This test looks up the hostname in DNS to verify that it is known on the internet.',
+    'validate destination url':
+      'This test checks the destination URL before anything is connected to. The URL must use http or https, use a permitted port, and point to a publicly reachable host. Internal, private and loopback addresses are not valid destinations.',
     tcp: 'This test makes a connection to the host to verify that that it can be reached from the internet.',
     tls: 'This test ensures that the host uses Transport Layer Security version 1.2 or 1.3 when making secure connections.',
     cipher:
