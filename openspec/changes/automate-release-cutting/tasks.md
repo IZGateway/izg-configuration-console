@@ -126,11 +126,14 @@
 
 ## 6. End-to-end verification
 
-- [x] 6.1 Confirm `main` and `develop` branch protection has been relaxed to match
-      `izg-transformation-ui` (no required approving review) and the release App is
-      installed with the permissions listed in design.md, before running anything in this
-      section. Verify via `gh api repos/IZGateway/izg-configuration-console/branches/main/protection`
-      and the equivalent for `develop` returning no required-review rule.
+- [x] 6.1 Confirm the release App is installed with the permissions listed in design.md and
+      is a bypass actor on ruleset `1072449` ("main"), before running anything in this
+      section. That ruleset targets `refs/heads/main*`, `refs/heads/develop*`,
+      `refs/heads/testmain`, and `refs/heads/testdevelop`, with the rules `deletion`,
+      `non_fast_forward`, `code_scanning`, and `pull_request`. Do **not** relax the
+      ruleset. Verify via
+      `gh api repos/IZGateway/izg-configuration-console/rulesets/1072449`. Classic branch
+      protection is not in use: the `branches/*/protection` endpoints return 404.
 - [x] 6.2 Trigger `release.yml` once with `dry-run: true` from `develop`, using a version
       genuinely newer than the latest tag, per design.md's Migration Plan. Verify the run:
       passes validation, generates the App token, pushes the release branch, commits
@@ -195,9 +198,25 @@
       draft release holds no tag association, so a lookup by tag cannot find it. Cleanup
       also deletes the tag before the release, which makes any tag-name lookup fragile. The
       release ID was already captured and unused.
-- [ ] 7.10 Exercise the paths that the dry-runs could not reach. The dry-runs skipped
-      failure cleanup (`if: failure() || cancelled()` never fired), the advisory scan
-      dispatch (gated on `dry-run == false`), the APHL push, and every registry push. The
-      first real release is the first exercise of all four. To cover cleanup before then,
-      add a temporary `exit 1` to the top of the "Update develop branch" step on a
-      throwaway branch, dispatch a dry-run at 1.18.102, and read the cleanup report.
+      **Verified** by run `34515176941`: a temporary `exit 1` at the top of the "Update
+      develop branch" step on `testdevelop` failed release 1.18.102 after the tag, the main
+      merge, and the GitHub Release existed. Cleanup ran and succeeded. It deleted tag
+      `v1.18.102`, reverted the `testmain` merge and pushed the revert (`54dfcba` reverts
+      `8917823`), deleted branch `release/1.18.102`, and deleted the GitHub Release with no
+      error. Develop cleanup correctly did nothing, because the failing step never set
+      `updated=true`. Confirmed against the remote afterward: the tag and the release
+      branch are gone, and `testmain` points at the revert commit.
+- [x] 7.10 Confirm the App bypasses the branch ruleset instead of needing it relaxed. Run
+      `34515176941` logged `remote: Bypassed rule violations for refs/heads/testmain` for
+      the `pull_request` and `code_scanning` rules, then pushed. Ruleset `1072449` covers
+      `main` and `develop` with the same rules, so the same bypass applies. This reverses
+      the earlier prerequisite to drop the required-review rule. A bypass actor is the
+      better answer, because the rules stay in force for humans. See design.md Context.
+- [ ] 7.11 Exercise the paths that the dry-runs could not reach. The dry-runs skipped
+      the advisory scan dispatch (gated on `dry-run == false`), the APHL push, and every
+      registry push. Failure cleanup is now covered by 7.9. No dry-run can reach the
+      remaining three, because each one is gated on `dry-run == false`. The first real
+      release is therefore the first exercise of all three. Before that release, dispatch
+      `scan-ecr-image.yml` by hand with a tag that already exists in the dev ECR. That
+      checks the two prerequisites most likely to be missing: the `AWS_ROLE_ARN` OIDC role
+      and cross-repository access to `izg-dependency-scripts`.
