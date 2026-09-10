@@ -80,10 +80,11 @@ manual bookkeeping.
     write` permissions (user confirmed they will handle this). The workflow's
     `GITHUB_TOKEN` receives `packages: write` for GHCR and `actions: write` to dispatch the
     advisory scan; the scan workflow receives `id-token: write` for AWS OIDC.
-  - `main` and `develop` branch protection on this repo relaxed to match
-    `izg-transformation-ui` (drop the required-approving-review rule) — confirmed this
-    repo currently requires 1 approving review on both branches, which the reference
-    pipeline's direct pushes/merges cannot satisfy (user confirmed they will handle this).
+  - The release App listed as a bypass actor on ruleset `1072449` ("main"), which protects
+    `main` and `develop` with `deletion`, `non_fast_forward`, `code_scanning`, and
+    `pull_request` rules. The reference pipeline's direct pushes and merges cannot satisfy
+    those rules, so the App must bypass them. Do **not** relax the ruleset. Run
+    `34515176941` confirmed the bypass works.
   - `AWS_ROLE_ARN` repo variable and an OIDC IAM role (`inspector2:ListFindings`,
     `inspector2:ListCoverage`) for the Inspector2 scan.
   - APHL ECR credentials/registry secrets, expected to already exist since `deploy.yml`

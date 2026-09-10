@@ -15,12 +15,20 @@ See `proposal.md` - Why for motivation. Relevant current state:
   `security-updates.yml`), unlike `izg-transformation-ui`'s plain `npm ci`.
 - This repo does not yet have `scan-ecr-image.yml`, `RELEASE_AUTOMATION_APP_ID`/`KEY`
   secrets, or an `AWS_ROLE_ARN` OIDC role — these are new prerequisites for this change.
-- Unlike `izg-transformation-ui` (no branch protection on either branch), this repo's
-  `main` and `develop` both currently require one approving PR review. The reference
-  pipeline pushes and merges directly with an App token, which cannot succeed against a
-  reviewed-PR-required branch. Austin will relax `main`/`develop` protection on this repo
-  to match `izg-transformation-ui` (drop the required-review rule) as a prerequisite, so no
-  bypass/ruleset logic is needed in the workflows themselves.
+- Unlike `izg-transformation-ui` (no branch protection on either branch), this repo
+  protects `main` and `develop` with ruleset `1072449` ("main"). That ruleset targets
+  `refs/heads/main*`, `refs/heads/develop*`, `refs/heads/testmain`, and
+  `refs/heads/testdevelop`, with the rules `deletion`, `non_fast_forward`, `code_scanning`,
+  and `pull_request`. The reference pipeline pushes and merges directly, which those rules
+  forbid.
+  **The App bypasses the ruleset, so no protection change is needed.** Run
+  `34515176941` pushed a cleanup revert to `testmain` and logged
+  `remote: Bypassed rule violations for refs/heads/testmain` for both the `pull_request`
+  and `code_scanning` rules. The same ruleset covers real `main` and `develop`, so the same
+  bypass applies there. An earlier draft of this design planned to drop the
+  required-review rule instead. That is unnecessary and weaker: a bypass actor keeps the
+  rules in force for humans. Keep the App on the ruleset bypass list as the prerequisite,
+  and no bypass logic is needed in the workflows themselves.
 - A prior draft of this design incorrectly assumed dry-run in the reference pipeline is a
   no-op. Re-reading `_release_common.yml` shows only the registry logins/image push are
   gated on `dry-run == false`; the branch, notes/version commits, merge to main, tag, and
@@ -67,10 +75,9 @@ push without that permission). The workflow's `GITHUB_TOKEN`, not the App token,
 workflow receives `id-token: write` for AWS OIDC. Alternative considered: using the
 default `GITHUB_TOKEN` for Git mutations — rejected because it cannot push commits that
 modify workflow files and its commits don't trigger other workflows. This design also
-depends on `main`/`develop` protection being relaxed to match `izg-transformation-ui`
-(see Context) — the App token decision alone does not solve pushing to a
-reviewed-PR-required branch. The user owns installing the App and relaxing branch
-protection as prerequisites outside this change.
+depends on the App staying on ruleset `1072449`'s bypass list (see Context) — the App
+token alone does not solve pushing to a branch that requires a pull request. The user owns
+installing the App and keeping it on the bypass list as prerequisites outside this change.
 
 The token step keeps the `app-id` input, although
 `actions/create-github-app-token@v3` marks it deprecated in favor of `client-id`. The two
@@ -176,8 +183,8 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
 ## Risks / Trade-offs
 
 - **[Risk]** The GitHub App may not be installed, its secrets may not resolve on this repo,
-  or `main`/`develop` protection may not yet be relaxed, so the first real run fails at the
-  App-token step or at the first protected push.
+  or the App may be missing from ruleset `1072449`'s bypass list, so the first real run
+  fails at the App-token step or at the first protected push.
   → **Mitigation**: exercise `release.yml` in dry-run mode first — this still exercises the
   App-token step and the first protected push (the release-branch push), surfacing either
   failure early. Note this is not side-effect-free (see the dry-run Decision above): a
@@ -216,9 +223,10 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
    before cutting the next real release.
 3. This is a CI/tooling-only change — no application runtime or data migration. Rollback
    of the workflow/documentation changes themselves is a plain revert of the PR.
-4. Relax branch protection on `main` and `develop` to match `izg-transformation-ui` (drop
-   the required-approving-review rule) before the first dry-run — the release pipeline
-   cannot push or merge against a protected branch otherwise.
+4. Confirm the release App is a bypass actor on ruleset `1072449` before the first
+   dry-run — the release pipeline cannot push or merge to `main`/`develop` otherwise. Do
+   **not** relax the ruleset. Run `34515176941` proved the bypass works on `testmain`, and
+   the same ruleset covers `main` and `develop`.
 5. External prerequisites (GitHub App installation with the permissions listed under
    Decisions, `AWS_ROLE_ARN` + OIDC IAM role, `izg-dependency-scripts` cross-repo workflow
    access) are owned outside this change and must be confirmed working via the dry-run in
