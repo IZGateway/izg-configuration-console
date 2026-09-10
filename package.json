@@ -14,6 +14,7 @@
     "type-check": "tsc --noEmit",
     "test:watch": "jest --watch",
     "test": "jest",
+    "test:release-validation": "bash .github/scripts/validate-release.test.sh",
     "fix-vulnerabilities": "fix-vulnerabilities && npm install && npm audit",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"
@@ -81,7 +82,7 @@
     "@typescript-eslint/parser": "^8.57.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "cypress": "^14.5.4",
+    "cypress": "^16.0.0",
     "dotenv": "^16.6.1",
     "eslint-config-next": "^16.3.4",
     "eslint-config-prettier": "^8.10.2",

@@ -1,105 +1,90 @@
-# Workflow Trigger Configuration - Quick Reference
+# Workflow Trigger Configuration
 
-## Problem Solved
-Prevent automated dependency update PRs and unrelated workflow changes from triggering builds, while still allowing workflow files to be tested when modified.
+## Deployment workflow
 
-## Solution
-Use negated path patterns in `paths-ignore` to exclude all workflow files except the workflow itself:
+`.github/workflows/deploy.yml` runs for pull requests to `develop` and by manual
+dispatch. It ignores unrelated workflow changes while allowing edits to
+`deploy.yml` itself to exercise the changed workflow.
 
-```yaml
-on:
-  push:
-    branches:
-      - 'release/**'
-    paths-ignore:
-      - '.github/workflows/*'           # Ignore all workflow files
-      - '!.github/workflows/deploy.yml' # EXCEPT this workflow itself
-  pull_request:
-    branches:
-      - develop
-    paths-ignore:
-      - '.github/workflows/*'
-      - '!.github/workflows/deploy.yml'
-  workflow_dispatch:
-```
+Pushing a `release/**` branch no longer triggers deployment. Release images are built
+once by the release pipeline.
 
-## How It Works
+`deploy.yml` owns the `latest` tag in the dev ECR. The dev ECS task definition pins
+`container_image_tag = "latest"`, so that tag is a deployment pointer. The release
+pipeline does not write it.
 
-### Pattern Explanation
-- `.github/workflows/*` - Match all files in the workflows directory (single level, no subdirectories)
-- `!.github/workflows/deploy.yml` - Negation pattern that creates an exception
+## Release workflows
 
-### Trigger Behavior
+### Standard release (`release.yml`)
 
-| Change Made | deploy.yml Triggered? | Reason |
-|-------------|----------------------|---------|
-| Modify `deploy.yml` | ✅ YES | Exception pattern allows it |
-| Modify `security-updates.yml` | ❌ NO | Ignored by first pattern |
-| Modify `gitleaks.yml` | ❌ NO | Ignored by first pattern |
-| Modify `src/app.js` | ✅ YES | Not in `.github/workflows/` |
-| Security update PR touching only workflows | ❌ NO | All changes are ignored |
+Run manually from `develop`.
 
-## Key GitHub Actions Behavior
+| Input | Required | Default | Purpose |
+|---|---|---|---|
+| `release-version` | Yes | - | New `X.Y.Z` release version |
+| `app-version` | No | Next minor | Version assigned to `develop` after release |
+| `develop-branch` | No | `develop` | Develop branch |
+| `main-branch` | No | `main` | Main branch |
+| `dry-run` | No | `false` | Build without publishing images and create a draft release |
+| `skip-aphl` | No | `false` | Skip APHL ECR publication |
 
-**Important:** When a push or PR event occurs, GitHub Actions uses the workflow file **from the branch where the event occurred**, NOT the default branch.
+### Hotfix release (`hotfix.yml`)
 
-This means:
-- You can test workflow changes by pushing them to a branch
-- The modified workflow will run with your changes
-- You need to allow the workflow to trigger on changes to itself for testing
+Run manually from a branch named exactly `hotfix/<release-version>`, created from
+`main`. It accepts the standard release inputs except `app-version`; hotfixes merge back
+to `develop` without changing its package version.
 
-## Applied To
+Both entry points use the same `release-${{ github.repository }}` concurrency group, so
+only one standard or hotfix release runs at a time.
 
-### izg-configuration-console
-- ✅ `.github/workflows/deploy.yml`
+### Reusable release implementation (`_release_common.yml`)
 
-### izg-transformation-ui  
-- ✅ `.github/workflows/deploy.yml`
+The entry-point workflows call `_release_common.yml` with `secrets: inherit`. The
+reusable workflow validates all inputs before persistent changes, creates or reuses the
+release branch, generates release notes, applies package versions, runs quality gates,
+builds one image, publishes it to configured registries, merges and tags the release,
+creates the GitHub Release, and performs scoped cleanup after failures.
 
-### v2tofhir
-- ✅ `.github/workflows/develop.yml`
+Dry runs still create branches, commits, a tag, branch merges, and a draft GitHub
+Release. They only skip registry publication and the post-release vulnerability scan.
 
-## Benefits
+The workflow requires the `RELEASE_AUTOMATION_APP_ID` and
+`RELEASE_AUTOMATION_APP_KEY` secrets. `RELEASE_AUTOMATION_APP_ID` holds the numeric App
+ID and goes to the `app-id` input of `actions/create-github-app-token`. Do not switch that
+secret to the `client-id` input. `client-id` needs the App Client ID, which is a different
+value, and `izg-transformation-ui` shares this secret. The installed GitHub App needs repository
+permissions for contents, pull requests, and workflows. The release workflows grant the
+`GITHUB_TOKEN` `packages: write` for GHCR and `actions: write` to dispatch the advisory
+scan. The scan workflow grants `id-token: write` separately for AWS OIDC.
 
-1. **Prevents Infinite Loops** - Automated workflows creating PRs don't trigger endless builds
-2. **Testable Workflows** - Can test workflow changes by pushing to a branch
-3. **Reduces CI Load** - Unrelated workflow changes don't trigger builds
-4. **Clear Intent** - Only code changes (and the workflow itself) trigger deployments
+## Inspector2 vulnerability scan (`scan-ecr-image.yml`)
 
-## Testing Workflow Changes
+The advisory scan can run manually with an `image-tag`; `_release_common.yml` dispatches
+it as a separate workflow run after a real release. It waits up to 20 minutes for Inspector2 to scan
+`izg-configuration-console:<image-tag>`, then calls
+`IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1` to produce
+the report artifact.
 
-### Option 1: Push to Branch (Recommended)
-Push your workflow changes to a feature branch and verify the workflow runs with your changes.
+The scan requires:
 
-**Important for `security-updates.yml`:**
-- The workflow uses the branch that triggers it (no hardcoded `ref`)
-- This means when you manually trigger from a feature branch, it will use your updated scripts
-- Test your script changes by:
-  1. Push your changes to a feature branch
-  2. Go to Actions → Security Updates → Run workflow
-  3. Select your feature branch from the dropdown
-  4. The workflow will use the scripts from your branch
+- An `AWS_ROLE_ARN` repository variable for OIDC authentication.
+- An IAM role with `inspector2:ListCoverage` and `inspector2:ListFindings`.
+- Cross-repository permission to call the shared report workflow.
 
-### Option 2: Manual Trigger
-Use `workflow_dispatch` from the GitHub Actions UI to manually trigger the workflow.
-- For scheduled workflows, select the branch you want to test from the branch dropdown
-- The workflow will checkout and use code from that branch
+The release build continues to use the existing AWS access-key secrets. OIDC is used
+only for the advisory scan. Scan dispatch and execution cannot change the release
+workflow's result.
 
-### Option 3: Create PR
-Create a PR with your workflow changes to see if it triggers correctly on the PR event.
+## Testing workflow changes
 
-## Troubleshooting
-
-### Workflow not triggering when expected
-- Check if all changes are in `.github/workflows/` directory
-- Verify the exception pattern matches your workflow filename exactly
-- Check branch name matches the pattern in the workflow
-
-### Workflow triggering when it shouldn't  
-- Ensure you're using `.github/workflows/*` (single asterisk) not `/**` (double asterisk)
-- Verify the exception pattern is for the workflow file itself only
-- Check if there are other trigger conditions (schedule, workflow_dispatch, etc.)
+GitHub Actions reads a workflow from the branch that triggered it. Push changes to a
+feature branch, then use `workflow_dispatch` from that branch to test manual workflows.
+Run `npm run test:release-validation` locally to exercise every release validation path
+against a temporary Git remote without changing repository refs. `deploy.yml`'s
+`code-quality-check` job runs the same command, so a pull request that only edits
+`.github/scripts/` still gets checked.
 
 ## References
-- [GitHub Actions: Workflow Syntax - on.<push|pull_request>.paths](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore)
-- [GitHub Actions: Filter Pattern Cheat Sheet](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet)
+
+- [GitHub Actions workflow syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
+- [Workflow schedule](./WORKFLOW_SCHEDULE.md)
