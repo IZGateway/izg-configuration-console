@@ -28,9 +28,10 @@ manual bookkeeping.
   `## Release vX.Y.Z` + manual IGDD-ticket bullets to an auto-generated
   `## [X.Y.Z] - YYYY-MM-DD` entry listing merged PR titles. Entries for releases cut before
   this change keep their existing format.
-- Add `scan-ecr-image.yml`, an advisory Inspector2 vulnerability scan that runs after a real
-  (non-dry-run) release, reusing `IZGateway/izg-dependency-scripts`'s
-  `ecr-scan-report.yml`. A scan failure or empty result never blocks a release.
+- Add `scan-ecr-image.yml`, an advisory Inspector2 vulnerability scan dispatched as a
+  separate workflow run after a real (non-dry-run) release, reusing
+  `IZGateway/izg-dependency-scripts`'s `ecr-scan-report.yml`. Dispatch and scan failures
+  cannot change the release workflow's result.
 - **BREAKING**: Remove `create-release-branch.yml`. Cutting a release no longer has a manual
   gitflow-action entry point — use `release.yml` or `hotfix.yml`'s `workflow_dispatch`
   inputs instead.
@@ -46,9 +47,14 @@ manual bookkeeping.
   match `hotfix/<release-version>` or doesn't descend from `main`, and any release-type
   other than `standard`/`hotfix` — beyond `izg-transformation-ui`'s format/existence-only
   checks.
-- Only plain semver tags and `latest` are published to each registry; the legacy
+- Release inputs are passed to shell scripts through environment variables, and branch
+  names are validated before Git commands use them. The validation logic has an automated
+  test matrix covering all accepted and rejected paths.
+- Only plain semver tags are published to each registry, plus `latest` on GHCR; the legacy
   `{version}-{run_number}` / `-release` / `-snapshot` tag formats from today's `deploy.yml`
-  are not carried forward (confirmed nothing depends on them).
+  are not carried forward (confirmed nothing depends on them). The release pipeline leaves
+  the dev ECR `latest` tag alone, because the dev ECS task definition pins that tag and
+  `deploy.yml` owns it.
 
 ## Capabilities
 
@@ -70,9 +76,10 @@ manual bookkeeping.
   `.github/WORKFLOW_SCHEDULE.md`, `RELEASE_NOTES.md` (format going forward)
 - External prerequisites, owned outside this change:
   - `RELEASE_AUTOMATION_APP_ID` / `RELEASE_AUTOMATION_APP_KEY` secrets and the GitHub App
-    installed on this repo, with `contents: write`, `packages: write`, `pull-requests:
-    read`, `id-token: write`, and `workflows: write` permissions (user confirmed they will
-    handle this).
+    installed on this repo, with `contents: write`, `pull-requests: read`, and `workflows:
+    write` permissions (user confirmed they will handle this). The workflow's
+    `GITHUB_TOKEN` receives `packages: write` for GHCR and `actions: write` to dispatch the
+    advisory scan; the scan workflow receives `id-token: write` for AWS OIDC.
   - `main` and `develop` branch protection on this repo relaxed to match
     `izg-transformation-ui` (drop the required-approving-review rule) — confirmed this
     repo currently requires 1 approving review on both branches, which the reference

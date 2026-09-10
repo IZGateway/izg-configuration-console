@@ -58,17 +58,27 @@ it duplicates ~15 steps and lets the two paths drift out of sync.
 **GitHub App token for all git-mutating steps.**
 A short-lived token from `actions/create-github-app-token`
 (`RELEASE_AUTOMATION_APP_ID`/`RELEASE_AUTOMATION_APP_KEY`) is used for checkout and all
-pushes, merges, tags, and reverts, with permissions `contents: write`, `packages: write`,
-`pull-requests: read`, `id-token: write`, and `workflows: write` (the last one is not
-present in `izg-transformation-ui`'s App, but is added defensively here: a merge into
-`main`/`develop` can include a prior PR's changes to `.github/workflows/*.yml`, and GitHub
-rejects such a push without that permission). Alternative considered: the default
-`GITHUB_TOKEN` — rejected because it cannot push commits that modify workflow files and its
-commits don't trigger other workflows, both of which the release path needs. This design
-also depends on `main`/`develop` protection being relaxed to match `izg-transformation-ui`
+pushes, merges, tags, and reverts, with permissions `contents: write`, `pull-requests:
+read`, and `workflows: write` (the last one is not present in
+`izg-transformation-ui`'s App, but is added defensively here: a merge into `main`/`develop`
+can include a prior PR's changes to `.github/workflows/*.yml`, and GitHub rejects such a
+push without that permission). The workflow's `GITHUB_TOKEN`, not the App token, receives
+`packages: write` for GHCR and `actions: write` for the advisory scan dispatch. The scan
+workflow receives `id-token: write` for AWS OIDC. Alternative considered: using the
+default `GITHUB_TOKEN` for Git mutations — rejected because it cannot push commits that
+modify workflow files and its commits don't trigger other workflows. This design also
+depends on `main`/`develop` protection being relaxed to match `izg-transformation-ui`
 (see Context) — the App token decision alone does not solve pushing to a
 reviewed-PR-required branch. The user owns installing the App and relaxing branch
 protection as prerequisites outside this change.
+
+The token step keeps the `app-id` input, although
+`actions/create-github-app-token@v3` marks it deprecated in favor of `client-id`. The two
+inputs need different values: `app-id` takes the numeric App ID, and `client-id` takes the
+App Client ID (`Iv23li…`). `RELEASE_AUTOMATION_APP_ID` holds the numeric App ID, and
+`izg-transformation-ui` passes that same secret to `app-id`, so the secret value cannot
+change without breaking that repo. A follow-up must add a separate
+`RELEASE_AUTOMATION_CLIENT_ID` secret before the migration.
 
 **Dry-run mirrors the reference pipeline exactly — it is a rehearsal, not a no-op.**
 Per spec Requirement "A dry run skips registry publication and the vulnerability scan,"
@@ -92,15 +102,15 @@ rewriting its history out from under them on a failed release run is more disrup
 leaving the failed attempt's commits for manual review. This is `izg-transformation-ui`'s
 own documented, accepted limitation, not an oversight being ported forward unnoticed.
 
-**Reject decoupling the vulnerability scan into an independent workflow run.**
-The scan runs as a sibling job (`needs: release`) inside the same workflow run, matching
-`izg-transformation-ui`. Alternative considered: having the release job `gh workflow run`
-(or dispatch via API) `scan-ecr-image.yml` as a fully separate run, so a scan failure can
-never make the overall Actions run show red — rejected. This workflow is not a required
-status check anywhere (it is `workflow_dispatch`-only), so a red overall run is cosmetic,
-not a functional blocker; decoupling would add `actions: write` permission, a dispatch
-step, and no reliable way to link back to the triggering release run, for a purely
-cosmetic gain.
+**Dispatch the vulnerability scan as an independent workflow run.**
+After a successful real release, `_release_common.yml` dispatches `scan-ecr-image.yml`
+with the released image tag. The dispatch step is `continue-on-error`, and the scan runs
+independently, so a dispatch, authentication, timeout, or report failure cannot change the
+release workflow's successful result. This differs from `izg-transformation-ui`'s sibling
+job because a reusable-workflow call job cannot use `continue-on-error`; keeping that
+structure could make the overall release run red and contradict the release-automation
+spec. The trade-off is that the scan appears as a separate Actions run rather than a child
+job in the release run.
 
 **Strict validation beyond format/existence checks.**
 The validate step also rejects: a release version that is not strictly newer than the
@@ -112,20 +122,36 @@ non-existence only) — accepted as low-risk, low-cost checks that catch real op
 mistakes (e.g., cutting a release with an accidentally-lower version, or hotfixing off the
 wrong branch) before any side effect occurs.
 
+**Validate shell inputs through a testable script.**
+Workflow inputs are passed through environment variables rather than interpolated into
+inline shell source. `.github/scripts/validate-release.sh` also validates configured
+branch names before using them in Git commands. A local test script creates a temporary
+Git remote and exercises every validation success and failure path while asserting that
+failed validation does not change remote refs. This intentionally improves on the
+`izg-transformation-ui` implementation, which still interpolates inputs directly.
+
 **No legacy image-tag aliases.**
-Only plain semver tags and `latest` are published (per Decisions above on naming) — the
+Only plain semver tags are published, plus `latest` on GHCR — the
 `{version}-{run_number}` and `-release`/`-snapshot` suffix formats from today's `deploy.yml`
 are not carried forward. Confirmed nothing outside this repo pins to those formats.
 
-**Same reusable `scan-ecr-image.yml`, invoked as a sibling job.**
-`_release_common.yml` calls `scan-ecr-image.yml` with `needs: release`, gated on
-non-dry-run, exactly as `izg-transformation-ui` does. It authenticates via OIDC
-(`AWS_ROLE_ARN` repo variable) and calls
+**The release pipeline does not move the dev ECR `latest` tag.**
+The dev ECS task definition pins `container_image_tag = "latest"`
+(`iz-gateway-terraform/hub/console/terraform.tfvars`), so dev ECR `latest` is a deployment
+pointer, not a release pointer. `deploy.yml` owns it. A release that also wrote that tag
+would put release code into the dev environment on the next ECS task restart. The release
+pipeline therefore publishes only `izg-configuration-console:<version>` to the dev ECR, and
+keeps `latest` on GHCR, where nothing deploys from it. Alternative considered: dropping
+`latest=true` from `deploy.yml` instead — rejected, because that breaks dev deployment.
+
+**Standalone `scan-ecr-image.yml`, dispatched after release.**
+`_release_common.yml` dispatches `scan-ecr-image.yml` after a successful non-dry release.
+The scan authenticates via OIDC (`AWS_ROLE_ARN` repo variable) and calls
 `IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1`, scanning
 `izg-configuration-console:<version>` instead of `izg-transformation-ui:<version>`.
 Alternative considered: inlining the scan steps directly in `_release_common.yml` —
-rejected because it would duplicate logic already centralized in `izg-transformation-ui`
-and require re-solving the same 4-level nesting GitHub allows.
+rejected because it would duplicate logic already centralized in the dependency-scripts
+repository and couple advisory reporting to the release job.
 
 **Keep `npm ci --force` for this repo's install step.**
 `_release_common.yml`'s dependency-install step uses `npm ci --force`, matching this
@@ -158,11 +184,9 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
   dry-run failure partway through still needs the same cleanup as any failed run.
 - **[Risk]** `izg-dependency-scripts` may not have granted this repo access to call its
   reusable `ecr-scan-report.yml` workflow yet.
-  → **Mitigation**: the scan runs as a sibling job (`needs: release`) — its failure does
-  not fail the `release` job itself, so a release can still succeed while this access gap
-  is resolved separately. The overall workflow run may still show as failed/partial in the
-  Actions UI; that is an accepted, pre-existing trade-off inherited from
-  `izg-transformation-ui`.
+  → **Mitigation**: the scan runs as an independently dispatched workflow. Its failure
+  cannot change the release workflow's conclusion, so the access gap can be resolved
+  separately.
 - **[Risk]** Changing `RELEASE_NOTES.md`'s format is a visible, permanent change for
   anyone or anything that parses that file (release announcements, changelogs).
   → **Mitigation**: none needed in the automation itself; call it out in the release PR

@@ -42,6 +42,7 @@ on:
         default: false
 
 permissions:
+  actions: write
   contents: write
   packages: write
   pull-requests: read
@@ -51,13 +52,24 @@ jobs:
     name: Cut ${{ inputs.release-type }} release
     runs-on: ubuntu-latest
     env:
+      APP_VERSION: ${{ inputs.app-version }}
+      CURRENT_BRANCH: ${{ github.ref_name }}
+      DEVELOP_BRANCH: ${{ inputs.develop-branch }}
+      DRY_RUN: ${{ inputs.dry-run }}
       GITHUB_REGISTRY_NAME: izgateway
+      MAIN_BRANCH: ${{ inputs.main-branch }}
+      RELEASE_TYPE: ${{ inputs.release-type }}
+      RELEASE_VERSION: ${{ inputs.release-version }}
+      SKIP_APHL: ${{ inputs.skip-aphl }}
 
     steps:
       - name: Generate release automation App token
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
+          # Keep app-id. RELEASE_AUTOMATION_APP_ID holds the numeric App ID, which
+          # izg-transformation-ui also passes to app-id. The client-id input needs the
+          # separate GitHub App Client ID value and a new secret to hold it.
           app-id: ${{ secrets.RELEASE_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.RELEASE_AUTOMATION_APP_KEY }}
 
@@ -87,93 +99,7 @@ jobs:
 
       - name: Validate prerequisites
         id: validate
-        run: |
-          set -euo pipefail
-
-          RELEASE_TYPE="${{ inputs.release-type }}"
-          RELEASE_VERSION="${{ inputs.release-version }}"
-          APP_VERSION="${{ inputs.app-version }}"
-          CURRENT_BRANCH="${{ github.ref_name }}"
-          DEVELOP_BRANCH="${{ inputs.develop-branch }}"
-          MAIN_BRANCH="${{ inputs.main-branch }}"
-          SEMVER_PATTERN='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-
-          version_is_greater() {
-            local candidate="$1"
-            local baseline="$2"
-            [[ "$candidate" != "$baseline" ]] &&
-              [[ "$(printf '%s\n%s\n' "$baseline" "$candidate" | sort -V | tail -n 1)" == "$candidate" ]]
-          }
-
-          case "$RELEASE_TYPE" in
-            standard | hotfix) ;;
-            *)
-              echo "::error::release-type '$RELEASE_TYPE' must be 'standard' or 'hotfix'"
-              exit 1
-              ;;
-          esac
-
-          if [[ ! "$RELEASE_VERSION" =~ $SEMVER_PATTERN ]]; then
-            echo "::error::release-version '$RELEASE_VERSION' must be in X.Y.Z format"
-            exit 1
-          fi
-
-          if [[ -n "$APP_VERSION" && ! "$APP_VERSION" =~ $SEMVER_PATTERN ]]; then
-            echo "::error::app-version '$APP_VERSION' must be in X.Y.Z format"
-            exit 1
-          fi
-
-          git fetch --force --tags origin
-          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname |
-            grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' |
-            head -n 1 || true)
-          if [[ -n "$LATEST_TAG" ]]; then
-            LATEST_VERSION="${LATEST_TAG#v}"
-            if ! version_is_greater "$RELEASE_VERSION" "$LATEST_VERSION"; then
-              echo "::error::release-version '$RELEASE_VERSION' must be newer than latest tag '$LATEST_TAG'"
-              exit 1
-            fi
-          fi
-
-          if git ls-remote --exit-code --tags origin "refs/tags/v${RELEASE_VERSION}" >/dev/null 2>&1; then
-            echo "::error::Tag 'v${RELEASE_VERSION}' already exists"
-            exit 1
-          fi
-
-          if [[ "$RELEASE_TYPE" == "standard" ]]; then
-            if [[ "$CURRENT_BRANCH" != "$DEVELOP_BRANCH" ]]; then
-              echo "::error::Standard release must be triggered from '$DEVELOP_BRANCH', not '$CURRENT_BRANCH'"
-              exit 1
-            fi
-            if [[ -n "$APP_VERSION" ]] && ! version_is_greater "$APP_VERSION" "$RELEASE_VERSION"; then
-              echo "::error::app-version '$APP_VERSION' must be newer than release-version '$RELEASE_VERSION'"
-              exit 1
-            fi
-
-            RELEASE_BRANCH="release/${RELEASE_VERSION}"
-            if git ls-remote --exit-code --heads origin "refs/heads/${RELEASE_BRANCH}" >/dev/null 2>&1; then
-              echo "::error::Release branch '$RELEASE_BRANCH' already exists"
-              exit 1
-            fi
-          else
-            RELEASE_BRANCH="hotfix/${RELEASE_VERSION}"
-            if [[ "$CURRENT_BRANCH" != "$RELEASE_BRANCH" ]]; then
-              echo "::error::Hotfix release '$RELEASE_VERSION' must be triggered from '$RELEASE_BRANCH', not '$CURRENT_BRANCH'"
-              exit 1
-            fi
-            if ! git ls-remote --exit-code --heads origin "refs/heads/${MAIN_BRANCH}" >/dev/null 2>&1; then
-              echo "::error::Main branch '$MAIN_BRANCH' does not exist"
-              exit 1
-            fi
-            git fetch origin "$MAIN_BRANCH"
-            if ! git merge-base --is-ancestor "origin/${MAIN_BRANCH}" HEAD; then
-              echo "::error::Hotfix branch '$CURRENT_BRANCH' must descend from '$MAIN_BRANCH'"
-              exit 1
-            fi
-          fi
-
-          echo "release_branch=$RELEASE_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "Validation passed for $RELEASE_TYPE release $RELEASE_VERSION"
+        run: bash .github/scripts/validate-release.sh
 
       - name: Create release branch
         if: inputs.release-type == 'standard'
@@ -212,7 +138,7 @@ jobs:
                 printf -- '- %s ([#%s](%s))\n' "$title" "$number" "$url"
               done > PR_CHANGES.txt
           else
-            echo "- Release ${{ inputs.release-version }}" > PR_CHANGES.txt
+            echo "- Release $RELEASE_VERSION" > PR_CHANGES.txt
             echo "::warning::No merged pull requests found since ${PREVIOUS_TAG:-the beginning of history}"
           fi
 
@@ -220,14 +146,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          if grep -qE "^## \[${{ inputs.release-version }}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" RELEASE_NOTES.md; then
-            echo "Release notes already contain ${{ inputs.release-version }}; skipping duplicate entry"
+          if grep -qE "^## \[${RELEASE_VERSION}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" RELEASE_NOTES.md; then
+            echo "Release notes already contain $RELEASE_VERSION; skipping duplicate entry"
           else
             RELEASE_DATE=$(date -u +%Y-%m-%d)
             {
               head -n 1 RELEASE_NOTES.md
               echo
-              echo "## [${{ inputs.release-version }}] - ${RELEASE_DATE}"
+              echo "## [${RELEASE_VERSION}] - ${RELEASE_DATE}"
               echo
               echo "### Changes"
               cat PR_CHANGES.txt
@@ -241,20 +167,20 @@ jobs:
           if git diff --cached --quiet; then
             echo "RELEASE_NOTES.md is already current"
           else
-            git commit -m "docs: update release notes for ${{ inputs.release-version }}"
+            git commit -m "docs: update release notes for $RELEASE_VERSION"
           fi
 
       - name: Set release version
         run: |
           set -euo pipefail
 
-          npm pkg set version="${{ inputs.release-version }}"
+          npm pkg set version="$RELEASE_VERSION"
           npm install --package-lock-only --ignore-scripts --force
           git add package.json package-lock.json
           if git diff --cached --quiet; then
-            echo "Package version is already ${{ inputs.release-version }}"
+            echo "Package version is already $RELEASE_VERSION"
           else
-            git commit -m "chore: prepare release ${{ inputs.release-version }}"
+            git commit -m "chore: prepare release $RELEASE_VERSION"
           fi
           git push origin "${{ steps.validate.outputs.release_branch }}"
 
@@ -276,10 +202,10 @@ jobs:
         if: inputs.release-type == 'standard'
         id: app-version
         run: |
-          if [[ -n "${{ inputs.app-version }}" ]]; then
-            NEXT_VERSION="${{ inputs.app-version }}"
+          if [[ -n "$APP_VERSION" ]]; then
+            NEXT_VERSION="$APP_VERSION"
           else
-            IFS='.' read -r major minor _patch <<< "${{ inputs.release-version }}"
+            IFS='.' read -r major minor _patch <<< "$RELEASE_VERSION"
             NEXT_VERSION="${major}.$((minor + 1)).0"
           fi
           echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
@@ -322,8 +248,8 @@ jobs:
       - name: Compute Docker image tags
         id: image-tags
         run: |
-          VERSION="${{ inputs.release-version }}"
-          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+          VERSION="$RELEASE_VERSION"
+          if [[ "$DRY_RUN" == "true" ]]; then
             {
               echo "tags<<EOF"
               echo "izg-configuration-console:${VERSION}"
@@ -335,8 +261,11 @@ jobs:
               echo "ghcr.io/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console:${VERSION}"
               echo "ghcr.io/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console:latest"
               echo "${{ steps.login-ecr.outputs.registry }}/izg-configuration-console:${VERSION}"
-              echo "${{ steps.login-ecr.outputs.registry }}/izg-configuration-console:latest"
-              if [[ "${{ inputs.skip-aphl }}" != "true" ]]; then
+              # Do not tag latest in the dev ECR. The dev ECS task definition pins
+              # container_image_tag = "latest" (iz-gateway-terraform/hub/console), so a
+              # release that moves that tag deploys release code into dev on the next
+              # task restart. deploy.yml owns the dev latest tag.
+              if [[ "$SKIP_APHL" != "true" ]]; then
                 echo "${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }}:izgw-cc-${VERSION}"
               fi
               echo "EOF"
@@ -366,20 +295,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin "${{ inputs.main-branch }}" "${{ steps.validate.outputs.release_branch }}"
-          git checkout -B "${{ inputs.main-branch }}" "origin/${{ inputs.main-branch }}"
-          git merge --no-ff -X theirs "origin/${{ steps.validate.outputs.release_branch }}" \
-            -m "chore: merge ${{ steps.validate.outputs.release_branch }} into ${{ inputs.main-branch }}"
+          RELEASE_BRANCH="${{ steps.validate.outputs.release_branch }}"
+          git fetch origin "$MAIN_BRANCH" "$RELEASE_BRANCH"
+          git checkout -B "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
+          git merge --no-ff -X theirs "origin/$RELEASE_BRANCH" \
+            -m "chore: merge $RELEASE_BRANCH into $MAIN_BRANCH"
           MAIN_MERGE_SHA=$(git rev-parse HEAD)
           echo "merge_sha=$MAIN_MERGE_SHA" >> "$GITHUB_OUTPUT"
-          git push origin "${{ inputs.main-branch }}"
+          git push origin "$MAIN_BRANCH"
           echo "merged=true" >> "$GITHUB_OUTPUT"
 
       - name: Create semver Git tag
         id: create-tag
         run: |
-          git tag -a "v${{ inputs.release-version }}" -m "Release ${{ inputs.release-version }}"
-          git push origin "v${{ inputs.release-version }}"
+          git tag -a "v${RELEASE_VERSION}" -m "Release $RELEASE_VERSION"
+          git push origin "v${RELEASE_VERSION}"
           echo "tagged=true" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
@@ -400,15 +330,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin "${{ inputs.develop-branch }}" "${{ steps.validate.outputs.release_branch }}"
-          git checkout -B "${{ inputs.develop-branch }}" "origin/${{ inputs.develop-branch }}"
+          RELEASE_BRANCH="${{ steps.validate.outputs.release_branch }}"
+          git fetch origin "$DEVELOP_BRANCH" "$RELEASE_BRANCH"
+          git checkout -B "$DEVELOP_BRANCH" "origin/$DEVELOP_BRANCH"
           DEVELOP_VERSION=$(npm pkg get version | tr -d '"')
-          git merge --no-ff -X ours "origin/${{ steps.validate.outputs.release_branch }}" \
-            -m "chore: merge ${{ steps.validate.outputs.release_branch }} back to ${{ inputs.develop-branch }}"
+          git merge --no-ff -X ours "origin/$RELEASE_BRANCH" \
+            -m "chore: merge $RELEASE_BRANCH back to $DEVELOP_BRANCH"
           DEVELOP_MERGE_SHA=$(git rev-parse HEAD)
           echo "merge_sha=$DEVELOP_MERGE_SHA" >> "$GITHUB_OUTPUT"
 
-          if [[ "${{ inputs.release-type }}" == "standard" ]]; then
+          if [[ "$RELEASE_TYPE" == "standard" ]]; then
             NEXT_VERSION="${{ steps.app-version.outputs.next_version }}"
             npm pkg set version="$NEXT_VERSION"
             npm install --package-lock-only --ignore-scripts --force
@@ -431,8 +362,19 @@ jobs:
             fi
           fi
 
-          git push origin "${{ inputs.develop-branch }}"
+          git push origin "$DEVELOP_BRANCH"
           echo "updated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch advisory vulnerability scan
+        id: dispatch-scan
+        if: inputs.dry-run == false
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run scan-ecr-image.yml \
+            --ref "$DEVELOP_BRANCH" \
+            --field "image-tag=$RELEASE_VERSION"
 
       - name: Job summary
         if: success()
@@ -442,19 +384,22 @@ jobs:
             echo
             echo "| Field | Value |"
             echo "|---|---|"
-            echo "| Release type | \`${{ inputs.release-type }}\` |"
-            echo "| Version | \`${{ inputs.release-version }}\` |"
+            echo "| Release type | \`$RELEASE_TYPE\` |"
+            echo "| Version | \`$RELEASE_VERSION\` |"
             echo "| Release branch | \`${{ steps.validate.outputs.release_branch }}\` |"
-            echo "| Main branch | \`${{ inputs.main-branch }}\` |"
-            echo "| Develop branch | \`${{ inputs.develop-branch }}\` |"
-            echo "| Dry run | \`${{ inputs.dry-run }}\` |"
-            echo "| Skip APHL | \`${{ inputs.skip-aphl }}\` |"
+            echo "| Main branch | \`$MAIN_BRANCH\` |"
+            echo "| Develop branch | \`$DEVELOP_BRANCH\` |"
+            echo "| Dry run | \`$DRY_RUN\` |"
+            echo "| Skip APHL | \`$SKIP_APHL\` |"
             echo "| Unit tests | \`${{ steps.unit-tests.outcome }}\` |"
-            if [[ "${{ inputs.release-type }}" == "standard" ]]; then
+            if [[ "$RELEASE_TYPE" == "standard" ]]; then
               echo "| Next develop version | \`${{ steps.app-version.outputs.next_version }}\` |"
             fi
+            if [[ "$DRY_RUN" == "false" ]]; then
+              echo "| Advisory scan dispatch | \`${{ steps.dispatch-scan.outcome }}\` |"
+            fi
             echo
-            if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+            if [[ "$DRY_RUN" == "true" ]]; then
               echo "Docker images were built but not pushed. The GitHub Release is a draft."
             else
               echo "### Published image tags"
@@ -465,7 +410,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Cleanup on failure
-        if: failure()
+        if: failure() || cancelled()
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           RELEASE_VERSION: ${{ inputs.release-version }}
@@ -578,14 +523,3 @@ jobs:
             echo
             echo "Published registry images are not deleted automatically."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  scan-ecr-image:
-    name: Scan released image with Inspector2
-    needs: release
-    if: inputs.dry-run == false
-    permissions:
-      id-token: write
-      contents: read
-    uses: ./.github/workflows/scan-ecr-image.yml
-    with:
-      image-tag: ${{ inputs.release-version }}

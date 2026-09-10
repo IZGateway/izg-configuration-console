@@ -8,7 +8,6 @@ on:
     paths-ignore:
       - '.github/workflows/*'
       - '!.github/workflows/deploy.yml'
-      - '.github/scripts/*'
   workflow_dispatch:
 
 env:
@@ -70,6 +69,8 @@ jobs:
       #   run: npm run test
       - name: Lint
         run: npm run code-quality-check
+      - name: Test release validation script
+        run: npm run test:release-validation
 
   create-tag:
     name: Create tag

@@ -57,7 +57,7 @@ All workflows support manual triggering via `workflow_dispatch`, which can be in
 
 ### Advisory Image Scan
 - **File:** `.github/workflows/scan-ecr-image.yml`
-- **Triggered by:** Real releases or manual dispatch
+- **Triggered by:** A separate dispatch after real releases or manual dispatch
 - **No conflict:** Runs after image publication and does not block the release job
 
 ### Gitleaks
