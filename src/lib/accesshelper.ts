@@ -1,3 +1,4 @@
+import logger from '../../logger'
 import { subjectOf } from './security/authzsubject'
 import { hasGlobalTenancy } from './security/policy'
 
@@ -26,7 +27,15 @@ export default function hasAccessToDestId(destId: string, session: unknown) {
   if (hasGlobalTenancy(subject)) return true
 
   if (!subject.jurisdictions.length) {
-    throw new Error(`Non-admin users must be assigned at least 1 jurisdiction`)
+    // Deny cleanly rather than throw. A scoped role with no jurisdictions
+    // assigned is a reachable state — e.g. Okta's userinfo call failing, or a
+    // user not yet assigned one — not an invariant violation, and none of
+    // this function's callers (changerequest routes, the changerequest SSR
+    // page, api-middleware-helper's destination-scoped routes) wrap it in a
+    // try/catch. Throwing here turned what should be a clean 401/404 into an
+    // uncaught 500 for that case (PR #666 review).
+    logger.warn('Denied: scoped role has no assigned jurisdictions', { destId })
+    return false
   }
 
   // Exact element match, never a substring test: the data contains both `az`
