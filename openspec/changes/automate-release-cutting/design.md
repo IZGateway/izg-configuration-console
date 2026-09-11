@@ -153,12 +153,30 @@ keeps `latest` on GHCR, where nothing deploys from it. Alternative considered: d
 
 **Standalone `scan-ecr-image.yml`, dispatched after release.**
 `_release_common.yml` dispatches `scan-ecr-image.yml` after a successful non-dry release.
-The scan authenticates via OIDC (`AWS_ROLE_ARN` repo variable) and calls
-`IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1`, scanning
-`izg-configuration-console:<version>` instead of `izg-transformation-ui:<version>`.
+The scan authenticates via OIDC (`AWS_ROLE_ARN` repo variable), checks out
+`IZGateway/izg-dependency-scripts@v1`, and runs its unchanged
+`.github/scripts/ecr-scan-report.sh`, scanning `izg-configuration-console:<version>`
+instead of `izg-transformation-ui:<version>`.
 Alternative considered: inlining the scan steps directly in `_release_common.yml` —
 rejected because it would duplicate logic already centralized in the dependency-scripts
 repository and couple advisory reporting to the release job.
+
+**Strict scan status with shared report logic, scoped to this repository.**
+Run `34518311102` exposed a misleading green workflow with two failed authentication
+jobs: both the console's polling job and the shared report workflow used job-level
+`continue-on-error`. The console already dispatches scans independently, so suppressing
+scan execution failures is unnecessary. The polling job now fails on AWS errors or a
+20-minute timeout, and the report job owns normal failing authentication, checkout,
+script execution, completeness validation, and artifact-upload steps. It requires
+nonempty JSON, CSV, and HTML files and a JSON findings array. Zero findings and findings
+of any severity remain successful report outcomes, not execution errors.
+The missing `AWS_ROLE_ARN` variable gets a clear preflight error; image tags are validated
+before they are used in report paths and step outputs.
+The report script stays centralized and unchanged. The small job wrapper is local so
+neither `izg-dependency-scripts` nor transformation UI needs a behavior change.
+Trade-off: the console owns the authentication and artifact-upload configuration.
+Regression tests execute shell steps extracted from the workflow with mocked external
+responses, and `deploy.yml` includes scan-only changes in its test triggers.
 
 **Keep `npm ci --force` for this repo's install step.**
 `_release_common.yml`'s dependency-install step uses `npm ci --force`, matching this
@@ -189,8 +207,8 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
   App-token step and the first protected push (the release-branch push), surfacing either
   failure early. Note this is not side-effect-free (see the dry-run Decision above): a
   dry-run failure partway through still needs the same cleanup as any failed run.
-- **[Risk]** `izg-dependency-scripts` may not have granted this repo access to call its
-  reusable `ecr-scan-report.yml` workflow yet.
+- **[Risk]** The scan runner may be unable to check out the shared report scripts from
+  `izg-dependency-scripts`.
   → **Mitigation**: the scan runs as an independently dispatched workflow. Its failure
   cannot change the release workflow's conclusion, so the access gap can be resolved
   separately.
@@ -227,7 +245,9 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
    dry-run — the release pipeline cannot push or merge to `main`/`develop` otherwise. Do
    **not** relax the ruleset. Run `34515176941` proved the bypass works on `testmain`, and
    the same ruleset covers `main` and `develop`.
-5. External prerequisites (GitHub App installation with the permissions listed under
-   Decisions, `AWS_ROLE_ARN` + OIDC IAM role, `izg-dependency-scripts` cross-repo workflow
-   access) are owned outside this change and must be confirmed working via the dry-run in
-   step 2 before this pipeline is used for an actual production release.
+5. External prerequisites are owned outside this change. Confirm the GitHub App via the
+   dry-run in step 2, and confirm `AWS_ROLE_ARN`, the OIDC IAM role, and shared-script
+   checkout via a manual scan of an existing dev ECR tag before a production release.
+   Run `34530206067` confirmed both scan jobs authenticated, checked out the shared
+   scripts, and generated/uploaded all reports for `1.18.0-1190`. That run predates the
+   strict-status correction and does not prove the new job wrapper or release publishing.

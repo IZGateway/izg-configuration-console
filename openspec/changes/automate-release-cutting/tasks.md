@@ -88,12 +88,10 @@
 ## 3. Vulnerability scan integration
 
 - [x] 3.1 Create `.github/workflows/scan-ecr-image.yml` with a `wait-for-inspector2-scan`
-      job (continue-on-error) and a `scan-report` job that calls
-      `IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1` with
-      `ecr-repository: izg-configuration-console` and `gh-pkg-name: izgw-cc` (matching the
-      `izgw-cc-` APHL tag prefix). Verify with the `yaml.safe_load` check and by confirming
-      all four required inputs of `ecr-scan-report.yml` (`ecr-repository`, `image-tag`,
-      `gh-pkg-name`, `release-date`) are supplied.
+      job and a `scan-report` job using the shared report implementation with repository
+      `izg-configuration-console` and package name `izgw-cc` (matching the `izgw-cc-`
+      APHL tag prefix). The initial advisory reusable-workflow call is replaced by local
+      strict job steps in 7.12. Preserve image-tag and release-date inputs.
 - [x] 3.2 Dispatch `scan-ecr-image.yml` as a separate workflow run after a successful,
       non-dry release. Grant `actions: write` through `release.yml`, `hotfix.yml`, and
       `_release_common.yml`, and make dispatch failure non-blocking. Verify against spec
@@ -220,3 +218,19 @@
       `scan-ecr-image.yml` by hand with a tag that already exists in the dev ECR. That
       checks the two prerequisites most likely to be missing: the `AWS_ROLE_ARN` OIDC role
       and cross-repository access to `izg-dependency-scripts`.
+      **Manual-scan prerequisite verified:** run `34530206067` scanned existing tag
+      `1.18.0-1190`; both OIDC authentications, shared-script checkout, and report
+      generation/upload succeeded. Artifact `izgw-cc_v1.18.0-1190_InspectorScan` contains
+      JSON, CSV, and HTML reports with five findings. This predates 7.12; real registry
+      publication and release-triggered scan dispatch remain unverified.
+- [x] 7.12 Correct misleading successful scan status using console-only changes. Remove
+      polling failure suppression and fail on API errors or timeout. Replace the advisory
+      shared workflow call with local authentication, checkout, and unchanged shared-script
+      execution steps; require complete reports and successful artifact upload. Keep
+      findings informational and release dispatch non-blocking. Add mocked regression
+      cases using the existing Jest runner, wire them into CI, update related artifacts,
+      and run `npm run test:scan-workflow`, `npm run test:release-validation`, and
+      `npm run code-quality-check`.
+      **Local verification:** 29 scan-workflow regression cases and 18 release-validator
+      cases passed; lint/type-check and strict OpenSpec validation passed. The corrected
+      workflow still needs a new GitHub Actions run.

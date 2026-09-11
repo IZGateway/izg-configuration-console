@@ -199,3 +199,41 @@ cause the release run to be marked as failed.
 #### Scenario: Scan errors or times out
 - **WHEN** the post-release scan cannot complete (error or timeout)
 - **THEN** the release run is still reported as successful
+
+### Requirement: The standalone scan reports execution failures accurately
+The standalone scan workflow SHALL fail on missing authentication configuration,
+authentication or API errors, scan timeout, shared-script checkout or execution failure,
+invalid or incomplete report files, or artifact upload failure. It SHALL NOT suppress
+these errors with a successful workflow conclusion. A complete report SHALL include
+nonempty JSON, CSV, and HTML files, with a JSON findings array. A successful report with
+zero findings or findings of any severity SHALL NOT fail solely because of its findings.
+This behavior SHALL apply to both manual and release-dispatched scans without changing
+the release workflow's conclusion or other repositories' shared-workflow behavior.
+
+#### Scenario: AWS authentication or API access fails
+- **GIVEN** a scan was dispatched manually or by a completed release
+- **WHEN** AWS authentication or an Inspector2 API call fails
+- **THEN** the scan workflow is marked as failed with the error visible
+- **AND** any separate release run remains unchanged
+
+#### Scenario: Scan never completes
+- **GIVEN** Inspector2 has not reported a completed scan for the requested image
+- **WHEN** the polling deadline is reached
+- **THEN** the scan workflow fails instead of reporting success after a timeout
+
+#### Scenario: Report generation or publication fails
+- **GIVEN** the image scan completed
+- **WHEN** shared-script checkout, report generation, or artifact upload fails
+- **THEN** the scan workflow is marked as failed
+
+#### Scenario: Report files are incomplete
+- **GIVEN** the report script returned successfully
+- **WHEN** an expected JSON, CSV, or HTML file is missing or empty, or the JSON lacks a
+  findings array
+- **THEN** the scan workflow fails instead of claiming a report was produced
+
+#### Scenario: Report contains vulnerabilities or no findings
+- **GIVEN** the image scan and report generation completed
+- **WHEN** valid reports containing zero findings or findings of any severity are uploaded
+- **THEN** the scan workflow is successful
+- **AND** vulnerability findings remain informational for the release
