@@ -153,8 +153,6 @@
 - Trigger `release.yml` twice in quick succession (or `release.yml` and `hotfix.yml`
   together) and confirm the second run queues behind the first via the shared concurrency
   group rather than running in parallel.
-- Confirm the first real release publishes all expected registry tags and its separately
-  dispatched Inspector2 workflow produces the expected report artifact.
 
 ## 7. Verification hardening
 
@@ -210,19 +208,14 @@
       `main` and `develop` with the same rules, so the same bypass applies. This reverses
       the earlier prerequisite to drop the required-review rule. A bypass actor is the
       better answer, because the rules stay in force for humans. See design.md Context.
-- [ ] 7.11 Exercise the paths that the dry-runs could not reach. The dry-runs skipped
-      the advisory scan dispatch (gated on `dry-run == false`), the APHL push, and every
-      registry push. Failure cleanup is now covered by 7.9. No dry-run can reach the
-      remaining three, because each one is gated on `dry-run == false`. The first real
-      release is therefore the first exercise of all three. Before that release, dispatch
-      `scan-ecr-image.yml` by hand with a tag that already exists in the dev ECR. That
-      checks the two prerequisites most likely to be missing: the `AWS_ROLE_ARN` OIDC role
-      and cross-repository access to `izg-dependency-scripts`.
-      **Manual-scan prerequisite verified:** run `34530206067` scanned existing tag
-      `1.18.0-1190`; both OIDC authentications, shared-script checkout, and report
-      generation/upload succeeded. Artifact `izgw-cc_v1.18.0-1190_InspectorScan` contains
-      JSON, CSV, and HTML reports with five findings. This predates 7.12; real registry
-      publication and release-triggered scan dispatch remain unverified.
+- [x] 7.11 Verify manual-scan prerequisites using an existing dev ECR tag: the
+      `AWS_ROLE_ARN` OIDC role, Inspector2 access, shared-script checkout, and report
+      generation/upload. Run `34530206067` verified the initial workflow against
+      `1.18.0-1190`; run `34550222564` verified the corrected workflow at `e92fc66`
+      against the same tag. Both jobs and every step succeeded, including report
+      completeness and upload of JSON, CSV, and HTML reports with five findings.
+      **Scope adjustment:** the original real-publication and release-dispatch portion
+      of this task is explicitly deferred below, not marked as verified.
 - [x] 7.12 Correct misleading successful scan status using console-only changes. Remove
       polling failure suppression and fail on API errors or timeout. Replace the advisory
       shared workflow call with local authentication, checkout, and unchanged shared-script
@@ -232,5 +225,22 @@
       and run `npm run test:scan-workflow`, `npm run test:release-validation`, and
       `npm run code-quality-check`.
       **Local verification:** 29 scan-workflow regression cases and 18 release-validator
-      cases passed; lint/type-check and strict OpenSpec validation passed. The corrected
-      workflow still needs a new GitHub Actions run.
+      cases passed; lint/type-check and strict OpenSpec validation passed.
+      **Live success-path verification:** run `34550222564` at `e92fc66` completed every
+      step and uploaded artifact `izgw-cc_v1.18.0-1190_InspectorScan`. The corrected
+      failure paths have local regression coverage, not a live failing-run result.
+
+## First-release operational follow-up (non-blocking)
+
+**Accepted deferral, not completed verification.** Actual registry publication and
+release-triggered scan dispatch cannot be exercised until code review and merge are
+complete and the next scheduled release occurs. By agreement, this portion of the
+original task 7.11 is outside the blocking implementation checklist. It does not require
+keeping this change open until that release. Code review and merge remain required;
+the release behavior specified in `specs/release-automation/spec.md` is unchanged.
+
+At the next scheduled real release, observe publication to GHCR, dev ECR, and APHL ECR
+(unless explicitly skipped), plus automatic dispatch of the separate scan and its report
+artifact. These outcomes remain unverified end to end. The successful manual scans do
+not establish them. Open a separate troubleshooting ticket if the release exposes a
+problem; no advance ticket is required solely to keep this change open.

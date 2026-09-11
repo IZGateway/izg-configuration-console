@@ -198,6 +198,17 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
 `true` for *this run*, using `git revert` (a forward commit) rather than `git reset
 --hard`/force-push, so it works under branch protection rules.
 
+**Implementation completion is separate from first-release operational verification.**
+The real-publication and release-triggered scan checks originally included in task 7.11
+depend on completed code review, merge, and the next scheduled release. They are an
+explicitly accepted, non-blocking operational follow-up, not evidence of unfinished
+implementation and not checks claimed to have passed. The implementation can proceed
+through review, merge, and archival without waiting for next month's release. Review
+and merge are still required, and all specified release behaviors remain unchanged.
+At that release, observe registry publication and automatic scan dispatch/reporting.
+Open a separate troubleshooting ticket only if a problem occurs; no advance ticket is
+required solely because this operational verification is deferred.
+
 ## Risks / Trade-offs
 
 - **[Risk]** The GitHub App may not be installed, its secrets may not resolve on this repo,
@@ -249,5 +260,9 @@ step output; the cleanup step only reverts/deletes state whose corresponding out
    dry-run in step 2, and confirm `AWS_ROLE_ARN`, the OIDC IAM role, and shared-script
    checkout via a manual scan of an existing dev ECR tag before a production release.
    Run `34530206067` confirmed both scan jobs authenticated, checked out the shared
-   scripts, and generated/uploaded all reports for `1.18.0-1190`. That run predates the
-   strict-status correction and does not prove the new job wrapper or release publishing.
+   scripts, and generated/uploaded all reports for `1.18.0-1190`. Run `34550222564` at
+   `e92fc66` then confirmed the corrected strict-status workflow's success path, including
+   report completeness and artifact upload. The corrected failure paths have local
+   regression coverage, not a live failing-run result. Neither manual scan proves real
+   registry publication or release-triggered scan dispatch; those remain the accepted
+   first-release operational follow-up described above.
