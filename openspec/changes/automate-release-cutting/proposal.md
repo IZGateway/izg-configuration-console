@@ -30,8 +30,9 @@ manual bookkeeping.
   this change keep their existing format.
 - Add `scan-ecr-image.yml`, an advisory Inspector2 vulnerability scan dispatched as a
   separate workflow run after a real (non-dry-run) release, reusing
-  `IZGateway/izg-dependency-scripts`'s `ecr-scan-report.yml`. Dispatch and scan failures
-  cannot change the release workflow's result.
+  `IZGateway/izg-dependency-scripts@v1`'s unchanged `ecr-scan-report.sh` in local job steps.
+  Execution errors fail the scan run; vulnerability findings do not. Dispatch and scan
+  failures cannot change the separate release workflow's result.
 - **BREAKING**: Remove `create-release-branch.yml`. Cutting a release no longer has a manual
   gitflow-action entry point — use `release.yml` or `hotfix.yml`'s `workflow_dispatch`
   inputs instead.

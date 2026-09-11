@@ -15,6 +15,7 @@
     "test:watch": "jest --watch",
     "test": "jest",
     "test:release-validation": "bash .github/scripts/validate-release.test.sh",
+    "test:scan-workflow": "jest --runInBand --runTestsByPath .github/scripts/scan-ecr-image.test.ts",
     "fix-vulnerabilities": "fix-vulnerabilities && npm install && npm audit",
     "swagger:generate-doc": "npx next-swagger-doc-cli src/next-swagger-doc.json --output swaggerAPI.json",
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed"

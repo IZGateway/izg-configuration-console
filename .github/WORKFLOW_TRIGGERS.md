@@ -3,8 +3,8 @@
 ## Deployment workflow
 
 `.github/workflows/deploy.yml` runs for pull requests to `develop` and by manual
-dispatch. It ignores unrelated workflow changes while allowing edits to
-`deploy.yml` itself to exercise the changed workflow.
+dispatch. Its ordered `paths` filters exclude unrelated workflow changes but include
+`deploy.yml` and `scan-ecr-image.yml`, so scan-only changes run the regression suite.
 
 Pushing a `release/**` branch no longer triggers deployment. Release images are built
 once by the release pipeline.
@@ -60,20 +60,26 @@ scan. The scan workflow grants `id-token: write` separately for AWS OIDC.
 ## Inspector2 vulnerability scan (`scan-ecr-image.yml`)
 
 The advisory scan can run manually with an `image-tag`; `_release_common.yml` dispatches
-it as a separate workflow run after a real release. It waits up to 20 minutes for Inspector2 to scan
-`izg-configuration-console:<image-tag>`, then calls
-`IZGateway/izg-dependency-scripts/.github/workflows/ecr-scan-report.yml@v1` to produce
-the report artifact.
+it as a separate workflow run after a real release. It waits up to 20 minutes for
+Inspector2 to scan `izg-configuration-console:<image-tag>`, then checks out
+`IZGateway/izg-dependency-scripts@v1` and runs its unchanged
+`.github/scripts/ecr-scan-report.sh` to produce the JSON, CSV, and HTML report artifact.
+The console owns the job steps instead of calling the shared workflow, which tolerates
+job failures for its other callers.
 
 The scan requires:
 
 - An `AWS_ROLE_ARN` repository variable for OIDC authentication.
 - An IAM role with `inspector2:ListCoverage` and `inspector2:ListFindings`.
-- Cross-repository permission to call the shared report workflow.
+- Read access to check out the shared report scripts.
 
 The release build continues to use the existing AWS access-key secrets. OIDC is used
 only for the advisory scan. Scan dispatch and execution cannot change the release
-workflow's result.
+workflow's result. However, authentication/API errors, scan timeout, checkout or report
+generation failures, and missing/empty report files fail the **scan run**. Artifact
+upload failures also fail that run. A completed report succeeds even if it contains HIGH
+or CRITICAL findings, or zero findings. "Advisory" means the release is unaffected, not
+that scan execution errors are hidden.
 
 ## Testing workflow changes
 
@@ -83,6 +89,9 @@ Run `npm run test:release-validation` locally to exercise every release validati
 against a temporary Git remote without changing repository refs. `deploy.yml`'s
 `code-quality-check` job runs the same command, so a pull request that only edits
 `.github/scripts/` still gets checked.
+Run `npm run test:scan-workflow` for scan status regression cases. These execute the
+workflow's shell steps with mocked AWS/time/report-script responses; no AWS credentials
+or live scan are needed. The same suite runs in `deploy.yml`.
 
 ## References
 

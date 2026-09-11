@@ -5,9 +5,11 @@ on:
   pull_request:
     branches:
       - develop
-    paths-ignore:
-      - '.github/workflows/*'
-      - '!.github/workflows/deploy.yml'
+    paths:
+      - '**'
+      - '!.github/workflows/*'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/scan-ecr-image.yml'
   workflow_dispatch:
 
 env:
@@ -71,6 +73,8 @@ jobs:
         run: npm run code-quality-check
       - name: Test release validation script
         run: npm run test:release-validation
+      - name: Test scan workflow
+        run: npm run test:scan-workflow
 
   create-tag:
     name: Create tag
