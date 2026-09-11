@@ -1,0 +1,59 @@
+# Hotfix release workflow.
+# Run this workflow from the matching hotfix/<version> branch.
+#
+# Hotfix process:
+#   1. Create hotfix/<version> from main and push it.
+#   2. Merge emergency fixes into that hotfix branch.
+#   3. Run this workflow from the hotfix branch.
+
+name: Release - Hotfix
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Hotfix release version (for example, 1.17.1).'
+        required: true
+        type: string
+      develop-branch:
+        description: 'Develop branch name.'
+        required: false
+        type: string
+        default: 'develop'
+      main-branch:
+        description: 'Main branch name.'
+        required: false
+        type: string
+        default: 'main'
+      dry-run:
+        description: 'Build without pushing images and create a draft GitHub Release.'
+        required: false
+        type: boolean
+        default: false
+      skip-aphl:
+        description: 'Skip the APHL ECR login and image tag.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: write
+  packages: write
+  pull-requests: read
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  hotfix:
+    uses: ./.github/workflows/_release_common.yml
+    secrets: inherit
+    with:
+      release-version: ${{ inputs.release-version }}
+      release-type: hotfix
+      develop-branch: ${{ inputs.develop-branch }}
+      main-branch: ${{ inputs.main-branch }}
+      dry-run: ${{ inputs.dry-run }}
+      skip-aphl: ${{ inputs.skip-aphl }}
