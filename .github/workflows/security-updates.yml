@@ -262,19 +262,28 @@ jobs:
           GH_TOKEN: ${{ secrets.IZGW_ALL_REPO_ACCESS_TOKEN }}
         run: |
           PR_BODY=$(cat pr_body.md)
-          gh pr create \
+          PR_URL=$(gh pr create \
             --base develop \
             --head ${{ env.branch_name }} \
             --title "chore(deps): security and dependency updates" \
-            --body "$PR_BODY"
-          
+            --body "$PR_BODY")
+          echo "PR_URL=$PR_URL" >> $GITHUB_ENV
+
           echo "## ✅ Pull Request Created" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "A pull request has been created with the dependency updates." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ env.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Base:** \`develop\`" >> $GITHUB_STEP_SUMMARY
-      
+
+      - name: Wait for PR checks, then merge if green
+        if: steps.final_check.outputs.has_changes == 'true'
+        run: |
+          gh pr checks "$PR_URL" --watch --interval 30
+          gh pr merge "$PR_URL" --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload npm logs on failure
         if: failure()
         uses: actions/upload-artifact@v7
