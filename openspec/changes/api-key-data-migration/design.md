@@ -1,6 +1,25 @@
 ---
 schema_version: '1.0'
 updated:
+  - date: '2026-09-11T19:06:26.858Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: >-
+      prompt:/claude-code/4f96b5e4-3b73-481a-b286-a39b0bc937d1/~2a4cfcf0-a716-4615-a4fe-bba79c96a1af
+    summary: >-
+      Update jurisdiction-updates.sh reference (table row 1 of 2) to .js; Update
+      senders.sh reference (table row) to .js; Update provider-allowed-users.sh
+      reference (table row) to .js; Update apikey-domains.sh reference (table
+      row) to .js; Update iis-allowed-users.sh reference (table row, retry) to
+      .js; Update first numbered execution-order list from .sh to .js; Update
+      second table block from .sh to .js and refresh row counts to current
+      values; Update second numbered execution-order list from .sh to .js;
+      Update summary count line from .sh to .js
   - date: '2026-08-19T19:08:50.208Z'
     user: boonek
     agent:
@@ -32,6 +51,7 @@ updated:
 created:
   date: '2026-08-14T06:23:29.000Z'
   user: Keith W. Boone
+ticket: IGDD-3258
 ---
 # Design — API Key Data Migration
 
@@ -159,12 +179,12 @@ The `batches/` directory contains everything needed to run the migration:
 
 | Script | Description |
 |---|---|
-| `jurisdiction-updates.sh` | 62 `update-item` calls grouped by update pattern; 1 `put-item` for CCUAT |
+| `jurisdiction-updates.js` | 62 `UpdateItem` calls grouped by update pattern; 1 `UpdateItem` for CCUAT |
 | `prefix-corrections.json` | 3 `TransactWriteItems` for Hawaii/Idaho/Nebraska prefix fixes |
-| `senders.sh` | Reads `denormalized/senders.csv`; one `put-item` per sender org |
-| `iis-allowed-users.sh` | Reads `denormalized/allowed-users-iis.csv`; one `put-item` per IIS AllowedUser |
-| `provider-allowed-users.sh` | Reads `denormalized/allowed-users-provider.csv`; one `put-item` per provider AllowedUser |
-| `apikey-domains.sh` | Reads `denormalized/apikey-domains.csv`; one `put-item` per ApiKeyDomain |
+| `senders.js` | Reads `denormalized/senders.csv`; one `BatchWriteItem` write per sender org |
+| `iis-allowed-users.js` | Reads `denormalized/allowed-users-iis.csv`; one `BatchWriteItem` write per IIS AllowedUser |
+| `provider-allowed-users.js` | Reads `denormalized/allowed-users-provider.csv`; one `BatchWriteItem` write per provider AllowedUser |
+| `apikey-domains.js` | Reads `denormalized/apikey-domains.csv`; one `BatchWriteItem` write per ApiKeyDomain |
 
 Each script takes `--table <dynamodb-table-name>` and an optional `--profile <aws-profile>`.
 No environment flag is needed — the denormalized CSVs contain rows for all environments,
@@ -177,11 +197,11 @@ Jurisdiction `allowedUseTypes` are in place before AllowedUser records activate 
 permissions:
 
 1. `aws dynamodb transact-write-items --transact-items file://batches/prefix-corrections.json`
-2. `batches/jurisdiction-updates.sh --table <table>`
-3. `batches/senders.sh --table <table>`
-4. `batches/iis-allowed-users.sh --table <table>`
-5. `batches/provider-allowed-users.sh --table <table>`
-6. `batches/apikey-domains.sh --table <table>`
+2. `batches/jurisdiction-updates.js --table <table>`
+3. `batches/senders.js --table <table>`
+4. `batches/iis-allowed-users.js --table <table>`
+5. `batches/provider-allowed-users.js --table <table>`
+6. `batches/apikey-domains.js --table <table>`
 
 Steps 4–6 MUST NOT run if steps 1–3 have not completed successfully.
 
@@ -316,11 +336,11 @@ These are the artifacts used directly during migration execution:
 | File | Role |
 |---|---|
 | `prefix-corrections.json` | TransactWriteItems for Hawaii/Idaho/Nebraska prefix fixes |
-| `jurisdiction-updates.sh` | 62 `update-item` calls grouped by update pattern; CCUAT `put-item` |
-| `senders.sh` | Reads `denormalized/senders.csv` (15 rows); one `put-item` per sender |
-| `iis-allowed-users.sh` | Reads `denormalized/allowed-users-iis.csv` (1,566 rows) |
-| `provider-allowed-users.sh` | Reads `denormalized/allowed-users-provider.csv` (372 rows) |
-| `apikey-domains.sh` | Reads `denormalized/apikey-domains.csv` (133 rows) |
+| `jurisdiction-updates.js` | 63 `UpdateItem` calls grouped by update pattern; CCUAT `UpdateItem` |
+| `senders.js` | Reads `denormalized/senders.csv` (15 rows); one `BatchWriteItem` write per sender |
+| `iis-allowed-users.js` | Reads `denormalized/allowed-users-iis.csv` (1,694 rows; 926 distinct AllowedUser keys) |
+| `provider-allowed-users.js` | Reads `denormalized/allowed-users-provider.csv` (398 rows) |
+| `apikey-domains.js` | Reads `denormalized/apikey-domains.csv` (134 rows) |
 | `denormalized/senders.csv` | Denormalized sender records for review and execution |
 | `denormalized/jurisdiction-updates.csv` | Denormalized jurisdiction update records for review |
 | `denormalized/allowed-users-iis.csv` | Denormalized IIS AllowedUser records for review and execution |
@@ -336,11 +356,11 @@ hub-safety requirement that Jurisdiction `allowedUseTypes` are in place before
 AllowedUser records activate new sender permissions:
 
 1. **Prefix corrections** — `aws dynamodb transact-write-items --transact-items file://batches/prefix-corrections.json`
-2. **Jurisdiction updates** — `batches/jurisdiction-updates.sh --table <table>` (backfill `allowedUseTypes`/`useTypes`; insert CCUAT)
-3. **Sender records** — `batches/senders.sh --table <table>` (insert ids 100–114)
-4. **IIS AllowedUsers** — `batches/iis-allowed-users.sh --table <table>`
-5. **Provider AllowedUsers** — `batches/provider-allowed-users.sh --table <table>`
-6. **ApiKeyDomains** — `batches/apikey-domains.sh --table <table>`
+2. **Jurisdiction updates** — `batches/jurisdiction-updates.js --table <table>` (backfill `allowedUseTypes`/`useTypes`; insert CCUAT)
+3. **Sender records** — `batches/senders.js --table <table>` (insert ids 100–114)
+4. **IIS AllowedUsers** — `batches/iis-allowed-users.js --table <table>`
+5. **Provider AllowedUsers** — `batches/provider-allowed-users.js --table <table>`
+6. **ApiKeyDomains** — `batches/apikey-domains.js --table <table>`
 
 Steps 4–6 MUST NOT run if steps 1–3 have not completed successfully.
 
@@ -471,4 +491,4 @@ backfill for Texas.
 | AllowedUser records (IIS-to-IIS + IIS-to-DEX) | ~647 |
 | AllowedUser records (Provider-to-IIS) | ~136 |
 | **Total write operations** | **~908** |
-| **Migration scripts** | **6 (jurisdiction-updates.sh + 4 entity scripts + prefix-corrections.json)** |
+| **Migration scripts** | **6 (jurisdiction-updates.js + 4 entity scripts (.js) + prefix-corrections.json)** |

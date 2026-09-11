@@ -3,6 +3,19 @@ schema_version: '1.0'
 change_request: api-key-data-migration
 ticket: IGDD-3258
 updated:
+  - date: '2026-09-11T19:07:07.277Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: >-
+      prompt:/claude-code/4f96b5e4-3b73-481a-b286-a39b0bc937d1/~2a4cfcf0-a716-4615-a4fe-bba79c96a1af
+    summary: >-
+      Update task 2.2 script references from retired .sh to Node .js
+      replacements
   - date: '2026-08-19T19:09:18.796Z'
     user: boonek
     agent:
@@ -167,9 +180,9 @@ created:
 
 - [x] 2.2 Commit denormalized CSVs and execution scripts to branch
   - `batches/denormalized/` — 5 denormalized CSV files for review and execution
-  - `batches/jurisdiction-updates.sh` — annotated grouped update loops
+  - `batches/jurisdiction-updates.js` — annotated grouped update loops (Node/BatchWriteItem; retired the original .sh/aws-cli version, which took 20-60+ min per script on this team's Windows/Git-Bash setup due to per-row process-spawn overhead)
   - `batches/prefix-corrections.json` — TransactWriteItems for 3 prefix fixes
-  - `batches/senders.sh`, `iis-allowed-users.sh`, `provider-allowed-users.sh`, `apikey-domains.sh`
+  - `batches/senders.js`, `iis-allowed-users.js`, `provider-allowed-users.js`, `apikey-domains.js` (Node, via shared `batches/lib/batchLoad.js`)
 
 ## Phase 3: Docker Migration Image
 

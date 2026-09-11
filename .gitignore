@@ -47,3 +47,6 @@ playwright-report
 
 # Claude Code agent worktrees (nested repo checkouts, not source content)
 .claude/worktrees/
+
+# DynamoDB Local test snapshots (IGDD-3258) - regenerable from AWS, not a reviewed artifact
+openspec/changes/api-key-data-migration/local-testing/*.json

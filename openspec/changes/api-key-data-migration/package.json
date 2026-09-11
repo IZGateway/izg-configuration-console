@@ -1,0 +1,20 @@
+{
+  "name": "api-key-data-migration",
+  "version": "1.0.0",
+  "description": "Batch generator and DynamoDB loaders for IGDD-3258 data migration",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "generate": "node generate-batches.js",
+    "load:senders": "node batches/senders.js",
+    "load:iis": "node batches/iis-allowed-users.js",
+    "load:provider": "node batches/provider-allowed-users.js",
+    "load:domains": "node batches/apikey-domains.js",
+    "load:jurisdictions": "node batches/jurisdiction-updates.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1120.0",
+    "@aws-sdk/lib-dynamodb": "^3.1120.0",
+    "csv-parse": "^5.6.0"
+  }
+}

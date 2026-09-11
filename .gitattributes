@@ -1,0 +1,5 @@
+# Shell scripts must always check out as LF. core.autocrlf=true (a per-developer
+# Windows setting) would otherwise convert them to CRLF, which corrupts the
+# multi-line JSON string literals embedded in openspec/changes/api-key-data-migration/batches/*.sh.
+# Scoped to *.sh only -- does not affect any other file type or anyone's global git config.
+*.sh text eol=lf
