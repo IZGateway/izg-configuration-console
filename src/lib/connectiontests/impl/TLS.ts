@@ -3,10 +3,13 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
+import { createPinnedLookup } from '../../security/pinnedLookup'
 import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
-const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
+  ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
+  : 5000
 export default class TLS extends ConnectionTest {
   jurisdictionUrl: string
   private readonly TEST_NAME: string
@@ -18,15 +21,17 @@ export default class TLS extends ConnectionTest {
   private static readonly MIN_TLS_VERSION: string = 'TLSv1.2'
   private static readonly MAX_TLS_VERSION: string = 'TLSv1.3'
   skip = (): Promise<ConnectionTestResult[]> => {
-    return Promise.resolve([{
-      name: this.TEST_NAME,
-      order: this.connectionTestRequest.order,
-      status: TestStatus.SKIPPED,
-      message: 'TLS test skipped due to connectivity test failures',
-      detail: null,
-      type: 'tls'
-    }])
-  } 
+    return Promise.resolve([
+      {
+        name: this.TEST_NAME,
+        order: this.connectionTestRequest.order,
+        status: TestStatus.SKIPPED,
+        message: 'TLS test skipped due to connectivity test failures',
+        detail: null,
+        type: 'tls',
+      },
+    ])
+  }
   run = (): Promise<ConnectionTestResult[]> => {
     const dnsConnectionTestResult: ConnectionTestResult = {
       name: this.TEST_NAME,
@@ -34,7 +39,7 @@ export default class TLS extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
-      type: 'tls'
+      type: 'tls',
     }
 
     const httpsAgentOptions = {
@@ -56,6 +61,8 @@ export default class TLS extends ConnectionTest {
       port: this.connectionTestRequest.port,
       path: this.connectionTestRequest.path,
       agent: new https.Agent(httpsAgentOptions),
+      // Pin to the address the guard validated (see createPinnedLookup).
+      lookup: createPinnedLookup(this.connectionTestRequest.ip),
     }
 
     return new Promise((resolve) => {
@@ -67,9 +74,9 @@ export default class TLS extends ConnectionTest {
             message: this.isGoodTLSVersion((res.socket as any).getProtocol())
               ? ''
               : TestResponseMessages.TLS_VERSION_FAIL(
-                options.hostname,
-                (res.socket as any).getProtocol()
-              ),
+                  options.hostname,
+                  (res.socket as any).getProtocol()
+                ),
             status: this.isGoodTLSVersion((res.socket as any).getProtocol())
               ? TestStatus.PASS
               : TestStatus.FAIL,
