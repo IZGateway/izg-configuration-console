@@ -63,7 +63,12 @@ export function hasApiKeyPermission(
   permission: ApiKeyPermission
 ): boolean {
   const allowed = Boolean(getApiKeyAccess(session)?.[permission])
-  if (!allowed) {
+  // The feature-wide kill switch being off is not an RBAC rejection — it's a
+  // feature-availability state that applies to every caller regardless of
+  // role, so it must not be logged as one (would otherwise spam an
+  // AccessDenied event on every /api/apikeys/* call in any environment where
+  // the feature hasn't launched yet).
+  if (!allowed && isApiKeyManagementEnabled()) {
     logAccessDenied({
       reason: `insufficient role for ${permission}`,
       user: session?.user?.email,

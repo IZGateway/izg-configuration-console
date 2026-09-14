@@ -1106,6 +1106,35 @@ describe('API key authorization (role + tenancy)', () => {
       })
     })
 
+    it('403s GET list while the feature kill switch is off WITHOUT logging AccessDenied, even for a role with full access', async () => {
+      // Regression test for the PR #672 review (IGDD-3444 interaction): the
+      // kill switch being off is a feature-availability state, not an RBAC
+      // rejection, and must not be logged as one — otherwise every
+      // /api/apikeys/* call in any environment where the feature hasn't
+      // launched yet spams a false AccessDenied event, including for roles
+      // (like IZG Operations here) that would otherwise have full access.
+      const previousFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
+      process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
+      try {
+        mockGetServerSession.mockResolvedValue(authedSession)
+        const fetchApiKeyCredentials = jest.fn()
+        mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+        const res = createRes()
+        await apikeysHandler(createReq('GET'), res)
+
+        expect(res.statusCode).toBe(403)
+        expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+
+        const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+          (call: any) => call[1]?.eventType === 'AccessDenied'
+        )
+        expect(deniedCalls).toHaveLength(0)
+      } finally {
+        process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = previousFlag
+      }
+    })
+
     it('403s token reveal for IZG Support (before any DB read)', async () => {
       mockGetServerSession.mockResolvedValue(izgSupportSession)
       const getApiKeyCredential = jest.fn()
