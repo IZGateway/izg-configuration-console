@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import logger from '../../../../logger'
 import _ from 'lodash'
 import roles from '../../../lib/security/roles'
+import { isApiKeyManagementEnabled } from '../../../lib/security/apiKeyAuthz'
 
 const userInfoEndpoint = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/oauth2/v1/userinfo`
 const isDebugging = process.env.NEXTAUTH_DEBUG === 'true'
@@ -32,6 +33,12 @@ export const authOptions = {
           process.env.OPERATIONS_GROUP
         )
         session.user.jurisdictions = token.jurisdictions
+        // Read at request time (not build time) so the feature-wide API Key
+        // Management kill switch can be flipped via env var without a
+        // redeploy — the nav link (menuItems.tsx) needs it client-side, and
+        // this session payload is the existing vehicle for that (same as
+        // role/jurisdictions/isAdmin above).
+        session.apiKeyManagementEnabled = isApiKeyManagementEnabled()
       }
       return session
     },

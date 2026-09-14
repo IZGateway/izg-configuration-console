@@ -10,6 +10,8 @@ declare module 'next-auth' {
       address: string
     } & DefaultSession['user']
     isAdmin: boolean
+    /** Release flag (IGDD-3444) gating the API Key Management nav link/page/APIs for every role. */
+    apiKeyManagementEnabled: boolean
   }
 }
 
