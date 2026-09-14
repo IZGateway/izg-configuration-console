@@ -5,6 +5,7 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { requireApiKeyAccess } from '../../../lib/security/apiKeyAuthz'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -46,6 +47,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(400).json({ error: 'envId must each be a number between 1 and 5' })
     }
     if (envIds.length > 1 && !session.user.isAdmin) {
+      logAccessDenied({
+        reason: 'multi-environment domain query requires admin',
+        user: session.user.email,
+        role: session.user.role,
+        jurisdictionId,
+      })
       return res.status(403).json({ error: 'Only administrators may query multiple environments' })
     }
 

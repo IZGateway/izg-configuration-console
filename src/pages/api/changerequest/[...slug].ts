@@ -5,6 +5,7 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
 import hasAccessToDestId from '../../../lib/accesshelper'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { asyncRequestContext } from '../../../lib/Context'
 /**
  * @swagger
@@ -42,6 +43,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const destTypeId = _.toNumber(slug[0])
 
     if (!hasAccessToDestId(destId, session)) {
+      logAccessDenied({
+        reason: 'caller has no access to destination',
+        url: req.url,
+        method: req.method,
+        user: session.user.email,
+        role: session.user.role,
+        destId,
+      })
       return res.status(401).send('unauthorized')
     }
 
@@ -57,6 +66,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const changeRequest = await dbClient.fetchDestinationChangeRequestById(id)
 
       if (!changeRequest || !hasAccessToDestId(changeRequest.destId, session)) {
+        if (changeRequest) {
+          logAccessDenied({
+            reason: 'caller has no access to destination',
+            url: req.url,
+            method: req.method,
+            user: session.user.email,
+            role: session.user.role,
+            destId: changeRequest.destId,
+          })
+        }
         return res.status(401).send('unauthorized')
       }
 
