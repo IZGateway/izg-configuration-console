@@ -14,9 +14,11 @@ import {
   defaultChangeRequestPageAccessControl,
   defaultHistoryPageAccessControl,
 } from './defaultaccesslevels'
-import { PageControls } from '../accesslevel'
+import { RoleAccess } from '../accesslevel'
 
-const IZGOperationsAccess: PageControls = {
+const IZGOperationsAccess: RoleAccess = {
+  // IZG Operations sees every jurisdiction (was: hardcoded in accesshelper.ts).
+  globalTenancy: true,
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
     canRunConnectionTest: true,
