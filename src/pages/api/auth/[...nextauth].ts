@@ -7,6 +7,7 @@ import {
   getGroupsFromClaims,
   getGroupsFromJwt,
   mergeGroups,
+  normalizeGroupName,
   rolesFromGroups,
 } from '../../../lib/security/rolemapping'
 import { isApiKeyManagementEnabled } from '../../../lib/security/apiKeyAuthz'
@@ -41,8 +42,18 @@ export const authOptions = {
         // would only preserve a footgun: any reader still using it would compile
         // and silently apply single-role logic.
         session.user.roles = rolesFromGroups(token.groups)
-        session.user.isAdmin = token?.groups?.includes(
-          process.env.OPERATIONS_GROUP
+        // Normalized comparison (not a raw `includes`) so a differently
+        // cased/punctuated Okta group (e.g. `IZG-Operations` vs
+        // `IZG Operations`) still resolves `isAdmin` correctly — the same
+        // tolerance `rolesFromGroups` already applies to `roles` above. Before
+        // this fix the two could disagree: a user got the right role but
+        // `isAdmin` silently stayed false, hiding admin-only controls that key
+        // off `isAdmin` alone (e.g. `DenyList.tsx`, `FileTypeList.tsx`).
+        const operationsGroup = normalizeGroupName(
+          process.env.OPERATIONS_GROUP ?? ''
+        )
+        session.user.isAdmin = (token?.groups ?? []).some(
+          (group) => normalizeGroupName(group) === operationsGroup
         )
         session.user.jurisdictions = token.jurisdictions
         // Read at request time (not build time) so the feature-wide API Key
