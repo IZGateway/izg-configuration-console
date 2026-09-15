@@ -240,8 +240,11 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
 }) => {
   const { data: session } = useSession()
   const { setAlert } = useContext(CombinedContext)
-  const isAdminOrIZGOp =
-    session?.user?.role === 'IZG Operations' || session?.user?.isAdmin
+  // `isAdmin` is membership of OPERATIONS_GROUP, which is the `IZG Operations`
+  // group — so the old `role === 'IZG Operations'` clause was already implied by
+  // it and has been dropped. Also more correct under multi-role: a user in that
+  // group keeps admin rights regardless of which other roles they hold.
+  const isAdminOrIZGOp = Boolean(session?.user?.isAdmin)
   const sessionContext = useContext(SessionContext)
   const pageSize = sessionContext?.pageSize || 25
   const setPageSize =
