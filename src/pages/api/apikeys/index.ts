@@ -10,6 +10,7 @@ import {
   ownsJurisdiction,
   requireApiKeyAccess,
 } from '../../../lib/security/apiKeyAuthz'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -87,6 +88,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // Multi-env credentials are an IZG Operations capability (server-enforced,
       // not just UI-gated) — every other role is limited to a single environment.
       if (envIds.length > 1 && !session.user.isAdmin) {
+        logAccessDenied({
+          reason: 'multi-environment key creation requires admin',
+          user: session.user.email,
+          role: session.user.role,
+          jurisdictionId,
+        })
         return res.status(403).json({ error: 'Only administrators may create a multi-environment key' })
       }
 
@@ -148,6 +155,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           return res.status(404).json({ error: 'Credential being re-issued was not found' })
         }
         if (oldCredential.jurisdictionId !== String(jurisdictionId)) {
+          logAccessDenied({
+            reason: 're-issue target credential belongs to a different jurisdiction',
+            user: session.user.email,
+            role: session.user.role,
+            jurisdictionId,
+          })
           return res.status(403).json({ error: 'Forbidden - not authorized for this jurisdiction' })
         }
         // The UI never offers Re-issue on a revoked/cancelled key, but that's

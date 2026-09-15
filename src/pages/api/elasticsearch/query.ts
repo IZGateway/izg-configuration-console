@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import logger from '../../../../logger'
 
 /**
@@ -14,6 +15,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getServerSession(req, res, authOptions)
 
   if (!session?.user?.isAdmin) {
+    // Only log a genuine RBAC rejection (authenticated but non-admin) — an
+    // unauthenticated caller is a separate authentication concern, not a
+    // role-based denial.
+    if (session?.user) {
+      logAccessDenied({
+        reason: 'admin-only Elasticsearch query',
+        url: req.url,
+        method: req.method,
+        user: session.user.email,
+        role: session.user.role,
+      })
+    }
     return res.status(403).json({
       error: 'Unauthorized',
       message: 'Only admin users can access Elasticsearch queries',
