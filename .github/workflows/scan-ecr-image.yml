@@ -1,0 +1,142 @@
+# Advisory ECR image vulnerability scan.
+# This workflow runs manually or by dispatch from a successful real release.
+# Execution errors fail this run, but cannot change the separate release run.
+
+name: Scan ECR Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: 'Image tag in the izg-configuration-console ECR repository.'
+        required: true
+        type: string
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ECR_REPOSITORY: izg-configuration-console
+  GH_PKG_NAME: izgw-cc
+  IMAGE_TAG: ${{ inputs.image-tag }}
+
+jobs:
+  wait-for-inspector2-scan:
+    name: Wait for Inspector2 scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      release-date: ${{ steps.metadata.outputs.release-date }}
+      image-version: ${{ steps.metadata.outputs.image-version }}
+    steps:
+      - name: Validate scan configuration and compute metadata
+        id: metadata
+        env:
+          AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$AWS_ROLE_ARN" ]]; then
+            echo "::error::Set the AWS_ROLE_ARN Actions variable to the scan role ARN"
+            exit 1
+          fi
+          if [[ ! "$IMAGE_TAG" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_.-]{0,127}$ ]]; then
+            echo "::error::image-tag must be a valid container image tag (1-128 characters)"
+            exit 1
+          fi
+          echo "release-date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          echo "image-version=${IMAGE_TAG%%-RELEASE-*}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Wait for the Inspector2 image scan
+        run: |
+          set -euo pipefail
+          DEADLINE=$(( $(date +%s) + 20 * 60 ))
+          FILTER=$(jq -n --arg repo "$ECR_REPOSITORY" --arg tag "$IMAGE_TAG" \
+            '{ecrRepositoryName: [{comparison: "EQUALS", value: $repo}],
+              ecrImageTags: [{comparison: "EQUALS", value: $tag}]}')
+
+          while :; do
+            SCAN=$(aws inspector2 list-coverage \
+              --filter-criteria "$FILTER" \
+              --query 'coveredResources[0].scanStatus' \
+              --output json \
+              --cli-connect-timeout 10 \
+              --cli-read-timeout 30)
+            CODE=$(echo "$SCAN" | jq -r '.statusCode // "NONE"')
+            REASON=$(echo "$SCAN" | jq -r '.reason // "NONE"')
+            echo "Inspector2 status: ${CODE}/${REASON}"
+
+            if [[ "$CODE" == "ACTIVE" && "$REASON" == "SUCCESSFUL" ]]; then
+              exit 0
+            fi
+            if [[ "$(date +%s)" -ge "$DEADLINE" ]]; then
+              echo "::error::Inspector2 scan did not complete within 20 minutes (${CODE}/${REASON})"
+              exit 1
+            fi
+            sleep 30
+          done
+
+  scan-report:
+    name: Inspector2 scan report
+    needs: wait-for-inspector2-scan
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      RELEASE_DATE: ${{ needs.wait-for-inspector2-scan.outputs.release-date }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Reuse the script, not the shared workflow that suppresses job failures.
+      - name: Checkout shared report scripts
+        uses: actions/checkout@v7
+        with:
+          repository: IZGateway/izg-dependency-scripts
+          ref: v1
+          path: izg-dependency-scripts
+          sparse-checkout: |
+            .github/scripts
+          persist-credentials: false
+
+      - name: Generate ECR scan report
+        run: |
+          set -euo pipefail
+          bash izg-dependency-scripts/.github/scripts/ecr-scan-report.sh \
+            --repo "$ECR_REPOSITORY" \
+            --tag "$IMAGE_TAG" \
+            --pkg "$GH_PKG_NAME" \
+            --release-date "$RELEASE_DATE" \
+            --out-dir scan-reports
+
+      - name: Require complete scan reports
+        run: |
+          set -euo pipefail
+          REPORT_BASE="scan-reports/${RELEASE_DATE//-/}_${GH_PKG_NAME}_v${IMAGE_TAG%%-RELEASE-*}_InspectorScan"
+          for extension in json csv html; do
+            if [[ ! -s "${REPORT_BASE}.${extension}" ]]; then
+              echo "::error::Missing or empty scan report: ${REPORT_BASE}.${extension}"
+              exit 1
+            fi
+          done
+          jq -e '.findings | type == "array"' "${REPORT_BASE}.json" > /dev/null
+
+      - name: Upload scan report artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: izgw-cc_v${{ needs.wait-for-inspector2-scan.outputs.image-version }}_InspectorScan
+          path: scan-reports/
+          retention-days: 90
+          if-no-files-found: error
