@@ -105,12 +105,6 @@ To avoid infinite loops and unnecessary workflow runs when workflow files are up
 
 ```yaml
 on:
-  push:
-    branches:
-      - 'release/**'
-    paths-ignore:
-      - '.github/workflows/*'
-      - '!.github/workflows/deploy.yml'
   pull_request:
     branches:
       - develop

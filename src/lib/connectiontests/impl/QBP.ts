@@ -2,6 +2,7 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
+import { createPinnedLookup } from '../../security/pinnedLookup'
 import { TestResponseMessages } from '../TestResponseMessages'
 import * as fs from 'fs'
 import path from 'path'
@@ -12,29 +13,39 @@ import { DOMParser } from '@xmldom/xmldom'
 import DbClientFactory from '../../db/DbClientFactory'
 import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
-function escapeXml(unsafe : string): string {
-    return unsafe.replace(/[<>&'"]/g, function (c) {
-        switch (c) {
-            case '<': return '&lt;';
-            case '>': return '&gt;';
-            case '&': return '&amp;';
-        }
-    });
+function escapeXml(unsafe: string): string {
+  return unsafe.replace(/[<>&'"]/g, function (c) {
+    switch (c) {
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '&':
+        return '&amp;'
+    }
+  })
 }
 const randomUUID = uuidv4()
 let hl7Message: string
-const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
-const TEST_NAME = 'Send a Submit Single Message with an HL7 QBP for test patient'
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
+  ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
+  : 5000
+const TEST_NAME =
+  'Send a Submit Single Message with an HL7 QBP for test patient'
 export default class QBP extends ConnectionTest {
-  skip = (msg : string): Promise<ConnectionTestResult[]> => {
-    return Promise.resolve([{
-      name: TEST_NAME,
-      order: this.connectionTestRequest.order,
-      status: TestStatus.SKIPPED,
-      message: msg ? msg : 'QBP test skipped due to connectivity test failures',
-      detail: null,
-      type: 'qbp'
-    }])
+  skip = (msg: string): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([
+      {
+        name: TEST_NAME,
+        order: this.connectionTestRequest.order,
+        status: TestStatus.SKIPPED,
+        message: msg
+          ? msg
+          : 'QBP test skipped due to connectivity test failures',
+        detail: null,
+        type: 'qbp',
+      },
+    ])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
     const destination = this.connectionTestRequest.destinationData
@@ -44,7 +55,7 @@ export default class QBP extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
-      type: 'qbp'
+      type: 'qbp',
     }
     /* msh11 should really be set by DB, but that must wait for core/hub changes to support it */
     const normalOnboardingDestinations = [
@@ -77,45 +88,54 @@ export default class QBP extends ConnectionTest {
       'wy',
     ]
     const dbClient = await DbClientFactory.getDbClient()
-    const password = destination.password || await dbClient.fetchDestinationPassword(
-      destination.destId,
-      destination.destinationType.typeId
-    ) || ''
-    const destinationVersion = await lookupDestinationVersion(
-      destination.destId,
-      destination.destinationType.typeId
-    ) || ''
+    const password =
+      destination.password ||
+      (await dbClient.fetchDestinationPassword(
+        destination.destId,
+        destination.destinationType.typeId
+      )) ||
+      ''
+    const destinationVersion =
+      (await lookupDestinationVersion(
+        destination.destId,
+        destination.destinationType.typeId
+      )) || ''
 
     /* Production destinations, or non-production destinations in above list us MSH11 value of P, other non-production require T. */
     const msh11 =
       destination.destinationType.typeId == 5 ||
-        normalOnboardingDestinations.includes(destination.destId)
+      normalOnboardingDestinations.includes(destination.destId)
         ? 'P'
         : 'T'
 
-    const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${destination?.MSH5
-      }|${destination?.MSH6}|${moment().format(
-        'YYYYMMDDHHmmssZZ'
-      )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${destination?.MSH22
-      }|
+    const hl7msg = `MSH|^~\\&amp;|${destination?.MSH3}|${destination?.MSH4}|${
+      destination?.MSH5
+    }|${destination?.MSH6}|${moment().format(
+      'YYYYMMDDHHmmssZZ'
+    )}||QBP^Q11^QBP_Q11|${randomUUID}|${msh11}|2.5.1|||ER|AL|||||Z34^CDCPHINVS|${
+      destination?.MSH22
+    }|
 QPD|Z34^Request Immunization History^CDCPHINVS|${randomUUID.replace(
-        /-/g,
-        ''
-      )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
+      /-/g,
+      ''
+    )}|112258-9^^^ND^MR|JohnsonIZG^JamesIZG^AndrewIZG^^^^L|LeungIZG^SarahIZG^^^^^M|20160414|M|Main Street&amp;&amp;123^^Alexander^ND^58831^^L|^PRN^PH^^^555^5551111|Y|1
 RCP|I|10^RD&amp;Records&amp;HL70126`
-    const requestBody = (destinationVersion !== '2014') ?
-        // 2011 is default value if not set
-        `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+    const requestBody =
+      destinationVersion !== '2014'
+        ? // 2011 is default value if not set
+          `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
            <soap:Body>
              <iis:submitSingleMessage xmlns:iis="urn:cdc:iisb:2011">
                <iis:username>${escapeXml(destination?.username)}</iis:username>
                <iis:password>${escapeXml(password)}</iis:password>
-               <iis:facilityID>${escapeXml(destination?.facilityId)}</iis:facilityID>
+               <iis:facilityID>${escapeXml(
+                 destination?.facilityId
+               )}</iis:facilityID>
                <iis:hl7Message>${escapeXml(hl7msg)}</iis:hl7Message>
              </iis:submitSingleMessage>
            </soap:Body>
          </soap:Envelope>`
-      : `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+        : `<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
            <soap:Header xmlns:wsa="http://www.w3.org/2005/08/addressing">
              <wsa:Action>urn:cdc:iisb:2014:IISPortType:SubmitSingleMessageRequest</wsa:Action>
              <wsa:MessageID>${randomUUID}</wsa:MessageID>
@@ -124,11 +144,13 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
              <iis:SubmitSingleMessageRequest xmlns:iis="urn:cdc:iisb:2014">
                <iis:Username>${escapeXml(destination?.username)}</iis:Username>
                <iis:Password>${escapeXml(password)}</iis:Password>
-               <iis:FacilityID>${escapeXml(destination?.facilityId)}</iis:FacilityID>
+               <iis:FacilityID>${escapeXml(
+                 destination?.facilityId
+               )}</iis:FacilityID>
                <iis:Hl7Message>${escapeXml(hl7msg)}</iis:Hl7Message>
              </iis:SubmitSingleMessageRequest>
            </soap:Body>
-         </soap:Envelope>`;
+         </soap:Envelope>`
 
     const httpsAgentOptions = {
       cert: fs.readFileSync(
@@ -150,6 +172,8 @@ RCP|I|10^RD&amp;Records&amp;HL70126`
       path: this.connectionTestRequest.path,
       method: 'POST',
       agent: new https.Agent(httpsAgentOptions),
+      // Pin to the address the guard validated (see createPinnedLookup).
+      lookup: createPinnedLookup(this.connectionTestRequest.ip),
       headers: {
         Host: this.connectionTestRequest.url.hostname,
         'Content-Type': isVersion2014

@@ -66,8 +66,13 @@ export const menuItems: MenuItem[] = [
     // set server-side per request in the session callback, so the link
     // disappears for every role while the feature is disabled.
     adminOnly: false,
-    isVisible: (role, session) =>
+    // Visible if the feature-wide kill switch is on AND any held role can
+    // list keys. A "what"-only role check with no jurisdiction, so unioning
+    // across roles is correct here.
+    isVisible: (roles, session) =>
       !!session?.apiKeyManagementEnabled &&
-      !!accessLevel[role ?? '']?.apikeys?.canListApiKeys,
+      (roles ?? []).some(
+        (role) => !!accessLevel[role]?.apikeys?.canListApiKeys
+      ),
   },
 ]
