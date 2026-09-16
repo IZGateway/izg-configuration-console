@@ -11,7 +11,7 @@ This project uses an automated workflow to keep dependencies current and secure.
 - **Manual:** Can be triggered via GitHub Actions UI
 
 ### What it does:
-1. Checks out the branch that triggered the workflow (default branch for scheduled runs)
+1. Checks out `develop` using a repository-scoped Dependency Bot App token, including on manual runs
 2. Runs `ncu --target minor -u` to update dependencies
 3. If no changes detected, exits with a summary
 4. If changes detected:
@@ -19,10 +19,32 @@ This project uses an automated workflow to keep dependencies current and secure.
    - Installs updated dependencies (without `--legacy-peer-deps`)
    - Adds security overrides for vulnerable transitive dependencies (all severity levels)
    - Runs `scripts/test-overrides.js` to remove unnecessary overrides
-   - Commits the changes
-   - Runs linting, type-checking, tests, and build
-   - Runs security audit with `--audit-level=low`
-   - Creates a PR to `develop` branch
+   - Commits the changes, or stops without a PR if no tracked changes remain after cleanup
+   - Runs linting, type-checking, and build as blocking gates; Jest remains non-blocking
+   - Runs a non-blocking security audit with `--audit-level=low`
+   - Creates a PR to `develop` as `izg-dependency-bot[bot]`
+   - Waits for PR checks, then squash-merges through the GitHub API using the App's PR-only bypass
+   - Requires an open, non-draft, same-repository PR with the expected branch and commit, changing only `package.json` and/or `package-lock.json`
+   - Rechecks PR metadata after waiting and pins the merge to the checked commit SHA
+   - Deletes the branch only after confirmed merge success, if it still points to that commit
+
+The merge step waits up to 20 polling attempts (15 seconds apart) for checks to
+register, then watches them with fail-fast behavior. Missing checks, failed checks,
+API errors, unexpected PR changes, or the 20-minute step timeout stop the merge.
+The existing non-blocking Jest and audit policy is unchanged; green PR checks do
+not guarantee passing unit tests or a clean dependency audit.
+
+### Required GitHub setup
+
+- Install **IZG Dependency Bot** on this repository. Grant the App Contents and Pull requests read/write, and Checks and Commit statuses read access.
+- Make `DEPENDENCY_BOT_APP_ID` and `DEPENDENCY_BOT_APP_KEY` available as Actions secrets. Existing npm credentials remain unchanged; this workflow no longer uses `IZGW_ALL_REPO_ACCESS_TOKEN`.
+- Separate the shared `main*`/`develop*` ruleset so the bot has **PR-only bypass on `develop`**, not `main`. Preserve existing protections and other actors' access.
+- Account for this repository's CodeQL rule explicitly: a ruleset bypass covers the ruleset, not just its approval requirement. The workflow waits for reported PR checks; it does not create a CodeQL scan or replace that policy.
+
+These repository settings are not configured by the workflow. A manual run can
+create and merge a real dependency PR once the App and rules are ready. Selecting
+a feature branch chooses the workflow version to run, but dependency changes
+always start from `develop`.
 
 ### Key Features:
 - **Safe Updates:** Only minor version updates (no breaking changes)
@@ -30,7 +52,7 @@ This project uses an automated workflow to keep dependencies current and secure.
 - **Automatic Overrides:** Adds package overrides for vulnerable transitive dependencies
 - **Override Cleanup:** Automatically removes unnecessary package overrides
 - **Proper Peer Dependencies:** Uses npm's native peer dependency resolution (no `--legacy-peer-deps`)
-- **Full Testing:** Runs all quality checks before creating PR
+- **Quality Gates:** Lint, type-check, build, and PR-check failures block merging; Jest and the dependency audit remain non-blocking
 - **Transparent:** Detailed summary in PR description
 
 ### Labels applied:
@@ -107,7 +129,7 @@ This pattern means:
 **Important:** GitHub Actions uses the workflow file from the branch where the push/PR occurred, not the default branch. This means:
 
 1. **Test Workflow Changes** - When you modify `deploy.yml`, you need it to run so you can verify your changes work
-2. **Prevents Infinite Loops** - Automated workflows (like security-updates.yml) that create PRs won't trigger other workflows
+2. **Filters Workflow-Only Changes** - Changes only to ignored workflow files do not trigger deployment. Dependency PRs changing package files still trigger it, including those created by the Dependency Bot App.
 3. **Reduces CI Load** - Changes to unrelated workflow files don't trigger unnecessary builds
 
 ### Testing Workflow Changes:
@@ -165,12 +187,15 @@ on:
 
 ### Branch Behavior
 
-The workflow automatically uses the branch that triggered it:
-- **Scheduled runs** - Uses the default branch (typically `main` or `develop`)
-- **Manual triggers** - Uses the branch selected when running the workflow
-- **Testing workflow changes** - Push to a feature branch and manually trigger to test your changes
+The workflow definition comes from the branch that triggered it, but checkout
+always uses `develop`:
+- **Scheduled runs** - Uses the workflow definition on the default branch
+- **Manual triggers** - Uses the workflow definition on the selected branch
+- **Dependency updates** - Always creates the update branch from `develop`, not the selected feature branch
 
-This allows you to test updated scripts and workflow changes before merging to the main branch.
+To try workflow changes before merging, push them to a feature branch and trigger
+that version manually. Source and package files on the feature branch are not
+included in the dependency PR.
 
 ### Modify Update Strategy
 
