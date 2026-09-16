@@ -1018,6 +1018,68 @@ describe('API key lifecycle guards', () => {
   })
 })
 
+// IGDD-3444: the feature-wide kill switch must deny even a fully-authorized
+// role. jest.setup.js sets it 'true' for the whole run so every other test in
+// this file is unaffected; these tests flip it off temporarily to prove
+// `requireApiKeyAccess` itself enforces it — not just the `hasApiKeyPermission`
+// pre-check some routes call first (domains.ts and the POST create path here
+// call `requireApiKeyAccess` directly, with no such pre-check).
+describe('feature flag: FEATURE_API_KEY_MANAGEMENT_ENABLED', () => {
+  const originalFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
+    mockGetServerSession.mockResolvedValue(authedSession) // IZG Operations — fully authorized
+  })
+
+  afterEach(() => {
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = originalFlag
+  })
+
+  it('403s POST create even for a fully-authorized role', async () => {
+    const createApiKeyCredential = jest.fn()
+    mockGetDbClient.mockResolvedValue({ createApiKeyCredential })
+
+    const res = createRes()
+    await apikeysHandler(
+      createReq('POST', {
+        jurisdictionId: '1',
+        environments: [5],
+        upn: 'immunize.example.gov',
+        dnsChoice: 'existing',
+        useTypes: ['PATIENT'],
+      }),
+      res
+    )
+
+    expect(res.statusCode).toBe(403)
+    expect(createApiKeyCredential).not.toHaveBeenCalled()
+  })
+
+  it('403s GET domains even for a fully-authorized role', async () => {
+    const fetchAuthorizedApiKeyDomains = jest.fn()
+    mockGetDbClient.mockResolvedValue({ fetchAuthorizedApiKeyDomains })
+
+    const res = createRes()
+    await domainsHandler(createReq('GET', {}, { envId: '5', jurisdictionId: '1' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(fetchAuthorizedApiKeyDomains).not.toHaveBeenCalled()
+  })
+
+  it('403s GET list even for a fully-authorized role (hasApiKeyPermission path)', async () => {
+    const fetchApiKeyCredentials = jest.fn()
+    mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+    const res = createRes()
+    await apikeysHandler(createReq('GET'), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+  })
+})
+
 // Server-side authorization (IGDD-2707 P1): the routes must enforce BOTH a role
 // gate (does this role manage API keys at all?) and a tenancy gate (does this
 // caller own the target jurisdiction?). UI gating is not a security boundary.
@@ -1381,6 +1443,107 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(fetchAuthorizedApiKeyDomains).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('tenancy gate — Sender Operations is scoped to its own organization', () => {
+    // Full lifecycle permissions (AC-equivalent to Jurisdiction Operations), but
+    // reach is limited to jurisdiction '1' ('ainq'), exactly like jurOpsSession.
+    const senderSession = {
+      user: {
+        email: 'sender@example.com',
+        role: 'Sender Operations',
+        jurisdictions: ['ainq'],
+      },
+    }
+
+    it('authorizes revoke within its own organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1' })
+      const revokeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, revokeApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(200)
+      expect(revokeApiKeyCredential).toHaveBeenCalled()
+    })
+
+    it('403s revoke of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '99' })
+      const revokeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, revokeApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('403s cancel of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'ready_for_validation', jurisdictionId: '99' })
+      const cancelApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, cancelApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('DELETE', { sortKey: '5#pending' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(cancelApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('403s renew of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest.fn().mockResolvedValue({
+        status: 'active',
+        jurisdictionId: '99',
+        domain: 'stored.example.gov',
+        expiresAt: new Date(),
+      })
+      const createApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        createApiKeyCredential,
+        supersedeApiKeyCredential,
+      })
+
+      const res = createRes()
+      await renewHandler(
+        createReq('POST', { oldSortKey: '5#old', jurisdictionId: '1' }),
+        res
+      )
+
+      expect(res.statusCode).toBe(403)
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+      expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('scopes the GET list to its own organization only', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
+        { sortKey: '5#a', jurisdictionId: '1', status: 'active' },
+        { sortKey: '5#b', jurisdictionId: '99', status: 'active' },
+      ])
+      mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+      const res = createRes()
+      await apikeysHandler(createReq('GET'), res)
+
+      expect(res.statusCode).toBe(200)
+      const returned = res.body as Array<{ jurisdictionId: string }>
+      expect(returned).toHaveLength(1)
+      expect(returned[0].jurisdictionId).toBe('1')
     })
   })
 
