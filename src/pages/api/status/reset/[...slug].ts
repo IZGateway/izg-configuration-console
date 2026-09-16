@@ -40,15 +40,6 @@ import { can } from '../../../../lib/security/policy'
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const context = asyncRequestContext.getStore()
-  const allowedRoles = ['IZG Operations', 'Jurisdiction Operations']
-  if (!allowedRoles.includes(context?.session?.user?.role)) {
-    logAccessDenied({
-      reason: 'role not permitted to reset circuit breaker',
-      url: req.url,
-      method: req.method,
-      user: context?.user,
-      role: context?.session?.user?.role,
-    })
   const { slug } = req.query
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
@@ -69,6 +60,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     destId
   )
   if (!decision.allowed) {
+    logAccessDenied({
+      reason: 'role not permitted to reset circuit breaker',
+      url: req.url,
+      method: req.method,
+      user: context?.user,
+      roles: subjectOf(context?.session).roles,
+    })
     return res.status(401).send('unauthorized')
   }
 

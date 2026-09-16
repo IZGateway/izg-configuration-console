@@ -6,6 +6,7 @@ import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import { asyncRequestContext } from '../../../lib/Context'
 /**
  * @swagger
@@ -48,7 +49,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         url: req.url,
         method: req.method,
         user: session.user.email,
-        role: session.user.role,
+        roles: subjectOf(session).roles,
         destId,
       })
       return res.status(401).send('unauthorized')
@@ -72,7 +73,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             url: req.url,
             method: req.method,
             user: session.user.email,
-            role: session.user.role,
+            roles: subjectOf(session).roles,
             destId: changeRequest.destId,
           })
         }

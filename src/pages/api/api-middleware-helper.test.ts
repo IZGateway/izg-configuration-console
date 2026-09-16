@@ -88,7 +88,7 @@ describe('RBAC rejection audit logging', () => {
     expect(deniedCall[1]).toMatchObject({
       eventType: 'AccessDenied',
       reason: 'admin-only operation',
-      role: 'Jurisdiction Operations',
+      roles: ['Jurisdiction Operations'],
     })
   })
 

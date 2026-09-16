@@ -69,8 +69,8 @@ export function getApiKeyAccess(
  */
 // Emits an AccessDenied audit event on denial — only call this as a
 // per-request gate. Never call it inside a loop/row-filter (like
-// `ownsJurisdiction` below), or an authorized caller's normal request will
-// emit a phantom "denied" event per row it doesn't own.
+// `canActOnJurisdiction` below), or an authorized caller's normal request
+// will emit a phantom "denied" event per row it doesn't own.
 export function hasApiKeyPermission(
   session: unknown,
   permission: ApiKeyPermission
@@ -84,8 +84,9 @@ export function hasApiKeyPermission(
   if (!allowed && isApiKeyManagementEnabled()) {
     logAccessDenied({
       reason: `insufficient role for ${permission}`,
-      user: session?.user?.email,
-      role: session?.user?.role,
+      user: (session as { user?: { email?: string } } | null | undefined)
+        ?.user?.email,
+      roles: subjectOf(session).roles,
       permission,
     })
   }
@@ -171,17 +172,17 @@ export async function requireApiKeyAccess(
   if (!can(subject, 'apikeys', permission, ANY_JURISDICTION).allowed) {
     return { ok: false, status: 403, error: 'Forbidden - insufficient role' }
   }
-  if (!(await ownsJurisdiction(session, jurisdictionId))) {
-    logAccessDenied({
-      reason: 'not authorized for this jurisdiction',
-      user: session?.user?.email,
-      role: session?.user?.role,
-      permission,
-      jurisdictionId,
-    })
 
   const decision = await canActOnJurisdiction(subject, permission, jurisdictionId)
   if (!decision.allowed) {
+    logAccessDenied({
+      reason: 'not authorized for this jurisdiction',
+      user: (session as { user?: { email?: string } } | null | undefined)
+        ?.user?.email,
+      roles: subject.roles,
+      permission,
+      jurisdictionId,
+    })
     return {
       ok: false,
       status: 403,

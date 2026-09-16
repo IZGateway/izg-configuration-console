@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { requireApiKeyAccess } from '../../../lib/security/apiKeyAuthz'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -50,7 +51,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logAccessDenied({
         reason: 'multi-environment domain query requires admin',
         user: session.user.email,
-        role: session.user.role,
+        roles: subjectOf(session).roles,
         jurisdictionId,
       })
       return res.status(403).json({ error: 'Only administrators may query multiple environments' })

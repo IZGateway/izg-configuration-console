@@ -6,15 +6,17 @@ import logger from '../../../logger'
  * Only call this from a genuine per-request rejection gate (something that
  * returns a 401/403 for the current action) — never from inside a predicate
  * that is also used to filter a list of rows (e.g. `hasAccessToDestId`,
- * `ownsJurisdiction`), or an authorized user's normal request will emit one
- * phantom "denied" event per row they don't own.
+ * `canActOnJurisdiction`), or an authorized user's normal request will emit
+ * one phantom "denied" event per row they don't own.
  */
 export interface AccessDeniedEvent {
   reason: string
   url?: string
   method?: string
   user?: string | null
-  role?: string | null
+  // Plural: a caller can hold multiple roles (see `AuthzSubject`/`subjectOf`).
+  // Prefer `subjectOf(session).roles` over reading a session's role(s) directly.
+  roles?: string[]
   permission?: string
   destId?: string
   jurisdictionId?: string

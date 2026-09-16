@@ -4,6 +4,7 @@ import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import logger from '../../../../logger'
 
 /**
@@ -24,7 +25,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         url: req.url,
         method: req.method,
         user: session.user.email,
-        role: session.user.role,
+        roles: subjectOf(session).roles,
       })
     }
     return res.status(403).json({

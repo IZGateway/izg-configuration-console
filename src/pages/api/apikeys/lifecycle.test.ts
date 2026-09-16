@@ -1101,7 +1101,7 @@ describe('API key authorization (role + tenancy)', () => {
       expect(deniedCalls).toHaveLength(1)
       expect(deniedCalls[0][1]).toMatchObject({
         eventType: 'AccessDenied',
-        role: 'IZG Support',
+        roles: ['IZG Support'],
         permission: 'canListApiKeys',
       })
     })

@@ -5,6 +5,7 @@ import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
 import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -76,7 +77,7 @@ const checkAccessToDestId: Middleware = async (req, res, next) => {
       url: req.url,
       method: req.method,
       user,
-      role: context?.session?.user?.role,
+      roles: subjectOf(context?.session).roles,
       destId,
     })
     res.status(401).send('unauthorized')
@@ -103,7 +104,7 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
       url: req.url,
       method: req.method,
       user,
-      role: context?.session?.user?.role,
+      roles: subjectOf(context?.session).roles,
       destId,
     })
     res.status(401).send('unauthorized')
@@ -125,7 +126,7 @@ const checkAdmin: Middleware = async (req, res, next) => {
       url: req.url,
       method: req.method,
       user,
-      role: context?.session?.user?.role,
+      roles: subjectOf(context?.session).roles,
     })
     res.status(403).send('forbidden')
   }

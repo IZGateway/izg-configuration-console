@@ -3,6 +3,7 @@ import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
 import withMiddleware from '../api-middleware-helper'
@@ -216,7 +217,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       url: req.url,
       method: req.method,
       user: session?.user?.email,
-      role: session?.user?.role,
+      roles: subjectOf(session).roles,
       destId: requestBody.destId,
     })
     res.status(401)

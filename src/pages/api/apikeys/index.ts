@@ -108,7 +108,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         logAccessDenied({
           reason: 'multi-environment key creation requires admin',
           user: session.user.email,
-          role: session.user.role,
+          roles: subjectOf(session).roles,
           jurisdictionId,
         })
         return res.status(403).json({ error: 'Only administrators may create a multi-environment key' })
@@ -175,7 +175,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           logAccessDenied({
             reason: 're-issue target credential belongs to a different jurisdiction',
             user: session.user.email,
-            role: session.user.role,
+            roles: subjectOf(session).roles,
             jurisdictionId,
           })
           return res.status(403).json({ error: 'Forbidden - not authorized for this jurisdiction' })
