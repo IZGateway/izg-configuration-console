@@ -1,5 +1,6 @@
 import DbClientFactory from '../db/DbClientFactory'
 import logger from '../../../logger'
+import { logAccessDenied } from './accessDeniedAudit'
 import { subjectOf, type AuthzSubject } from './authzsubject'
 import {
   ANY_JURISDICTION,
@@ -66,11 +67,30 @@ export function getApiKeyAccess(
  * credential — pair it with `canActOnJurisdiction`, or just use
  * `requireApiKeyAccess`.
  */
+// Emits an AccessDenied audit event on denial — only call this as a
+// per-request gate. Never call it inside a loop/row-filter (like
+// `canActOnJurisdiction` below), or an authorized caller's normal request
+// will emit a phantom "denied" event per row it doesn't own.
 export function hasApiKeyPermission(
   session: unknown,
   permission: ApiKeyPermission
 ): boolean {
-  return Boolean(getApiKeyAccess(session)?.[permission])
+  const allowed = Boolean(getApiKeyAccess(session)?.[permission])
+  // The feature-wide kill switch being off is not an RBAC rejection — it's a
+  // feature-availability state that applies to every caller regardless of
+  // role, so it must not be logged as one (would otherwise spam an
+  // AccessDenied event on every /api/apikeys/* call in any environment where
+  // the feature hasn't launched yet).
+  if (!allowed && isApiKeyManagementEnabled()) {
+    logAccessDenied({
+      reason: `insufficient role for ${permission}`,
+      user: (session as { user?: { email?: string } } | null | undefined)
+        ?.user?.email,
+      roles: subjectOf(session).roles,
+      permission,
+    })
+  }
+  return allowed
 }
 
 /** Resolve a jurisdiction id to its short prefix. Throws on infrastructure failure. */
@@ -166,6 +186,14 @@ export async function requireApiKeyAccess(
 
   const decision = await canActOnJurisdiction(subject, permission, jurisdictionId)
   if (!decision.allowed) {
+    logAccessDenied({
+      reason: 'not authorized for this jurisdiction',
+      user: (session as { user?: { email?: string } } | null | undefined)
+        ?.user?.email,
+      roles: subject.roles,
+      permission,
+      jurisdictionId,
+    })
     return {
       ok: false,
       status: 403,
