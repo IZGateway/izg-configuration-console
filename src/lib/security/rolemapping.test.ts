@@ -29,6 +29,15 @@ describe('group name normalization', () => {
       normalizeGroupName('izg operations')
     )
   })
+
+  it.each([
+    'Sender Operations',
+    'sender operations',
+    'Sender-Operations',
+    '  SENDER_OPERATIONS  ',
+  ])('resolves %p to the Sender Operations role', (groupName) => {
+    expect(rolesFromGroups([groupName])).toEqual(['Sender Operations'])
+  })
 })
 
 describe('tolerant claim shapes', () => {
@@ -151,6 +160,13 @@ describe('role resolution', () => {
     const b = rolesFromGroups(['IZG Support', 'Jurisdiction Operations'])
     expect(a).toEqual(b)
     expect(a).toEqual(['IZG Support', 'Jurisdiction Operations'])
+  })
+
+  it('resolves a sender group alongside an IIS role — the escalation setup', () => {
+    const a = rolesFromGroups(['IZG Support', 'Sender Operations'])
+    const b = rolesFromGroups(['Sender Operations', 'IZG Support'])
+    expect(a).toEqual(b)
+    expect(a).toEqual(['IZG Support', 'Sender Operations'])
   })
 
   it('ignores unmapped groups without displacing a working role', () => {
