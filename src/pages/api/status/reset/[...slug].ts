@@ -9,6 +9,8 @@ import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../../lib/IZGHubStatusHistoryEndpoint'
 import { asyncRequestContext } from '../../../../lib/Context'
 import { logAccessDenied } from '../../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../../lib/security/authzsubject'
+import { can } from '../../../../lib/security/policy'
 
 /**
  * @swagger
@@ -47,6 +49,26 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       user: context?.user,
       role: context?.session?.user?.role,
     })
+  const { slug } = req.query
+  const destId = slug[1]
+  const destTypeId = _.toNumber(slug[0])
+
+  // Permission and tenancy evaluated together, from the SAME held role — the
+  // same rule `apikeys` uses (see policy.ts). This used to be a role-list
+  // membership check plus a SEPARATE tenancy check (the `checkAccessToDestIdSlug`
+  // middleware), evaluated independently: `(∃r: role∈allowed) ∧ (∃r: reach(r))`.
+  // That let a user holding a globally-scoped role with no reset permission
+  // (e.g. `IZG Support`) combine with a different, jurisdiction-scoped role
+  // that IS allowed to reset (e.g. `Jurisdiction Operations`) to reset a
+  // circuit breaker OUTSIDE that second role's own jurisdiction — access
+  // neither role grants alone.
+  const decision = can(
+    subjectOf(context?.session),
+    'manageconnections',
+    'canResetCircuitBreaker',
+    destId
+  )
+  if (!decision.allowed) {
     return res.status(401).send('unauthorized')
   }
 
@@ -64,10 +86,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const configuredHubURLs = new IZGHubStatusHistoryEndpoint(
     IZG_STATUS_ENDPOINT_URL
   )
-
-  const { slug } = req.query
-  const destId = slug[1]
-  const destTypeId = _.toNumber(slug[0])
 
   const resetCircuitBreaker = async (destTypeId: number, destId: string) => {
     const configuredEndpoint = configuredHubURLs.getIZGHubURL(destTypeId)
@@ -92,6 +110,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       logger.info('Circuit breaker reset', {
         destinationId: destId,
         destinationType: destTypeId,
+        grantedBy: decision.grantedBy,
       })
       // Remove statusBy field to prevent private IP/DNS being delivered to
       // client, matching fetchEndpointStatus.ts's redaction on initial load.
@@ -127,4 +146,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('checkAccessToDestIdSlug')(handler)
+// No `checkAccessToDestIdSlug` here — that middleware is a reach-only check,
+// and pairing it separately from a permission check is exactly the escalation
+// this route used to be vulnerable to. `can()` above is the sole, authoritative
+// gate; it already evaluates reach.
+export default withMiddleware()(handler)

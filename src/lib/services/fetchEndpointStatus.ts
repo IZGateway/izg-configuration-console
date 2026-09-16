@@ -9,7 +9,7 @@ import isOperationsRole from '../security/accessutils'
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 
 export const fetchEndpointStatus = async (
-  role: string,
+  roles: string[],
   jurisdictions: string[]
 ): Promise<any[]> => {
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
@@ -29,7 +29,7 @@ export const fetchEndpointStatus = async (
   )
   let hubURLs = configuredHubURLs.getIZGHubURLs()
 
-  if (!isOperationsRole(role)) {
+  if (!isOperationsRole(roles)) {
     hubURLs = appendJurisdictionsAssignedToUser(hubURLs, jurisdictions)
   }
 
