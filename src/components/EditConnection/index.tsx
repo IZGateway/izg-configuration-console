@@ -298,6 +298,10 @@ const EditConnection = (props: editConnectionProps) => {
       setHasCreateChangeRequestTicketError(true)
     }
     clearValue()
+    if (!response) {
+      // fetch itself threw; the catch above already raised the error alert.
+      return
+    }
     if (response.ok) {
       setAlert({
         level: 'success',
@@ -306,11 +310,36 @@ const EditConnection = (props: editConnectionProps) => {
         message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}!`,
       })
       router.push('/manageconnections')
+    } else if (response.status === 400) {
+      // The server rejected a submitted value - today, a destUri outside the
+      // destination URL specification. Stay on the form and report the
+      // server's own reason: navigating to /manageconnections here would throw
+      // away the request the user just filled in and replace a specific,
+      // fixable message with a generic one.
+      let message =
+        'The change request was rejected. Please review the values and try again.'
+      try {
+        const body = await response.json()
+        if (body?.error) {
+          message = body.error
+        }
+      } catch {
+        // no JSON body - keep the generic message
+      }
+      setAlert({
+        level: 'error',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destinationType.type,
+        message,
+      })
+      // The snackbar auto-opens only on the IDENTIFY step, so open it here.
+      setShowSnackbar(true)
+      console.error(`Change request rejected: ${message}`)
     } else {
       setHasCreateChangeRequestTicketError(true)
       router.push('/manageconnections')
       console.error(
-        `Error creating change request: status is ${response.status}, message: ${response.message}`
+        `Error creating change request: status is ${response.status}, message: ${response.statusText}`
       )
     }
   }
