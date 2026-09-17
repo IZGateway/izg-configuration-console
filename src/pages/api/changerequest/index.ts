@@ -11,6 +11,8 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
+import { assertSafeDestinationUri } from '../../../lib/security/assertSafeDestinationUri'
+import { UnsafeDestinationUriError } from '../../../lib/security/destinationUriGuard'
 /**
  * @swagger
  * /api/changerequest:
@@ -71,6 +73,38 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
   if (hasAccessToDestId(requestBody.destId, session)) {
     const { isDraft } = requestBody
+
+    // A destUri written here becomes the live destination address on deploy, so
+    // it must satisfy the destination URL specification before it can enter
+    // change control at all. Checked ahead of the method branches so that no
+    // Jira ticket is raised and no draft is stored for a URI we would refuse.
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const requestedDestUri = requestBody?.requested?.destUri
+      if (requestedDestUri) {
+        try {
+          await assertSafeDestinationUri(
+            requestedDestUri,
+            requestBody?.destType?.typeId
+          )
+        } catch (error) {
+          if (!(error instanceof UnsafeDestinationUriError)) {
+            throw error
+          }
+          logger.warn('Rejected unsafe destUri on change request', {
+            destId: requestBody.destId,
+            destType: requestBody?.destType?.type,
+            destUri: requestedDestUri,
+            isDraft,
+            userId: session?.user?.email,
+            reason: error.message,
+            operation: 'reject_change_request_dest_uri',
+          })
+          res.status(400).json({ error: error.message })
+          return
+        }
+      }
+    }
+
     if (req.method === 'POST') {
       if (isDraft === true) {
         const draft = await upsertChangeRequest(requestBody)
