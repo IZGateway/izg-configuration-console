@@ -4,6 +4,8 @@ import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
+import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
 
@@ -70,13 +72,15 @@ const checkAccessToDestId: Middleware = async (req, res, next) => {
     })
     await next()
   } else {
-    res.status(401).send('unauthorized')
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
+    logAccessDenied({
+      reason: 'caller has no access to destination',
+      url: req.url,
+      method: req.method,
       user,
-      sub,
+      roles: subjectOf(context?.session).roles,
+      destId,
     })
+    res.status(401).send('unauthorized')
   }
 }
 const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
@@ -95,13 +99,15 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
     })
     await next()
   } else {
-    res.status(401).send('unauthorized')
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
+    logAccessDenied({
+      reason: 'caller has no access to destination',
+      url: req.url,
+      method: req.method,
       user,
-      sub,
+      roles: subjectOf(context?.session).roles,
+      destId,
     })
+    res.status(401).send('unauthorized')
   }
 }
 
@@ -111,16 +117,16 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
 const checkAdmin: Middleware = async (req, res, next) => {
   const context = asyncRequestContext.getStore()
   const user = context?.user || 'unknown'
-  const sub = context?.sub || null
   const isAdmin = context?.session?.user?.isAdmin
   if (isAdmin) {
     await next()
   } else {
-    logger.warn('Forbidden: non-admin attempted an admin-only operation', {
+    logAccessDenied({
+      reason: 'admin-only operation',
       url: req.url,
       method: req.method,
       user,
-      sub,
+      roles: subjectOf(context?.session).roles,
     })
     res.status(403).send('forbidden')
   }
