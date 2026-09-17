@@ -59,6 +59,7 @@ const EditConnection = (props: editConnectionProps) => {
   const [testResults, setTestResults] = useState(null)
   const [isLoadingTest, setIsLoadingTest] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
+  const [isValidatingDestUri, setIsValidatingDestUri] = useState(false)
 
   const [
     hasCreateChangeRequestTicketError,
@@ -216,7 +217,8 @@ const EditConnection = (props: editConnectionProps) => {
   const isResetButtonDisabled = _.isNull(draftData)
   const isNextButtonDisabled =
     (activeStep === 2 && !isFormChanged && _.isNull(draftData)) ||
-    !_.isEmpty(formErrors)
+    !_.isEmpty(formErrors) ||
+    isValidatingDestUri
   const isScheduleButtonDisabled = !asapSelected && !futureDateTimeSelected
 
   const toggleTestDrawer = async () => {
@@ -364,8 +366,75 @@ const EditConnection = (props: editConnectionProps) => {
     setScheduledDateTime(null)
   }
 
-  const handleNext = () => {
+  /**
+   * Runs the real destination URL guard server-side before leaving the step
+   * where the URI is edited. Only the guard knows the approved TLDs, the
+   * allowed ports and whether the host resolves to a routable address, so the
+   * check is made there rather than duplicated in the browser.
+   *
+   * Returns false when the URI was rejected, having raised the snackbar.
+   */
+  const isDestUriAccepted = async (): Promise<boolean> => {
+    const destUri = formValues?.destUri
+    // Only worth a round-trip when the user actually changed the URI.
+    if (!destUri || destUri === defaultFormValues?.destUri) {
+      return true
+    }
+    setIsValidatingDestUri(true)
+    try {
+      const response = await fetch('/api/destinationuri/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destId: destData.destId,
+          destTypeId: destData.destinationType.typeId,
+          destUri,
+        }),
+      })
+      if (response.ok) {
+        return true
+      }
+      let message =
+        'This destination URL is not permitted. Please correct it and try again.'
+      try {
+        const body = await response.json()
+        if (body?.error) {
+          message = body.error
+        }
+      } catch {
+        // no JSON body - keep the generic message
+      }
+      setAlert({
+        level: 'error',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destinationType.type,
+        message,
+      })
+      setShowSnackbar(true)
+      return false
+    } catch (error) {
+      // The check could not be completed. Do not advance on an unknown
+      // result: POST /api/changerequest would reject it later anyway, and
+      // failing here keeps the message next to the field.
+      setAlert({
+        level: 'error',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destinationType.type,
+        message: `The destination URL could not be validated: ${error}. Please try again.`,
+      })
+      setShowSnackbar(true)
+      return false
+    } finally {
+      setIsValidatingDestUri(false)
+    }
+  }
+
+  const handleNext = async () => {
     if (_.isEmpty(formErrors)) {
+      // The URI is edited on IDENTIFY, so validate on the way out of it.
+      if (activeStep === 2 && !(await isDestUriAccepted())) {
+        return
+      }
       advanceStepper(1)
     }
     if (activeStep === 1 && !_.isNull(draftData)) {
