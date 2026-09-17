@@ -29,6 +29,12 @@ export const menuItems: MenuItem[] = [
     ),
     path: '/manageconnections',
     adminOnly: false,
+    // Visible if ANY held role can view connections. A "what"-only check with
+    // no jurisdiction, so unioning across roles is correct here.
+    isVisible: (roles) =>
+      (roles ?? []).some(
+        (role) => !!accessLevel[role]?.manageconnections?.canViewConnections
+      ),
   },
   {
     label: 'Admin Operations',
@@ -47,6 +53,12 @@ export const menuItems: MenuItem[] = [
     icon: <AddIcon sx={iconSx} />,
     path: '/onboarding',
     adminOnly: false,
+    // Visible if ANY held role can view onboarding. A "what"-only check with
+    // no jurisdiction, so unioning across roles is correct here.
+    isVisible: (roles) =>
+      (roles ?? []).some(
+        (role) => !!accessLevel[role]?.onboarding?.canViewOnboarding
+      ),
   },
   {
     label: 'Console',

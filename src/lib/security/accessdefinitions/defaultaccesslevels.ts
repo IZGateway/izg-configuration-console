@@ -2,6 +2,7 @@ import {
   ApiKeyManagementPageAccessControl,
   EditPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   ChangeRequestPageAccessControl,
   HistoryPageAccessControl,
@@ -18,6 +19,7 @@ const defaultEditPageAccessControl: EditPageAccessControl = {
 
 const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessControl =
   {
+    canViewConnections: false,
     canRunConnectionTest: false,
     canScheduleMaintainance: false,
     canViewHistory: false,
@@ -25,6 +27,10 @@ const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessCont
     canViewChangeRequest: false,
     canResetCircuitBreaker: false,
   }
+
+const defaultOnboardingPageAccessControl: OnboardingPageAccessControl = {
+  canViewOnboarding: false,
+}
 
 const defaultTestPageAccessControl: TestPageAccessControl = {
   canRunConnectionTest: false,
@@ -62,5 +68,6 @@ export {
   defaultEditPageAccessControl,
   defaultHistoryPageAccessControl,
   defaultManageConnectionsPageAccessControl,
+  defaultOnboardingPageAccessControl,
   defaultTestPageAccessControl,
 }
