@@ -19,24 +19,24 @@ jest.mock('next-auth/jwt', () => ({
   getToken: jest.fn().mockResolvedValue(null),
 }))
 
-jest.mock('../api/auth/[...nextauth]', () => ({ authOptions: {} }))
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
-jest.mock('../../lib/services/fetchEndpointStatus', () => ({
+jest.mock('../../../lib/services/fetchEndpointStatus', () => ({
   __esModule: true,
   fetchEndpointStatus: (...args: unknown[]) => mockFetchEndpointStatus(...args),
 }))
 
-jest.mock('../../lib/db/DbClientFactory', () => ({
+jest.mock('../../../lib/db/DbClientFactory', () => ({
   __esModule: true,
   default: { getDbClient: jest.fn().mockResolvedValue({}) },
 }))
 
-jest.mock('../../../logger', () => ({
+jest.mock('../../../../logger', () => ({
   __esModule: true,
   default: { info: jest.fn(), debug: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }))
 
-import { getServerSideProps } from './index'
+import { getServerSideProps } from '../../../pages/manageconnections/index'
 
 function createContext() {
   return {
