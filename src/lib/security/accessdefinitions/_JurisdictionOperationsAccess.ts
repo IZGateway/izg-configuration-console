@@ -14,9 +14,11 @@ import {
   defaultChangeRequestPageAccessControl,
   defaultHistoryPageAccessControl,
 } from './defaultaccesslevels'
-import { PageControls } from '../accesslevel'
+import { RoleAccess } from '../accesslevel'
 
-const JurisdictionOperationsAccess: PageControls = {
+const JurisdictionOperationsAccess: RoleAccess = {
+  // Scoped to the jurisdictions in the user's Okta `jurisdictions` claim.
+  globalTenancy: false,
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
     canRunConnectionTest: true,
