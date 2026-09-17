@@ -412,7 +412,7 @@ function HomeComponent() {
                 sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
               >
                 Version {pack.version}-{process.env.NEXT_PUBLIC_BUILD_ID} |
-                Immunization (IZ) Gateway Configuration Console 2025
+                Immunization (IZ) Gateway Configuration Console 2026
               </Typography>
               <Box
                 display={'flex'}
