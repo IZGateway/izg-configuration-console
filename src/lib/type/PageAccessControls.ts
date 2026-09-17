@@ -8,12 +8,20 @@ type EditPageAccessControl = {
 }
 
 type ManageConnectionsPageAccessControl = {
+  // Gates the nav entry and the page itself — deliberately separate from the
+  // more granular flags below, which gate actions *within* the page for
+  // roles that can already reach it.
+  canViewConnections: boolean
   canRunConnectionTest: boolean
   canScheduleMaintainance: boolean
   canViewHistory: boolean
   canEditConnection: boolean
   canViewChangeRequest: boolean
   canResetCircuitBreaker: boolean
+}
+
+type OnboardingPageAccessControl = {
+  canViewOnboarding: boolean
 }
 
 type TestPageAccessControl = {
@@ -52,5 +60,6 @@ export type {
   EditPageAccessControl,
   HistoryPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
 }

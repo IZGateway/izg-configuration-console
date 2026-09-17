@@ -29,6 +29,7 @@ export type CcRole =
   | 'IZG Support'
   | 'Jurisdiction Operations'
   | 'Jurisdiction Support'
+  | 'Sender Operations'
 
 /**
  * Ordering for the resolved role array.
@@ -45,6 +46,7 @@ export const ROLE_PRECEDENCE: CcRole[] = [
   'IZG Support',
   'Jurisdiction Operations',
   'Jurisdiction Support',
+  'Sender Operations',
 ]
 
 /**
@@ -61,6 +63,11 @@ const GROUP_ROLE_MAPPING: Record<string, CcRole[]> = {
   'IZG Support': ['IZG Support'],
   'Jurisdiction Operations': ['Jurisdiction Operations'],
   'Jurisdiction Support': ['Jurisdiction Support'],
+  // [CONFIRM] Exact Okta group name with the Okta administrator (see
+  // sender-role-access/design.md Open Questions). normalizeGroupName already
+  // tolerates capitalization/punctuation choices, so confirming this later is
+  // not a breaking change.
+  'Sender Operations': ['Sender Operations'],
 }
 
 /**
@@ -79,13 +86,10 @@ export const normalizeGroupName = (groupName: string): string =>
 
 const NORMALIZED_GROUP_ROLE_MAPPING: Record<string, CcRole[]> = Object.entries(
   GROUP_ROLE_MAPPING
-).reduce(
-  (acc, [groupName, roles]) => {
-    acc[normalizeGroupName(groupName)] = roles
-    return acc
-  },
-  {} as Record<string, CcRole[]>
-)
+).reduce((acc, [groupName, roles]) => {
+  acc[normalizeGroupName(groupName)] = roles
+  return acc
+}, {} as Record<string, CcRole[]>)
 
 /** Every group name CC recognizes, in their original (un-normalized) form. */
 export const RECOGNIZED_GROUP_NAMES = Object.keys(GROUP_ROLE_MAPPING)

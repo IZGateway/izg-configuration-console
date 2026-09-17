@@ -1,6 +1,7 @@
 import {
   ApiKeyManagementPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
   ChangeRequestPageAccessControl,
@@ -9,6 +10,7 @@ import {
 import {
   defaultApiKeyManagementPageAccessControl,
   defaultManageConnectionsPageAccessControl,
+  defaultOnboardingPageAccessControl,
   defaultTestPageAccessControl,
   defaultEditPageAccessControl,
   defaultChangeRequestPageAccessControl,
@@ -21,6 +23,7 @@ const JurisdictionSupportAccess: RoleAccess = {
   globalTenancy: false,
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
+    canViewConnections: true,
     canRunConnectionTest: true,
     canViewHistory: true,
     canViewChangeRequest: true,
@@ -48,6 +51,10 @@ const JurisdictionSupportAccess: RoleAccess = {
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
   } as ApiKeyManagementPageAccessControl,
+  onboarding: {
+    ...defaultOnboardingPageAccessControl,
+    canViewOnboarding: true,
+  } as OnboardingPageAccessControl,
 }
 
 export default JurisdictionSupportAccess

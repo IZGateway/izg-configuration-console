@@ -1,6 +1,7 @@
 import {
   ApiKeyManagementPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
   ChangeRequestPageAccessControl,
@@ -11,6 +12,7 @@ import {
   JurisdictionOperationsAccess,
   IZGSupportAccess,
   JurisdictionSupportAccess,
+  SenderOperationsAccess,
 } from './accessdefinitions'
 
 const accessLevel: AccessLevel = {
@@ -18,6 +20,7 @@ const accessLevel: AccessLevel = {
   'IZG Support': IZGSupportAccess,
   'Jurisdiction Support': JurisdictionSupportAccess,
   'Jurisdiction Operations': JurisdictionOperationsAccess,
+  'Sender Operations': SenderOperationsAccess,
 }
 export default accessLevel
 
@@ -53,4 +56,5 @@ export type PageControls = {
   history: HistoryPageAccessControl
   // Key must match the page key derived in useRoleAccess (router.pathname with dynamic segments removed): e.g. '/apikeys' -> 'apikeys' (IGDD-2708)
   apikeys: ApiKeyManagementPageAccessControl
+  onboarding: OnboardingPageAccessControl
 }
