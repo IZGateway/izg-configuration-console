@@ -16,6 +16,9 @@ import {
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
 import { fetchEndpointStatus } from '../../lib/services/fetchEndpointStatus'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { mergePageAccess } from '../../lib/security/policy'
+import type { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -60,6 +63,20 @@ export const getServerSideProps = withRequestContext(
     if (!session?.user) {
       return { redirect: { destination: '/api/auth/signin', permanent: false } }
     }
+
+    // UI-layer capability gate, not the security boundary — but without it
+    // this page would render for any session, IIS-recognized role or not,
+    // filtered only by the raw Okta `jurisdictions` claim (a reach-only
+    // check). A role with no `canViewConnections` (e.g. Sender Operations)
+    // is redirected rather than reaching fetchEndpointStatus at all.
+    const access = mergePageAccess(
+      subjectOf(session),
+      'manageconnections'
+    ) as Partial<ManageConnectionsPageAccessControl>
+    if (!access.canViewConnections) {
+      return { redirect: { destination: '/', permanent: false } }
+    }
+
     const endpointStatuses = await fetchEndpointStatus(
       session.user.roles,
       session.user.jurisdictions

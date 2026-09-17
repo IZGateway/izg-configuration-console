@@ -98,6 +98,59 @@ describe('policy: union grants what neither role alone would', () => {
   })
 })
 
+describe('policy: Sender Operations is scoped to its own organization', () => {
+  const sender = subject(['Sender Operations'], ['vha'])
+
+  it('has full apikeys lifecycle within its own jurisdiction', () => {
+    expect(can(sender, 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
+    expect(can(sender, 'apikeys', 'canCreateApiKey', 'vha').allowed).toBe(true)
+    expect(can(sender, 'apikeys', 'canRevokeApiKey', 'vha').allowed).toBe(true)
+    expect(can(sender, 'apikeys', 'canRenewApiKey', 'vha').allowed).toBe(true)
+    expect(can(sender, 'apikeys', 'canCancelApiKey', 'vha').allowed).toBe(true)
+  })
+
+  it('has no reach outside its own jurisdiction', () => {
+    expect(can(sender, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(false)
+    expect(can(sender, 'apikeys', 'canListApiKeys', ANY_JURISDICTION).allowed).toBe(true)
+  })
+
+  it('has no access to any IIS-only page', () => {
+    const access = mergePageAccess(sender, 'manageconnections')
+    expect(access.canViewConnections).toBeFalsy()
+    expect(mergePageAccess(sender, 'test').canRunConnectionTest).toBeFalsy()
+    expect(mergePageAccess(sender, 'changerequest').canViewDetails).toBeFalsy()
+    expect(mergePageAccess(sender, 'history').canViewChangeHistory).toBeFalsy()
+    expect(mergePageAccess(sender, 'onboarding').canViewOnboarding).toBeFalsy()
+  })
+})
+
+describe('policy: THE escalation guard generalizes to Sender Operations', () => {
+  // Mirrors the IZG Support + Jurisdiction Operations case above, but with the
+  // sender role as the scoped, permission-granting half.
+  const mixed = subject(['IZG Support', 'Sender Operations'], ['vha'])
+
+  it('allows only the sender organization, never every jurisdiction', () => {
+    expect(can(mixed, 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
+    expect(can(mixed, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(false)
+    expect(can(mixed, 'apikeys', 'canListApiKeys', 'azova').allowed).toBe(false)
+  })
+
+  it('attributes the decision to Sender Operations, not IZG Support', () => {
+    expect(can(mixed, 'apikeys', 'canListApiKeys', 'vha').grantedBy).toBe(
+      'Sender Operations'
+    )
+  })
+})
+
+describe('policy: union with Sender Operations keeps each role scoped independently', () => {
+  it('Jurisdiction Operations + Sender Operations reaches both, and only both', () => {
+    const s = subject(['Jurisdiction Operations', 'Sender Operations'], ['az', 'vha'])
+    expect(can(s, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(true)
+    expect(can(s, 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
+    expect(can(s, 'apikeys', 'canListApiKeys', 'md').allowed).toBe(false)
+  })
+})
+
 describe('policy: deny by default', () => {
   it('no roles denies everything and yields empty page access', () => {
     const none = subject([])

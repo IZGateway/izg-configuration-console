@@ -157,12 +157,23 @@ export type ApiKeyAuthzResult = {
 /**
  * The combined role + tenancy gate. Call this immediately before touching a
  * credential or domain, so the two checks cannot drift apart as routes are added.
+ *
+ * Checks the feature-wide kill switch itself, rather than relying on every
+ * caller to have already gone through `hasApiKeyPermission()` (which is the
+ * only other place that checks it, via `getApiKeyAccess`). `domains.ts` calls
+ * this function directly with no `hasApiKeyPermission` pre-check, so without
+ * this line an authorized role could still read real data while the feature
+ * is supposed to be fully disabled.
  */
 export async function requireApiKeyAccess(
   session: unknown,
   permission: ApiKeyPermission,
   jurisdictionId: string
 ): Promise<ApiKeyAuthzResult> {
+  if (!isApiKeyManagementEnabled()) {
+    return { ok: false, status: 403, error: 'Forbidden - feature disabled' }
+  }
+
   const subject = subjectOf(session)
 
   // Cheap prefilter: skip the DynamoDB read for a caller that no held role could

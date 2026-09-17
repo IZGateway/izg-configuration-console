@@ -1,6 +1,7 @@
 import {
   ApiKeyManagementPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
   ChangeRequestPageAccessControl,
@@ -9,6 +10,7 @@ import {
 import {
   defaultApiKeyManagementPageAccessControl,
   defaultManageConnectionsPageAccessControl,
+  defaultOnboardingPageAccessControl,
   defaultTestPageAccessControl,
   defaultEditPageAccessControl,
   defaultChangeRequestPageAccessControl,
@@ -23,6 +25,7 @@ const IZGSupportAccess: RoleAccess = {
   globalTenancy: true,
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
+    canViewConnections: true,
     canRunConnectionTest: true,
     canViewHistory: true,
     canViewChangeRequest: true,
@@ -50,6 +53,10 @@ const IZGSupportAccess: RoleAccess = {
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
   } as ApiKeyManagementPageAccessControl,
+  onboarding: {
+    ...defaultOnboardingPageAccessControl,
+    canViewOnboarding: true,
+  } as OnboardingPageAccessControl,
 }
 
 export default IZGSupportAccess
