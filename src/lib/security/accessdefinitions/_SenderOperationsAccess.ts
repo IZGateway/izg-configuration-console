@@ -18,47 +18,33 @@ import {
 } from './defaultaccesslevels'
 import { RoleAccess } from '../accesslevel'
 
-const JurisdictionOperationsAccess: RoleAccess = {
-  // Scoped to the jurisdictions in the user's Okta `jurisdictions` claim.
+const SenderOperationsAccess: RoleAccess = {
+  // A sender only ever reaches its own organization's data — never every
+  // jurisdiction's, unlike the IZG-tier roles.
   globalTenancy: false,
+  // Every IIS-only page is denied outright: a sender has no role in managing
+  // IIS connections, change requests, or hub-status history. Spreading the
+  // all-false default and adding nothing here is what makes that deny
+  // deliberate rather than incidental.
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
-    canViewConnections: true,
-    canRunConnectionTest: true,
-    canScheduleMaintainance: true,
-    canViewHistory: true,
-    canEditConnection: true,
-    canViewChangeRequest: true,
-    canResetCircuitBreaker: true,
   } as ManageConnectionsPageAccessControl,
   test: {
     ...defaultTestPageAccessControl,
-    canRunConnectionTest: true,
   } as TestPageAccessControl,
   edit: {
     ...defaultEditPageAccessControl,
-    canChangeCredentials: true,
-    canCreateChangeRequest: true,
-    canApproveChangeRequest: true,
-    canSaveDraft: true,
-    canResetDraft: true,
-    canRunDraftConnectionTest: true,
   } as EditPageAccessControl,
   changerequest: {
     ...defaultChangeRequestPageAccessControl,
-    canRunHealthCheck: true,
-    canRescheduleRequest: true,
-    canCancelRequest: true,
-    canViewDetails: true,
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,
-    canViewChangeRequest: true,
-    canViewConnectionInfo: true,
-    canViewConnectionInfoDetails: true,
-    canViewHubStatusHistory: true,
-    canViewChangeHistory: true,
   } as HistoryPageAccessControl,
+  // Full lifecycle over its own credentials, scoped by the same per-role
+  // jurisdiction check every other role goes through (see policy.ts) — this
+  // is not a wider capability than Jurisdiction Operations, only a narrower
+  // reach.
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
     canListApiKeys: true,
@@ -69,8 +55,7 @@ const JurisdictionOperationsAccess: RoleAccess = {
   } as ApiKeyManagementPageAccessControl,
   onboarding: {
     ...defaultOnboardingPageAccessControl,
-    canViewOnboarding: true,
   } as OnboardingPageAccessControl,
 }
 
-export default JurisdictionOperationsAccess
+export default SenderOperationsAccess

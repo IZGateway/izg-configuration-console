@@ -28,11 +28,29 @@ import Faq from './Faqs'
 import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
 import isOperationsRole from '../../lib/security/accessutils'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { mergePageAccess } from '../../lib/security/policy'
+import type {
+  ManageConnectionsPageAccessControl,
+  ApiKeyManagementPageAccessControl,
+} from '../../lib/type/PageAccessControls'
 
 function HomeComponent() {
   const [showFullContent, setShowFullContent] = useState(false)
   const { data: session } = useSession()
   const isAdmin = Boolean(session?.user?.isAdmin)
+  // useRoleAccess() can't be used here: it derives the page key from
+  // router.pathname, which is '' on '/' and matches no page block. Ask for
+  // the two relevant page blocks directly instead.
+  const subject = subjectOf(session)
+  const connectionsAccess = mergePageAccess(
+    subject,
+    'manageconnections'
+  ) as Partial<ManageConnectionsPageAccessControl>
+  const apiKeyAccess = mergePageAccess(
+    subject,
+    'apikeys'
+  ) as Partial<ApiKeyManagementPageAccessControl>
   return (
     <>
       <AppHeaderBar open />
@@ -82,18 +100,35 @@ function HomeComponent() {
                   mt={4}
                   justifyContent={{ xs: 'center', md: 'flex-start' }}
                 >
-                  <Link href="/manageconnections">
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      sx={{
-                        width: { xs: '100%', sm: 'auto' },
-                        minWidth: '200px',
-                      }}
-                    >
-                      Manage Connections
-                    </Button>
-                  </Link>
+                  {connectionsAccess.canViewConnections && (
+                    <Link href="/manageconnections">
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        sx={{
+                          width: { xs: '100%', sm: 'auto' },
+                          minWidth: '200px',
+                        }}
+                      >
+                        Manage Connections
+                      </Button>
+                    </Link>
+                  )}
+                  {session?.apiKeyManagementEnabled &&
+                    apiKeyAccess.canListApiKeys && (
+                      <Link href="/apikeys">
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          sx={{
+                            width: { xs: '100%', sm: 'auto' },
+                            minWidth: '200px',
+                          }}
+                        >
+                          API Key Management
+                        </Button>
+                      </Link>
+                    )}
                   {isOperationsRole(session?.user.roles) && (
                     <Link href="/api-doc">
                       <Button
