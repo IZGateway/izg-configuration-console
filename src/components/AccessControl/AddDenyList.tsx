@@ -9,9 +9,8 @@ import EnvironmentSelect, {
 } from '../Dropdown/EnvironmentSelect'
 
 interface AddDenyListProps {
-  onSave: (item: DenyListItem) => void
+  onSave: (item: Partial<DenyListItem>) => void
   onCancel: () => void
-  userName: string
 }
 
 interface Organization {
@@ -19,11 +18,7 @@ interface Organization {
   principalNames: string[]
 }
 
-const AddDenyList: React.FC<AddDenyListProps> = ({
-  onSave,
-  onCancel,
-  userName,
-}) => {
+const AddDenyList: React.FC<AddDenyListProps> = ({ onSave, onCancel }) => {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrganization, setSelectedOrganization] =
     useState<Organization | null>(null)
@@ -120,11 +115,8 @@ const AddDenyList: React.FC<AddDenyListProps> = ({
       certificationName: formData.certificationName || '',
       environment: formData.environment as number,
       reason: formData.reason || '',
-      deniedBy: userName,
       id: '',
       name: formData.name || '',
-      createdBy: userName,
-      createdOn: new Date(),
     })
   }
 
