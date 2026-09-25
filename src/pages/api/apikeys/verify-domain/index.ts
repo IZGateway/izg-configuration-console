@@ -5,6 +5,7 @@ import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import { requireApiKeyAccess } from '../../../../lib/security/apiKeyAuthz'
+import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
 import dns from 'dns/promises'
 
 // DNS-verification bypass for local dev / automated tests ONLY. Requires BOTH a
@@ -183,7 +184,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // becomes active, so exp is computed from issuance (1 year), not from when
     // the request record was created. The bind/status checks already ran above,
     // but status is re-checked atomically in the DB write (`expectedStatus`).
-    const activateCredential = async (): Promise<{
+    const activatedBy = session.user.email || 'unknown'
+    const activateCredential = async (
+      verificationMethod: 'dns_txt' | 'bypass'
+    ): Promise<{
       status: number
       error: string
     } | null> => {
@@ -196,14 +200,51 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         issuedAt: issuedAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         expiresAt: expiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         expectedStatus: 'ready_for_validation',
+        // Activation previously recorded only timestamps — nothing on the row
+        // said who satisfied the DNS challenge, or whether it was satisfied at
+        // all (see `bypass`).
+        activatedBy,
+        verificationMethod,
+      })
+
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Activate',
+        credentialSortKey: String(credentialSortKey),
+        userName: activatedBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'active',
+          issuedAt,
+          expiresAt,
+          activatedBy,
+          verificationMethod,
+        },
+        context: {
+          jurisdictionId: String(jurisdictionId),
+          domain: String(domain),
+          environments,
+          grantedBy: authz.grantedBy,
+          // 'bypass' means the real DNS TXT lookup was SKIPPED (non-production
+          // only). Recorded so a bypassed activation remains distinguishable
+          // from a genuinely verified one long after the log line ages out.
+          verificationMethod,
+        },
       })
       return null
     }
 
     if (pendingIndexes.length === 0) {
       // Every one of the credential's (or the single requested) environments
-      // is already authorized for this domain — nothing left to verify.
-      const activationError = await activateCredential()
+      // is already authorized for this domain — nothing left to verify. The
+      // activation inherits however the domain's prior authorization was
+      // obtained, so a credential activated off a bypassed authorization is
+      // not silently recorded as DNS-verified.
+      const activationError = await activateCredential(
+        domainRecords.find((rec) => rec?.verificationMethod === 'bypass')
+          ? 'bypass'
+          : 'dns_txt'
+      )
       if (activationError) {
         return res.status(activationError.status).json({ error: activationError.error })
       }
@@ -237,6 +278,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // regardless of how many environments are pending.
     const txtHost = domain
     let records: string[][]
+    // Persisted alongside the authorization (and the activation) so a skipped
+    // lookup stays visible on the record, not only in a log line.
+    const verificationMethod: 'dns_txt' | 'bypass' = DNS_VERIFY_BYPASS_ENABLED
+      ? 'bypass'
+      : 'dns_txt'
     try {
       if (DNS_VERIFY_BYPASS_ENABLED) {
         // Dev/test only, explicitly opted in via ALLOW_DNS_VERIFY_BYPASS (and
@@ -317,6 +363,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           jurisdictionId: String(jurisdictionId),
           status: 'authorized',
           validatedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          validatedBy: activatedBy,
+          verificationMethod,
+          // upsertApiKeyDomain is a Put (full overwrite), so the requester must
+          // be carried forward explicitly or it is erased at the exact moment
+          // the domain becomes authorized.
+          requestedBy: domainRecords[i]?.requestedBy,
           authExpiresAt: authExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         })
       )
@@ -325,12 +377,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('DNS domain authorized', {
       domain,
       environments,
-      validatedBy: session.user.email,
+      validatedBy: activatedBy,
+      verificationMethod,
       grantedBy: authz.grantedBy,
       operation: 'verifyDomain',
     })
 
-    const activationError = await activateCredential()
+    const activationError = await activateCredential(verificationMethod)
     if (activationError) {
       return res.status(activationError.status).json({ error: activationError.error })
     }

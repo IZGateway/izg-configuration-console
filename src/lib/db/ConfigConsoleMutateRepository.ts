@@ -5,6 +5,7 @@ import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import { AllowedUser } from '../type/AllowedUser'
 import type { AllowedUseType } from '../type/AllowedUseType'
+import type { ApiKeyCredential } from '../type/ApiKeyCredential'
 
 export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
@@ -81,6 +82,14 @@ export default interface ConfigConsoleMutateRepository {
     oldValues: AllowedUser | null,
     newValues: AllowedUser | null
   ): Promise<boolean>
+  createApiKeyCredentialAudit(
+    changeType: string,
+    credentialSortKey: string,
+    userName: string,
+    oldValues: ApiKeyCredential | null,
+    newValues: ApiKeyCredential | null,
+    additionalData?: Record<string, unknown>
+  ): Promise<boolean>
   cancelApiKeyCredential(
     sortKey: string,
     cancelledBy: string,
@@ -103,6 +112,8 @@ export default interface ConfigConsoleMutateRepository {
     challengeExpiresAt?: string
     requestedBy?: string
     validatedAt?: string
+    validatedBy?: string
+    verificationMethod?: 'dns_txt' | 'bypass'
     authExpiresAt?: string
   }): Promise<void>
   claimDomainOwnership(
@@ -142,6 +153,12 @@ export default interface ConfigConsoleMutateRepository {
     expiresAt?: string
     issuedAt?: string
     expectedStatus?: string
+    activatedBy?: string
+    verificationMethod?: 'dns_txt' | 'bypass'
   }): Promise<void>
-  markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void>
+  markApiKeyCredentialViewed(
+    sortKey: string,
+    viewedAt: string,
+    viewedBy?: string
+  ): Promise<void>
 }
