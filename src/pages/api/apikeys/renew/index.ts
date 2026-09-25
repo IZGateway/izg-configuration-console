@@ -8,6 +8,8 @@ import {
   hasApiKeyPermission,
   requireApiKeyAccess,
 } from '../../../../lib/security/apiKeyAuthz'
+import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
+import type { ApiKeyCredential } from '../../../../lib/type/ApiKeyCredential'
 import crypto from 'crypto'
 
 /** Add N business days (Mon–Fri) to a date, excluding the start date. */
@@ -151,7 +153,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // concurrent-request race, and matches the same "last write is the
     // atomicity boundary" tradeoff already accepted everywhere else in this
     // codebase (no cross-item DynamoDB transactions are used anywhere here).
-    await dbClient.createApiKeyCredential({
+    const newCredential = {
       jti: newJti,
       sortKey: newSortKey,
       jurisdictionId: renewedJurisdictionId,
@@ -164,6 +166,47 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       domain,
       // Carry the sender's use-type scope forward to the renewed credential.
       useTypes: oldCredential.useTypes,
+    }
+    await dbClient.createApiKeyCredential(newCredential)
+
+    // Two rows, one per credential: a renewal is a single action that changes
+    // two records, and each key's history must stand on its own — looking up
+    // only the old key would otherwise show it entering grace_period with no
+    // indication of what replaced it, and vice versa.
+    await recordApiKeyAudit(dbClient, {
+      changeType: 'Renew',
+      credentialSortKey: String(oldSortKey),
+      userName: renewedBy,
+      oldValues: oldCredential,
+      newValues: {
+        ...oldCredential,
+        status: 'grace_period',
+        renewedBy,
+        renewedAt: new Date(renewedAt),
+        supersededBy: newJti,
+        graceExpiresAt,
+      },
+      context: {
+        jurisdictionId: renewedJurisdictionId,
+        grantedBy: authz.grantedBy,
+        supersededBy: newJti,
+        successorSortKey: newSortKey,
+        graceExpiresAt: graceExpiresAt.toISOString(),
+      },
+    })
+    await recordApiKeyAudit(dbClient, {
+      changeType: 'Create',
+      credentialSortKey: newSortKey,
+      userName: renewedBy,
+      newValues: newCredential as unknown as ApiKeyCredential,
+      context: {
+        jurisdictionId: renewedJurisdictionId,
+        grantedBy: authz.grantedBy,
+        // Marks this Create as the product of a renewal, and points back at
+        // the credential it replaced.
+        renewedFrom: String(oldSortKey),
+        issuedImmediately: true,
+      },
     })
 
     logger.info('API key renewed', {
