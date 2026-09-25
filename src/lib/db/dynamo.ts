@@ -10,7 +10,6 @@ import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
-import type { ApiKeyCredentialAudit } from '../type/ApiKeyCredentialAudit'
 import type { AllowedUseType } from '../type/AllowedUseType'
 import type { Jurisdiction } from '../type/Jurisdiction'
 import { isValidUseType } from '../type/AllowedUseType'
@@ -51,22 +50,6 @@ import {
 } from './auditHelper'
 
 global.setImmediate = global.setImmediate || setImmediate
-
-/**
- * `createAuditRecord` persists old/new snapshots as JSON strings. Parse one
- * back for the read path, tolerating a row that predates (or somehow missed)
- * the stringification rather than failing the whole history fetch.
- */
-function parseAuditValues(value: unknown): Record<string, unknown> | null {
-  if (value === null || value === undefined) return null
-  if (typeof value === 'object') return value as Record<string, unknown>
-  if (typeof value !== 'string') return null
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
-}
 
 // DynamoDB Configuration
 const endpoint: string = process.env.DYNAMODB_ENDPOINT || ''
@@ -301,8 +284,6 @@ class Dynamo implements DbClient {
         challengeExpiresAt: item.challengeExpiresAt ? new Date(item.challengeExpiresAt) : null,
         requestedBy: item.requestedBy,
         validatedAt: item.validatedAt ? new Date(item.validatedAt) : null,
-        validatedBy: item.validatedBy,
-        verificationMethod: item.verificationMethod,
         authExpiresAt: item.authExpiresAt ? new Date(item.authExpiresAt) : null,
         createdBy: item.createdBy,
         createdOn: item.createdOn ? new Date(item.createdOn) : null,
@@ -327,14 +308,8 @@ class Dynamo implements DbClient {
     challengeExpiresAt?: string
     requestedBy?: string
     validatedAt?: string
-    validatedBy?: string
-    verificationMethod?: 'dns_txt' | 'bypass'
     authExpiresAt?: string
   }): Promise<void> {
-    // NOTE: this is a Put, i.e. a full overwrite — any attribute the caller
-    // omits is erased, not preserved. The authorization write must therefore
-    // pass `requestedBy` through from the existing pending_challenge row, or
-    // the requester is lost at the exact moment the domain is authorized.
     const item: Record<string, unknown> = {
       entityType: 'ApiKeyDomain',
       sortKey: params.sortKey,
@@ -346,10 +321,6 @@ class Dynamo implements DbClient {
       ...(params.challengeExpiresAt ? { challengeExpiresAt: params.challengeExpiresAt } : {}),
       ...(params.requestedBy ? { requestedBy: params.requestedBy } : {}),
       ...(params.validatedAt ? { validatedAt: params.validatedAt } : {}),
-      ...(params.validatedBy ? { validatedBy: params.validatedBy } : {}),
-      ...(params.verificationMethod
-        ? { verificationMethod: params.verificationMethod }
-        : {}),
       ...(params.authExpiresAt !== undefined ? { authExpiresAt: params.authExpiresAt } : {}),
     }
     try {
@@ -1480,74 +1451,44 @@ class Dynamo implements DbClient {
       )
     )
 
-    return items.map((item) =>
-      this.convertResponseToApiKeyCredential(
-        item,
-        jurisdictionsById.get(item.jurisdictionId)?.description ??
-          item.jurisdictionId
-      )
-    )
-  }
-
-  /**
-   * Single read mapping for an ApiKeyCredential row, shared by
-   * `fetchApiKeyCredentials` and `getApiKeyCredential`. These previously
-   * carried byte-identical copies of this object literal, so any attribute
-   * added to one could silently be missing from the other.
-   */
-  private convertResponseToApiKeyCredential(
-    item: Record<string, any>,
-    jurisdictionDescription: string
-  ): ApiKeyCredential {
-    return {
-      jti: item.jti as string,
-      sortKey: item.sortKey as string,
-      jurisdictionId: item.jurisdictionId as string,
-      jurisdictionDescription,
-      status: item.status as ApiKeyCredential['status'],
-      expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
-      issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
-      revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
-      revokedBy: item.revokedBy as string | undefined,
-      reason: item.reason as string | undefined,
-      cancelledBy: item.cancelledBy as string | undefined,
-      cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
-      // Renewal/re-issue linkage. `supersededBy` and `reissuedAs` are the only
-      // on-record pointers from a credential to its successor.
-      supersededBy: item.supersededBy as string | undefined,
-      renewedBy: item.renewedBy as string | undefined,
-      renewedAt: item.renewedAt ? new Date(item.renewedAt) : null,
-      reissuedAs: item.reissuedAs as string | undefined,
-      reissuedBy: item.reissuedBy as string | undefined,
-      reissuedAt: item.reissuedAt ? new Date(item.reissuedAt) : null,
-      // Falls back to the legacy singular `env` attribute for rows written
-      // before the environments-list migration, so existing credentials
-      // don't lose their environment on read. `environments` is a deduped
-      // DynamoDB Number Set (see createApiKeyCredential); `Array.from` +
-      // `Number` also tolerates any interim rows written as a List or with
-      // string elements.
-      environments: item.environments
-        ? Array.from(item.environments as Iterable<string | number>, Number)
-        : item.env
-          ? [Number(item.env)]
-          : [],
-      description: item.description as string | undefined,
-      domain: item.domain as string | undefined,
-      viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
-      viewedBy: item.viewedBy as string | undefined,
-      activatedBy: item.activatedBy as string | undefined,
-      verificationMethod: item.verificationMethod as
-        | ApiKeyCredential['verificationMethod']
-        | undefined,
-      graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
-      useTypes: item.useTypes
-        ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
-        : undefined,
-      createdOn: item.createdOn ? new Date(item.createdOn) : null,
-      createdBy: item.createdBy as string,
-      updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
-      updatedBy: item.updatedBy as string,
-    }
+    return items.map((item) => {
+      const jurisdiction = jurisdictionsById.get(item.jurisdictionId)
+      return {
+        jti: item.jti as string,
+        sortKey: item.sortKey as string,
+        jurisdictionId: item.jurisdictionId as string,
+        jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+        status: item.status as ApiKeyCredential['status'],
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
+        revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        cancelledBy: item.cancelledBy as string | undefined,
+        cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
+        reissuedAs: item.reissuedAs as string | undefined,
+        // Falls back to the legacy singular `env` attribute for rows written
+        // before the environments-list migration, so existing credentials
+        // don't lose their environment on read. `environments` is a deduped
+        // DynamoDB Number Set (see createApiKeyCredential); `Array.from` +
+        // `Number` also tolerates any interim rows written as a List or with
+        // string elements.
+        environments: item.environments
+          ? Array.from(item.environments as Iterable<string | number>, Number)
+          : item.env
+            ? [Number(item.env)]
+            : [],
+        description: item.description as string | undefined,
+        domain: item.domain as string | undefined,
+        viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
+        graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        useTypes: item.useTypes
+          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        createdBy: item.createdBy as string,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        updatedBy: item.updatedBy as string,
+      }
+    })
   }
 
   async getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null> {
@@ -1561,10 +1502,41 @@ class Dynamo implements DbClient {
       if (!result.Item) return null
       const item = result.Item
       const jurisdiction = await this.getJurisdiction(item.jurisdictionId)
-      return this.convertResponseToApiKeyCredential(
-        item,
-        jurisdiction?.description ?? item.jurisdictionId
-      )
+      return {
+        jti: item.jti as string,
+        sortKey: item.sortKey as string,
+        jurisdictionId: item.jurisdictionId as string,
+        jurisdictionDescription: jurisdiction?.description ?? item.jurisdictionId,
+        status: item.status as ApiKeyCredential['status'],
+        expiresAt: item.expiresAt ? new Date(item.expiresAt) : null,
+        issuedAt: item.issuedAt ? new Date(item.issuedAt) : null,
+        revokedAt: item.revokedAt ? new Date(item.revokedAt) : null,
+        cancelledBy: item.cancelledBy as string | undefined,
+        cancelledAt: item.cancelledAt ? new Date(item.cancelledAt) : null,
+        reissuedAs: item.reissuedAs as string | undefined,
+        // Falls back to the legacy singular `env` attribute for rows written
+        // before the environments-list migration, so existing credentials
+        // don't lose their environment on read. `environments` is a deduped
+        // DynamoDB Number Set (see createApiKeyCredential); `Array.from` +
+        // `Number` also tolerates any interim rows written as a List or with
+        // string elements.
+        environments: item.environments
+          ? Array.from(item.environments as Iterable<string | number>, Number)
+          : item.env
+            ? [Number(item.env)]
+            : [],
+        description: item.description as string | undefined,
+        domain: item.domain as string | undefined,
+        viewedAt: item.viewedAt ? new Date(item.viewedAt) : null,
+        graceExpiresAt: item.graceExpiresAt ? new Date(item.graceExpiresAt) : null,
+        useTypes: item.useTypes
+          ? Array.from(item.useTypes as Iterable<string>).filter(isValidUseType)
+          : undefined,
+        createdOn: item.createdOn ? new Date(item.createdOn) : null,
+        createdBy: item.createdBy as string,
+        updatedOn: item.updatedOn ? new Date(item.updatedOn) : null,
+        updatedBy: item.updatedBy as string,
+      }
     } catch (error) {
       logger.error('Error fetching ApiKeyCredential', {
         sortKey,
@@ -1781,22 +1753,15 @@ class Dynamo implements DbClient {
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { entityType: 'ApiKeyCredential', sortKey: params.sortKey },
-      // `reissuedBy`/`reissuedAt` are stored under their own names as well as
-      // in updatedBy/updatedOn: a later unrelated update would overwrite the
-      // generic pair, losing the attribution for the re-issue specifically.
       UpdateExpression:
-        'SET #reissuedAs = :reissuedAs, #reissuedBy = :reissuedBy, #reissuedAt = :reissuedAt, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
+        'SET #reissuedAs = :reissuedAs, #updatedBy = :updatedBy, #updatedOn = :updatedOn',
       ExpressionAttributeNames: {
         '#reissuedAs': 'reissuedAs',
-        '#reissuedBy': 'reissuedBy',
-        '#reissuedAt': 'reissuedAt',
         '#updatedBy': 'updatedBy',
         '#updatedOn': 'updatedOn',
       },
       ExpressionAttributeValues: {
         ':reissuedAs': params.reissuedAs,
-        ':reissuedBy': params.reissuedBy,
-        ':reissuedAt': params.reissuedAt,
         ':updatedBy': params.reissuedBy,
         ':updatedOn': params.reissuedAt,
       },
@@ -1890,8 +1855,6 @@ class Dynamo implements DbClient {
     expiresAt?: string
     issuedAt?: string
     expectedStatus?: string
-    activatedBy?: string
-    verificationMethod?: 'dns_txt' | 'bypass'
   }): Promise<void> {
     const updateParts = ['#status = :status']
     const attrNames: Record<string, string> = { '#status': 'status' }
@@ -1905,23 +1868,6 @@ class Dynamo implements DbClient {
       updateParts.push('#issuedAt = :issuedAt')
       attrNames['#issuedAt'] = 'issuedAt'
       attrValues[':issuedAt'] = params.issuedAt
-    }
-    // Activation actor. Until now the transition to `active` recorded only a
-    // timestamp, so nothing on the row said who satisfied the DNS challenge.
-    if (params.activatedBy) {
-      updateParts.push('#activatedBy = :activatedBy')
-      attrNames['#activatedBy'] = 'activatedBy'
-      attrValues[':activatedBy'] = params.activatedBy
-      updateParts.push('#updatedBy = :updatedBy')
-      attrNames['#updatedBy'] = 'updatedBy'
-      attrValues[':updatedBy'] = params.activatedBy
-    }
-    // How the challenge was satisfied, so a dev/test `bypass` activation stays
-    // distinguishable from a genuinely DNS-verified one on the record itself.
-    if (params.verificationMethod) {
-      updateParts.push('#verificationMethod = :verificationMethod')
-      attrNames['#verificationMethod'] = 'verificationMethod'
-      attrValues[':verificationMethod'] = params.verificationMethod
     }
     // Optional atomic precondition on the CURRENT status. Used by activation to
     // require the credential still be `ready_for_validation`, so the write can
@@ -1960,29 +1906,13 @@ class Dynamo implements DbClient {
     }
   }
 
-  async markApiKeyCredentialViewed(
-    sortKey: string,
-    viewedAt: string,
-    viewedBy?: string
-  ): Promise<void> {
-    // `viewedBy` records WHO received the one-time bearer token — `viewedAt`
-    // alone only recorded that it was handed out. Written in the same
-    // conditional update as `viewedAt` so the actor can never be missing from a
-    // row that records a reveal.
-    const updateParts = ['#viewedAt = :viewedAt']
-    const attrNames: Record<string, string> = { '#viewedAt': 'viewedAt' }
-    const attrValues: Record<string, unknown> = { ':viewedAt': viewedAt }
-    if (viewedBy) {
-      updateParts.push('#viewedBy = :viewedBy')
-      attrNames['#viewedBy'] = 'viewedBy'
-      attrValues[':viewedBy'] = viewedBy
-    }
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { entityType: 'ApiKeyCredential', sortKey },
-      UpdateExpression: `SET ${updateParts.join(', ')}`,
-      ExpressionAttributeNames: attrNames,
-      ExpressionAttributeValues: attrValues,
+      UpdateExpression: 'SET #viewedAt = :viewedAt',
+      ExpressionAttributeNames: { '#viewedAt': 'viewedAt' },
+      ExpressionAttributeValues: { ':viewedAt': viewedAt },
       // attribute_not_exists(viewedAt) makes "viewed exactly once" atomic: the
       // caller's earlier `if (credential.viewedAt)` read-then-check is only a
       // fast-path optimization, not the enforcement — without this, two
@@ -2770,127 +2700,6 @@ class Dynamo implements DbClient {
           ['createdOn', 'updatedOn']
         ),
     })
-  }
-
-  /**
-   * Immutable audit row for an API key credential lifecycle action — the same
-   * mechanism already used for AllowedUser / AccessGroup / DenyList /
-   * AdsFileType, so API keys stop being the one managed entity whose history
-   * lives only in application logs.
-   *
-   * The credential row itself is safe to snapshot in full: the JWT is never
-   * persisted (it is re-signed on demand, once, by /api/apikeys/token), so
-   * old/new values contain no bearer secret.
-   *
-   * `additionalData` carries action-specific context that is not part of the
-   * credential — the revoke `reason`, the successor `jti` on Renew/Reissue,
-   * `verificationMethod` on Activate.
-   */
-  async createApiKeyCredentialAudit(
-    changeType: string,
-    credentialSortKey: string,
-    userName: string,
-    oldValues: ApiKeyCredential | null,
-    newValues: ApiKeyCredential | null,
-    additionalData?: Record<string, unknown>
-  ): Promise<boolean> {
-    return createAuditRecord<ApiKeyCredential>(dynamodDbDocClient, TABLE_NAME, {
-      entityType: 'ApiKeyCredentialAudit',
-      tableName: 'api_key_credentials',
-      sortKeyParts: [credentialSortKey],
-      userName,
-      changeType,
-      oldValues,
-      newValues,
-      // Deliberately `credentialSortKey`, not `sortKey`: createAuditRecord
-      // writes the audit row's own composite `sortKey` last, so a `sortKey`
-      // here would be clobbered and the credential reference lost.
-      additionalData: { credentialSortKey, ...additionalData },
-      serializeValues: (credential) => {
-        const serialized = serializeDateFields(
-          credential as unknown as Record<string, unknown> | null,
-          [
-            'createdOn',
-            'updatedOn',
-            'expiresAt',
-            'issuedAt',
-            'revokedAt',
-            'cancelledAt',
-            'viewedAt',
-            'graceExpiresAt',
-            'renewedAt',
-            'reissuedAt',
-          ]
-        )
-        if (!serialized) return null
-        // `environments`/`useTypes` are DynamoDB Sets on the raw item. The read
-        // mappers already hand back arrays, but a caller passing a
-        // freshly-constructed credential could supply either — and JSON.stringify
-        // turns a Set into `{}`, silently emptying the audit snapshot.
-        for (const field of ['environments', 'useTypes']) {
-          const value = serialized[field]
-          if (value instanceof Set) serialized[field] = Array.from(value)
-        }
-        return serialized
-      },
-    })
-  }
-
-  async fetchApiKeyCredentialAuditHistory(
-    credentialSortKey: string
-  ): Promise<ApiKeyCredentialAudit[]> {
-    return fetchAuditHistory<ApiKeyCredentialAudit>(
-      dynamodDbDocClient,
-      TABLE_NAME,
-      {
-        entityType: 'ApiKeyCredentialAudit',
-        sortKeyPrefix: `${credentialSortKey}#`,
-        identifyingFields: { credentialSortKey },
-        // oldValues/newValues are stored as JSON strings (createAuditRecord
-        // stringifies them); parse them back so callers get objects, matching
-        // what the UI consumes for other entities' history.
-        transformResult: (item) => ({
-          ...item,
-          oldValues: parseAuditValues(item.oldValues),
-          newValues: parseAuditValues(item.newValues),
-        }),
-      }
-    )
-  }
-
-  /**
-   * Every API key audit row, across all credentials — backs the dashboard's
-   * AUDIT LOG tab, which is an activity feed rather than a single key's
-   * history.
-   *
-   * Returns rows UNSCOPED; the caller is responsible for tenancy filtering
-   * (see `scopeToOwnedJurisdictions`). Pages through LastEvaluatedKey for the
-   * same reason `fetchApiKeyCredentials` does: a single Query caps at 1MB, and
-   * this partition only ever grows — audit rows are never deleted.
-   */
-  async fetchApiKeyCredentialAudits(): Promise<ApiKeyCredentialAudit[]> {
-    const items: Record<string, any>[] = []
-    let lastEvaluatedKey: Record<string, any> | undefined
-    do {
-      const result = await dynamodDbDocClient.send(
-        new QueryCommand({
-          TableName: TABLE_NAME,
-          KeyConditionExpression: 'entityType = :entityType',
-          ExpressionAttributeValues: { ':entityType': 'ApiKeyCredentialAudit' },
-          ExclusiveStartKey: lastEvaluatedKey,
-        })
-      )
-      if (result.Items) items.push(...result.Items)
-      lastEvaluatedKey = result.LastEvaluatedKey
-    } while (lastEvaluatedKey)
-
-    return items.map((item) => ({
-      ...item,
-      createdAt: new Date(item.createdAt as string),
-      id: item.sortKey,
-      oldValues: parseAuditValues(item.oldValues),
-      newValues: parseAuditValues(item.newValues),
-    })) as unknown as ApiKeyCredentialAudit[]
   }
 
   async fetchAllowedUserAuditHistory(

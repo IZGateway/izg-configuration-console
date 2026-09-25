@@ -19,7 +19,6 @@ import {
 import logger from '../../../logger'
 import { AdsFileTypeItem } from '../type/AdsFileType'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
-import type { ApiKeyCredentialAudit } from '../type/ApiKeyCredentialAudit'
 import type { AllowedUseType } from '../type/AllowedUseType'
 import type { Jurisdiction } from '../type/Jurisdiction'
 import type { ApiKeyDomain } from '../type/ApiKeyDomain'
@@ -141,18 +140,6 @@ class EncryptedRepository implements DbClient {
     oldValues: AdsFileTypeItem | null,
     newValues: AdsFileTypeItem | null
   ) => Promise<boolean>
-  createApiKeyCredentialAudit!: (
-    changeType: string,
-    credentialSortKey: string,
-    userName: string,
-    oldValues: ApiKeyCredential | null,
-    newValues: ApiKeyCredential | null,
-    additionalData?: Record<string, unknown>
-  ) => Promise<boolean>
-  fetchApiKeyCredentialAuditHistory!: (
-    credentialSortKey: string
-  ) => Promise<ApiKeyCredentialAudit[]>
-  fetchApiKeyCredentialAudits!: () => Promise<ApiKeyCredentialAudit[]>
 
   private repository: DbClient
 
@@ -186,12 +173,6 @@ class EncryptedRepository implements DbClient {
       repository.createDenyListAudit.bind(repository)
     this.createAdsFileTypeAudit =
       repository.createAdsFileTypeAudit.bind(repository)
-    this.createApiKeyCredentialAudit =
-      repository.createApiKeyCredentialAudit.bind(repository)
-    this.fetchApiKeyCredentialAuditHistory =
-      repository.fetchApiKeyCredentialAuditHistory.bind(repository)
-    this.fetchApiKeyCredentialAudits =
-      repository.fetchApiKeyCredentialAudits.bind(repository)
   }
   /** Return the base repository */
   getRepository(): DbClient {
@@ -490,8 +471,6 @@ class EncryptedRepository implements DbClient {
     challengeExpiresAt?: string
     requestedBy?: string
     validatedAt?: string
-    validatedBy?: string
-    verificationMethod?: 'dns_txt' | 'bypass'
     authExpiresAt?: string
   }): Promise<void> {
     return await this.repository.upsertApiKeyDomain(params)
@@ -521,21 +500,11 @@ class EncryptedRepository implements DbClient {
     expiresAt?: string
     issuedAt?: string
     expectedStatus?: string
-    activatedBy?: string
-    verificationMethod?: 'dns_txt' | 'bypass'
   }): Promise<void> {
     return await this.repository.updateApiKeyCredentialStatus(params)
   }
 
-  async markApiKeyCredentialViewed(
-    sortKey: string,
-    viewedAt: string,
-    viewedBy?: string
-  ): Promise<void> {
-    return await this.repository.markApiKeyCredentialViewed(
-      sortKey,
-      viewedAt,
-      viewedBy
-    )
+  async markApiKeyCredentialViewed(sortKey: string, viewedAt: string): Promise<void> {
+    return await this.repository.markApiKeyCredentialViewed(sortKey, viewedAt)
   }
 }

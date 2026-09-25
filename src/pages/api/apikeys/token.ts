@@ -9,7 +9,6 @@ import {
   hasApiKeyPermission,
   requireApiKeyAccess,
 } from '../../../lib/security/apiKeyAuthz'
-import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
 
 // Reveals an API key's JWT exactly once. The token is never persisted —
 // its claims (jti, upn, env, iat, exp) are fixed when the credential was
@@ -77,13 +76,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     })
 
     const viewedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
-    const viewedBy = session.user.email || 'unknown'
     try {
-      await dbClient.markApiKeyCredentialViewed(
-        credential.sortKey,
-        viewedAt,
-        viewedBy
-      )
+      await dbClient.markApiKeyCredentialViewed(credential.sortKey, viewedAt)
     } catch (error) {
       // The earlier `credential.viewedAt` check is a stale read, not the
       // enforcement — markApiKeyCredentialViewed's own atomic condition is
@@ -97,25 +91,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       throw error
     }
 
-    // Revealing the token hands out a live bearer credential — the single most
-    // sensitive action in this feature — so it gets a first-class audit row,
-    // not just a log line. No token material is recorded, only who and when.
-    await recordApiKeyAudit(dbClient, {
-      changeType: 'TokenViewed',
-      credentialSortKey: credential.sortKey,
-      userName: viewedBy,
-      context: {
-        jurisdictionId: credential.jurisdictionId,
-        jti: credential.jti,
-        domain: credential.domain,
-        grantedBy: authz.grantedBy,
-        viewedAt,
-      },
-    })
-
     logger.info('API key token viewed', {
       sortKey: credential.sortKey,
-      viewedBy,
+      viewedBy: session.user.email,
       grantedBy: authz.grantedBy,
       operation: 'viewApiKeyToken',
     })
