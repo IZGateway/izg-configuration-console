@@ -60,7 +60,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               sortKey,
               fileTypeName,
               description,
-              createdBy: createdBy || userName,
+              createdBy: userName,
               createdOn: new Date(),
             }
           )
