@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
 
@@ -52,4 +52,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-export default withMiddleware('checkAccessToDestIdSlug')(handler)
+export default withMiddleware(
+  { inHandler: 'IGDD-3472: per-destination reach check in the handler; the capability half has no agreed flag' },
+  'checkAccessToDestIdSlug'
+)(handler)

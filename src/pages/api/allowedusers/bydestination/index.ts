@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -73,11 +73,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized' })
       }
 
-      const isAdmin = isOperationsRole(session.user.roles)
+      // Named `isAdmin` until IGDD-3472, but it never read the session flag —
+      // it is a row-scoping switch computed from the caller's roles ('see every
+      // row' vs 'see only these'). The old name made it look like a real
+      // isAdmin dependency to anyone auditing that axis.
+      const hasGlobalReach = isOperationsRole(session.user.roles)
       const destinations = session.user.jurisdictions || []
 
       logger.info('Fetching allowed users by destination', {
-        isAdmin,
+        hasGlobalReach,
         destinationsCount: destinations.length,
         userRoles: session.user.roles,
         operation: 'fetchAllowedUsersByDestination',
@@ -87,13 +91,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       const dbClient = await DbClientFactory.getDbClient()
       const result = await dbClient.fetchAllowedUsersByDestination(
-        isAdmin,
+        hasGlobalReach,
         destinations
       )
 
       logger.info('Successfully fetched allowed users by destination', {
         count: result.length,
-        isAdmin,
+        hasGlobalReach,
         operation: 'fetchAllowedUsersByDestination',
         httpMethod: req.method,
         endpoint: req.url,
@@ -142,4 +146,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('captureErrors')(handler)
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
+// so any authenticated session could reach it. One capability across every
+// method, deliberately: splitting view from mutate needs a flag whose seed
+// value nobody has decided, and this closes the hole without inventing one.
+export default withMiddleware(
+  { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
+  'captureErrors'
+)(handler)

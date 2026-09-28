@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 
 import * as fs from 'fs'
@@ -189,4 +189,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(503).json(error.message)
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware({
+  public:
+    'Readiness probe for the load balancer; reports dependency reachability, not data.',
+})(handler)

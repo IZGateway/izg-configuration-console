@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
@@ -102,4 +102,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-export default withMiddleware('captureErrors')(handler)
+// Same shape as changerequest/index.ts before IGDD-3472: error capture plus an
+// in-handler reach check only, so reach was checked and capability never was.
+// See the note there.
+export default withMiddleware(
+  {
+    byMethod: {
+      GET: { page: 'changerequest', capability: 'canViewDetails' },
+      DELETE: { page: 'changerequest', capability: 'canCancelRequest' },
+    },
+  },
+  'captureErrors'
+)(handler)
