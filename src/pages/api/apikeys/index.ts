@@ -5,12 +5,14 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { isValidUseType } from '../../../lib/type/AllowedUseType'
+import type { ApiKeyCredential } from '../../../lib/type/ApiKeyCredential'
 import {
-  canActOnJurisdiction,
   hasApiKeyPermission,
   requireApiKeyAccess,
 } from '../../../lib/security/apiKeyAuthz'
+import { scopeToOwnedJurisdictions } from '../../../lib/apikeys/scope'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
 import { subjectOf } from '../../../lib/security/authzsubject'
 import crypto from 'crypto'
 
@@ -37,33 +39,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Tenancy scoping (fix enumeration/IDOR): a caller only sees credentials
-      // for jurisdictions they own.
-      //
-      // The permission and the jurisdiction are checked together, per role, by
-      // `canActOnJurisdiction` — the same gate the mutating routes use. It must
-      // NOT be split into "does any role grant canListApiKeys?" plus "does any
-      // role reach this jurisdiction?": that would let a globally-scoped role
-      // with no API-key rights (IZG Support) supply the reach while a scoped role
-      // supplies the permission, exposing every organization's credentials.
-      //
-      // Resolved once per DISTINCT jurisdiction rather than once per credential.
-      // `fetchApiKeyCredentials` has already pre-warmed the jurisdiction cache,
-      // so these are in-memory hits either way, but this keeps the work
-      // proportional to jurisdictions rather than to key count.
-      const subject = subjectOf(session)
-      const decisions = new Map<string, boolean>()
-      for (const jurisdictionId of new Set(
-        result.map((c) => String(c.jurisdictionId))
-      )) {
-        const decision = await canActOnJurisdiction(
-          subject,
-          'canListApiKeys',
-          jurisdictionId
-        )
-        decisions.set(jurisdictionId, decision.allowed)
-      }
-      const scoped = result.filter((c) =>
-        decisions.get(String(c.jurisdictionId))
+      // for jurisdictions they own. Shared with the audit-log list route so the
+      // two can never disagree about what a caller may see — see
+      // `scopeToOwnedJurisdictions` for why permission and reach must be
+      // evaluated together rather than separately.
+      const scoped = await scopeToOwnedJurisdictions(
+        session,
+        'canListApiKeys',
+        result
       )
 
       return res.status(200).json(scoped)
@@ -232,7 +215,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           return res.status(reissueError.status).json({ error: reissueError.error })
         }
         const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-        await dbClient.createApiKeyCredential({
+        const credential = {
           jti,
           sortKey,
           jurisdictionId: String(jurisdictionId),
@@ -244,7 +227,35 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           description: description ? String(description) : undefined,
           domain: String(upn),
           useTypes,
+        }
+        await dbClient.createApiKeyCredential(credential)
+
+        await recordApiKeyAudit(dbClient, {
+          changeType: 'Create',
+          credentialSortKey: sortKey,
+          userName: createdBy,
+          newValues: credential as unknown as ApiKeyCredential,
+          context: {
+            jurisdictionId: String(jurisdictionId),
+            dnsChoice,
+            grantedBy: authz.grantedBy,
+            // The domain was already authorized, so no DNS challenge ran for
+            // this credential — it was issued Active immediately.
+            issuedImmediately: true,
+            ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
+          },
         })
+        if (reissuedFrom) {
+          // Recorded against the PREDECESSOR too, so the expired credential's
+          // own history shows it was replaced and by whom — the successor's
+          // Create row alone would leave the old key's timeline silent.
+          await recordApiKeyAudit(dbClient, {
+            changeType: 'Reissue',
+            credentialSortKey: String(reissuedFrom),
+            userName: createdBy,
+            context: { reissuedAs: jti, reissuedTo: sortKey },
+          })
+        }
 
         logger.info('API key created for already-authorized domain', {
           jti,
@@ -321,7 +332,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (reissueError) {
         return res.status(reissueError.status).json({ error: reissueError.error })
       }
-      await dbClient.createApiKeyCredential({
+      const pendingCredential = {
         jti,
         sortKey,
         jurisdictionId: String(jurisdictionId),
@@ -332,7 +343,30 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         description: description ? String(description) : undefined,
         domain: String(upn),
         useTypes,
+      }
+      await dbClient.createApiKeyCredential(pendingCredential)
+
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Create',
+        credentialSortKey: sortKey,
+        userName: createdBy,
+        newValues: pendingCredential as unknown as ApiKeyCredential,
+        context: {
+          jurisdictionId: String(jurisdictionId),
+          dnsChoice,
+          grantedBy: authz.grantedBy,
+          issuedImmediately: false,
+          ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
+        },
       })
+      if (reissuedFrom) {
+        await recordApiKeyAudit(dbClient, {
+          changeType: 'Reissue',
+          credentialSortKey: String(reissuedFrom),
+          userName: createdBy,
+          context: { reissuedAs: jti, reissuedTo: sortKey },
+        })
+      }
 
       // The DNS TXT challenge proves ownership of the domain itself (record
       // placed at the domain APEX, DigiCert-style — not a `_izg-verify.`
@@ -472,6 +506,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         throw error
       }
 
+      // `credential` is the pre-revoke read above, so oldValues captures the
+      // exact state that was revoked (status, expiry, domain, use-type scope).
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Revoke',
+        credentialSortKey: String(sortKey),
+        userName: revokedBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'revoked',
+          revokedBy,
+          revokedAt: new Date(revokedAt),
+          ...(reason ? { reason: String(reason) } : {}),
+        },
+        context: {
+          jurisdictionId: credential.jurisdictionId,
+          grantedBy: authz.grantedBy,
+          previousStatus: credential.status,
+          ...(reason ? { reason: String(reason) } : {}),
+        },
+      })
+
       logger.info('API key revoked', {
         sortKey,
         revokedBy,
@@ -534,6 +590,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const cancelledAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 
       await dbClient.cancelApiKeyCredential(String(sortKey), cancelledBy, cancelledAt)
+
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Cancel',
+        credentialSortKey: String(sortKey),
+        userName: cancelledBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'cancelled',
+          cancelledBy,
+          cancelledAt: new Date(cancelledAt),
+        },
+        context: {
+          jurisdictionId: credential.jurisdictionId,
+          grantedBy: authz.grantedBy,
+          previousStatus: credential.status,
+        },
+      })
 
       logger.info('API key cancelled (soft; record retained for audit)', {
         sortKey,
