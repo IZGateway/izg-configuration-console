@@ -67,3 +67,40 @@ describe('nav visibility: no held roles', () => {
     )
   })
 })
+
+// ---------------------------------------------------------------------------
+// IGDD-3472 — the three admin items moved from adminOnly to matrix capabilities
+// ---------------------------------------------------------------------------
+
+describe('nav visibility: admin items read the matrix, not isAdmin', () => {
+  const ADMIN_ITEMS = ['Admin Operations', 'Access Control', 'Console']
+
+  it.each(ADMIN_ITEMS)('%s is visible for IZG Operations', (label) => {
+    expect(item(label).isVisible?.(['IZG Operations'])).toBe(true)
+  })
+
+  it.each([
+    'IZG Support',
+    'Jurisdiction Operations',
+    'Jurisdiction Support',
+    'Sender Operations',
+  ])('%s sees none of the admin items', (role) => {
+    for (const label of ADMIN_ITEMS) {
+      expect({ label, visible: item(label).isVisible?.([role]) }).toEqual({
+        label,
+        visible: false,
+      })
+    }
+  })
+
+  it.each(ADMIN_ITEMS)('%s is hidden with no roles and with undefined roles', (label) => {
+    expect(item(label).isVisible?.([])).toBe(false)
+    expect(item(label).isVisible?.(undefined)).toBe(false)
+  })
+
+  it('every item declares an isVisible predicate', () => {
+    // Without one an item is unconditionally visible, which is the failure
+    // mode this change exists to remove.
+    expect(menuItems.filter((m) => !m.isVisible).map((m) => m.label)).toEqual([])
+  })
+})

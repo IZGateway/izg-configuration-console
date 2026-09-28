@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 import { Box, Typography, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
@@ -152,6 +153,9 @@ const AccessControlComponent = () => {
 
   const { data: session } = useSession()
   const currentUserName = session?.user?.name || 'Unknown'
+  // Computed once here and threaded down: AccessGroups is presentational, and
+  // a second useRoleAccess call there would be a second thing to keep in step.
+  const { canManageAccessGroups } = useRoleAccess('accesscontrol')
 
   // Manage actual data state
   const [accessGroupsData, setAccessGroupsData] = useState<AccessGroup[]>([])
@@ -636,6 +640,7 @@ const AccessControlComponent = () => {
                 onAddGroup={handleAddGroup}
                 onDeleteGroup={handleDeleteGroup}
                 isLoading={isLoadingAccessGroups}
+                canManageAccessGroups={canManageAccessGroups}
               />
             </TabPanel>
 
