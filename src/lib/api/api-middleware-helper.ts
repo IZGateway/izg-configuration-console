@@ -6,10 +6,9 @@ import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
 import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../lib/security/authzsubject'
-import { ANY_JURISDICTION, can, hasGlobalTenancy } from '../../lib/security/policy'
 import {
   CapabilityRef,
-  requiresGlobalTenancy,
+  decideCapability,
 } from '../../lib/security/accessregistry'
 
 /**
@@ -265,25 +264,19 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     }
 
     // A single alternative: the capability AND, when its data path applies no
-    // jurisdiction filter, global tenancy reach on the SAME subject.
-    const satisfies = (ref: CapabilityRef): boolean => {
-      const decision = can(
-        subject,
-        ref.page,
-        // `as never` is load-bearing and unavoidable here. `CapabilityRef` is a
-        // union distributed over PageKey, so `ref.page` and `ref.capability`
-        // are correlated at construction — but once destructured, TypeScript
-        // has no way to carry that correlation into a call, and widens
-        // `ref.capability` to the union of every page's capabilities.
-        // `withPageAccess` needs no cast because its page key is a generic
-        // parameter. The pairing is still guaranteed: nothing can build a
-        // mismatched `CapabilityRef` in the first place.
-        ref.capability as never,
-        ANY_JURISDICTION
-      )
-      if (!decision.allowed) return false
-      return !requiresGlobalTenancy(ref) || hasGlobalTenancy(subject)
-    }
+    // jurisdiction filter, global tenancy reach — both from the SAME role.
+    //
+    // `decideCapability` enforces that role-locally. Asking `can(...)` and
+    // `hasGlobalTenancy(subject)` as two separate questions computes
+    // `(∃r: holds) ∧ (∃r: reach)`, which would let a scoped role holding a
+    // guarded capability borrow reach from an unrelated global role — the exact
+    // leak the guard exists to prevent. Caught in review on PR #700.
+    //
+    // The tenancy predicate is the function's own default rather than a lambda
+    // passed from here, so this enforcer, the page gate and the nav predicate
+    // cannot be edited into three different decisions.
+    const satisfies = (ref: CapabilityRef): boolean =>
+      decideCapability(subject, ref)
 
     if ('public' in authz) return next()
 
@@ -291,13 +284,28 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // enforced here.
     if ('inHandler' in authz) return next()
 
-    if ('session' in authz) {
-      if (session?.user) return next()
-      // Authentication, not RBAC: no audit event. Logging it would fire on
-      // every expired session (see the header warning in accessDeniedAudit).
+    // Unauthenticated is 401, never 403 — for every declaration kind that
+    // requires a caller, not just `{ session: true }`.
+    //
+    // Without this, a request with no resolvable session reached the capability
+    // branches with `subjectOf(undefined)` → zero roles → a 403 and an
+    // `AccessDenied` event naming a permission nobody was denied. That is an
+    // authentication failure wearing an authorization failure's clothes: wrong
+    // status for the caller, and a false RBAC denial in the very
+    // `eventType:AccessDenied` query this change adds `deniedAt`/`permission`
+    // to support. A session expiring between the edge `withAuth` check and the
+    // handler is enough to trigger it. The page gate and the `{ session: true }`
+    // branch below already special-cased this; the others did not. Raised by
+    // review on PR #700.
+    if (!session?.user) {
+      // No audit event, for the reason in the accessDeniedAudit header: an
+      // expired session is not an RBAC denial, and logging it buries the real
+      // ones.
       res.status(401).send('unauthorized')
       return
     }
+
+    if ('session' in authz) return next()
 
     if ('byMethod' in authz) {
       const method = (req.method || 'GET').toUpperCase() as HttpMethod
@@ -345,15 +353,27 @@ const withMiddleware = (
   const declaredNames = Array.from(new Set(middlewareNames)).filter(
     (name) => name !== 'logApiRequest'
   )
+  // `captureErrors`, where a route declares it, keeps its original position
+  // ahead of everything else it used to wrap — which now includes the
+  // authorization decision. The first version of this stack put
+  // `enforceRouteAuthz` at index 1, ahead of the declared list, so on the four
+  // routes that declare `captureErrors` a throw inside the denial path (a
+  // logger transport failure, say) escaped the trap that previously covered it:
+  // no structured error log, no 500 body, just a dropped request. Raised by
+  // review on PR #700.
+  const errorTrap = declaredNames.filter((name) => name === 'captureErrors')
+  const routeSpecific = declaredNames.filter((name) => name !== 'captureErrors')
   // The order is written out rather than reached by index arithmetic: the
   // request log must precede any denial (so a denied request still appears in
-  // the access log), and authorization must precede every route-specific
-  // middleware. A `splice(1, 0, ...)` here would silently put authorization in
-  // the wrong place the first time anything else is prepended.
+  // the access log), the error trap must wrap everything after it, and
+  // authorization must precede every route-specific middleware. A
+  // `splice(1, 0, ...)` here would silently put authorization in the wrong
+  // place the first time anything else is prepended.
   const stack: Middleware[] = [
     logApiRequest,
+    ...errorTrap.map((name) => middlewareMap[name]),
     enforceRouteAuthz(authz),
-    ...declaredNames.map((name) => middlewareMap[name]),
+    ...routeSpecific.map((name) => middlewareMap[name]),
   ]
 
   return (handler: NextApiHandler) => {

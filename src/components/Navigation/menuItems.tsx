@@ -6,35 +6,10 @@ import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeMosaicIcon from '@mui/icons-material/AutoAwesomeMosaic'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import React from 'react'
-import accessLevel from '../../lib/security/accesslevel'
-import type { PageKey } from '../../lib/security/accesslevel'
-import { PAGE_ENTRY } from '../../lib/security/accessregistry'
+import { canEnterPage } from '../../lib/security/accessregistry'
 
 const iconSx = {
   fontSize: '2rem',
-}
-
-/**
- * Is this page's entry capability held by any of these roles?
- *
- * Reads `PAGE_ENTRY` — the same constant `withPageAccess` reads — so a nav
- * link and the page it points at cannot resolve to different flags. That drift
- * was live before IGDD-3472: the "OUR API" button on the landing page admitted
- * IZG Operations *and* IZG Support while the /api-doc guard admitted IZG
- * Operations only, so IZG Support saw a link to a page that rejected them.
- *
- * A "what"-only check with no jurisdiction, so unioning across roles is
- * correct here — unlike `can()`, which must evaluate capability and reach
- * within a single role.
- */
-export const canEnterPage = (
-  page: PageKey,
-  roles: string[] | undefined
-): boolean => {
-  const capability = PAGE_ENTRY[page]
-  return (roles ?? []).some(
-    (role) => !!accessLevel[role]?.[page]?.[capability as never]
-  )
 }
 
 export const menuItems: MenuItem[] = [

@@ -65,6 +65,48 @@ describe('derivePageKey matches every declared page key', () => {
     expect(derivePageKey('/changerequest/[...slug]')).toBe('changerequest')
     expect(derivePageKey('/edit/[...slug]')).toBe('edit')
   })
+
+  it('derives a distinct, non-collapsed key for every page on disk', () => {
+    // `derivePageKey` deletes every slash rather than taking the first path
+    // segment, so a future nested page at `/access/control` would derive to
+    // `accesscontrol` and silently inherit that page's capability block in
+    // `useRoleAccess`'s route-derived form. Raised by review on PR #700.
+    //
+    // The suggested fix — `pathname.split('/')[1]` — was considered and is
+    // worse. A nested route whose collapsed form is not a matrix key today
+    // gets `{}` from `mergePageAccess`, i.e. deny-by-default; the first
+    // segment would instead hand it the *parent* page's flags. That trades a
+    // hypothetical collision for a real widening. So the derivation stays as
+    // it is, and this is what makes a collision impossible to add quietly.
+    const declared = new Set(Object.keys(PAGE_ENTRY))
+    const seen = new Map<string, string>()
+    const pages = walk(PAGES, ['.tsx']).filter(
+      (f) => !f.startsWith(API + path.sep)
+    )
+
+    for (const file of pages) {
+      const key = pageKeyOf(file)
+      expect({ key, alreadyClaimedBy: seen.get(key) ?? null }).toEqual({
+        key,
+        alreadyClaimedBy: null,
+      })
+      seen.set(key, relPosix(file))
+
+      // A page whose derived key IS a matrix key must live at that key's own
+      // route — never at a nested path that happens to collapse onto it.
+      if (!declared.has(key)) continue
+      const route =
+        '/' +
+        path
+          .relative(PAGES, file)
+          .split(path.sep)
+          .join(path.posix.sep)
+          .replace(/\.tsx?$/, '')
+          .replace(/\/index$/, '')
+          .replace(/\/\[.*?\]$/, '')
+      expect({ key, route }).toEqual({ key, route: '/' + key })
+    }
+  })
 })
 
 describe('page coverage: an ungated page is a test failure', () => {
@@ -79,8 +121,10 @@ describe('page coverage: an ungated page is a test failure', () => {
     index: 'the landing page, deliberately reachable by any session',
     add: 'orphan with zero inbound links, proposed for deletion',
     user: 'orphan with zero inbound links, proposed for deletion',
-    'api-doc':
-      'exports getStaticProps and cannot be SSR-gated; client-gated, and the spec endpoint behind it is capability-gated',
+    // `api-doc` used to sit here, on the reasoning that the spec endpoint
+    // behind it was gated. That reasoning was wrong — the page embeds the spec
+    // in its own static payload and never calls the endpoint — so it is an
+    // AUTHZ_DEBT row now rather than a page we claim is fine. PR #700.
   }
 
   // Excluding src/pages/api/** matters: without it the .tsx API route is
@@ -300,8 +344,17 @@ describe('the acknowledged-gap ratchet', () => {
       .map((f) => fs.readFileSync(f, 'utf8'))
       .join('\n')
     for (const subject of debtSubjects('unwired-flag')) {
-      const capability = subject.split('.')[1]
-      const declared = new RegExp(`capability: '${capability}'`).test(routeSource)
+      // Match the page-qualified ref, not the bare capability name. Two of
+      // these rows name a capability that also exists on another page block
+      // (`test.canRunConnectionTest` and `history.canViewChangeRequest` both
+      // have twins on `manageconnections`), so a bare-name match would fail
+      // for a still-unwired row the moment a route declared the *other* page's
+      // flag — which the debt note for tests/connectiontest explicitly plans.
+      // The fix under that red build would look like deleting the row.
+      const [page, capability] = subject.split('.')
+      const declared = new RegExp(
+        `page: '${page}',\\s*capability: '${capability}'`
+      ).test(routeSource)
       expect({ subject, declaredAtARoute: declared }).toEqual({
         subject,
         declaredAtARoute: false,

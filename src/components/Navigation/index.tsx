@@ -22,7 +22,8 @@ import {
   Button,
   Link,
 } from '@mui/material'
-import { canEnterPage, menuItems } from './menuItems'
+import { menuItems } from './menuItems'
+import { canEnterPage } from '../../lib/security/accessregistry'
 import palette from '../../styles/theme/palette'
 
 const drawerWidthOpen = '300px'

@@ -20,11 +20,29 @@ const SwaggerUI = dynamic<{
  * time — where it would find nothing, because the Dockerfile runner stage does
  * not copy `src/`.
  *
- * So be precise about what this achieves: the *interface* is hidden after
- * hydration; the page shell is still reachable by any authenticated user and
- * the denial is not audited. What actually protects the documentation is
- * `/api/swaggerjson`, which is capability-gated and does audit. Without a spec
- * this is an empty Swagger UI.
+ * So be precise about what this achieves — and an earlier version of this
+ * comment was not. **The gate hides the interface, not the content.**
+ * `getStaticProps` runs at build time, where `src/` *is* present, so the full
+ * spec is generated and serialized into this page's static payload. Hiding
+ * `<SwaggerUI>` does not remove it: any authenticated user can read the spec
+ * out of the page's `__NEXT_DATA__` or its `/_next/data/…` JSON.
+ *
+ * That exposure is **pre-existing and unchanged by IGDD-3472** — the previous
+ * `AdminGuard` was also client-side and the spec was equally embedded — but the
+ * claim that "without a spec this is an empty Swagger UI" was simply wrong, and
+ * is corrected here rather than left to reassure the next reader. Raised by
+ * review on PR #700.
+ *
+ * Not fixed here, deliberately. The fix is to stop embedding the spec and fetch
+ * it from `/api/swaggerjson`, which *is* capability-gated and audited — but
+ * that endpoint resolves `src/pages/api/**` at request time and the runner
+ * image does not ship `src/`, so it almost certainly returns an empty spec in
+ * every deployed environment. Switching to it would trade a disclosure for
+ * documentation that renders blank everywhere. Both halves need fixing
+ * together, in a change that can be tested against a real container.
+ *
+ * Tracked as an `AUTHZ_DEBT` row. Do **not** count this page among the pages
+ * IGDD-3472 secures; the honest count is seven.
  */
 function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
   const { status } = useSession()

@@ -27,7 +27,7 @@ import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
 import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
-import { canEnterPage } from '../Navigation/menuItems'
+import { canEnterPage } from '../../lib/security/accessregistry'
 import { subjectOf } from '../../lib/security/authzsubject'
 import { mergePageAccess } from '../../lib/security/policy'
 import type {

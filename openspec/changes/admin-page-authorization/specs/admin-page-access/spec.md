@@ -144,6 +144,22 @@ administrative operation.
 - **AND** this SHALL hold regardless of the caller's jurisdiction reach, because reach without
   capability is not authorization
 
+> **Known limitation, raised by review on PR #700.** On these routes the capability and the
+> destination reach are checked in two places — the capability by the route declaration, the
+> reach by `hasAccessToDestId` inside the handler — and both are evaluated against the whole
+> subject rather than one role. A user holding a scoped role that grants the capability *and* a
+> separate global role that grants no capability can therefore combine the two halves and act
+> outside the granting role's jurisdiction. `Jurisdiction Operations` plus `IZG Support` is a
+> live example with today's roles.
+>
+> This is **narrower than the behaviour it replaces** — before this change these routes checked
+> reach alone and no capability at all, so the same user could already act everywhere — but it
+> does not yet meet the same-role rule stated in `page-authorization`. Closing it needs the
+> capability and the destination resolved in one role-local decision, which means plumbing the
+> destination id (carried in the body on one of these routes) into the declaration. Tracked as
+> `AUTHZ_DEBT`; deliberately not attempted here, because it changes a helper shared with six
+> routes beyond this change's scope.
+
 #### Scenario: A shared lookup route accepts any of its legitimate callers
 
 - **WHEN** the organizations lookup is called
@@ -156,7 +172,17 @@ administrative operation.
 - **THEN** it SHALL require `manageconnections.canScheduleMaintainance`
 - **AND** it SHALL additionally require that the caller's jurisdiction reach covers the target
   destination
-- **AND** a caller failing either check SHALL receive `403`
+- **AND** a caller failing the capability check SHALL receive `403`
+- **AND** a caller failing the reach check SHALL receive `401`
+
+> The two halves answer with different status codes, and this scenario says so rather than
+> stating the intent. `403` is the correct code for both — a reach failure is an authorization
+> failure — but the reach half is enforced by a middleware that predates this change and is
+> shared with five other routes. Changing its status code affects all six and can alter client
+> retry behaviour, so it is deliberately left to its own ticket. An earlier draft of this
+> scenario required `403` for both and therefore described behaviour the implementation does not
+> have; a specification that is not met is worse than one that records the gap. Raised by review
+> on PR #700.
 
 ### Requirement: Onboarding is gated on its capability at the page and at every route behind it
 

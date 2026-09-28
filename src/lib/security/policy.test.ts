@@ -7,6 +7,7 @@ import { ANY_JURISDICTION, can, mergePageAccess, hasGlobalTenancy } from './poli
 import { ROLE_PRECEDENCE, type CcRole } from './rolemapping'
 import type { AuthzSubject } from './authzsubject'
 import {
+  decideCapability,
   PAGE_ENTRY,
   REQUIRES_GLOBAL_TENANCY,
   requiresGlobalTenancy,
@@ -284,6 +285,57 @@ describe('IGDD-3472 tenancy invariant on unfiltered data paths', () => {
         expect({ role, ...ref, held }).toEqual({ role, ...ref, held: false })
       }
     }
+  })
+
+  // REGRESSION, PR #700. The guard used to be evaluated as two independent
+  // questions — `can(subject, …)` for the capability and
+  // `hasGlobalTenancy(subject)` for the reach. Both are subject-wide, so that
+  // computes `(∃r: holds) ∧ (∃r: global)` and a scoped role holding a guarded
+  // capability could borrow reach from any unrelated global role the user also
+  // held. That is the leak the guard exists to prevent, reintroduced by the
+  // guard itself.
+  //
+  // No real role can express this today — every holder of a guarded capability
+  // is already global — which is exactly why the invariant test above passed
+  // throughout and caught nothing. So the tenancy predicate is injected here
+  // to model the arrangement the ratified matrix is expected to create.
+  describe('the guard is role-local, not subject-wide', () => {
+    const GUARDED: CapabilityRef = {
+      page: 'console',
+      capability: 'canViewConsole',
+    }
+
+    it('denies when the capability and the global reach come from different roles', () => {
+      // IZG Operations holds canViewConsole; IZG Support does not. Treat only
+      // IZG Support as global, so no single role supplies both halves.
+      const held = decideCapability(
+        subject(['IZG Operations', 'IZG Support']),
+        GUARDED,
+        (role) => role === 'IZG Support'
+      )
+      expect(held).toBe(false)
+    })
+
+    it('allows when one role supplies both halves', () => {
+      const held = decideCapability(
+        subject(['IZG Operations', 'IZG Support']),
+        GUARDED,
+        (role) => role === 'IZG Operations'
+      )
+      expect(held).toBe(true)
+    })
+
+    it('ignores the guard entirely for an unguarded capability', () => {
+      // onboarding.canViewOnboarding is not guarded, so a scoped holder passes
+      // with no global role anywhere in the subject. /api/organizations depends
+      // on this: two scoped roles reach it through this alternative alone.
+      const held = decideCapability(
+        subject(['Jurisdiction Support'], ['az']),
+        { page: 'onboarding', capability: 'canViewOnboarding' },
+        () => false
+      )
+      expect(held).toBe(true)
+    })
   })
 
   it('the guarded set is exactly the capabilities over unfiltered reads', () => {

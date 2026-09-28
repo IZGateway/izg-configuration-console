@@ -673,7 +673,7 @@ Counts that moved, and everywhere they are asserted:
 | Routes (excluding the 2 next-auth files) | 39 | **41** |
 | Files under `src/pages/api/` | 41 | **43** |
 | `{ inHandler }` declarations | 11 | **13** |
-| `AUTHZ_DEBT` rows | 27 | **29** |
+| `AUTHZ_DEBT` rows | 27 | **33** (29 after integration, +4 from PR #700 review — see §13) |
 | Test-plan Group F endpoints | 11 | **13** |
 
 Also carried across cleanly: develop modified `apikeys/lifecycle.test.ts` while this change moved
@@ -683,3 +683,224 @@ the moved file; verified line by line rather than assumed.
 The two new routes inherit the open question that already applies to the five `apikeys/*` routes
 beside them — whether per-row jurisdiction scoping in a handler should become a declared
 capability. They are on the same follow-up, not a new one.
+
+## 13. Review findings from PR #700
+
+Seven automated review comments. Five were valid and are addressed here; one was
+factually wrong; one was valid and is deferred with its reasoning recorded.
+
+### Fixed — the tenancy guard was not role-local
+
+**The defect this change was built to prevent, reintroduced by the code preventing it.**
+`withPageAccess` and `enforceRouteAuthz` each asked two independent questions —
+`can(subject, …)` for the capability and `hasGlobalTenancy(subject)` for the reach. Both are
+subject-wide, so together they compute `(∃r: holds) ∧ (∃r: global)` where the rule requires
+`∃r: (holds ∧ global)`. A scoped role holding a guarded capability could borrow reach from any
+unrelated global role the same user held.
+
+Not exploitable today — every holder of a guarded capability is already global — which is
+exactly why the derived invariant test passed throughout and caught nothing. It would have
+become exploitable on the first matrix edit granting a guarded capability to a scoped role,
+which is the edit the guard exists to make safe.
+
+Both enforcers now call `decideCapability`, which iterates roles and evaluates the capability
+against a single-role subject each time. `can()` is untouched. Filtering roles *before* calling
+`can()` would not work: with `ANY_JURISDICTION` it returns the first role holding the
+capability, which may be a scoped one even when a later global role would legitimately allow.
+
+Three regression tests in `policy.test.ts` inject the tenancy predicate, because no real role
+can express the arrangement today. Reintroducing subject-wide reach fails them.
+
+### Fixed — `/api-doc` embeds the spec it claims not to have
+
+`getStaticProps` runs at build time, where `src/` is present, so the full API specification is
+serialized into the page payload. The client gate hides the interface; **it does not hide the
+content**, which any authenticated user can read from `__NEXT_DATA__`.
+
+Pre-existing and unchanged by this work — the previous `AdminGuard` was also client-side — but
+the code comment asserted the opposite ("without a spec this is an empty Swagger UI") and the
+page was listed as *permanently fine* on the strength of it. Both corrected. The page is now an
+`AUTHZ_DEBT` row, which is what it actually is.
+
+Not fixed here, deliberately: the fix is to serve the spec from `/api/swaggerjson`, which is
+gated and audited — but that endpoint resolves `src/pages/api/**` at request time and the runner
+image ships no `src/`, so it very likely returns an empty spec in every deployed environment.
+Switching to it would trade a disclosure for documentation that renders blank everywhere. Both
+halves need one change, tested against a real container.
+
+### Deferred, with the gap recorded — capability and reach are split on three routes
+
+`changerequest/index.ts`, `changerequest/[...slug].ts` and `maintenance/update/[...slug].ts`
+check the capability in the declaration and the destination reach in the handler, each against
+the whole subject. `Jurisdiction Operations` (scoped, holds `canCancelRequest`) plus `IZG
+Support` (global, holds no change-request write) can combine the halves — a live gap with
+today's roles, not a future one.
+
+**Narrower than what it replaces**: before this change these routes checked reach *alone* and no
+capability at all, so that same user could already act everywhere. But it does not yet meet the
+same-role rule, and saying so is better than implying otherwise.
+
+Closing it needs the destination id — in the request body on one of the three — resolved inside
+one role-local decision, which means changing `hasAccessToDestId`, a helper shared with six
+routes outside this change. Three `split-decision` debt rows and a spec scenario now record it.
+
+### Corrected — the spec required a status code the code does not return
+
+The maintenance-update scenario said a caller failing *either* check receives `403`. The reach
+half returns `401`, from a middleware shared with five other routes and predating this change.
+`403` is correct for both, but changing it affects all six and can alter client retry behaviour.
+The scenario now states both codes and why they differ. A specification that is not met is worse
+than one that records the gap.
+
+### Rejected — the page-count assertion
+
+Reported as always failing on the grounds that 19 non-API pages exist against an assertion of
+20. There are 20: `find src/pages -name '*.tsx' | grep -v /api/` returns 20, and the single
+`.tsx` file under `src/pages/api/` is excluded before the count. The suite passes.
+
+## 14. Review findings from PR #700, second pass
+
+Twelve findings from a full-diff review. Eight are addressed, two are rejected on
+evidence (one with a test substituted for the suggested fix), and two are deferred.
+
+### Fixed — the nav predicate was a third implementation of the rule
+
+`canEnterPage` read `accessLevel[role]?.[page]?.[capability]` directly. It never
+called `can()` and never consulted `REQUIRES_GLOBAL_TENANCY`, so for the five
+guarded capabilities a nav link could render for a role the page gate then
+rejects — the precise drift `PAGE_ENTRY` was introduced to make
+unrepresentable, and the same shape as the `AdminGuard` / `isOperationsRole`
+divergence this change removes.
+
+Unreachable today, and not only because of the seeds: the derived tenancy
+invariant in `policy.test.ts` makes the grant that would expose it a red build.
+But a rule with three implementations has one implementation too many. It now
+routes through `decideCapability`, so a link and the page it points at run the
+same decision.
+
+### Fixed — the decision function was called two ways at two enforcement points
+
+Both enforcers passed `(role) => hasGlobalTenancy({ ...subject, roles: [role] })`
+verbatim — a full subject clone per held role to answer what is a single matrix
+lookup, and, more to the point, two independently editable copies of the thing
+that had just been consolidated. `decideCapability` now defaults its tenancy
+predicate; the parameter stays only so `policy.test.ts` can inject an
+arrangement no current role can express.
+
+### Fixed — `canEnterPage` lived in the navigation menu module
+
+A pure authorization predicate exported from a module whose top level builds six
+MUI icon elements, so `Home` imported the nav component tree to ask whether a
+role may enter a page. Moved to `accessregistry.ts`, beside `PAGE_ENTRY`,
+`entryCapabilityOf` and `decideCapability`. Any future surface asking the same
+question now has somewhere to import it from rather than a reason to
+re-implement it.
+
+### Fixed — unauthenticated callers got 403 and a phantom audit event
+
+`subjectOf(undefined)` yields zero roles, so a request with no resolvable
+session fell through the capability branches to a `403` plus an `AccessDenied`
+event naming a permission nobody was denied. The `{ session: true }` branch and
+the page gate both already special-cased this and cited the noise warning in
+`accessDeniedAudit.ts`; the other branches did not. A session expiring between
+the edge `withAuth` check and the handler is enough to trigger it, and the false
+denials land in exactly the `eventType:AccessDenied` query this change adds
+`deniedAt` and `permission` to support. Now `401`, no event, for every
+declaration kind that requires a caller.
+
+### Fixed — `captureErrors` no longer wrapped the authorization decision
+
+The stack was assembled as `[logApiRequest, enforceRouteAuthz, ...declared]`,
+which put authorization ahead of a `captureErrors` the caller had declared. On
+the four routes that declare it, a throw inside the denial path — a logger
+transport failure, say — would escape the trap that previously covered it: no
+structured error log, no `500` body, a dropped request. The trap is now placed
+ahead of `enforceRouteAuthz` when declared, keeping its original coverage.
+
+### Fixed — the debt test matched a bare capability name
+
+*"No `unwired-flag` row names a capability a route now declares"* matched
+`capability: '<name>'` against all route source, dropping the page half of the
+ref it was checking. Two rows name a capability with a twin on another page
+(`test.canRunConnectionTest`, `history.canViewChangeRequest`), so declaring the
+*other* page's flag — which the `tests/connectiontest` debt note explicitly
+plans — would have failed this test for a row that is still genuinely unwired,
+and the fix under that red build looks like deleting the row. Now matched
+page-qualified.
+
+### Fixed — a comment claimed a conjunction the code does not make
+
+The Password Encryption card's comment said it was ANDed with `hasKeyName` and
+"both must hold". The condition is `canManagePasswordEncryption` alone;
+`hasKeyName` is forwarded to the card as a prop. In a change whose purpose is
+removing reassuring-but-false authorization claims, this is the same defect
+class.
+
+### Fixed — the deploy handler could write a null password and answer twice
+
+When a change request is flagged `isPasswordDifferent` and either password
+lookup returns null, the `500` was sent without a `return`. Execution continued:
+`updateDestination` wrote `password: null` over the stored credential,
+`deleteDestinationChangeRequest` removed the source row, and the success reply
+threw `ERR_HTTP_HEADERS_SENT`.
+
+Pre-existing and byte-identical on `develop` — this change only removed the
+`if (session.user.isAdmin)` wrapper and de-indented the block. Fixed anyway,
+because this handler is rewritten here precisely for having resolved without
+responding, and the note saying so now sits ten lines above a second
+fall-through. One `return`; outside the authorization scope and called out as
+such.
+
+### Recorded as debt — one capability authorizes read and write on three routes
+
+`allowedusers/index.ts`, `allowedusers/bydestination/index.ts` and
+`allowedusersaudit/[...slug].ts` declare `onboarding.canViewOnboarding` across
+`GET`, `POST` and `DELETE`, so a view flag authorizes mutation.
+
+Reported as granting write access to the read-only Support tier. It does not:
+all four roles hold `canViewOnboarding`, and before this change these routes
+carried **no authorization at all**, so every authenticated session could
+already `POST` and `DELETE`. The narrowing is real and the direction is right.
+
+But the granularity gap is real too, and a comment repeated at three routes is
+not a count. Splitting it needs an onboarding write capability whose seed value
+belongs to the matrix owner — already tracked as the spike review's *Finding
+#5, role-gate Onboarding Senders*. Three `coarse-capability` debt rows now
+carry it.
+
+### Rejected, test substituted — `derivePageKey` collapses every slash
+
+True that the derivation maps `/access/control` onto the existing
+`accesscontrol` key. The suggested fix — take the first path segment — is
+worse: a nested route whose collapsed form is not a matrix key gets `{}` from
+`mergePageAccess` today, which is deny-by-default, where the first segment
+would hand it the **parent page's flags**. That trades a hypothetical collision
+for a real widening.
+
+The derivation stays. A new test asserts that every page on disk derives to a
+distinct key, and that any page deriving to a declared key sits at exactly that
+key's route — so the collision cannot be added quietly, which was the actual
+concern.
+
+### Rejected — `Partial<T>` on the denial path
+
+The denial returns `{ accessDenied: true } as T & AccessDeniedProp`, so a gated
+page's inferred props assert that data which is absent is present. Accurate.
+
+The proposed fix does not work in this repo: `tsconfig.json` sets
+`"strict": false`, so `strictNullChecks` is off and an optional property is not
+`| undefined` at the use site. `Partial<T>` would change the declaration and
+produce no new compile error at any `props.data.length`. Verified separately
+that all seven gated pages branch on `accessDenied` before the first
+dereference. Worth revisiting in whichever change turns `strict` on; worth
+nothing before then.
+
+### Deferred — `manageconnections` props typed as `{ data: unknown[] }`
+
+Migrating to `withPageAccess` replaced a handler-inferred props type with an
+explicit one, flattening the endpoint row shape to `unknown[]`. Nothing breaks
+— `ConnectionsTable` takes an implicit `any` — but the page-to-table contract is
+unchecked, so a renamed field in `getServerSideProps` surfaces as `undefined` at
+runtime rather than as a compile error. Restoring it means naming the row type,
+which the handler builds ad hoc. Follow-up, with the same caveat as above: under
+`strict: false` the compile-time gain is smaller than it looks.

@@ -77,7 +77,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         changeRequest.requested.password = changeRequestPassword
         changeRequest.current.password = currentPassword
       } else {
-        res
+        // `return`, not just a 500. Without it execution fell through and
+        // deployed anyway: `updatedDestination.password` took the null
+        // `changeRequestPassword`, `updateDestination` wiped the stored
+        // credential, `deleteDestinationChangeRequest` removed the source row,
+        // and the success reply then threw ERR_HTTP_HEADERS_SENT on an
+        // already-answered request. Pre-existing — byte-identical on develop —
+        // but this handler is rewritten here precisely because it used to
+        // resolve without responding, and leaving a second fall-through one
+        // line below that note is not defensible. Raised by review on PR #700.
+        return res
           .status(500)
           .json(
             `Change request id ${changeRequestId} password or current password not found`

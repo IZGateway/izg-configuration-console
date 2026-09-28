@@ -1,4 +1,8 @@
+import accessLevel from './accesslevel'
 import type { PageControls, PageKey } from './accesslevel'
+import type { CcRole } from './rolemapping'
+import type { AuthzSubject } from './authzsubject'
+import { ANY_JURISDICTION, can, hasGlobalTenancy } from './policy'
 
 /**
  * The shared authorization vocabulary (IGDD-3472).
@@ -76,6 +80,59 @@ export function requiresGlobalTenancy(ref: CapabilityRef): boolean {
 }
 
 /**
+ * Does this one role have global tenancy reach?
+ *
+ * The default `isGlobal` for `decideCapability`. A default rather than an
+ * argument, because both enforcers were passing the same lambda verbatim — and
+ * a single decision function invoked two slightly different ways at two
+ * enforcement points is the drift this module exists to close. The parameter
+ * stays overridable only so `policy.test.ts` can model an arrangement no
+ * current role can express. Raised by review on PR #700.
+ */
+const roleHasGlobalTenancy = (role: CcRole): boolean =>
+  hasGlobalTenancy({ roles: [role], jurisdictions: [] })
+
+/**
+ * Decide one `CapabilityRef`, with the tenancy guard applied **per role**.
+ *
+ * The rule this enforces is `∃r: (holds(r) ∧ reach(r))` — one role must supply
+ * both halves. Never `(∃r: holds) ∧ (∃r: reach)`, which is what evaluating
+ * `can(...)` and `hasGlobalTenancy(subject)` separately computes, because
+ * `hasGlobalTenancy` is true if *any* held role is global.
+ *
+ * That difference is not cosmetic. Under the separate form, a future matrix
+ * edit granting a guarded capability to a jurisdiction-scoped role would let
+ * any user who *also* holds an unrelated global role read every tenant's data
+ * — precisely the leak the guard exists to prevent, reintroduced by the guard's
+ * own implementation. Caught in review on PR #700.
+ *
+ * Restricting the subject to one role per iteration is what makes the
+ * conjunction role-local, and it keeps `can()` untouched: filtering first would
+ * not work, because `can()` with `ANY_JURISDICTION` returns the *first* role
+ * holding the capability, which may be a scoped one even when a later global
+ * role would legitimately allow the request.
+ */
+export function decideCapability(
+  subject: AuthzSubject,
+  ref: CapabilityRef,
+  isGlobal: (role: CcRole) => boolean = roleHasGlobalTenancy
+): boolean {
+  const needsGlobal = requiresGlobalTenancy(ref)
+  return subject.roles.some((role) => {
+    if (needsGlobal && !isGlobal(role)) return false
+    return can(
+      { ...subject, roles: [role] },
+      ref.page,
+      // See the note at the `can()` call in api-middleware-helper: CapabilityRef
+      // is a union distributed over PageKey, and the page/capability
+      // correlation cannot survive being passed as two arguments.
+      ref.capability as never,
+      ANY_JURISDICTION
+    ).allowed
+  })
+}
+
+/**
  * The capability that gates entry to each page.
  *
  * Exists so the server-side page gate and the navigation-visibility predicate
@@ -111,6 +168,43 @@ export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
 /** The `CapabilityRef` that gates entry to `page`. */
 export function entryCapabilityOf<P extends PageKey>(page: P): CapabilityRef {
   return { page, capability: PAGE_ENTRY[page] } as CapabilityRef
+}
+
+/**
+ * Is this page's entry capability held by any of these roles?
+ *
+ * The navigation-visibility predicate — what decides whether a nav link or a
+ * landing-page button renders. It lives here, beside `PAGE_ENTRY` and
+ * `decideCapability`, and not in `Navigation/menuItems.tsx` where it was first
+ * written: it is a pure authorization question with no JSX, and while it lived
+ * in the menu module any other surface needing it had to import the whole menu
+ * (as `Home` did) or re-implement the check — and re-implementation is exactly
+ * how the `AdminGuard` / `isOperationsRole` divergence this change removes came
+ * about. Raised by review on PR #700.
+ *
+ * It routes through `decideCapability`, so a link and the page it points at run
+ * the *same* decision, tenancy guard included. Reading `accessLevel` directly —
+ * as the first version did — skipped the guard, so for the five capabilities in
+ * `REQUIRES_GLOBAL_TENANCY` a link could render for a role the page gate then
+ * rejects. Not reachable today, because the derived invariant in
+ * `policy.test.ts` keeps every guarded capability inside globally-scoped roles;
+ * but it made this a third implementation of a rule that is meant to have one.
+ *
+ * Jurisdictions are empty because page entry is decided with
+ * `ANY_JURISDICTION`: these surfaces carry no jurisdiction, and `scopeAllows`
+ * short-circuits on it before the prefix list is consulted.
+ */
+export function canEnterPage(
+  page: PageKey,
+  roles: string[] | undefined
+): boolean {
+  const subject: AuthzSubject = {
+    // Same defence-in-depth filter `subjectOf` applies: a role with no matrix
+    // entry never reaches the policy.
+    roles: (roles ?? []).filter((role): role is CcRole => role in accessLevel),
+    jurisdictions: [],
+  }
+  return decideCapability(subject, entryCapabilityOf(page))
 }
 
 /**

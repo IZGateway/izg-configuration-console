@@ -1,13 +1,12 @@
 import type { GetServerSideProps, GetServerSidePropsContext } from 'next'
 import { withRequestContext } from '../requestContext'
 import type { Context } from '../Context'
-import { ANY_JURISDICTION, can, hasGlobalTenancy } from './policy'
 import { subjectOf } from './authzsubject'
 import { logAccessDenied } from './accessDeniedAudit'
 import {
+  decideCapability,
   entryCapabilityOf,
   PAGE_ENTRY,
-  requiresGlobalTenancy,
 } from './accessregistry'
 import type { PageKey } from './accesslevel'
 
@@ -74,15 +73,20 @@ export function withPageAccess<
       const capability = PAGE_ENTRY[page]
       const subject = subjectOf(session)
 
-      // ANY_JURISDICTION because these pages carry no jurisdiction in their
-      // URL — they are authorized on the capability alone. The tenancy guard
-      // below is what keeps that safe when the capability's data path applies
-      // no jurisdiction filter.
-      const decision = can(subject, page, capability, ANY_JURISDICTION)
-      const allowed =
-        decision.allowed &&
-        (!requiresGlobalTenancy(entryCapabilityOf(page)) ||
-          hasGlobalTenancy(subject))
+      // These pages carry no jurisdiction in their URL, so they are authorized
+      // on the capability alone; the tenancy guard is what keeps that safe when
+      // the capability's data path applies no jurisdiction filter.
+      //
+      // The guard is evaluated **per role**, inside `decideCapability`. Asking
+      // `can(...)` and `hasGlobalTenancy(subject)` as two separate questions
+      // would let a scoped role holding a guarded capability borrow reach from
+      // an unrelated global role — reintroducing the exact leak the guard
+      // exists to prevent. Caught in review on PR #700.
+      //
+      // The tenancy predicate is `decideCapability`'s own default, not an
+      // argument: both enforcers and the nav predicate call it the same way, so
+      // there is one decision here rather than three spellings of one.
+      const allowed = decideCapability(subject, entryCapabilityOf(page))
 
       if (!allowed) {
         logAccessDenied({

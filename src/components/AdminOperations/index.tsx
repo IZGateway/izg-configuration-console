@@ -66,8 +66,12 @@ const AdminOperations = ({
         </CardContent>
       </Card>
 
-      {/* Password Encryption. ANDed with hasKeyName, which is a configuration
-          precondition rather than a permission — both must hold. */}
+      {/* Password Encryption. Gated on the capability alone. `hasKeyName` is a
+          configuration precondition, not a permission, and is forwarded to the
+          card to decide what to show — it is deliberately NOT part of this
+          condition, so a missing DB_ENCRYPTION_KEYNAME still renders the card.
+          (An earlier version of this comment claimed the two were ANDed. They
+          are not. Raised by review on PR #700.) */}
       {canManagePasswordEncryption && (
         <Box sx={rowSx}>
           <PasswordEncryptionCard

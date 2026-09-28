@@ -34,6 +34,25 @@ export type AuthzDebt = {
     | 'unwrapped-route'
     | 'in-handler'
     | 'unwired-flag'
+    /**
+     * The route declares a capability, but its destination-reach check lives
+     * separately in the handler and both are evaluated against the whole
+     * subject. That computes `(∃r: capability) ∧ (∃r: reach)` where the rule
+     * requires `∃r: (capability ∧ reach)`, so a user can combine a scoped role
+     * that grants the capability with an unrelated global role that grants the
+     * reach. Added PR #700.
+     */
+    | 'split-decision'
+    /**
+     * The route declares one capability across methods that read *and* write,
+     * so a view-only flag authorizes mutation. Narrower than what it replaces
+     * — these routes carried no authorization at all — but a `byMethod` split
+     * needs a write capability that does not exist in the matrix yet, and
+     * inventing one here means choosing its seed value without the matrix
+     * owner. Counted rather than only commented, so it reads as an open gap
+     * and not as a settled design. Added PR #700.
+     */
+    | 'coarse-capability'
   /** A page key, a route path under `src/pages/api/`, or `page.capability`. */
   subject: string
   /**
@@ -60,6 +79,74 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   // in PAGE_ENTRY. They are sequenced second because their seeds must preserve
   // today's *ungated* audience, which is a separate decision from reproducing
   // `isAdmin`.
+  {
+    kind: 'split-decision',
+    subject: 'changerequest/index.ts',
+    ticket: 'IGDD-3472',
+    note:
+      'The declaration checks the capability with ANY_JURISDICTION; the handler separately calls ' +
+      'hasAccessToDestId, which unions reach across roles. Jurisdiction Operations (holds ' +
+      'canCancelRequest, scoped) plus IZG Support (global, holds no change-request write) can ' +
+      'therefore mutate a request outside the granting role reach. Strictly narrower than before ' +
+      'this change, which checked reach ALONE, but short of the same-role rule. Closing it needs ' +
+      'the destination id — carried in the body here — resolved in one role-local decision.',
+  },
+  {
+    kind: 'split-decision',
+    subject: 'changerequest/[...slug].ts',
+    ticket: 'IGDD-3472',
+    note: 'As changerequest/index.ts; the destination id is in the slug here rather than the body.',
+  },
+  {
+    kind: 'split-decision',
+    subject: 'maintenance/update/[...slug].ts',
+    ticket: 'IGDD-3472',
+    note:
+      'As changerequest/index.ts. Also the route whose reach half answers 401 where the capability ' +
+      'half answers 403 — 403 is correct for both, but the reach middleware is shared with five ' +
+      'other routes and changing its status code can affect client retry behaviour.',
+  },
+  // ---------------------------------------------------------------------
+  // Routes authorized by one capability across read and write.
+  // ---------------------------------------------------------------------
+  {
+    kind: 'coarse-capability',
+    subject: 'allowedusers/index.ts',
+    ticket: 'IGDD-3472',
+    note:
+      'GET, POST and DELETE are all authorized by onboarding.canViewOnboarding, so a view flag ' +
+      'authorizes mutation. Every role holds it, so the practical narrowing here is Sender ' +
+      'Operations only — but the route had NO authorization before this change, so this is a ' +
+      'strict improvement, not a widening. Closing it means a write capability for onboarding ' +
+      'and a byMethod split; the spike review already tracks that as "Finding #5 — role-gate ' +
+      'Onboarding Senders", which is where the seed value gets decided.',
+  },
+  {
+    kind: 'coarse-capability',
+    subject: 'allowedusers/bydestination/index.ts',
+    ticket: 'IGDD-3472',
+    note: 'As allowedusers/index.ts.',
+  },
+  {
+    kind: 'coarse-capability',
+    subject: 'allowedusersaudit/[...slug].ts',
+    ticket: 'IGDD-3472',
+    note: 'As allowedusers/index.ts.',
+  },
+  {
+    kind: 'ungated-page',
+    subject: 'api-doc',
+    ticket: 'IGDD-3472',
+    note:
+      'Cannot be SSR-gated: it exports getStaticProps and Next forbids both. The client gate hides ' +
+      'the interface but NOT the content — getStaticProps runs at build time, where src/ exists, so ' +
+      'the full spec is serialized into the page payload and any authenticated user can read it out ' +
+      'of __NEXT_DATA__. Pre-existing and unchanged here, but previously mis-recorded as "permanently ' +
+      'fine" on the false premise that the page fetched the gated endpoint (PR #700). Fixing it means ' +
+      'serving the spec from /api/swaggerjson, which needs that endpoint fixed first — it resolves ' +
+      'src/pages/api/** at request time and the runner image ships no src/, so it very likely returns ' +
+      'an empty spec in every deployed environment. Both halves together, tested in a real container.',
+  },
   {
     kind: 'ungated-page',
     subject: 'edit',
