@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -174,4 +174,9 @@ const handler = async (
   }
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  byMethod: {
+    PUT: { page: 'accesscontrol', capability: 'canManageAccessGroups' },
+    DELETE: { page: 'accesscontrol', capability: 'canManageAccessGroups' },
+  },
+})(handler)

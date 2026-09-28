@@ -4,7 +4,7 @@ import { authOptions } from '../auth/[...nextauth]'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import { assertSafeDestinationUri } from '../../../lib/security/assertSafeDestinationUri'
 import { UnsafeDestinationUriError } from '../../../lib/security/destinationUriGuard'
@@ -90,4 +90,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   res.status(200).json({ valid: true })
 }
 
-export default withMiddleware()(handler)
+// Stateless URI validation; reads and writes nothing.
+export default withMiddleware({ session: true })(handler)

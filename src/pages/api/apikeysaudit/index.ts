@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -72,4 +72,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+// Declared { inHandler } to match the five existing apikeys/* routes: this
+// handler checks canListApiKeys itself and then scopes rows to the caller's
+// owned jurisdictions, so the decision is per-row and cannot be expressed as
+// a single route-level capability. Arrived on develop after IGDD-3472 was
+// branched, with no declaration at all - the required argument is what
+// stopped the build and forced this line to be written.
+export default withMiddleware({
+  inHandler:
+    'IGDD-3472: handler checks canListApiKeys, then scopes rows to owned jurisdictions',
+})(handler)

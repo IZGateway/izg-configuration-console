@@ -4,7 +4,7 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import logger from '../../../../../logger'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../../lib/IZGHubStatusHistoryEndpoint'
 import { asyncRequestContext } from '../../../../lib/Context'
@@ -148,4 +148,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // and pairing it separately from a permission check is exactly the escalation
 // this route used to be vulnerable to. `can()` above is the sole, authoritative
 // gate; it already evaluates reach.
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler: 'IGDD-3472: per-destination reset; maps to manageconnections.canResetCircuitBreaker plus a reach check, NOT the hub-wide flag',
+})(handler)

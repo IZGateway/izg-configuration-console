@@ -50,10 +50,10 @@ jest.mock('next-auth', () => ({
 }))
 
 // Avoid loading the real NextAuth options (provider/env side effects).
-jest.mock('../auth/[...nextauth]', () => ({ authOptions: {} }))
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
 // Run handlers directly, bypassing buildRequestContext + logging middleware.
-jest.mock('../api-middleware-helper', () => ({
+jest.mock('../../../lib/api/api-middleware-helper', () => ({
   __esModule: true,
   default: () => (handler: unknown) => handler,
 }))
@@ -94,11 +94,11 @@ jest.mock('dns/promises', () => ({
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import logger from '../../../../logger'
-import apikeysHandler from './index'
-import renewHandler from './renew/index'
-import verifyDomainHandler from './verify-domain/index'
-import tokenHandler from './token'
-import domainsHandler from './domains'
+import apikeysHandler from '../../../pages/api/apikeys/index'
+import renewHandler from '../../../pages/api/apikeys/renew/index'
+import verifyDomainHandler from '../../../pages/api/apikeys/verify-domain/index'
+import tokenHandler from '../../../pages/api/apikeys/token'
+import domainsHandler from '../../../pages/api/apikeys/domains'
 
 type MockRes = NextApiResponse & { statusCode: number; body: unknown }
 

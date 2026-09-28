@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 
 /**
@@ -28,4 +28,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(503).json(healthcheck)
   }
 }
-export default withMiddleware()(handler)
+export default withMiddleware({
+  public: 'Liveness probe for the load balancer; returns no data.',
+})(handler)

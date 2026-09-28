@@ -1,5 +1,9 @@
 import {
+  AccessControlPageAccessControl,
+  AdminOperationsPageAccessControl,
+  ApiDocPageAccessControl,
   ApiKeyManagementPageAccessControl,
+  ConsolePageAccessControl,
   ManageConnectionsPageAccessControl,
   OnboardingPageAccessControl,
   TestPageAccessControl,
@@ -57,4 +61,13 @@ export type PageControls = {
   // Key must match the page key derived in useRoleAccess (router.pathname with dynamic segments removed): e.g. '/apikeys' -> 'apikeys' (IGDD-2708)
   apikeys: ApiKeyManagementPageAccessControl
   onboarding: OnboardingPageAccessControl
+  // Admin surfaces (IGDD-3472). Same rule as above: the key must equal the key
+  // derived from the page's route path — hence the quoted 'api-doc', not
+  // 'apidoc', so the invariant holds with no exceptions.
+  accesscontrol: AccessControlPageAccessControl
+  // /passwordencryption deliberately shares this block rather than taking a
+  // page key of its own — it duplicates the Admin Operations password card.
+  adminoperations: AdminOperationsPageAccessControl
+  console: ConsolePageAccessControl
+  'api-doc': ApiDocPageAccessControl
 }

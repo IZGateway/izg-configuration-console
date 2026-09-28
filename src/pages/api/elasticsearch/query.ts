@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
@@ -153,4 +153,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler:
+    'IGDD-3472: inline isAdmin check. canViewConsole would be wrong here - this route is also called from Home/SystemResourcesWidget, which the target matrix treats as a separate capability from the admin log search.',
+})(handler)

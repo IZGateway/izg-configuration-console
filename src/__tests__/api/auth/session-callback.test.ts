@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { authOptions } from './[...nextauth]'
+import { authOptions } from '../../../pages/api/auth/[...nextauth]'
 
 const session = (args: any) => (authOptions.callbacks as any).session(args)
 
