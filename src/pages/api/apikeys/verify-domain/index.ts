@@ -186,7 +186,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // but status is re-checked atomically in the DB write (`expectedStatus`).
     const activatedBy = session.user.email || 'unknown'
     const activateCredential = async (
-      verificationMethod: 'dns_txt' | 'bypass'
+      verificationMethod: 'dns_txt' | 'bypass',
+      /**
+       * Per-environment provenance behind `verificationMethod`.
+       *
+       * The stored scalar is deliberately conservative: a multi-env credential
+       * can have been authorized differently per environment (one bypassed in
+       * dev, another genuinely DNS-verified), and it reports 'bypass' if ANY
+       * contributing authorization was bypassed. That is the safe direction
+       * for a compliance trail — but on its own it cannot say WHICH
+       * environment was bypassed. This breakdown carries that detail into the
+       * audit row, so a 'bypass' label can always be resolved to its cause.
+       */
+      verificationByEnvironment: { env: number; method: string }[]
     ): Promise<{
       status: number
       error: string
@@ -228,7 +240,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           // 'bypass' means the real DNS TXT lookup was SKIPPED (non-production
           // only). Recorded so a bypassed activation remains distinguishable
           // from a genuinely verified one long after the log line ages out.
+          // Paired with the per-environment breakdown, since the scalar
+          // collapses a mixed multi-env activation to its weakest link.
           verificationMethod,
+          verificationByEnvironment,
         },
       })
       return null
@@ -236,14 +251,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     if (pendingIndexes.length === 0) {
       // Every one of the credential's (or the single requested) environments
-      // is already authorized for this domain — nothing left to verify. The
-      // activation inherits however the domain's prior authorization was
-      // obtained, so a credential activated off a bypassed authorization is
-      // not silently recorded as DNS-verified.
+      // is already authorized for this domain — nothing left to verify, so
+      // this activation inherits the provenance of those prior
+      // authorizations rather than establishing its own.
+      //
+      // `domainRecords[i]` is the authorization for `environments[i]` — the
+      // credential's OWN environment list — so every entry contributes to
+      // this activation; there is no unrelated record in the array. A
+      // multi-env credential can still have been authorized differently per
+      // environment, though, and one scalar cannot express that. The scalar
+      // therefore reports the weakest link (any bypass ⇒ 'bypass'), which is
+      // the safe direction for a compliance trail, and the per-environment
+      // breakdown below preserves which environment was actually bypassed.
+      //
+      // Rows written before `verificationMethod` existed carry none; those
+      // read as 'dns_txt', since bypass has never been reachable in
+      // production (see DNS_VERIFY_BYPASS_ENABLED).
+      const verificationByEnvironment = environments.map((env, i) => ({
+        env,
+        method: domainRecords[i]?.verificationMethod ?? 'dns_txt',
+      }))
       const activationError = await activateCredential(
-        domainRecords.find((rec) => rec?.verificationMethod === 'bypass')
+        verificationByEnvironment.some((e) => e.method === 'bypass')
           ? 'bypass'
-          : 'dns_txt'
+          : 'dns_txt',
+        verificationByEnvironment
       )
       if (activationError) {
         return res.status(activationError.status).json({ error: activationError.error })
@@ -383,7 +415,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       operation: 'verifyDomain',
     })
 
-    const activationError = await activateCredential(verificationMethod)
+    // This activation established its own provenance: a single TXT lookup (or
+    // a single bypass) authorized every environment that was still pending,
+    // so they all share one method — this path can never be mixed.
+    const activationError = await activateCredential(
+      verificationMethod,
+      environments.map((env) => ({ env, method: verificationMethod }))
+    )
     if (activationError) {
       return res.status(activationError.status).json({ error: activationError.error })
     }

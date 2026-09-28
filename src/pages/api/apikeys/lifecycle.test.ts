@@ -1811,6 +1811,100 @@ describe('API key authorization (role + tenancy)', () => {
         })
       )
     })
+
+    // PR review (IGDD_3083): the "already authorized" fast-path derives its
+    // verificationMethod from the credential's prior per-environment domain
+    // authorizations. When those disagree, the stored scalar reports the
+    // WEAKEST link — a partly-bypassed activation must never be recorded as
+    // fully DNS-verified — and the audit row carries the per-environment
+    // breakdown so 'bypass' can be traced to the environment that caused it.
+    it('records the weakest link and a per-environment breakdown when a multi-env credential inherits mixed provenance', async () => {
+      mockGetServerSession.mockResolvedValue(adminSession)
+      const authorized = (verificationMethod?: string) => ({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        ...(verificationMethod ? { verificationMethod } : {}),
+      })
+      const getApiKeyDomain = jest
+        .fn()
+        // env 4 was authorized via the dev bypass, env 5 genuinely DNS-verified.
+        .mockResolvedValueOnce(authorized('bypass'))
+        .mockResolvedValueOnce(authorized('dns_txt'))
+      const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: 'multi-jti',
+          status: 'ready_for_validation',
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          environments: [4, 5],
+        }),
+        getApiKeyDomain,
+        updateApiKeyCredentialStatus,
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'multi-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(updateApiKeyCredentialStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationMethod: 'bypass' })
+      )
+      const auditContext = createApiKeyCredentialAudit.mock.calls.find(
+        (call) => call[0] === 'Activate'
+      )[5]
+      expect(auditContext.verificationMethod).toBe('bypass')
+      expect(auditContext.verificationByEnvironment).toEqual([
+        { env: 4, method: 'bypass' },
+        { env: 5, method: 'dns_txt' },
+      ])
+    })
+
+    it('treats pre-existing authorizations with no recorded method as dns_txt (bypass is unreachable in production)', async () => {
+      mockGetServerSession.mockResolvedValue(adminSession)
+      const legacyAuthorized = {
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }
+      const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: 'multi-jti',
+          status: 'ready_for_validation',
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          environments: [4, 5],
+        }),
+        getApiKeyDomain: jest.fn().mockResolvedValue(legacyAuthorized),
+        updateApiKeyCredentialStatus,
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'multi-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(updateApiKeyCredentialStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationMethod: 'dns_txt' })
+      )
+    })
   })
 
   // GLOBAL domain exclusivity (IGDD-2707): a domain belongs to exactly one
