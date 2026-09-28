@@ -904,3 +904,46 @@ unchecked, so a renamed field in `getServerSideProps` surfaces as `undefined` at
 runtime rather than as a compile error. Restoring it means naming the row type,
 which the handler builds ad hoc. Follow-up, with the same caveat as above: under
 `strict: false` the compile-time gain is smaller than it looks.
+
+## 15. Integration — `develop` merged in after the PR opened
+
+`develop` was merged into this branch at `2fb7e24`, bringing PR #696
+(IGDD-3175, spoofable audit fields). Two things in it do not survive contact
+with this change, and the merge was pushed without either being run.
+
+### Four test files were living inside the route tree
+
+IGDD-3175 added `index.test.ts` beside four route files under
+`src/pages/api/`. `next.config.js` sets no `pageExtensions`, so **every `.ts`
+file in the page tree is served as a route**: `/api/denylist/index.test` and
+three siblings were routable endpoints whose default export is `undefined`.
+
+The route-coverage test failed on all four, plus on its own *"contains only
+routes — no helpers, types or test files"* assertion. That check exists because
+this exact trap is what put `api-middleware-helper.ts` on a public URL before
+this change moved it.
+
+Moved to `src/__tests__/api/<route>/index.test.ts`, matching the convention
+already used by `src/__tests__/api/apikeys/lifecycle.test.ts`. Only the mock
+and import paths change; not a line of test logic.
+
+### Their mocked sessions carried no roles
+
+The four sessions are `{ user: { email: 'real-user@example.com' } }`. Those
+routes now carry capability declarations, so `subjectOf` yields zero roles and
+`enforceRouteAuthz` answers `403` before the handler runs. Six assertions
+failed with `Number of calls: 0`.
+
+Fixed by authorizing the caller — `roles: ['IZG Operations']` — not by
+relaxing the route. These tests assert *which identity is written into an audit
+row*, not *who may call the endpoint*; they need a caller who may call it.
+
+### Worth noting for the PR
+
+This is the third time the coverage test has caught work written against the
+pre-IGDD-3472 model, on a case nobody aimed it at: two undeclared
+`apikeysaudit` routes during the first rebase, and now four routable test files
+and six unauthorized test callers. Each was a build or suite failure at the
+moment of integration rather than a discovery in a deployed environment.
+
+No authorization behaviour changes in this integration.
