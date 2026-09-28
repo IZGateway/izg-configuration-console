@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
@@ -23,4 +23,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
-export default withMiddleware()(handler)
+// Reference lookup: the jurisdiction list is not tenant data.
+export default withMiddleware({ session: true })(handler)

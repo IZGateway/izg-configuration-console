@@ -82,9 +82,18 @@ const DeployConnection: React.FC<DeployConnectionProps> = (props) => {
             jiraUrl={props.jiraUrl}
             jiraId={changeRequest.jiraId}
           />
+          {/* The card carries two independently-granted actions, so it shows
+              when EITHER is held and each button gates on its own flag. It
+              used to show on canRescheduleRequest alone, which also decided
+              whether Cancel appeared. */}
           {status !== JIRA_STATUS_FOR_DEPLOY &&
-            accessLevels.canRescheduleRequest && (
-              <MakeChanges {...changeRequest} />
+            (accessLevels.canRescheduleRequest ||
+              accessLevels.canCancelRequest) && (
+              <MakeChanges
+                {...changeRequest}
+                canRescheduleRequest={!!accessLevels.canRescheduleRequest}
+                canCancelRequest={!!accessLevels.canCancelRequest}
+              />
             )}
         </Box>
         <Box sx={{ width: { xs: '100%', md: '60%' } }}>

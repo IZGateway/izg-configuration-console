@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 
 /**
@@ -63,4 +63,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-export default withMiddleware()(handler)
+// The only route whose effective access NARROWS in IGDD-3472: it had no
+// session, capability or tenancy check at all. Both halves are required -
+// the capability, and reach over the target destination.
+export default withMiddleware(
+  { capability: { page: 'manageconnections', capability: 'canScheduleMaintainance' } },
+  'checkAccessToDestIdSlug'
+)(handler)

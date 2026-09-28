@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import logger from '../../../../../logger'
 import {
   refreshAllHubs,
@@ -77,4 +77,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('checkAdmin')(handler)
+// 'checkAdmin' stays alongside the capability for now, so removing the
+// isAdmin axis later is a pure subtraction rather than a re-gating.
+export default withMiddleware(
+  { capability: { page: 'adminoperations', capability: 'canRefreshHubDatabase' } },
+  'checkAdmin'
+)(handler)

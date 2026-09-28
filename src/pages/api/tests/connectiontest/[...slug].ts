@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
 import _ from 'lodash'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import connectionTest from '../../../../lib/connectiontests'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
@@ -190,4 +190,7 @@ const handler = async (
   }
 }
 
-export default withMiddleware('checkAccessToDestIdSlug')(handler)
+export default withMiddleware(
+  { inHandler: 'IGDD-3472: maps to test.canRunConnectionTest, currently unwired' },
+  'checkAccessToDestIdSlug'
+)(handler)

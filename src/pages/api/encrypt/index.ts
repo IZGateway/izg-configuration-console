@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { encryptDb } from '../../../lib/security/crypto/DbCrypto'
 import logger from '../../../../logger'
@@ -33,4 +33,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+// Reachable by ANY authenticated session before IGDD-3472.
+export default withMiddleware({
+  capability: { page: 'adminoperations', capability: 'canManagePasswordEncryption' },
+})(handler)
