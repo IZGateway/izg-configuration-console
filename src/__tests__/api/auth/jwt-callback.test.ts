@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { authOptions } from './[...nextauth]'
+import { authOptions } from '../../../pages/api/auth/[...nextauth]'
 import logger from '../../../../logger'
 
 const makeIdToken = (payload: object) =>

@@ -23,6 +23,7 @@ import {
   Link,
 } from '@mui/material'
 import { menuItems } from './menuItems'
+import { canEnterPage } from '../../lib/security/accessregistry'
 import palette from '../../styles/theme/palette'
 
 const drawerWidthOpen = '300px'
@@ -75,14 +76,17 @@ export type MenuItem = {
   label: string
   icon: any
   path: string
-  adminOnly?: boolean
-  // For nav items gated on a specific permission rather than the coarse
-  // isAdmin flag (e.g. API Key Management, which Jurisdiction Operations can
-  // also use) — receives ALL roles the user holds (so an item is visible when
-  // any held role grants it) and the full session, for flags that live
-  // outside the role matrix (e.g. apiKeyManagementEnabled, the feature-wide
-  // kill switch). Nav visibility is discoverability only; the API routes
-  // remain the security boundary.
+  // The only visibility mechanism. An `adminOnly?: boolean` field used to sit
+  // beside this and gate on the coarse `isAdmin` flag; IGDD-3472 moved its
+  // three remaining users onto matrix capabilities and removed the field
+  // rather than leaving it dead, because a dead authorization field invites
+  // someone to set it again and reintroduce an axis `can()` cannot see.
+  //
+  // Receives ALL roles the user holds (so an item is visible when any held
+  // role grants it) and the full session, for flags that live outside the
+  // role matrix (e.g. apiKeyManagementEnabled, the feature-wide kill switch).
+  // Nav visibility is discoverability only; the API routes remain the
+  // security boundary.
   isVisible?: (roles: string[] | undefined, session?: Session | null) => boolean
 }
 
@@ -161,8 +165,7 @@ const MiniDrawer = () => {
         {menuItems
           .filter(
             (item) =>
-              (!item.adminOnly || session.user.isAdmin) &&
-              (!item.isVisible || item.isVisible(session.user.roles, session))
+              !item.isVisible || item.isVisible(session.user.roles, session)
           )
           .map((item: MenuItem, index) => (
             <ListItem
@@ -246,7 +249,10 @@ const MiniDrawer = () => {
         </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
-        {session?.user.isAdmin && (
+        {/* Was `session?.user.isAdmin`. Now the same PAGE_ENTRY constant the
+            page's own gate reads, so this link and /api-doc cannot disagree —
+            which they did before IGDD-3472. */}
+        {canEnterPage('api-doc', session?.user.roles) && (
           <Link href="/api-doc">
             <Button
               variant="text"

@@ -27,7 +27,7 @@ import HomeCircleCallouts from './HomeCircleCallouts'
 import Faq from './Faqs'
 import SystemResourcesWidget from './SystemResourcesWidget'
 import Slide from '@mui/material/Slide'
-import isOperationsRole from '../../lib/security/accessutils'
+import { canEnterPage } from '../../lib/security/accessregistry'
 import { subjectOf } from '../../lib/security/authzsubject'
 import { mergePageAccess } from '../../lib/security/policy'
 import type {
@@ -129,7 +129,13 @@ function HomeComponent() {
                         </Button>
                       </Link>
                     )}
-                  {isOperationsRole(session?.user.roles) && (
+                  {/* Was `isOperationsRole(...)` — IZG Operations AND IZG
+                      Support — while the nav link and the page guard admitted
+                      IZG Operations only. IZG Support therefore saw a button
+                      to a page that rejected them. All three entry points now
+                      read the same PAGE_ENTRY constant, so IZG Support loses
+                      this button: a removal, and a dead end removed with it. */}
+                  {canEnterPage('api-doc', session?.user.roles) && (
                     <Link href="/api-doc">
                       <Button
                         variant="outlined"

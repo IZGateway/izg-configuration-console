@@ -3,7 +3,7 @@
  */
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('next-auth/jwt', () => ({ getToken: jest.fn() }))
-jest.mock('../auth/[...nextauth]', () => ({ authOptions: {} }))
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
 const mockAddDenyListRecord = jest.fn()
 const mockCreateDenyListAudit = jest.fn()
@@ -21,7 +21,7 @@ jest.mock('../../../lib/db/DbClientFactory', () => ({
 
 import { getServerSession } from 'next-auth'
 import { getToken } from 'next-auth/jwt'
-import handler from './index'
+import handler from '../../../pages/api/denylist/index'
 
 const buildReqRes = (body: Record<string, unknown>) => {
   const req: any = {
@@ -51,7 +51,10 @@ describe('POST /api/denylist audit identity (IGDD-3175)', () => {
 
   it('derives createdBy/deniedBy from the authenticated session, ignoring any values supplied in the request body', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'real-user@example.com' },
+      // Roles added with IGDD-3472: these routes now carry a capability
+      // declaration, so an unroled subject is denied before the handler runs.
+      // The test is about which identity gets recorded, not about who may call.
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
     })
 
     const { req, res } = buildReqRes({
@@ -74,7 +77,10 @@ describe('POST /api/denylist audit identity (IGDD-3175)', () => {
 
   it('does not persist a forged identity even when the body claims to be a different user', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'real-user@example.com' },
+      // Roles added with IGDD-3472: these routes now carry a capability
+      // declaration, so an unroled subject is denied before the handler runs.
+      // The test is about which identity gets recorded, not about who may call.
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
     })
 
     const { req, res } = buildReqRes({

@@ -1,3 +1,4 @@
+import useRoleAccess from '../../lib/security/useRoleAccess'
 import React, { useContext, useState } from 'react'
 import { DataGrid, GridColDef, GridFooter } from '@mui/x-data-grid'
 import { Box, Typography, Button, IconButton, Tooltip } from '@mui/material'
@@ -6,7 +7,6 @@ import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/DeleteOutlined'
 import palette from '../../styles/theme/palette'
 import SessionContext from '../../contexts/app'
-import { useSession } from 'next-auth/react'
 import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import useSWR, { mutate } from 'swr'
 import { DenyListItem } from '../../lib/type/DenyList'
@@ -182,13 +182,16 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   onAddDeny,
   onDeleteDeny,
 }) => {
-  const { data: session } = useSession()
   const { setAlert } = useContext(CombinedContext)
-  // `isAdmin` is membership of OPERATIONS_GROUP, which is the `IZG Operations`
-  // group — so the old `role === 'IZG Operations'` clause was already implied by
-  // it and has been dropped. Also more correct under multi-role: a user in that
-  // group keeps admin rights regardless of which other roles they hold.
-  const isAdminOrIZGOp = Boolean(session?.user?.isAdmin)
+  // Was `Boolean(session?.user?.isAdmin)` — the Okta OPERATIONS_GROUP axis,
+  // which is invisible to can() and cannot be granted to a future role by a
+  // data edit. Now a matrix capability (IGDD-3472). Behaviour-identical today,
+  // since OPERATIONS_GROUP is the IZG Operations group and that is the only
+  // role seeded with it.
+  //
+  // Render on true, never hide on false: useRoleAccess returns {} while the
+  // session loads, so `{flag && <Control/>}` fails closed.
+  const { canManageDenyList } = useRoleAccess('accesscontrol')
   const sessionContext = useContext(SessionContext)
   const pageSize = sessionContext?.pageSize || 25
   const setPageSize =
@@ -418,7 +421,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
       align: 'center',
       headerAlign: 'center',
       renderCell: (params) =>
-        isAdminOrIZGOp ? (
+        canManageDenyList ? (
           <Tooltip arrow title="Delete">
             <IconButton
               size="small"
@@ -517,7 +520,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
             pagination
             slots={{
               footer: () => (
-                <CustomFooter onAdd={handleAdd} canAdd={isAdminOrIZGOp} />
+                <CustomFooter onAdd={handleAdd} canAdd={canManageDenyList} />
               ),
             }}
             slotProps={{

@@ -1,5 +1,9 @@
 import {
+  AccessControlPageAccessControl,
+  AdminOperationsPageAccessControl,
+  ApiDocPageAccessControl,
   ApiKeyManagementPageAccessControl,
+  ConsolePageAccessControl,
   EditPageAccessControl,
   ManageConnectionsPageAccessControl,
   OnboardingPageAccessControl,
@@ -62,9 +66,36 @@ const defaultApiKeyManagementPageAccessControl: ApiKeyManagementPageAccessContro
     canCancelApiKey: false,
   }
 
+const defaultAccessControlPageAccessControl: AccessControlPageAccessControl = {
+  canViewAccessControl: false,
+  canManageAccessGroups: false,
+  canManageDenyList: false,
+  canManageAdsFileTypes: false,
+}
+
+const defaultAdminOperationsPageAccessControl: AdminOperationsPageAccessControl =
+  {
+    canViewAdminOperations: false,
+    canManagePasswordEncryption: false,
+    canResetHubCircuitBreakers: false,
+    canRefreshHubDatabase: false,
+  }
+
+const defaultConsolePageAccessControl: ConsolePageAccessControl = {
+  canViewConsole: false,
+}
+
+const defaultApiDocPageAccessControl: ApiDocPageAccessControl = {
+  canViewApiDoc: false,
+}
+
 export {
+  defaultAccessControlPageAccessControl,
+  defaultAdminOperationsPageAccessControl,
+  defaultApiDocPageAccessControl,
   defaultApiKeyManagementPageAccessControl,
   defaultChangeRequestPageAccessControl,
+  defaultConsolePageAccessControl,
   defaultEditPageAccessControl,
   defaultHistoryPageAccessControl,
   defaultManageConnectionsPageAccessControl,

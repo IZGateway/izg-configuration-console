@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -436,4 +436,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler: 'IGDD-3472: handler resolves the caller reach per credential',
+})(handler)

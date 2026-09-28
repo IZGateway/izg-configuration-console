@@ -7,6 +7,7 @@ import PasswordEncryptionCard from './PasswordEncryptionCard'
 import CircuitBreakerCard from './CircuitBreakerCard'
 import DatabaseRefreshCard from './DatabaseRefreshCard'
 import InfoPanel from './InfoPanel'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
 
 interface AdminOperationsProps {
@@ -28,6 +29,14 @@ const AdminOperations = ({
 }: AdminOperationsProps) => {
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
+  // Three action flags from one call. Entering the page does not imply
+  // permission to act on it: a user may hold canViewAdminOperations and none
+  // of these, in which case the page renders with no operation cards.
+  const {
+    canManagePasswordEncryption,
+    canResetHubCircuitBreakers,
+    canRefreshHubDatabase,
+  } = useRoleAccess('adminoperations')
 
   const handleResult = (result: {
     level: 'success' | 'error'
@@ -57,43 +66,59 @@ const AdminOperations = ({
         </CardContent>
       </Card>
 
-      {/* Password Encryption */}
-      <Box sx={rowSx}>
-        <PasswordEncryptionCard hasKeyName={hasKeyName} onResult={handleResult} />
-        <InfoPanel
-          title="Details & Critical Security Operations"
-          note="*Please ensure you have proper database backups before proceeding."
-          rows={[
-            { label: 'Algorithm', value: 'AES-256-GCM' },
-            { label: 'Key Provider', value: 'AWS KMS / HSM' },
-            { label: 'Isolation', value: 'Environment-scoped' },
-          ]}
-        />
-      </Box>
+      {/* Password Encryption. Gated on the capability alone. `hasKeyName` is a
+          configuration precondition, not a permission, and is forwarded to the
+          card to decide what to show — it is deliberately NOT part of this
+          condition, so a missing DB_ENCRYPTION_KEYNAME still renders the card.
+          (An earlier version of this comment claimed the two were ANDed. They
+          are not. Raised by review on PR #700.) */}
+      {canManagePasswordEncryption && (
+        <Box sx={rowSx}>
+          <PasswordEncryptionCard
+            hasKeyName={hasKeyName}
+            onResult={handleResult}
+          />
+          <InfoPanel
+            title="Details & Critical Security Operations"
+            note="*Please ensure you have proper database backups before proceeding."
+            rows={[
+              { label: 'Algorithm', value: 'AES-256-GCM' },
+              { label: 'Key Provider', value: 'AWS KMS / HSM' },
+              { label: 'Isolation', value: 'Environment-scoped' },
+            ]}
+          />
+        </Box>
+      )}
 
-      {/* Circuit Breaker Reset */}
-      <Box sx={{ mb: 4 }}>
-        <CircuitBreakerCard
-          environments={hubEnvironments}
-          onResult={handleResult}
-        />
-      </Box>
+      {/* Circuit Breaker Reset — the HUB-WIDE reset. Deliberately a different
+          capability from manageconnections.canResetCircuitBreaker, which
+          covers the per-destination reset. */}
+      {canResetHubCircuitBreakers && (
+        <Box sx={{ mb: 4 }}>
+          <CircuitBreakerCard
+            environments={hubEnvironments}
+            onResult={handleResult}
+          />
+        </Box>
+      )}
 
       {/* Database Refresh */}
-      <Box sx={rowSx}>
-        <DatabaseRefreshCard
-          environments={hubEnvironments}
-          onResult={handleResult}
-        />
-        <InfoPanel
-          title="Configuration Sync"
-          note="Reloads the selected hub environment's configuration from the database."
-          rows={[
-            { label: 'Scope', value: 'Selected hub environment' },
-            { label: 'Requires restart', value: 'No' },
-          ]}
-        />
-      </Box>
+      {canRefreshHubDatabase && (
+        <Box sx={rowSx}>
+          <DatabaseRefreshCard
+            environments={hubEnvironments}
+            onResult={handleResult}
+          />
+          <InfoPanel
+            title="Configuration Sync"
+            note="Reloads the selected hub environment's configuration from the database."
+            rows={[
+              { label: 'Scope', value: 'Selected hub environment' },
+              { label: 'Requires restart', value: 'No' },
+            ]}
+          />
+        </Box>
+      )}
 
       <CustomSnackbar
         open={showSnackbar}

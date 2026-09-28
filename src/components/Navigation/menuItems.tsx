@@ -6,7 +6,8 @@ import AddIcon from '@mui/icons-material/Add'
 import AutoAwesomeMosaicIcon from '@mui/icons-material/AutoAwesomeMosaic'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
 import React from 'react'
-import accessLevel from '../../lib/security/accesslevel'
+import { canEnterPage } from '../../lib/security/accessregistry'
+
 const iconSx = {
   fontSize: '2rem',
 }
@@ -28,43 +29,34 @@ export const menuItems: MenuItem[] = [
       />
     ),
     path: '/manageconnections',
-    adminOnly: false,
-    // Visible if ANY held role can view connections. A "what"-only check with
-    // no jurisdiction, so unioning across roles is correct here.
-    isVisible: (roles) =>
-      (roles ?? []).some(
-        (role) => !!accessLevel[role]?.manageconnections?.canViewConnections
-      ),
+    isVisible: (roles) => canEnterPage('manageconnections', roles),
   },
   {
     label: 'Admin Operations',
     icon: <AdminPanelSettingsIcon sx={iconSx} />,
     path: '/adminoperations',
-    adminOnly: true,
+    // Was adminOnly: true (the Okta OPERATIONS_GROUP axis). Now a matrix
+    // capability, which is what the page gate reads. Behaviour-identical
+    // today, since IZG Operations is the only role seeded with it.
+    isVisible: (roles) => canEnterPage('adminoperations', roles),
   },
   {
     label: 'Access Control',
     icon: <GroupIcon sx={iconSx} />,
     path: '/accesscontrol',
-    adminOnly: true,
+    isVisible: (roles) => canEnterPage('accesscontrol', roles),
   },
   {
     label: 'Onboarding Senders',
     icon: <AddIcon sx={iconSx} />,
     path: '/onboarding',
-    adminOnly: false,
-    // Visible if ANY held role can view onboarding. A "what"-only check with
-    // no jurisdiction, so unioning across roles is correct here.
-    isVisible: (roles) =>
-      (roles ?? []).some(
-        (role) => !!accessLevel[role]?.onboarding?.canViewOnboarding
-      ),
+    isVisible: (roles) => canEnterPage('onboarding', roles),
   },
   {
     label: 'Console',
     icon: <AutoAwesomeMosaicIcon sx={iconSx} />,
     path: '/console',
-    adminOnly: true,
+    isVisible: (roles) => canEnterPage('console', roles),
   },
   {
     label: 'API Key Management',
@@ -77,14 +69,7 @@ export const menuItems: MenuItem[] = [
     // Also requires the apiKeyManagementEnabled release flag (IGDD-3444),
     // set server-side per request in the session callback, so the link
     // disappears for every role while the feature is disabled.
-    adminOnly: false,
-    // Visible if the feature-wide kill switch is on AND any held role can
-    // list keys. A "what"-only role check with no jurisdiction, so unioning
-    // across roles is correct here.
     isVisible: (roles, session) =>
-      !!session?.apiKeyManagementEnabled &&
-      (roles ?? []).some(
-        (role) => !!accessLevel[role]?.apikeys?.canListApiKeys
-      ),
+      !!session?.apiKeyManagementEnabled && canEnterPage('apikeys', roles),
   },
 ]

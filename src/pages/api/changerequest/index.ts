@@ -6,7 +6,7 @@ import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
@@ -296,4 +296,16 @@ const upsertChangeRequest = async (
   return response
 }
 
-export default withMiddleware()(handler)
+// A privilege fix, not cleanup. This route was wrapped in withMiddleware()
+// with no authorization middleware at all and checked only hasAccessToDestId
+// in the handler - reach without capability. IZG Support holds
+// globalTenancy: true with canCancelRequest: false, so it could cancel or
+// reschedule a change request on ANY destination in the system. The flags
+// already said no; nothing read them.
+export default withMiddleware({
+  byMethod: {
+    POST: { page: 'edit', capability: 'canCreateChangeRequest' },
+    PUT: { page: 'changerequest', capability: 'canRescheduleRequest' },
+    DELETE: { page: 'changerequest', capability: 'canCancelRequest' },
+  },
+})(handler)
