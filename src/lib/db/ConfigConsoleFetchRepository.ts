@@ -9,6 +9,7 @@ import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
+import type { ApiKeyCredentialAudit } from '../type/ApiKeyCredentialAudit'
 import type { Jurisdiction } from '../type/Jurisdiction'
 import type { ApiKeyDomain } from '../type/ApiKeyDomain'
 
@@ -59,6 +60,10 @@ export default interface ConfigConsoleFetchRepository {
   ): Promise<AllowedUserAudit[]>
   fetchApiKeyCredentials(): Promise<ApiKeyCredential[]>
   getApiKeyCredential(sortKey: string): Promise<ApiKeyCredential | null>
+  fetchApiKeyCredentialAuditHistory(
+    credentialSortKey: string
+  ): Promise<ApiKeyCredentialAudit[]>
+  fetchApiKeyCredentialAudits(): Promise<ApiKeyCredentialAudit[]>
   fetchJurisdictions(): Promise<Jurisdiction[]>
   /**
    * Fetch a single jurisdiction by its numeric id. Memoized for the life of the
