@@ -2613,8 +2613,10 @@ class Dynamo implements DbClient {
       )
       return {
         ...allowedUser,
+        createdBy: params.Item.createdBy as string,
+        createdOn: new Date(params.Item.createdOn as string),
+        updatedBy: params.Item.updatedBy as string,
         updatedOn: new Date(now),
-        createdOn: allowedUser.createdOn || new Date(now),
       }
     } catch (error) {
       logger.error('Error upserting allowed user to DynamoDB', {

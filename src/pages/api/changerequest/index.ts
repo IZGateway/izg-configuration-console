@@ -66,6 +66,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
   const dbClient = await DbClientFactory.getDbClient()
+  requestBody.requestedBy = session?.user?.email || 'unknown'
   if (!isJiraConfigured) {
     throw new Error(
       'Jira connection is not configured correctly. Ensure the necessary variables have been configured for the environment.'

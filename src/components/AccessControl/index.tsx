@@ -513,11 +513,7 @@ const AccessControlComponent = () => {
 
   if (isAddingDeny) {
     return (
-      <AddDenyList
-        onSave={handleSaveDeny}
-        onCancel={handleCancelDeny}
-        userName={currentUserName}
-      />
+      <AddDenyList onSave={handleSaveDeny} onCancel={handleCancelDeny} />
     )
   }
 
