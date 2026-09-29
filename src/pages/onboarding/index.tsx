@@ -5,12 +5,15 @@ import ErrorBoundary from '../../components/ErrorBoundary'
 import AppHeaderBar from '../../components/AppHeader'
 import { InferGetServerSidePropsType } from 'next'
 import { SerializedAllowedUser } from '../../lib/type/AllowedUser'
-import { withRequestContext } from '../../lib/requestContext'
+import AccessDenied from '../../components/AccessDenied'
+import { withPageAccess } from '../../lib/security/pageAccessGate'
 import logger from '../../../logger'
 
 const OnboardingPage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
+  if (props.accessDenied) return <AccessDenied title="Onboarding" />
+
   return (
     <Container title="Onboarding">
       <AppHeaderBar open />
@@ -21,24 +24,19 @@ const OnboardingPage = (
   )
 }
 
-export const getServerSideProps = withRequestContext<{
-  allowedUsers: SerializedAllowedUser[]
-  error?: string
-}>(async (context, requestContext) => {
+// Checked session presence and no capability before IGDD-3472, so any
+// authenticated user reached it by URL — including Sender Operations, which
+// holds canViewOnboarding: false. The gate now covers both the page and the
+// three allowed-user routes behind it, so the write endpoints are closed too,
+// not just the page.
+export const getServerSideProps = withPageAccess<
+  'onboarding',
+  {
+    allowedUsers: SerializedAllowedUser[]
+    error?: string
+  }
+>('onboarding', async (context) => {
   try {
-    const session = requestContext.session
-
-    // Check if session exists before accessing user properties
-    if (!session?.user) {
-      logger.warn('Unauthorized access attempt to onboarding page')
-      return {
-        redirect: {
-          destination: '/api/auth/signin',
-          permanent: false,
-        },
-      }
-    }
-
     // Use API endpoint instead of direct database access
     const protocol = context.req.headers['x-forwarded-proto'] || 'http'
     const host = context.req.headers.host
@@ -66,6 +64,17 @@ export const getServerSideProps = withRequestContext<{
   } catch (error) {
     logger.error('Error fetching allowed users for onboarding page', {
       error: error instanceof Error ? error.message : 'Unknown error',
+      // Node's fetch reports every transport failure as the bare message
+      // "fetch failed" and puts the actual reason on `cause` — TLS rejection,
+      // DNS, connection refused. Without this the log says nothing useful:
+      // locally, where nginx serves a self-signed cert generated in
+      // local-docker/Dockerfile and NEXTAUTH_URL is https://localhost, the
+      // cause is certificate verification, which looks nothing like a
+      // permission problem but is easily mistaken for one.
+      cause:
+        error instanceof Error && error.cause instanceof Error
+          ? error.cause.message
+          : undefined,
       stack: error instanceof Error ? error.stack : undefined,
     })
 

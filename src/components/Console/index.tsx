@@ -20,6 +20,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
 import { useSession } from 'next-auth/react'
+import useRoleAccess from '../../lib/security/useRoleAccess'
+import AccessDenied from '../AccessDenied'
 import AppHeaderBar from '../AppHeader'
 import Container from '../Container'
 import palette from '../../styles/theme/palette'
@@ -118,7 +120,8 @@ function Item(props: BoxProps) {
 }
 
 const Console = () => {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
+  const { canViewConsole } = useRoleAccess('console')
   const [destinations, setDestinations] = useState<Destination[]>([])
   const [destinationsLoading, setDestinationsLoading] = useState(true)
   const [destinationsError, setDestinationsError] = useState<string>('')
@@ -286,17 +289,13 @@ const Console = () => {
     )
   }
 
-  if (!session?.user?.isAdmin) {
-    return (
-      <Container title="Operations Console">
-        <Box sx={{ mt: 4 }}>
-          <Alert severity="error">
-            You do not have permission to access the Console. Admin access is
-            required.
-          </Alert>
-        </Box>
-      </Container>
-    )
+  // Defence in depth, kept deliberately: the page is now gated server-side by
+  // withPageAccess('console'), so a denied user never renders this component
+  // at all. This reads the same matrix flag rather than the isAdmin axis, and
+  // renders the same denial surface — a second, differently-worded message for
+  // the same page is a thing that drifts.
+  if (!canViewConsole) {
+    return <AccessDenied title="Operations Console" />
   }
 
   return (

@@ -1,0 +1,50 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`role matrix snapshot matches the committed matrix 1`] = `
+"
+| Page | Capability | IZG Operations | IZG Support | Jurisdiction Operations | Jurisdiction Support | Sender Operations |
+|---|---|---|---|---|---|---|
+| _tenancy_ | globalTenancy | YES | YES | — | — | — |
+| accesscontrol | canManageAccessGroups | YES | — | — | — | — |
+| accesscontrol | canManageAdsFileTypes | YES | — | — | — | — |
+| accesscontrol | canManageDenyList | YES | — | — | — | — |
+| accesscontrol | canViewAccessControl | YES | — | — | — | — |
+| adminoperations | canManagePasswordEncryption | YES | — | — | — | — |
+| adminoperations | canRefreshHubDatabase | YES | — | — | — | — |
+| adminoperations | canResetHubCircuitBreakers | YES | — | — | — | — |
+| adminoperations | canViewAdminOperations | YES | — | — | — | — |
+| api-doc | canViewApiDoc | YES | — | — | — | — |
+| apikeys | canCancelApiKey | YES | — | YES | — | YES |
+| apikeys | canCreateApiKey | YES | — | YES | — | YES |
+| apikeys | canListApiKeys | YES | — | YES | — | YES |
+| apikeys | canRenewApiKey | YES | — | YES | — | YES |
+| apikeys | canRevokeApiKey | YES | — | YES | — | YES |
+| changerequest | canCancelRequest | YES | — | YES | — | — |
+| changerequest | canDeployChange | YES | — | — | — | — |
+| changerequest | canRescheduleRequest | YES | — | YES | — | — |
+| changerequest | canRunHealthCheck | YES | YES | YES | YES | — |
+| changerequest | canViewDetails | YES | YES | YES | YES | — |
+| changerequest | canViewJiraTicket | YES | — | — | — | — |
+| console | canViewConsole | YES | — | — | — | — |
+| edit | canApproveChangeRequest | YES | — | YES | — | — |
+| edit | canChangeCredentials | YES | — | YES | — | — |
+| edit | canCreateChangeRequest | YES | — | YES | — | — |
+| edit | canResetDraft | YES | — | YES | — | — |
+| edit | canRunDraftConnectionTest | YES | — | YES | — | — |
+| edit | canSaveDraft | YES | — | YES | — | — |
+| history | canViewChangeHistory | YES | YES | YES | YES | — |
+| history | canViewChangeRequest | YES | YES | YES | YES | — |
+| history | canViewConnectionInfo | YES | YES | YES | YES | — |
+| history | canViewConnectionInfoDetails | YES | YES | YES | YES | — |
+| history | canViewHubStatusHistory | YES | YES | YES | YES | — |
+| manageconnections | canEditConnection | YES | — | YES | — | — |
+| manageconnections | canResetCircuitBreaker | YES | — | YES | — | — |
+| manageconnections | canRunConnectionTest | YES | YES | YES | YES | — |
+| manageconnections | canScheduleMaintainance | YES | — | YES | — | — |
+| manageconnections | canViewChangeRequest | YES | YES | YES | YES | — |
+| manageconnections | canViewConnections | YES | YES | YES | YES | — |
+| manageconnections | canViewHistory | YES | YES | YES | YES | — |
+| onboarding | canViewOnboarding | YES | YES | YES | YES | — |
+| test | canRunConnectionTest | YES | YES | YES | YES | — |
+"
+`;

@@ -7,8 +7,9 @@ import { useEffect, useState, useContext } from 'react'
 import CustomSnackbar from '../../components/SnackBar'
 import CombinedContext from '../../contexts/app'
 import { InferGetServerSidePropsType } from 'next'
-import { withRequestContext } from '../../lib/requestContext'
 import AppHeaderBar from '../../components/AppHeader'
+import AccessDenied from '../../components/AccessDenied'
+import { withPageAccess } from '../../lib/security/pageAccessGate'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { Destination } from '../../lib/type/Destination'
 import {
@@ -16,9 +17,6 @@ import {
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
 import { fetchEndpointStatus } from '../../lib/services/fetchEndpointStatus'
-import { subjectOf } from '../../lib/security/authzsubject'
-import { mergePageAccess } from '../../lib/security/policy'
-import type { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -39,6 +37,8 @@ const Manage = (
     })
   }
 
+  if (props.accessDenied) return <AccessDenied title="Manage Connections" />
+
   return (
     <Container title="Manage Connections">
       <AppHeaderBar open />
@@ -57,69 +57,60 @@ const Manage = (
 
 export default Manage
 
-export const getServerSideProps = withRequestContext(
-  async (context, requestContext) => {
-    const session = requestContext.session
-    if (!session?.user) {
-      return { redirect: { destination: '/api/auth/signin', permanent: false } }
-    }
+// Migrated from a hand-rolled gate to the shared one (IGDD-3472). It already
+// checked the right capability — `canViewConnections`, the same flag
+// PAGE_ENTRY names — but it answered with `redirect: { destination: '/' }`,
+// so a role without it (Sender Operations) was bounced to the landing page
+// with no explanation and no audit event. The capability check is unchanged;
+// only the outcome is.
+export const getServerSideProps = withPageAccess<
+  'manageconnections',
+  { data: unknown[] }
+>('manageconnections', async (context, requestContext) => {
+  const session = requestContext.session
 
-    // UI-layer capability gate, not the security boundary — but without it
-    // this page would render for any session, IIS-recognized role or not,
-    // filtered only by the raw Okta `jurisdictions` claim (a reach-only
-    // check). A role with no `canViewConnections` (e.g. Sender Operations)
-    // is redirected rather than reaching fetchEndpointStatus at all.
-    const access = mergePageAccess(
-      subjectOf(session),
-      'manageconnections'
-    ) as Partial<ManageConnectionsPageAccessControl>
-    if (!access.canViewConnections) {
-      return { redirect: { destination: '/', permanent: false } }
-    }
+  const endpointStatuses = await fetchEndpointStatus(
+    session.user.roles,
+    session.user.jurisdictions
+  )
 
-    const endpointStatuses = await fetchEndpointStatus(
-      session.user.roles,
-      session.user.jurisdictions
-    )
-
-    const endpoints = await Promise.all(
-      endpointStatuses.map(async (endpoint) => {
-        const dbClient = await DbClientFactory.getDbClient()
-        const destination = await dbClient.fetchDestination(
+  const endpoints = await Promise.all(
+    endpointStatuses.map(async (endpoint) => {
+      const dbClient = await DbClientFactory.getDbClient()
+      const destination = await dbClient.fetchDestination(
+        endpoint.destId,
+        endpoint.destTypeId
+      )
+      const destinationChangeRequest =
+        await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
           endpoint.destId,
           endpoint.destTypeId
         )
-        const destinationChangeRequest =
-          await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
-            endpoint.destId,
-            endpoint.destTypeId
-          )
 
-        return {
-          ...endpoint,
-          // Hub's statushistory destUri is a polling cache that lags behind
-          // the destination record until the next scheduled status check
-          // (IGDD-2126); the destination record is updated synchronously on
-          // deploy, so prefer it when available.
-          destUri: destination?.destUri ?? endpoint.destUri,
-          hasChangeRequest: !!destinationChangeRequest,
-          hasActiveDraft: destinationChangeRequest?.jiraId === null,
-          hasActiveMaintenance: hasActiveMaintenance(
-            destination?.maintStart,
-            destination?.maintEnd
-          ),
-          hasFutureMaintenance: hasFutureMaintenance(
-            destination?.maintStart,
-            destination?.maintEnd
-          ),
-          maintenanceValues: getMaintenanceValues(destination),
-        }
-      })
-    )
+      return {
+        ...endpoint,
+        // Hub's statushistory destUri is a polling cache that lags behind
+        // the destination record until the next scheduled status check
+        // (IGDD-2126); the destination record is updated synchronously on
+        // deploy, so prefer it when available.
+        destUri: destination?.destUri ?? endpoint.destUri,
+        hasChangeRequest: !!destinationChangeRequest,
+        hasActiveDraft: destinationChangeRequest?.jiraId === null,
+        hasActiveMaintenance: hasActiveMaintenance(
+          destination?.maintStart,
+          destination?.maintEnd
+        ),
+        hasFutureMaintenance: hasFutureMaintenance(
+          destination?.maintStart,
+          destination?.maintEnd
+        ),
+        maintenanceValues: getMaintenanceValues(destination),
+      }
+    })
+  )
 
-    return { props: { data: endpoints } }
-  }
-)
+  return { props: { data: endpoints } }
+})
 
 const getMaintenanceValues = (destination: Destination | null) => ({
   maint_start: destination?.maintStart?.toISOString() || null,

@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../api/auth/[...nextauth]'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
@@ -478,4 +478,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('captureErrors')(handler)
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
+// so any authenticated session could reach it. One capability across every
+// method, deliberately: splitting view from mutate needs a flag whose seed
+// value nobody has decided, and this closes the hole without inventing one.
+export default withMiddleware(
+  { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
+  'captureErrors'
+)(handler)

@@ -3,7 +3,7 @@
  */
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('next-auth/jwt', () => ({ getToken: jest.fn() }))
-jest.mock('../auth/[...nextauth]', () => ({ authOptions: {} }))
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 jest.mock('../../../lib/accesshelper', () => ({
   __esModule: true,
   default: jest.fn(),
@@ -23,7 +23,7 @@ jest.mock('../../../lib/db/DbClientFactory', () => ({
 import { getServerSession } from 'next-auth'
 import { getToken } from 'next-auth/jwt'
 import hasAccessToDestId from '../../../lib/accesshelper'
-import handler from './index'
+import handler from '../../../pages/api/changerequest/index'
 
 const buildReqRes = (body: Record<string, unknown>) => {
   const req: any = {
@@ -46,7 +46,10 @@ describe('POST /api/changerequest audit identity (IGDD-3175)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'real-user@example.com' },
+      // Roles added with IGDD-3472: these routes now carry a capability
+      // declaration, so an unroled subject is denied before the handler runs.
+      // The test is about which identity gets recorded, not about who may call.
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
     })
     ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
     ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
