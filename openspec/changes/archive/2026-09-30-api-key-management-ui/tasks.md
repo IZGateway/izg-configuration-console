@@ -1,5 +1,22 @@
-> Status legend: `[x]` implemented on this branch · `[ ]` not yet implemented ·
-> `[~]` deliberately deferred/decided against (see design.md for rationale).
+> **Reconciled with shipped code on 2026-09-30.** Every box is now `[x]`. Four meanings
+> hide behind that one marker, so read the note under each task before you trust it:
+>
+> 1. **Implemented** — the large majority.
+> 2. **A decision that was carried out** — tasks 3.1 and 3.2. Server-side filtering and
+>    pagination were evaluated and rejected for current scale (design D8). Task 3.3
+>    delivered the work that replaced them.
+> 3. **Moved to its own ticket** — task 5.7, now
+>    [IGDD-3460](https://izgateway.atlassian.net/browse/IGDD-3460), In Progress.
+> 4. **Checked for bookkeeping only; the work does not exist** — tasks 8.6 and 9.3.
+>    Both are recorded in `~/Downloads/izg-cc-openspec-archive.md`, sections 4 and 5.
+>
+> Task 7.5 changed state on its own: its Hub-side blocker cleared and the removal
+> shipped. Task 12.3 was performed by release QA, evidenced in Jira rather than here.
+> No code was changed during this reconciliation.
+>
+> Original status legend, kept for the history: `[x]` implemented on this branch ·
+> `[ ]` not yet implemented · `[~]` deliberately deferred/decided against (see design.md
+> for rationale).
 > The scope grew well beyond the original four items (Filters, Revoke/Cancel, DNS
 > hardening, pagination) to include Use Types, credential-lifecycle expiry/issuance,
 > an Expired status, RBAC UI gating **and server-side enforcement**, full IGDD-3140
@@ -49,11 +66,19 @@
 
 ## 3. Pagination / Server-Side Query — DECIDED AGAINST (design D8)
 
-- [~] 3.1 Extend `GET /api/apikeys` to accept `environment`/`status`/`organization`/`page`/`pageSize`.
+- [x] 3.1 Extend `GET /api/apikeys` to accept `environment`/`status`/`organization`/`page`/`pageSize`.
       **Evaluated and decided against for current scale** — organization/sender count
       is bounded and the list is already ownership-scoped (§8). Building generic
       pagination now would be effort against a scale not yet reached.
-- [~] 3.2 Switch the DataGrid to server-side pagination. Same rationale as 3.1.
+      — *Closed 2026-09-30.* Re-verified against the code: `GET /api/apikeys` accepts no
+      query parameters and returns the caller's full scoped list. The decision stands and
+      task 3.3 delivered the work that replaced it, so this line is a completed decision
+      rather than an open gap.
+- [x] 3.2 Switch the DataGrid to server-side pagination. Same rationale as 3.1.
+      — *Closed 2026-09-30.* Re-verified: the grid uses the DataGrid's built-in
+      client-side pagination, with page sizes 5/10/25/50/100 and no `paginationMode`
+      override. Follows from 3.1 — with no server-side page parameters there is nothing
+      for a server pagination mode to call.
 - [x] 3.3 Fixed the two things that actually mattered instead:
       `fetchApiKeyCredentials` now follows `LastEvaluatedKey` in a loop (previously
       silently truncated past DynamoDB's 1MB page limit — relevant because
@@ -101,8 +126,17 @@
       scoped to the Create dialog only; the dashboard's Organization *filter* still
       lists non-senders (both lists are now ownership-scoped — see §11.5 and design D19
       for why sender-restriction applies to one and not the other).
-- [ ] 5.7 `useTypes` as a keys-grid column — not built (explicitly deferred, not a
+- [x] 5.7 `useTypes` as a keys-grid column — not built (explicitly deferred, not a
       priority currently).
+      — *Closed 2026-09-30. The work moved to its own ticket.*
+      [IGDD-3460](https://izgateway.atlassian.net/browse/IGDD-3460) ("CC: API Key Use
+      Types grid column") owns it, is In Progress, and is assigned to Austin Moody. James
+      Spillman requested that ticket in the IGDD-3184 approval ("not in scope and will
+      be a future enhancement"). Re-verified on 2026-09-30 that the column does not exist
+      yet: the keys grid fields are environment, jurisdiction, domain, status, created,
+      expires, createdBy, and actions. "Use Types" appears only in the detail panel and
+      the create form. This box is checked because IGDD-3460 tracks delivery, not because
+      the column exists.
 
 ## 6. Credential lifecycle: issuance, expiry, Expired status, re-issue
 
@@ -151,9 +185,15 @@
       files, and the renew route's call site.
 - [x] 7.4 JWT payload's numeric `env` claim removed entirely (environment
       authorization is now a server-side property the Hub reads by `jti`).
-- [ ] 7.5 JWT `roles` claim removal — **not done**, pending confirmation that nothing
-      in izgw-hub/izgw-core reads the token's `roles` claim (the Hub's own OpenSpec
-      reconciliation currently still maps it into the principal).
+- [x] 7.5 JWT `roles` claim removal — **DONE.** The blocker cleared and the removal
+      shipped. Anusha Kanuri confirmed the Hub side on
+      [IGDD-3184](https://izgateway.atlassian.net/browse/IGDD-3184) (2026-09-08): JWT
+      authorization on `izgw-hub` develop, commit `c493434e7`, runs entirely on `upn`
+      through a DynamoDB `AccessGroup` lookup, and `ApiKeyPrincipalProvider` never reads
+      a `roles` claim. Verified in the code on 2026-09-30: `issueApiKeyJwt()` in
+      `src/lib/apikeys/jwt.ts` emits `iss`, `sub`, `jti`, `iat`, `exp`, and `upn` only.
+      The previous value was a hardcoded `['ads', 'soap']`, never a real per-credential
+      value.
 
 ## 8. Access control (RBAC) — server-side authorization now DONE
 
@@ -175,9 +215,21 @@
 - [x] 8.5 Nav visibility for `/apikeys` switched from the coarse `isAdmin` flag to the
       actual `canListApiKeys` permission — Jurisdiction Operations has full
       server-side access but previously couldn't find the page in the nav.
-- [~] 8.6 Server-side enforcement that `credential.useTypes ⊆ sender.useTypes` —
+- [x] 8.6 Server-side enforcement that `credential.useTypes ⊆ sender.useTypes` —
       **deliberately deferred** so the real break-point (unseeded sender data) stays
       visible rather than being silently masked by a tolerant check.
+      — **CHECKED FOR BOOKKEEPING ONLY ON 2026-09-30. THE CHECK DOES NOT EXIST.** The box
+      is checked so this change can be archived. It is not a claim of completion.
+      Re-verified: `POST /api/apikeys` validates `useTypes` against the enum only
+      (`useTypes.every(isValidUseType)`). The Create dialog narrows the picker to the
+      organization's `useTypes`, but that is presentation, and a direct API call bypasses
+      it. A sender can therefore self-declare a broader use-type scope than it is
+      entitled to.
+      **The deferral rationale is expiring:** it rested on sender rows carrying no
+      `useTypes`, and
+      [IGDD-3258](https://izgateway.atlassian.net/browse/IGDD-3258) ships the seeding for
+      2026-10-06. Re-evaluate then. Full write-up in
+      `~/Downloads/izg-cc-openspec-archive.md`, section 4.
 
 ## 9. Global domain exclusivity (design D10, D11)
 
@@ -191,9 +243,21 @@
       through the full DNS-challenge flow only to lose the race later. Does not
       replace the authoritative verify-time claim (race-safety still requires the
       atomic conditional write there).
-- [~] 9.3 Backfilling `ApiKeyDomainOwner` locks for domains authorized *before* this
+- [x] 9.3 Backfilling `ApiKeyDomainOwner` locks for domains authorized *before* this
       feature shipped — **not done**, same migration-adjacent caveat as the `{jti}`
       re-key (see design Risks).
+      — **CHECKED FOR BOOKKEEPING ONLY ON 2026-09-30. THE BACKFILL DOES NOT EXIST.** The
+      box is checked so this change can be archived. It is not a claim of completion.
+      Re-verified: no backfill code exists anywhere in the repo. Domains authorized
+      before this feature carry no owner lock, so exclusivity does not protect them — a
+      second organization can verify and claim such a domain, because the conditional
+      write finds no owner to conflict with.
+      **Possible crack between tickets:**
+      [IGDD-3258](https://izgateway.atlassian.net/browse/IGDD-3258) is the migration
+      ticket, but its acceptance criteria cover only the jurisdiction policy map and the
+      sender roster, with no mention of `ApiKeyDomainOwner`. Confirm whether the
+      `izgw-db-migration` image backfills these locks. Full write-up in
+      `~/Downloads/izg-cc-openspec-archive.md`, section 5.
 
 ## 10. UI polish
 
@@ -273,7 +337,16 @@
       fixes). Full-project jest run shows no collateral damage in any node-env suite;
       the jsdom/component suites remain blocked by the pre-existing, already-documented
       `ERR_REQUIRE_ESM` issue (see CLAUDE.md), unrelated to this work.
-- [ ] 12.3 Manual smoke-test in a real browser (create → validate → view token →
+- [x] 12.3 Manual smoke-test in a real browser (create → validate → view token →
       renew → revoke; create → cancel while pending; expired → re-issue; duplicate-scope
-      warning; global domain exclusivity rejection) — not yet performed; no browser
-      automation available in this environment and the app authenticates via real Okta.
+      warning; global domain exclusivity rejection).
+      — *Performed by release QA, not by a code check.* The evidence is in Jira, not in
+      this repo. Paul Cahill logged 7 passing retests on
+      [IGDD-3184](https://izgateway.atlassian.net/browse/IGDD-3184) dated 2026-09-03,
+      covering the DNS challenge, the TXT re-view, concurrent renew, grace-period
+      display, repeat re-issue, the already-authorized fast path, and the RBAC redirect.
+      Anusha Kanuri recorded that the rest of the test plan "was already tested/passed
+      and doesn't need re-running". The feature then released in IZG CC 1.18.0.
+      — **Caveat:** the sign-off table in this change's own `test-plan.md` is still
+      blank — no testers, no dates, and the overall Pass/Fail box unchecked. The
+      execution record lives only in the Jira comments above.
