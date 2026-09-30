@@ -1,15 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { isValidUseType } from '../../../lib/type/AllowedUseType'
+import type { ApiKeyCredential } from '../../../lib/type/ApiKeyCredential'
 import {
   hasApiKeyPermission,
-  ownsJurisdiction,
   requireApiKeyAccess,
 } from '../../../lib/security/apiKeyAuthz'
+import { scopeToOwnedJurisdictions } from '../../../lib/apikeys/scope'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -35,18 +39,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Tenancy scoping (fix enumeration/IDOR): a caller only sees credentials
-      // for jurisdictions they own. IZG roles are global; jurisdiction roles are
-      // limited to their assigned jurisdictions.
-      //
-      // `ownsJurisdiction` is async (it resolves each jurisdiction's prefix), and
-      // Array.filter can't take an async predicate — so resolve all decisions
-      // first, then filter by index. `fetchApiKeyCredentials` has already
-      // pre-warmed the jurisdiction cache for every distinct jurisdiction in this
-      // result set, so these are in-memory hits, not N DynamoDB reads.
-      const ownedFlags = await Promise.all(
-        result.map((c) => ownsJurisdiction(session, c.jurisdictionId))
+      // for jurisdictions they own. Shared with the audit-log list route so the
+      // two can never disagree about what a caller may see — see
+      // `scopeToOwnedJurisdictions` for why permission and reach must be
+      // evaluated together rather than separately.
+      const scoped = await scopeToOwnedJurisdictions(
+        session,
+        'canListApiKeys',
+        result
       )
-      const scoped = result.filter((_, i) => ownedFlags[i])
 
       return res.status(200).json(scoped)
     } catch (error) {
@@ -87,6 +88,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // Multi-env credentials are an IZG Operations capability (server-enforced,
       // not just UI-gated) — every other role is limited to a single environment.
       if (envIds.length > 1 && !session.user.isAdmin) {
+        logAccessDenied({
+          reason: 'multi-environment key creation requires admin',
+          user: session.user.email,
+          roles: subjectOf(session).roles,
+          jurisdictionId,
+        })
         return res.status(403).json({ error: 'Only administrators may create a multi-environment key' })
       }
 
@@ -148,6 +155,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           return res.status(404).json({ error: 'Credential being re-issued was not found' })
         }
         if (oldCredential.jurisdictionId !== String(jurisdictionId)) {
+          logAccessDenied({
+            reason: 're-issue target credential belongs to a different jurisdiction',
+            user: session.user.email,
+            roles: subjectOf(session).roles,
+            jurisdictionId,
+          })
           return res.status(403).json({ error: 'Forbidden - not authorized for this jurisdiction' })
         }
         // The UI never offers Re-issue on a revoked/cancelled key, but that's
@@ -202,7 +215,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           return res.status(reissueError.status).json({ error: reissueError.error })
         }
         const expiresAt = new Date(now.getTime() + 365 * 24 * 3600 * 1000)
-        await dbClient.createApiKeyCredential({
+        const credential = {
           jti,
           sortKey,
           jurisdictionId: String(jurisdictionId),
@@ -214,13 +227,42 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           description: description ? String(description) : undefined,
           domain: String(upn),
           useTypes,
+        }
+        await dbClient.createApiKeyCredential(credential)
+
+        await recordApiKeyAudit(dbClient, {
+          changeType: 'Create',
+          credentialSortKey: sortKey,
+          userName: createdBy,
+          newValues: credential as unknown as ApiKeyCredential,
+          context: {
+            jurisdictionId: String(jurisdictionId),
+            dnsChoice,
+            grantedBy: authz.grantedBy,
+            // The domain was already authorized, so no DNS challenge ran for
+            // this credential — it was issued Active immediately.
+            issuedImmediately: true,
+            ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
+          },
         })
+        if (reissuedFrom) {
+          // Recorded against the PREDECESSOR too, so the expired credential's
+          // own history shows it was replaced and by whom — the successor's
+          // Create row alone would leave the old key's timeline silent.
+          await recordApiKeyAudit(dbClient, {
+            changeType: 'Reissue',
+            credentialSortKey: String(reissuedFrom),
+            userName: createdBy,
+            context: { reissuedAs: jti, reissuedTo: sortKey },
+          })
+        }
 
         logger.info('API key created for already-authorized domain', {
           jti,
           sortKey,
           createdBy,
           dnsChoice,
+          grantedBy: authz.grantedBy,
           operation: 'createApiKeyCredential',
         })
 
@@ -290,7 +332,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (reissueError) {
         return res.status(reissueError.status).json({ error: reissueError.error })
       }
-      await dbClient.createApiKeyCredential({
+      const pendingCredential = {
         jti,
         sortKey,
         jurisdictionId: String(jurisdictionId),
@@ -301,7 +343,30 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         description: description ? String(description) : undefined,
         domain: String(upn),
         useTypes,
+      }
+      await dbClient.createApiKeyCredential(pendingCredential)
+
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Create',
+        credentialSortKey: sortKey,
+        userName: createdBy,
+        newValues: pendingCredential as unknown as ApiKeyCredential,
+        context: {
+          jurisdictionId: String(jurisdictionId),
+          dnsChoice,
+          grantedBy: authz.grantedBy,
+          issuedImmediately: false,
+          ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
+        },
       })
+      if (reissuedFrom) {
+        await recordApiKeyAudit(dbClient, {
+          changeType: 'Reissue',
+          credentialSortKey: String(reissuedFrom),
+          userName: createdBy,
+          context: { reissuedAs: jti, reissuedTo: sortKey },
+        })
+      }
 
       // The DNS TXT challenge proves ownership of the domain itself (record
       // placed at the domain APEX, DigiCert-style — not a `_izg-verify.`
@@ -346,6 +411,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         challengeUuid,
         jti,
         sortKey,
+        grantedBy: authz.grantedBy,
         operation: 'createApiKeyCredential',
       })
 
@@ -440,10 +506,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         throw error
       }
 
+      // `credential` is the pre-revoke read above, so oldValues captures the
+      // exact state that was revoked (status, expiry, domain, use-type scope).
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Revoke',
+        credentialSortKey: String(sortKey),
+        userName: revokedBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'revoked',
+          revokedBy,
+          revokedAt: new Date(revokedAt),
+          ...(reason ? { reason: String(reason) } : {}),
+        },
+        context: {
+          jurisdictionId: credential.jurisdictionId,
+          grantedBy: authz.grantedBy,
+          previousStatus: credential.status,
+          ...(reason ? { reason: String(reason) } : {}),
+        },
+      })
+
       logger.info('API key revoked', {
         sortKey,
         revokedBy,
         revokedAt,
+        grantedBy: authz.grantedBy,
         operation: 'revokeApiKeyCredential',
       })
 
@@ -502,10 +591,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       await dbClient.cancelApiKeyCredential(String(sortKey), cancelledBy, cancelledAt)
 
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Cancel',
+        credentialSortKey: String(sortKey),
+        userName: cancelledBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'cancelled',
+          cancelledBy,
+          cancelledAt: new Date(cancelledAt),
+        },
+        context: {
+          jurisdictionId: credential.jurisdictionId,
+          grantedBy: authz.grantedBy,
+          previousStatus: credential.status,
+        },
+      })
+
       logger.info('API key cancelled (soft; record retained for audit)', {
         sortKey,
         cancelledBy,
         cancelledAt,
+        grantedBy: authz.grantedBy,
         operation: 'cancelApiKeyCredential',
       })
 
@@ -525,4 +633,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler: 'IGDD-3472: per-row jurisdiction filtering plus a multi-environment isAdmin check, which is environment reach rather than a capability',
+})(handler)

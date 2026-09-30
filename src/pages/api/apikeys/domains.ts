@@ -1,10 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { requireApiKeyAccess } from '../../../lib/security/apiKeyAuthz'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -46,6 +48,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(400).json({ error: 'envId must each be a number between 1 and 5' })
     }
     if (envIds.length > 1 && !session.user.isAdmin) {
+      logAccessDenied({
+        reason: 'multi-environment domain query requires admin',
+        user: session.user.email,
+        roles: subjectOf(session).roles,
+        jurisdictionId,
+      })
       return res.status(403).json({ error: 'Only administrators may query multiple environments' })
     }
 
@@ -72,4 +80,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler: 'IGDD-3472: same multi-environment isAdmin check as apikeys/index.ts',
+})(handler)

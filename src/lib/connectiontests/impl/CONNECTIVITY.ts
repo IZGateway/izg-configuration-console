@@ -2,6 +2,7 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import https from 'https'
+import { createPinnedLookup } from '../../security/pinnedLookup'
 import { TestResponseMessages } from '../TestResponseMessages'
 import * as fs from 'fs'
 import { v4 as uuidv4 } from 'uuid'
@@ -11,17 +12,23 @@ import { lookupDestinationVersion } from '../../utils/lookupDestinationVersion'
 
 const randomUUID = uuidv4()
 const TEST_NAME = 'Send a Connectivity Test message'
-const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
+  ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
+  : 5000
 export default class CONNECTIVITY extends ConnectionTest {
-  skip = (msg : string): Promise<ConnectionTestResult[]> => {
-    return Promise.resolve([{
-      name: TEST_NAME,
-      order: this.connectionTestRequest.order,
-      status: TestStatus.SKIPPED,
-      message: msg ? msg : 'Connectivity test skipped due to connectivity test failures',
-      detail: null,
-      type: 'connectivity'
-    }])
+  skip = (msg: string): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([
+      {
+        name: TEST_NAME,
+        order: this.connectionTestRequest.order,
+        status: TestStatus.SKIPPED,
+        message: msg
+          ? msg
+          : 'Connectivity test skipped due to connectivity test failures',
+        detail: null,
+        type: 'connectivity',
+      },
+    ])
   }
   run = async (): Promise<ConnectionTestResult[]> => {
     const connectivityTestResult: ConnectionTestResult = {
@@ -30,7 +37,7 @@ export default class CONNECTIVITY extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
-      type: 'connectivity'
+      type: 'connectivity',
     }
     const destinationVersion = await lookupDestinationVersion(
       this.connectionTestRequest.destinationData.destId,
@@ -46,8 +53,9 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <connectivityTest xmlns="urn:cdc:iisb:2011">
-            <echoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${this.connectionTestRequest.port
-          } an Audacious Hello at ${new Date()} !</echoBack>
+            <echoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
+          this.connectionTestRequest.port
+        } an Audacious Hello at ${new Date()} !</echoBack>
         </connectivityTest>
         </soap:Body>
         </soap:Envelope>`
@@ -60,8 +68,9 @@ export default class CONNECTIVITY extends ConnectionTest {
         </soap:Header>
         <soap:Body>
         <ConnectivityTestRequest xmlns="urn:cdc:iisb:2014">
-            <EchoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${this.connectionTestRequest.port
-          } an Audacious Hello at ${new Date()} !</EchoBack>
+            <EchoBack>Wishing ${this.connectionTestRequest.url.hostname} : ${
+          this.connectionTestRequest.port
+        } an Audacious Hello at ${new Date()} !</EchoBack>
         </ConnectivityTestRequest>
         </soap:Body>
         </soap:Envelope>`
@@ -96,6 +105,8 @@ export default class CONNECTIVITY extends ConnectionTest {
       path: this.connectionTestRequest.path,
       method: 'POST',
       agent: new https.Agent(httpsAgentOptions),
+      // Pin to the address the guard validated (see createPinnedLookup).
+      lookup: createPinnedLookup(this.connectionTestRequest.ip),
       headers: {
         Host: this.connectionTestRequest.url.hostname,
         'Content-Type': setContentType(destinationVersion),

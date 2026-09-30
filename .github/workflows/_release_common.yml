@@ -1,0 +1,529 @@
+# Reusable Release Workflow
+# Shared logic for standard and hotfix releases.
+# Do not trigger directly. Use release.yml or hotfix.yml.
+
+name: Release - Common
+
+on:
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release version (for example, 1.18.0).'
+        required: true
+        type: string
+      app-version:
+        description: 'Next app version after a standard release. Leave blank to increment the minor version.'
+        required: false
+        type: string
+        default: ''
+      release-type:
+        description: 'Release type: standard or hotfix.'
+        required: true
+        type: string
+      develop-branch:
+        description: 'Develop branch name.'
+        required: false
+        type: string
+        default: 'develop'
+      main-branch:
+        description: 'Main branch name.'
+        required: false
+        type: string
+        default: 'main'
+      dry-run:
+        description: 'Build without pushing images and create a draft GitHub Release.'
+        required: false
+        type: boolean
+        default: false
+      skip-aphl:
+        description: 'Skip the APHL ECR login and image tag.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: write
+  packages: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Cut ${{ inputs.release-type }} release
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ inputs.app-version }}
+      CURRENT_BRANCH: ${{ github.ref_name }}
+      DEVELOP_BRANCH: ${{ inputs.develop-branch }}
+      DRY_RUN: ${{ inputs.dry-run }}
+      GITHUB_REGISTRY_NAME: izgateway
+      MAIN_BRANCH: ${{ inputs.main-branch }}
+      RELEASE_TYPE: ${{ inputs.release-type }}
+      RELEASE_VERSION: ${{ inputs.release-version }}
+      SKIP_APHL: ${{ inputs.skip-aphl }}
+
+    steps:
+      - name: Generate release automation App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          # Keep app-id. RELEASE_AUTOMATION_APP_ID holds the numeric App ID, which
+          # izg-transformation-ui also passes to app-id. The client-id input needs the
+          # separate GitHub App Client ID value and a new secret to hold it.
+          app-id: ${{ secrets.RELEASE_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.RELEASE_AUTOMATION_APP_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      - name: Configure npm authentication
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm config set @izgateway:registry https://npm.pkg.github.com/
+          npm config set //npm.pkg.github.com/:_authToken "${NPM_TOKEN}"
+          echo "npm authentication configured"
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "izg-release-automation[bot]"
+          git config user.email "${{ secrets.RELEASE_AUTOMATION_APP_ID }}+izg-release-automation[bot]@users.noreply.github.com"
+
+      - name: Validate prerequisites
+        id: validate
+        run: bash .github/scripts/validate-release.sh
+
+      - name: Create release branch
+        if: inputs.release-type == 'standard'
+        id: create-standard-branch
+        run: |
+          git checkout -b "${{ steps.validate.outputs.release_branch }}"
+          git push origin "${{ steps.validate.outputs.release_branch }}"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes from merged pull requests
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          PREVIOUS_TAG=$(git tag -l 'v*' --sort=-v:refname |
+            grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' |
+            head -n 1 || true)
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            git rev-list "${PREVIOUS_TAG}..HEAD" > RELEASE_COMMITS.txt
+          else
+            git rev-list HEAD > RELEASE_COMMITS.txt
+          fi
+
+          : > PR_CHANGES.tsv
+          while IFS= read -r commit_sha; do
+            [[ -z "$commit_sha" ]] && continue
+            gh api "repos/${GITHUB_REPOSITORY}/commits/${commit_sha}/pulls" \
+              --jq '.[] | select(.merged_at != null) | [.number, .title, .html_url] | @tsv' \
+              >> PR_CHANGES.tsv
+          done < RELEASE_COMMITS.txt
+
+          if [[ -s PR_CHANGES.tsv ]]; then
+            sort -t $'\t' -k1,1n -u PR_CHANGES.tsv |
+              while IFS=$'\t' read -r number title url; do
+                printf -- '- %s ([#%s](%s))\n' "$title" "$number" "$url"
+              done > PR_CHANGES.txt
+          else
+            echo "- Release $RELEASE_VERSION" > PR_CHANGES.txt
+            echo "::warning::No merged pull requests found since ${PREVIOUS_TAG:-the beginning of history}"
+          fi
+
+      - name: Update RELEASE_NOTES.md
+        run: |
+          set -euo pipefail
+
+          if grep -qE "^## \[${RELEASE_VERSION}\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" RELEASE_NOTES.md; then
+            echo "Release notes already contain $RELEASE_VERSION; skipping duplicate entry"
+          else
+            RELEASE_DATE=$(date -u +%Y-%m-%d)
+            {
+              head -n 1 RELEASE_NOTES.md
+              echo
+              echo "## [${RELEASE_VERSION}] - ${RELEASE_DATE}"
+              echo
+              echo "### Changes"
+              cat PR_CHANGES.txt
+              echo
+              tail -n +2 RELEASE_NOTES.md
+            } > RELEASE_NOTES_NEW.md
+            mv RELEASE_NOTES_NEW.md RELEASE_NOTES.md
+          fi
+
+          git add RELEASE_NOTES.md
+          if git diff --cached --quiet; then
+            echo "RELEASE_NOTES.md is already current"
+          else
+            git commit -m "docs: update release notes for $RELEASE_VERSION"
+          fi
+
+      - name: Set release version
+        run: |
+          set -euo pipefail
+
+          npm pkg set version="$RELEASE_VERSION"
+          npm install --package-lock-only --ignore-scripts --force
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "Package version is already $RELEASE_VERSION"
+          else
+            git commit -m "chore: prepare release $RELEASE_VERSION"
+          fi
+          git push origin "${{ steps.validate.outputs.release_branch }}"
+
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Run code quality checks
+        run: npm run code-quality-check
+
+      - name: Run unit tests
+        id: unit-tests
+        continue-on-error: true
+        run: npm test
+
+      - name: Run npm security audit
+        run: npm audit --audit-level=high
+
+      - name: Compute next app version
+        if: inputs.release-type == 'standard'
+        id: app-version
+        run: |
+          if [[ -n "$APP_VERSION" ]]; then
+            NEXT_VERSION="$APP_VERSION"
+          else
+            IFS='.' read -r major minor _patch <<< "$RELEASE_VERSION"
+            NEXT_VERSION="${major}.$((minor + 1)).0"
+          fi
+          echo "next_version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials for dev ECR
+        if: inputs.dry-run == false
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to dev ECR
+        if: inputs.dry-run == false
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Configure AWS credentials for APHL ECR
+        if: inputs.dry-run == false && inputs.skip-aphl == false
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.APHL_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.APHL_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to APHL ECR
+        if: inputs.dry-run == false && inputs.skip-aphl == false
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Compute Docker image tags
+        id: image-tags
+        run: |
+          VERSION="$RELEASE_VERSION"
+          if [[ "$DRY_RUN" == "true" ]]; then
+            {
+              echo "tags<<EOF"
+              echo "izg-configuration-console:${VERSION}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "tags<<EOF"
+              echo "ghcr.io/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console:${VERSION}"
+              echo "ghcr.io/${{ env.GITHUB_REGISTRY_NAME }}/izg-configuration-console:latest"
+              echo "${{ steps.login-ecr.outputs.registry }}/izg-configuration-console:${VERSION}"
+              # Do not tag latest in the dev ECR. The dev ECS task definition pins
+              # container_image_tag = "latest" (iz-gateway-terraform/hub/console), so a
+              # release that moves that tag deploys release code into dev on the next
+              # task restart. deploy.yml owns the dev latest tag.
+              if [[ "$SKIP_APHL" != "true" ]]; then
+                echo "${{ secrets.APHL_ECR_REGISTRY }}/${{ secrets.APHL_ECR_REPOSITORY }}:izgw-cc-${VERSION}"
+              fi
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get build timestamp
+        id: build-timestamp
+        run: echo "value=$(date -u +'%d%b%Y%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
+          build-args: |
+            BUILD_ID=${{ steps.build-timestamp.outputs.value }}
+            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+          push: ${{ inputs.dry-run == false }}
+          tags: ${{ steps.image-tags.outputs.tags }}
+
+      - name: Merge release branch to main
+        id: merge-main
+        run: |
+          set -euo pipefail
+
+          RELEASE_BRANCH="${{ steps.validate.outputs.release_branch }}"
+          git fetch origin "$MAIN_BRANCH" "$RELEASE_BRANCH"
+          git checkout -B "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
+          git merge --no-ff -X theirs "origin/$RELEASE_BRANCH" \
+            -m "chore: merge $RELEASE_BRANCH into $MAIN_BRANCH"
+          MAIN_MERGE_SHA=$(git rev-parse HEAD)
+          echo "merge_sha=$MAIN_MERGE_SHA" >> "$GITHUB_OUTPUT"
+          git push origin "$MAIN_BRANCH"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create semver Git tag
+        id: create-tag
+        run: |
+          git tag -a "v${RELEASE_VERSION}" -m "Release $RELEASE_VERSION"
+          git push origin "v${RELEASE_VERSION}"
+          echo "tagged=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        id: create-github-release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ inputs.release-version }}
+          name: IZ Gateway Configuration Console v${{ inputs.release-version }}
+          body_path: PR_CHANGES.txt
+          draft: ${{ inputs.dry-run == true }}
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Update develop branch
+        id: update-develop
+        run: |
+          set -euo pipefail
+
+          RELEASE_BRANCH="${{ steps.validate.outputs.release_branch }}"
+          git fetch origin "$DEVELOP_BRANCH" "$RELEASE_BRANCH"
+          git checkout -B "$DEVELOP_BRANCH" "origin/$DEVELOP_BRANCH"
+          DEVELOP_VERSION=$(npm pkg get version | tr -d '"')
+          git merge --no-ff -X ours "origin/$RELEASE_BRANCH" \
+            -m "chore: merge $RELEASE_BRANCH back to $DEVELOP_BRANCH"
+          DEVELOP_MERGE_SHA=$(git rev-parse HEAD)
+          echo "merge_sha=$DEVELOP_MERGE_SHA" >> "$GITHUB_OUTPUT"
+
+          if [[ "$RELEASE_TYPE" == "standard" ]]; then
+            NEXT_VERSION="${{ steps.app-version.outputs.next_version }}"
+            npm pkg set version="$NEXT_VERSION"
+            npm install --package-lock-only --ignore-scripts --force
+            git add package.json package-lock.json
+            if git diff --cached --quiet; then
+              echo "Package version is already $NEXT_VERSION"
+            else
+              git commit -m "chore: bump version to $NEXT_VERSION"
+              echo "version_commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            npm pkg set version="$DEVELOP_VERSION"
+            npm install --package-lock-only --ignore-scripts --force
+            git add package.json package-lock.json
+            if git diff --cached --quiet; then
+              echo "Develop version remained at $DEVELOP_VERSION"
+            else
+              git commit -m "chore: preserve develop version $DEVELOP_VERSION after hotfix"
+              echo "version_commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+          git push origin "$DEVELOP_BRANCH"
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch advisory vulnerability scan
+        id: dispatch-scan
+        if: inputs.dry-run == false
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run scan-ecr-image.yml \
+            --ref "$DEVELOP_BRANCH" \
+            --field "image-tag=$RELEASE_VERSION"
+
+      - name: Job summary
+        if: success()
+        run: |
+          {
+            echo "## Release complete"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Release type | \`$RELEASE_TYPE\` |"
+            echo "| Version | \`$RELEASE_VERSION\` |"
+            echo "| Release branch | \`${{ steps.validate.outputs.release_branch }}\` |"
+            echo "| Main branch | \`$MAIN_BRANCH\` |"
+            echo "| Develop branch | \`$DEVELOP_BRANCH\` |"
+            echo "| Dry run | \`$DRY_RUN\` |"
+            echo "| Skip APHL | \`$SKIP_APHL\` |"
+            echo "| Unit tests | \`${{ steps.unit-tests.outcome }}\` |"
+            if [[ "$RELEASE_TYPE" == "standard" ]]; then
+              echo "| Next develop version | \`${{ steps.app-version.outputs.next_version }}\` |"
+            fi
+            if [[ "$DRY_RUN" == "false" ]]; then
+              echo "| Advisory scan dispatch | \`${{ steps.dispatch-scan.outcome }}\` |"
+            fi
+            echo
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "Docker images were built but not pushed. The GitHub Release is a draft."
+            else
+              echo "### Published image tags"
+              echo '```text'
+              echo "${{ steps.image-tags.outputs.tags }}"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup on failure
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_VERSION: ${{ inputs.release-version }}
+          RELEASE_TYPE: ${{ inputs.release-type }}
+          RELEASE_BRANCH: ${{ steps.validate.outputs.release_branch }}
+          DEVELOP_BRANCH: ${{ inputs.develop-branch }}
+          MAIN_BRANCH: ${{ inputs.main-branch }}
+          CREATED_RELEASE_BRANCH: ${{ steps.create-standard-branch.outputs.created }}
+          MERGED_MAIN: ${{ steps.merge-main.outputs.merged }}
+          MAIN_MERGE_SHA: ${{ steps.merge-main.outputs.merge_sha }}
+          CREATED_TAG: ${{ steps.create-tag.outputs.tagged }}
+          GITHUB_RELEASE_ID: ${{ steps.create-github-release.outputs.id }}
+          UPDATED_DEVELOP: ${{ steps.update-develop.outputs.updated }}
+          DEVELOP_MERGE_SHA: ${{ steps.update-develop.outputs.merge_sha }}
+          DEVELOP_VERSION_COMMIT_SHA: ${{ steps.update-develop.outputs.version_commit_sha }}
+        run: |
+          set +e
+          CLEANUP_SUCCESSES=""
+          CLEANUP_WARNINGS=""
+
+          if [[ "$UPDATED_DEVELOP" == "true" ]]; then
+            git fetch origin "$DEVELOP_BRANCH"
+            git checkout -B "$DEVELOP_BRANCH" "origin/$DEVELOP_BRANCH"
+            DEVELOP_REVERT_OK=true
+
+            if [[ -n "$DEVELOP_VERSION_COMMIT_SHA" ]] &&
+              git merge-base --is-ancestor "$DEVELOP_VERSION_COMMIT_SHA" HEAD; then
+              if ! git revert "$DEVELOP_VERSION_COMMIT_SHA" --no-edit; then
+                git revert --abort 2>/dev/null || true
+                DEVELOP_REVERT_OK=false
+                CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to revert the develop version commit"
+              fi
+            fi
+
+            if [[ "$DEVELOP_REVERT_OK" == "true" && -n "$DEVELOP_MERGE_SHA" ]] &&
+              git merge-base --is-ancestor "$DEVELOP_MERGE_SHA" HEAD; then
+              if ! git revert -m 1 "$DEVELOP_MERGE_SHA" --no-edit; then
+                git revert --abort 2>/dev/null || true
+                DEVELOP_REVERT_OK=false
+                CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to revert the develop merge"
+              fi
+            fi
+
+            if [[ "$DEVELOP_REVERT_OK" == "true" ]]; then
+              if git push origin "$DEVELOP_BRANCH"; then
+                CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Reverted changes on $DEVELOP_BRANCH"
+              else
+                CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to push develop cleanup"
+              fi
+            fi
+          fi
+
+          if [[ "$CREATED_TAG" == "true" ]]; then
+            if git push origin --delete "v$RELEASE_VERSION"; then
+              CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Deleted tag v$RELEASE_VERSION"
+            else
+              CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to delete tag v$RELEASE_VERSION"
+            fi
+          fi
+
+          # Delete by release ID, not by tag name. A dry run creates a draft release, and
+          # a draft holds no tag association, so a lookup by tag cannot find it. The tag
+          # is also already deleted above by this point.
+          if [[ -n "$GITHUB_RELEASE_ID" ]]; then
+            if gh api -X DELETE \
+              "repos/${GITHUB_REPOSITORY}/releases/${GITHUB_RELEASE_ID}" --silent; then
+              CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Deleted GitHub Release v$RELEASE_VERSION"
+            else
+              CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to delete GitHub Release v$RELEASE_VERSION"
+            fi
+          fi
+
+          if [[ "$MERGED_MAIN" == "true" ]]; then
+            git fetch origin "$MAIN_BRANCH"
+            git checkout -B "$MAIN_BRANCH" "origin/$MAIN_BRANCH"
+            if [[ -n "$MAIN_MERGE_SHA" ]] && git merge-base --is-ancestor "$MAIN_MERGE_SHA" HEAD; then
+              if git revert -m 1 "$MAIN_MERGE_SHA" --no-edit && git push origin "$MAIN_BRANCH"; then
+                CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Reverted changes on $MAIN_BRANCH"
+              else
+                git revert --abort 2>/dev/null || true
+                CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to revert the main merge"
+              fi
+            else
+              CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Main merge commit is not present on $MAIN_BRANCH"
+            fi
+          fi
+
+          if [[ "$RELEASE_TYPE" == "standard" && "$CREATED_RELEASE_BRANCH" == "true" ]]; then
+            if git push origin --delete "$RELEASE_BRANCH"; then
+              CLEANUP_SUCCESSES="${CLEANUP_SUCCESSES}\n- Deleted release branch $RELEASE_BRANCH"
+            else
+              CLEANUP_WARNINGS="${CLEANUP_WARNINGS}\n- Failed to delete release branch $RELEASE_BRANCH"
+            fi
+          elif [[ "$RELEASE_TYPE" == "hotfix" ]]; then
+            echo "Hotfix branch kept for investigation: $RELEASE_BRANCH"
+          fi
+
+          {
+            echo "## Release failed - cleanup report"
+            if [[ -n "$CLEANUP_SUCCESSES" ]]; then
+              echo
+              echo "### Cleaned up"
+              echo -e "$CLEANUP_SUCCESSES"
+            fi
+            if [[ -n "$CLEANUP_WARNINGS" ]]; then
+              echo
+              echo "### Manual cleanup required"
+              echo -e "$CLEANUP_WARNINGS"
+            fi
+            if [[ -z "$CLEANUP_SUCCESSES" && -z "$CLEANUP_WARNINGS" ]]; then
+              echo
+              echo "No persistent state was created."
+            fi
+            echo
+            echo "Published registry images are not deleted automatically."
+          } >> "$GITHUB_STEP_SUMMARY"

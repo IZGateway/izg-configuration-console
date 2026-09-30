@@ -50,10 +50,10 @@ jest.mock('next-auth', () => ({
 }))
 
 // Avoid loading the real NextAuth options (provider/env side effects).
-jest.mock('../auth/[...nextauth]', () => ({ authOptions: {} }))
+jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
 // Run handlers directly, bypassing buildRequestContext + logging middleware.
-jest.mock('../api-middleware-helper', () => ({
+jest.mock('../../../lib/api/api-middleware-helper', () => ({
   __esModule: true,
   default: () => (handler: unknown) => handler,
 }))
@@ -93,11 +93,12 @@ jest.mock('dns/promises', () => ({
 }))
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import apikeysHandler from './index'
-import renewHandler from './renew/index'
-import verifyDomainHandler from './verify-domain/index'
-import tokenHandler from './token'
-import domainsHandler from './domains'
+import logger from '../../../../logger'
+import apikeysHandler from '../../../pages/api/apikeys/index'
+import renewHandler from '../../../pages/api/apikeys/renew/index'
+import verifyDomainHandler from '../../../pages/api/apikeys/verify-domain/index'
+import tokenHandler from '../../../pages/api/apikeys/token'
+import domainsHandler from '../../../pages/api/apikeys/domains'
 
 type MockRes = NextApiResponse & { statusCode: number; body: unknown }
 
@@ -1013,8 +1014,77 @@ describe('API key lifecycle guards', () => {
       await tokenHandler(createReq('POST', { sortKey: '5#abc' }), res)
 
       expect(res.statusCode).toBe(200)
-      expect(markApiKeyCredentialViewed).toHaveBeenCalledWith('5#abc', expect.any(String))
+      // The reveal must record WHO received the token, not just that one was
+      // handed out — `viewedBy` is written in the same conditional update as
+      // `viewedAt` so a row can never record a reveal with no actor.
+      expect(markApiKeyCredentialViewed).toHaveBeenCalledWith(
+        '5#abc',
+        expect.any(String),
+        'tester@example.com'
+      )
     })
+  })
+})
+
+// IGDD-3444: the feature-wide kill switch must deny even a fully-authorized
+// role. jest.setup.js sets it 'true' for the whole run so every other test in
+// this file is unaffected; these tests flip it off temporarily to prove
+// `requireApiKeyAccess` itself enforces it — not just the `hasApiKeyPermission`
+// pre-check some routes call first (domains.ts and the POST create path here
+// call `requireApiKeyAccess` directly, with no such pre-check).
+describe('feature flag: FEATURE_API_KEY_MANAGEMENT_ENABLED', () => {
+  const originalFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
+    mockGetServerSession.mockResolvedValue(authedSession) // IZG Operations — fully authorized
+  })
+
+  afterEach(() => {
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = originalFlag
+  })
+
+  it('403s POST create even for a fully-authorized role', async () => {
+    const createApiKeyCredential = jest.fn()
+    mockGetDbClient.mockResolvedValue({ createApiKeyCredential })
+
+    const res = createRes()
+    await apikeysHandler(
+      createReq('POST', {
+        jurisdictionId: '1',
+        environments: [5],
+        upn: 'immunize.example.gov',
+        dnsChoice: 'existing',
+        useTypes: ['PATIENT'],
+      }),
+      res
+    )
+
+    expect(res.statusCode).toBe(403)
+    expect(createApiKeyCredential).not.toHaveBeenCalled()
+  })
+
+  it('403s GET domains even for a fully-authorized role', async () => {
+    const fetchAuthorizedApiKeyDomains = jest.fn()
+    mockGetDbClient.mockResolvedValue({ fetchAuthorizedApiKeyDomains })
+
+    const res = createRes()
+    await domainsHandler(createReq('GET', {}, { envId: '5', jurisdictionId: '1' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(fetchAuthorizedApiKeyDomains).not.toHaveBeenCalled()
+  })
+
+  it('403s GET list even for a fully-authorized role (hasApiKeyPermission path)', async () => {
+    const fetchApiKeyCredentials = jest.fn()
+    mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+    const res = createRes()
+    await apikeysHandler(createReq('GET'), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
   })
 })
 
@@ -1080,7 +1150,7 @@ describe('API key authorization (role + tenancy)', () => {
       expect(revokeApiKeyCredential).not.toHaveBeenCalled()
     })
 
-    it('403s GET list for IZG Support', async () => {
+    it('403s GET list for IZG Support and logs exactly one AccessDenied event', async () => {
       mockGetServerSession.mockResolvedValue(izgSupportSession)
       const fetchApiKeyCredentials = jest.fn()
       mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
@@ -1090,6 +1160,48 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+
+      // Regression coverage for the RBAC-rejection audit gap (IGDD spike): a
+      // genuine permission denial must produce exactly one structured
+      // AccessDenied event.
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(1)
+      expect(deniedCalls[0][1]).toMatchObject({
+        eventType: 'AccessDenied',
+        roles: ['IZG Support'],
+        permission: 'canListApiKeys',
+      })
+    })
+
+    it('403s GET list while the feature kill switch is off WITHOUT logging AccessDenied, even for a role with full access', async () => {
+      // Regression test for the PR #672 review (IGDD-3444 interaction): the
+      // kill switch being off is a feature-availability state, not an RBAC
+      // rejection, and must not be logged as one — otherwise every
+      // /api/apikeys/* call in any environment where the feature hasn't
+      // launched yet spams a false AccessDenied event, including for roles
+      // (like IZG Operations here) that would otherwise have full access.
+      const previousFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
+      process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
+      try {
+        mockGetServerSession.mockResolvedValue(authedSession)
+        const fetchApiKeyCredentials = jest.fn()
+        mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+        const res = createRes()
+        await apikeysHandler(createReq('GET'), res)
+
+        expect(res.statusCode).toBe(403)
+        expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+
+        const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+          (call: any) => call[1]?.eventType === 'AccessDenied'
+        )
+        expect(deniedCalls).toHaveLength(0)
+      } finally {
+        process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = previousFlag
+      }
     })
 
     it('403s token reveal for IZG Support (before any DB read)', async () => {
@@ -1268,6 +1380,15 @@ describe('API key authorization (role + tenancy)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(1)
+      expect(deniedCalls[0][1]).toMatchObject({
+        eventType: 'AccessDenied',
+        reason: 'not authorized for this jurisdiction',
+      })
     })
 
     it('403s DELETE cancel of a credential in a non-owned jurisdiction', async () => {
@@ -1384,8 +1505,109 @@ describe('API key authorization (role + tenancy)', () => {
     })
   })
 
+  describe('tenancy gate — Sender Operations is scoped to its own organization', () => {
+    // Full lifecycle permissions (AC-equivalent to Jurisdiction Operations), but
+    // reach is limited to jurisdiction '1' ('ainq'), exactly like jurOpsSession.
+    const senderSession = {
+      user: {
+        email: 'sender@example.com',
+        role: 'Sender Operations',
+        jurisdictions: ['ainq'],
+      },
+    }
+
+    it('authorizes revoke within its own organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '1' })
+      const revokeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, revokeApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(200)
+      expect(revokeApiKeyCredential).toHaveBeenCalled()
+    })
+
+    it('403s revoke of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'active', jurisdictionId: '99' })
+      const revokeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, revokeApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('403s cancel of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest
+        .fn()
+        .mockResolvedValue({ status: 'ready_for_validation', jurisdictionId: '99' })
+      const cancelApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({ getApiKeyCredential, cancelApiKeyCredential })
+
+      const res = createRes()
+      await apikeysHandler(createReq('DELETE', { sortKey: '5#pending' }), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(cancelApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('403s renew of a credential in another organization', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const getApiKeyCredential = jest.fn().mockResolvedValue({
+        status: 'active',
+        jurisdictionId: '99',
+        domain: 'stored.example.gov',
+        expiresAt: new Date(),
+      })
+      const createApiKeyCredential = jest.fn()
+      const supersedeApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential,
+        createApiKeyCredential,
+        supersedeApiKeyCredential,
+      })
+
+      const res = createRes()
+      await renewHandler(
+        createReq('POST', { oldSortKey: '5#old', jurisdictionId: '1' }),
+        res
+      )
+
+      expect(res.statusCode).toBe(403)
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+      expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    it('scopes the GET list to its own organization only', async () => {
+      mockGetServerSession.mockResolvedValue(senderSession)
+      const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
+        { sortKey: '5#a', jurisdictionId: '1', status: 'active' },
+        { sortKey: '5#b', jurisdictionId: '99', status: 'active' },
+      ])
+      mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+      const res = createRes()
+      await apikeysHandler(createReq('GET'), res)
+
+      expect(res.statusCode).toBe(200)
+      const returned = res.body as Array<{ jurisdictionId: string }>
+      expect(returned).toHaveLength(1)
+      expect(returned[0].jurisdictionId).toBe('1')
+    })
+  })
+
   describe('GET list scoping — only owned jurisdictions are returned', () => {
-    it("filters the list to the caller's jurisdictions", async () => {
+    it("filters the list to the caller's jurisdictions without logging phantom AccessDenied events", async () => {
       mockGetServerSession.mockResolvedValue(jurOpsSession)
       const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
         { sortKey: '5#a', jurisdictionId: '1', status: 'active' },
@@ -1401,6 +1623,16 @@ describe('API key authorization (role + tenancy)', () => {
       const returned = res.body as Array<{ jurisdictionId: string }>
       expect(returned).toHaveLength(2)
       expect(returned.every((c) => c.jurisdictionId === '1')).toBe(true)
+
+      // Regression guard: the '99' row is filtered out by the per-row tenancy
+      // predicate (ownsJurisdiction/hasAccessToDestId), which is NOT a
+      // rejection gate — it must not emit an AccessDenied event per unowned
+      // row, or a normal authorized list view would look like a security
+      // incident in the audit trail.
+      const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+        ([, meta]) => meta?.eventType === 'AccessDenied'
+      )
+      expect(deniedCalls).toHaveLength(0)
     })
 
     it('returns all credentials for a global IZG Operations caller', async () => {
@@ -1579,6 +1811,100 @@ describe('API key authorization (role + tenancy)', () => {
         })
       )
     })
+
+    // PR review (IGDD_3083): the "already authorized" fast-path derives its
+    // verificationMethod from the credential's prior per-environment domain
+    // authorizations. When those disagree, the stored scalar reports the
+    // WEAKEST link — a partly-bypassed activation must never be recorded as
+    // fully DNS-verified — and the audit row carries the per-environment
+    // breakdown so 'bypass' can be traced to the environment that caused it.
+    it('records the weakest link and a per-environment breakdown when a multi-env credential inherits mixed provenance', async () => {
+      mockGetServerSession.mockResolvedValue(adminSession)
+      const authorized = (verificationMethod?: string) => ({
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+        ...(verificationMethod ? { verificationMethod } : {}),
+      })
+      const getApiKeyDomain = jest
+        .fn()
+        // env 4 was authorized via the dev bypass, env 5 genuinely DNS-verified.
+        .mockResolvedValueOnce(authorized('bypass'))
+        .mockResolvedValueOnce(authorized('dns_txt'))
+      const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: 'multi-jti',
+          status: 'ready_for_validation',
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          environments: [4, 5],
+        }),
+        getApiKeyDomain,
+        updateApiKeyCredentialStatus,
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'multi-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(updateApiKeyCredentialStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationMethod: 'bypass' })
+      )
+      const auditContext = createApiKeyCredentialAudit.mock.calls.find(
+        (call) => call[0] === 'Activate'
+      )[5]
+      expect(auditContext.verificationMethod).toBe('bypass')
+      expect(auditContext.verificationByEnvironment).toEqual([
+        { env: 4, method: 'bypass' },
+        { env: 5, method: 'dns_txt' },
+      ])
+    })
+
+    it('treats pre-existing authorizations with no recorded method as dns_txt (bypass is unreachable in production)', async () => {
+      mockGetServerSession.mockResolvedValue(adminSession)
+      const legacyAuthorized = {
+        status: 'authorized',
+        authExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }
+      const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: 'multi-jti',
+          status: 'ready_for_validation',
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          environments: [4, 5],
+        }),
+        getApiKeyDomain: jest.fn().mockResolvedValue(legacyAuthorized),
+        updateApiKeyCredentialStatus,
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'multi-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      expect(updateApiKeyCredentialStatus).toHaveBeenCalledWith(
+        expect.objectContaining({ verificationMethod: 'dns_txt' })
+      )
+    })
   })
 
   // GLOBAL domain exclusivity (IGDD-2707): a domain belongs to exactly one
@@ -1730,6 +2056,223 @@ describe('API key authorization (role + tenancy)', () => {
         verified: false,
         error: 'TXT record found but value did not match. Expected: izg-challenge=chal-uuid',
       })
+    })
+  })
+
+  // Every credential-mutating action must leave a queryable audit row, not just
+  // a log line — API keys were previously the one managed entity here with no
+  // persisted history (AllowedUser / AccessGroup / DenyList / AdsFileType all
+  // have one). `createApiKeyCredentialAudit` is the write; these assert it is
+  // reached with the right actor, changeType and linkage.
+  describe('lifecycle audit trail', () => {
+    /** Pull the audit call for a given changeType out of the mock. */
+    const auditCallFor = (audit: jest.Mock, changeType: string) =>
+      audit.mock.calls.find((call) => call[0] === changeType)
+
+    it('records a Revoke row with the actor, prior state and reason', async () => {
+      const credential = {
+        sortKey: '5#abc',
+        status: 'active',
+        jurisdictionId: '1',
+        domain: 'immunize.example.gov',
+      }
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue(credential),
+        revokeApiKeyCredential: jest.fn().mockResolvedValue(undefined),
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('PATCH', { sortKey: '5#abc', reason: 'compromised' }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      const [changeType, sortKey, userName, oldValues, newValues, context] =
+        auditCallFor(createApiKeyCredentialAudit, 'Revoke')
+      expect(changeType).toBe('Revoke')
+      expect(sortKey).toBe('5#abc')
+      expect(userName).toBe('tester@example.com')
+      expect(oldValues).toMatchObject({ status: 'active' })
+      expect(newValues).toMatchObject({
+        status: 'revoked',
+        revokedBy: 'tester@example.com',
+      })
+      expect(context).toMatchObject({
+        previousStatus: 'active',
+        reason: 'compromised',
+      })
+    })
+
+    it('records a Cancel row for a soft-cancelled pending credential', async () => {
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: '5#pending',
+          status: 'ready_for_validation',
+          jurisdictionId: '1',
+        }),
+        cancelApiKeyCredential: jest.fn().mockResolvedValue(undefined),
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('DELETE', { sortKey: '5#pending' }), res)
+
+      expect(res.statusCode).toBe(200)
+      const call = auditCallFor(createApiKeyCredentialAudit, 'Cancel')
+      expect(call[1]).toBe('5#pending')
+      expect(call[2]).toBe('tester@example.com')
+      expect(call[4]).toMatchObject({ status: 'cancelled' })
+    })
+
+    it('records a Renew row on the OLD key and a Create row on the new one, cross-linked', async () => {
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: '5#old',
+          status: 'active',
+          jurisdictionId: '1',
+          domain: 'immunize.example.gov',
+          environments: [5],
+          expiresAt: new Date(Date.now() + 86_400_000),
+        }),
+        supersedeApiKeyCredential: jest.fn().mockResolvedValue(undefined),
+        createApiKeyCredential: jest.fn().mockResolvedValue(undefined),
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await renewHandler(
+        createReq('POST', { oldSortKey: '5#old', jurisdictionId: '1' }),
+        res
+      )
+
+      expect(res.statusCode).toBe(201)
+      const newSortKey = (res.body as { sortKey: string }).sortKey
+
+      // Old key's own history shows what replaced it...
+      const renewCall = auditCallFor(createApiKeyCredentialAudit, 'Renew')
+      expect(renewCall[1]).toBe('5#old')
+      expect(renewCall[4]).toMatchObject({ status: 'grace_period' })
+      expect(renewCall[5]).toMatchObject({ successorSortKey: newSortKey })
+
+      // ...and the new key's history shows where it came from. Without both,
+      // a renewal chain can only be reconstructed from logs.
+      const createCall = auditCallFor(createApiKeyCredentialAudit, 'Create')
+      expect(createCall[1]).toBe(newSortKey)
+      expect(createCall[5]).toMatchObject({ renewedFrom: '5#old' })
+    })
+
+    it('records a TokenViewed row when the one-time token is revealed', async () => {
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: '5#abc',
+          jti: 'jti-1',
+          status: 'active',
+          jurisdictionId: '1',
+          domain: 'immunize.example.gov',
+          createdOn: new Date(),
+          expiresAt: new Date(Date.now() + 86_400_000),
+        }),
+        markApiKeyCredentialViewed: jest.fn().mockResolvedValue(undefined),
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await tokenHandler(createReq('POST', { sortKey: '5#abc' }), res)
+
+      expect(res.statusCode).toBe(200)
+      const call = auditCallFor(createApiKeyCredentialAudit, 'TokenViewed')
+      expect(call[1]).toBe('5#abc')
+      expect(call[2]).toBe('tester@example.com')
+    })
+
+    it('records an Activate row naming who satisfied the DNS challenge, and how', async () => {
+      mockResolveTxt.mockResolvedValue([['izg-challenge=chal-uuid']])
+      const createApiKeyCredentialAudit = jest.fn().mockResolvedValue(true)
+      const updateApiKeyCredentialStatus = jest.fn().mockResolvedValue(undefined)
+      const upsertApiKeyDomain = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest.fn().mockResolvedValue({
+          sortKey: 'cred-jti',
+          status: 'ready_for_validation',
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          environments: [5],
+        }),
+        getApiKeyDomain: jest.fn().mockResolvedValue({
+          status: 'pending_challenge',
+          challengeUuid: 'chal-uuid',
+          challengeExpiresAt: new Date(Date.now() + 86_400_000),
+          requestedBy: 'requester@example.com',
+        }),
+        claimDomainOwnership: jest.fn().mockResolvedValue({ claimed: true }),
+        upsertApiKeyDomain,
+        updateApiKeyCredentialStatus,
+        createApiKeyCredentialAudit,
+      })
+
+      const res = createRes()
+      await verifyDomainHandler(
+        createReq('POST', {
+          domain: 'immunize.example.gov',
+          jurisdictionId: '1',
+          sortKey: 'cred-jti',
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(200)
+      // The activation write itself now carries the actor + method...
+      expect(updateApiKeyCredentialStatus).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'active',
+          activatedBy: 'tester@example.com',
+          verificationMethod: 'dns_txt',
+        })
+      )
+      // ...and upsertApiKeyDomain is a Put, so `requestedBy` must be carried
+      // forward or authorizing the domain erases who requested it.
+      expect(upsertApiKeyDomain).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'authorized',
+          validatedBy: 'tester@example.com',
+          verificationMethod: 'dns_txt',
+          requestedBy: 'requester@example.com',
+        })
+      )
+      const call = auditCallFor(createApiKeyCredentialAudit, 'Activate')
+      expect(call[2]).toBe('tester@example.com')
+      expect(call[5]).toMatchObject({ verificationMethod: 'dns_txt' })
+    })
+
+    it('does not fail the request when the audit write throws (mutation already committed)', async () => {
+      const revokeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
+      mockGetDbClient.mockResolvedValue({
+        getApiKeyCredential: jest
+          .fn()
+          .mockResolvedValue({ sortKey: '5#abc', status: 'active', jurisdictionId: '1' }),
+        revokeApiKeyCredential,
+        createApiKeyCredentialAudit: jest
+          .fn()
+          .mockRejectedValue(new Error('dynamo down')),
+      })
+
+      const res = createRes()
+      await apikeysHandler(createReq('PATCH', { sortKey: '5#abc' }), res)
+
+      // The revoke already happened; failing the response here would tell the
+      // caller nothing changed when something did. Logged loudly instead.
+      expect(revokeApiKeyCredential).toHaveBeenCalled()
+      expect(res.statusCode).toBe(200)
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to create API key credential audit record',
+        expect.objectContaining({ changeType: 'Revoke' })
+      )
     })
   })
 })

@@ -2,10 +2,13 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import * as tls from 'tls'
+import { createPinnedLookup } from '../../security/pinnedLookup'
 import logger from '../../../../logger'
 
 const TEST_NAME = 'Host uses a NIST approved encryption method'
-const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
+  ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
+  : 5000
 export default class CIPHER extends ConnectionTest {
   private static readonly IZG_ACCEPTED_FIPS_CIPHERS: string = [
     'TLS_AES_256_GCM_SHA384',
@@ -21,13 +24,16 @@ export default class CIPHER extends ConnectionTest {
   ].join(':')
 
   private TLSv1_2_methodConnection = new Promise((resolve, reject) => {
-    const client = tls.connect({
-      host: this.connectionTestRequest.url.hostname,
-      port: this.connectionTestRequest.port,
-      rejectUnauthorized: false,
-      ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
-      secureProtocol: 'TLSv1_2_method',
-    })
+    const client = tls
+      .connect({
+        host: this.connectionTestRequest.url.hostname,
+        port: this.connectionTestRequest.port,
+        rejectUnauthorized: false,
+        ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
+        secureProtocol: 'TLSv1_2_method',
+        // Pin to the address the guard validated (see createPinnedLookup).
+        lookup: createPinnedLookup(this.connectionTestRequest.ip),
+      })
 
       .setTimeout(CONNECTION_TEST_TIMEOUT, () => {
         logger.debug(`TLSv1_2_method connection timed out after 5 seconds`)
@@ -57,14 +63,17 @@ export default class CIPHER extends ConnectionTest {
   })
 
   private minVersionConnection = new Promise((resolve, reject) => {
-    const client = tls.connect({
-      host: this.connectionTestRequest.url.hostname,
-      port: this.connectionTestRequest.port,
-      rejectUnauthorized: false,
-      ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
-      minVersion: 'TLSv1.2',
-      maxVersion: 'TLSv1.3',
-    })
+    const client = tls
+      .connect({
+        host: this.connectionTestRequest.url.hostname,
+        port: this.connectionTestRequest.port,
+        rejectUnauthorized: false,
+        ciphers: CIPHER.IZG_ACCEPTED_FIPS_CIPHERS,
+        minVersion: 'TLSv1.2',
+        maxVersion: 'TLSv1.3',
+        // Pin to the address the guard validated (see createPinnedLookup).
+        lookup: createPinnedLookup(this.connectionTestRequest.ip),
+      })
 
       .setTimeout(CONNECTION_TEST_TIMEOUT, () => {
         logger.debug(`TLSv1.2–1.3 connection timed out after 5 seconds`)
@@ -93,14 +102,17 @@ export default class CIPHER extends ConnectionTest {
       })
   })
   skip = (): Promise<ConnectionTestResult[]> => {
-    return Promise.resolve([{
-      name: TEST_NAME,
-      order: this.connectionTestRequest.order,
-      status: TestStatus.SKIPPED,
-      message: 'Cipher Suites Appropriate test skipped due to connectivity test failures',
-      detail: null,
-      type: 'cipher'
-    }])
+    return Promise.resolve([
+      {
+        name: TEST_NAME,
+        order: this.connectionTestRequest.order,
+        status: TestStatus.SKIPPED,
+        message:
+          'Cipher Suites Appropriate test skipped due to connectivity test failures',
+        detail: null,
+        type: 'cipher',
+      },
+    ])
   }
   run = (): Promise<ConnectionTestResult[]> => {
     const cipherConnectionTestResult: ConnectionTestResult = {
@@ -109,7 +121,7 @@ export default class CIPHER extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
-      type: 'cipher'
+      type: 'cipher',
     }
 
     return Promise.allSettled([

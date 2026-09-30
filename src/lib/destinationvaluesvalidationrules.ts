@@ -51,6 +51,12 @@ const validationRules = {
     regex: new RegExp(`^[A-Za-z0-9_\\-.]{0,${maxUsernameLength}}$`),
     message: `Value must be between ${maxUsernameLength} characters and must contain only A-Z, a-z, 0-9, _, -, and space characters. It must not contain |^&~"/ characters`
   },
+  // Deliberately only a shape check. The destination URL specification (https
+  // only, approved TLD, no query string, no embedded credentials, allowed port,
+  // publicly routable address) is enforced by lib/security/destinationUriGuard
+  // and checked on NEXT via /api/destinationuri/validate, so the rules are not
+  // duplicated here: the allowlist must not drift between client and server,
+  // and the DNS-dependent rules cannot be evaluated in the browser at all.
   destUri: {
     regex: /^(https?):\/\/[^\s$.?#].[^\s]*$/i,
     message: 'Please enter a valid URL (must start with http:// or https://)',

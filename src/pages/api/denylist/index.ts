@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -40,8 +40,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
-    const { certificationName, environment, reason, deniedBy, createdBy } =
-      req.body
+    const { certificationName, environment, reason } = req.body
 
     try {
       if (!certificationName || !environment) {
@@ -50,13 +49,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
+      // Audit identity fields must come from the authenticated session, not
+      // the request body, so a caller cannot spoof who created/denied a
+      // record (IGDD-3175).
+      const actor = session.user.email || 'unknown'
+
       const dbClient = await DbClientFactory.getDbClient()
       const newRecord = await dbClient.addDenyListRecord({
         principal: certificationName,
         environment,
         reason,
-        deniedBy,
-        createdBy: createdBy || deniedBy || 'System',
+        deniedBy: actor,
+        createdBy: actor,
       })
 
       try {
@@ -109,4 +113,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  byMethod: {
+    GET: { page: 'accesscontrol', capability: 'canViewAccessControl' },
+    POST: { page: 'accesscontrol', capability: 'canManageDenyList' },
+  },
+})(handler)

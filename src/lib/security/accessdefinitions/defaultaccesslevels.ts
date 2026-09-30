@@ -1,7 +1,12 @@
 import {
+  AccessControlPageAccessControl,
+  AdminOperationsPageAccessControl,
+  ApiDocPageAccessControl,
   ApiKeyManagementPageAccessControl,
+  ConsolePageAccessControl,
   EditPageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   ChangeRequestPageAccessControl,
   HistoryPageAccessControl,
@@ -18,6 +23,7 @@ const defaultEditPageAccessControl: EditPageAccessControl = {
 
 const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessControl =
   {
+    canViewConnections: false,
     canRunConnectionTest: false,
     canScheduleMaintainance: false,
     canViewHistory: false,
@@ -25,6 +31,10 @@ const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessCont
     canViewChangeRequest: false,
     canResetCircuitBreaker: false,
   }
+
+const defaultOnboardingPageAccessControl: OnboardingPageAccessControl = {
+  canViewOnboarding: false,
+}
 
 const defaultTestPageAccessControl: TestPageAccessControl = {
   canRunConnectionTest: false,
@@ -56,11 +66,39 @@ const defaultApiKeyManagementPageAccessControl: ApiKeyManagementPageAccessContro
     canCancelApiKey: false,
   }
 
+const defaultAccessControlPageAccessControl: AccessControlPageAccessControl = {
+  canViewAccessControl: false,
+  canManageAccessGroups: false,
+  canManageDenyList: false,
+  canManageAdsFileTypes: false,
+}
+
+const defaultAdminOperationsPageAccessControl: AdminOperationsPageAccessControl =
+  {
+    canViewAdminOperations: false,
+    canManagePasswordEncryption: false,
+    canResetHubCircuitBreakers: false,
+    canRefreshHubDatabase: false,
+  }
+
+const defaultConsolePageAccessControl: ConsolePageAccessControl = {
+  canViewConsole: false,
+}
+
+const defaultApiDocPageAccessControl: ApiDocPageAccessControl = {
+  canViewApiDoc: false,
+}
+
 export {
+  defaultAccessControlPageAccessControl,
+  defaultAdminOperationsPageAccessControl,
+  defaultApiDocPageAccessControl,
   defaultApiKeyManagementPageAccessControl,
   defaultChangeRequestPageAccessControl,
+  defaultConsolePageAccessControl,
   defaultEditPageAccessControl,
   defaultHistoryPageAccessControl,
   defaultManageConnectionsPageAccessControl,
+  defaultOnboardingPageAccessControl,
   defaultTestPageAccessControl,
 }

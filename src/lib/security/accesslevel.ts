@@ -1,6 +1,11 @@
 import {
+  AccessControlPageAccessControl,
+  AdminOperationsPageAccessControl,
+  ApiDocPageAccessControl,
   ApiKeyManagementPageAccessControl,
+  ConsolePageAccessControl,
   ManageConnectionsPageAccessControl,
+  OnboardingPageAccessControl,
   TestPageAccessControl,
   EditPageAccessControl,
   ChangeRequestPageAccessControl,
@@ -11,6 +16,7 @@ import {
   JurisdictionOperationsAccess,
   IZGSupportAccess,
   JurisdictionSupportAccess,
+  SenderOperationsAccess,
 } from './accessdefinitions'
 
 const accessLevel: AccessLevel = {
@@ -18,12 +24,33 @@ const accessLevel: AccessLevel = {
   'IZG Support': IZGSupportAccess,
   'Jurisdiction Support': JurisdictionSupportAccess,
   'Jurisdiction Operations': JurisdictionOperationsAccess,
+  'Sender Operations': SenderOperationsAccess,
 }
 export default accessLevel
 
 type AccessLevel = {
-  [role: string]: PageControls
+  [role: string]: RoleAccess
 }
+
+/**
+ * A role definition: its per-page permissions plus its tenancy reach.
+ *
+ * `globalTenancy` used to be a hardcoded role-name list duplicated in two places
+ * (`accesshelper.ts` and `accessutils.ts`). Expressing it as matrix data means
+ * adding a globally-scoped role is a data change rather than an edit to
+ * authorization logic, and there is one list instead of two that can drift.
+ *
+ * Critically, it is read *per role* inside the policy loop and never merged
+ * across roles — see `policy.ts`. Merging reach across roles is what would let a
+ * user combine one role's permission with another role's global reach.
+ */
+export type RoleAccess = PageControls & {
+  /** True if this role sees every jurisdiction's data, bypassing prefix scoping. */
+  globalTenancy: boolean
+}
+
+/** Page keys in the access matrix (excludes the `globalTenancy` scalar). */
+export type PageKey = keyof PageControls
 
 export type PageControls = {
   manageconnections: ManageConnectionsPageAccessControl
@@ -33,4 +60,14 @@ export type PageControls = {
   history: HistoryPageAccessControl
   // Key must match the page key derived in useRoleAccess (router.pathname with dynamic segments removed): e.g. '/apikeys' -> 'apikeys' (IGDD-2708)
   apikeys: ApiKeyManagementPageAccessControl
+  onboarding: OnboardingPageAccessControl
+  // Admin surfaces (IGDD-3472). Same rule as above: the key must equal the key
+  // derived from the page's route path — hence the quoted 'api-doc', not
+  // 'apidoc', so the invariant holds with no exceptions.
+  accesscontrol: AccessControlPageAccessControl
+  // /passwordencryption deliberately shares this block rather than taking a
+  // page key of its own — it duplicates the Admin Operations password card.
+  adminoperations: AdminOperationsPageAccessControl
+  console: ConsolePageAccessControl
+  'api-doc': ApiDocPageAccessControl
 }

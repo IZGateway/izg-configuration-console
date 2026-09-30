@@ -1,0 +1,59 @@
+# Standard release workflow.
+# Trigger this workflow from the develop branch.
+
+name: Release - Standard
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release version (for example, 1.18.0).'
+        required: true
+        type: string
+      app-version:
+        description: 'Next app version. Leave blank to increment the minor version.'
+        required: false
+        type: string
+      develop-branch:
+        description: 'Develop branch name.'
+        required: false
+        type: string
+        default: 'develop'
+      main-branch:
+        description: 'Main branch name.'
+        required: false
+        type: string
+        default: 'main'
+      dry-run:
+        description: 'Build without pushing images and create a draft GitHub Release.'
+        required: false
+        type: boolean
+        default: false
+      skip-aphl:
+        description: 'Skip the APHL ECR login and image tag.'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  actions: write
+  contents: write
+  packages: write
+  pull-requests: read
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    uses: ./.github/workflows/_release_common.yml
+    secrets: inherit
+    with:
+      release-version: ${{ inputs.release-version }}
+      app-version: ${{ inputs.app-version }}
+      release-type: standard
+      develop-branch: ${{ inputs.develop-branch }}
+      main-branch: ${{ inputs.main-branch }}
+      dry-run: ${{ inputs.dry-run }}
+      skip-aphl: ${{ inputs.skip-aphl }}

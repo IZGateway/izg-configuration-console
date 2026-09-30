@@ -2,13 +2,17 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { authOptions } from '../auth/[...nextauth]'
 import { getServerSession } from 'next-auth'
 import hasAccessToDestId from '../../../lib/accesshelper'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
 import _ from 'lodash'
 import createChangeRequestTicket from '../../../lib/createchangerequestticket'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeRequest'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
+import { assertSafeDestinationUri } from '../../../lib/security/assertSafeDestinationUri'
+import { UnsafeDestinationUriError } from '../../../lib/security/destinationUriGuard'
 /**
  * @swagger
  * /api/changerequest:
@@ -62,6 +66,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
   const dbClient = await DbClientFactory.getDbClient()
+  requestBody.requestedBy = session?.user?.email || 'unknown'
   if (!isJiraConfigured) {
     throw new Error(
       'Jira connection is not configured correctly. Ensure the necessary variables have been configured for the environment.'
@@ -69,6 +74,38 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
   if (hasAccessToDestId(requestBody.destId, session)) {
     const { isDraft } = requestBody
+
+    // A destUri written here becomes the live destination address on deploy, so
+    // it must satisfy the destination URL specification before it can enter
+    // change control at all. Checked ahead of the method branches so that no
+    // Jira ticket is raised and no draft is stored for a URI we would refuse.
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const requestedDestUri = requestBody?.requested?.destUri
+      if (requestedDestUri) {
+        try {
+          await assertSafeDestinationUri(
+            requestedDestUri,
+            requestBody?.destType?.typeId
+          )
+        } catch (error) {
+          if (!(error instanceof UnsafeDestinationUriError)) {
+            throw error
+          }
+          logger.warn('Rejected unsafe destUri on change request', {
+            destId: requestBody.destId,
+            destType: requestBody?.destType?.type,
+            destUri: requestedDestUri,
+            isDraft,
+            userId: session?.user?.email,
+            reason: error.message,
+            operation: 'reject_change_request_dest_uri',
+          })
+          res.status(400).json({ error: error.message })
+          return
+        }
+      }
+    }
+
     if (req.method === 'POST') {
       if (isDraft === true) {
         const draft = await upsertChangeRequest(requestBody)
@@ -210,6 +247,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       )
     }
   } else {
+    logAccessDenied({
+      reason: 'caller has no access to destination',
+      url: req.url,
+      method: req.method,
+      user: session?.user?.email,
+      roles: subjectOf(session).roles,
+      destId: requestBody.destId,
+    })
     res.status(401)
   }
 }
@@ -251,4 +296,16 @@ const upsertChangeRequest = async (
   return response
 }
 
-export default withMiddleware()(handler)
+// A privilege fix, not cleanup. This route was wrapped in withMiddleware()
+// with no authorization middleware at all and checked only hasAccessToDestId
+// in the handler - reach without capability. IZG Support holds
+// globalTenancy: true with canCancelRequest: false, so it could cancel or
+// reschedule a change request on ANY destination in the system. The flags
+// already said no; nothing read them.
+export default withMiddleware({
+  byMethod: {
+    POST: { page: 'edit', capability: 'canCreateChangeRequest' },
+    PUT: { page: 'changerequest', capability: 'canRescheduleRequest' },
+    DELETE: { page: 'changerequest', capability: 'canCancelRequest' },
+  },
+})(handler)

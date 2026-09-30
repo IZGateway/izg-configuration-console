@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
@@ -24,4 +24,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
-export default withMiddleware()(handler)
+// Any-of: a shared lookup called from Access Control (AddDenyList,
+// AccessControl/index), the Console, and Onboarding's certificate selector.
+// Requiring a single capability would break two of the three callers.
+// The first two alternatives are tenancy-guarded and the third is not; the
+// guard is evaluated per alternative, so Jurisdiction Operations and
+// Support still reach this through canViewOnboarding.
+export default withMiddleware({
+  capability: [
+    { page: 'accesscontrol', capability: 'canViewAccessControl' },
+    { page: 'console', capability: 'canViewConsole' },
+    { page: 'onboarding', capability: 'canViewOnboarding' },
+  ],
+})(handler)

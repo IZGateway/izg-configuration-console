@@ -19,8 +19,13 @@ import CombinedContext from '../../contexts/app'
 import CustomSnackbar from '../SnackBar'
 import { useEffect } from 'react'
 import Loader from '../Loader'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 
 const PasswordEncryptionConsole = ({ hasKeyName }) => {
+  // The `adminoperations` page key, not one of its own: this component is
+  // rendered from both /adminoperations and /passwordencryption, which are
+  // the same card.
+  const { canManagePasswordEncryption } = useRoleAccess('adminoperations')
   const { setAlert, alert } = React.useContext(CombinedContext)
   const [openDialog, setOpenDialog] = React.useState(false)
   const [showSnackbar, setShowSnackbar] = React.useState(false)
@@ -223,9 +228,14 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
           </Card>
           <Card sx={{ marginTop: 4, borderRadius: '0px 0px 16px 16px' }}>
             <CardContent sx={{ px: 4 }}>
+              {/* Render on true, never hide on false: the flag is absent
+                  while the session loads, so this fails closed. Both actions
+                  share one capability because both call the same three
+                  encryption routes. */}
               {isEncrypted === null ? (
                 <Loader open={true} />
               ) : (
+                canManagePasswordEncryption && (
                 <Box
                   sx={{
                     display: 'flex',
@@ -268,6 +278,7 @@ const PasswordEncryptionConsole = ({ hasKeyName }) => {
                     Rotate Password Encryption Key
                   </Button>
                 </Box>
+                )
               )}
               <Loader open={loadingInit || loadingRotate} />
             </CardContent>

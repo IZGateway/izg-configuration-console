@@ -142,7 +142,9 @@ const Faq = () => {
                 The primary end users are Immunization Information System (IIS),
                 federal provider, and non-governmental healthcare organization
                 program and technical staff responsible for updating and testing
-                configurations through the IZ Gateway.
+                configurations through the IZ Gateway. This also includes sender
+                organizations that request and manage API Keys to submit data
+                through the IZ Gateway.
               </Typography>
             </AccordionDetails>
           </Accordion>
@@ -213,6 +215,14 @@ const Faq = () => {
                     <strong> Audit and Version Tracking:</strong> Provides
                     auditing capabilities, allowing users to track changes made
                     to the endpoint configuration over time.
+                  </Typography>
+                </ListItem>
+                <ListItem>
+                  <Typography gutterBottom variant="body2">
+                    <strong>API Key Management:</strong> Allows sender
+                    organizations to request, view, renew, re-issue, and revoke
+                    API Keys used to authenticate submissions to the IZ
+                    Gateway.
                   </Typography>
                 </ListItem>
               </List>
@@ -325,16 +335,17 @@ const Faq = () => {
             >
               <Typography variant="body1">
                 <strong>
-                  Is there a mechanism to track configuration changes?
+                  What is an API Key and why do I need one as a sender?
                 </strong>
               </Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Typography>
-                Yes, the Configuration Console maintains an audit trail of
-                configuration changes, providing traceability and
-                accountability. It also supports versioning to track different
-                configurations over time.
+                An API Key is a credential that authenticates your
+                organization&apos;s submissions to the IZ Gateway. Sender
+                organizations (e.g., provider or public health system
+                integrations) use API Keys to securely submit immunization
+                data.
               </Typography>
             </AccordionDetails>
           </Accordion>
@@ -346,6 +357,141 @@ const Faq = () => {
               expandIcon={<ExpandMore />}
               aria-controls="panel10a-content"
               id="panel10a-header"
+            >
+              <Typography variant="body1">
+                <strong>How do I request an API Key as a sender?</strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography gutterBottom>
+                Users with Jurisdiction Operations access can open{' '}
+                <strong>API Key Management</strong> from the navigation menu
+                and click <strong>Create Key</strong>, providing:
+              </Typography>
+              <List>
+                <ListItem>
+                  <Typography gutterBottom variant="body2">
+                    <strong>Organization:</strong> The sender organization the
+                    key will be issued to.
+                  </Typography>
+                </ListItem>
+                <ListItem>
+                  <Typography gutterBottom variant="body2">
+                    <strong>Environment:</strong> The environment (e.g.,
+                    Development, Testing, Staging, Production) the key will be
+                    used in.
+                  </Typography>
+                </ListItem>
+                <ListItem>
+                  <Typography gutterBottom variant="body2">
+                    <strong>Use Types:</strong> The categories of data
+                    exchange (Patient, Provider, or Public Health) your
+                    organization is registered for.
+                  </Typography>
+                </ListItem>
+                <ListItem>
+                  <Typography gutterBottom variant="body2">
+                    <strong>DNS Name:</strong> An existing verified domain, or
+                    a new domain to verify.
+                  </Typography>
+                </ListItem>
+              </List>
+              <Typography>
+                If you choose a new domain, you&apos;ll be asked to verify
+                ownership before the key is issued (see below).
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel11'}
+            onChange={handleChange('panel11')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel11a-content"
+              id="panel11a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  How do I verify domain ownership when requesting a new API
+                  Key?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                The Configuration Console will provide a DNS TXT record for
+                you to add at your DNS provider. Once added, return to the
+                Configuration Console and click <strong>Validate</strong>.
+                DNS changes may take up to 48 hours to propagate, so it may
+                take some time for verification to succeed.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel12'}
+            onChange={handleChange('panel12')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel12a-content"
+              id="panel12a-header"
+            >
+              <Typography variant="body1">
+                <strong>
+                  How long is an API Key valid, and how do I renew or replace
+                  it?
+                </strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography gutterBottom>
+                An API Key is valid for <strong>1 year</strong> from issuance.
+                You can renew an active key at any time; the old key remains
+                valid for a <strong>10 business day</strong> grace period so
+                your integration keeps working while you switch to the new
+                key.
+              </Typography>
+              <Typography>
+                If a key expires before it is renewed, use the{' '}
+                <strong>Re-issue</strong> action to request a new key with the
+                same scope. If the key&apos;s domain authorization has since
+                lapsed, you&apos;ll be asked to re-verify it via DNS.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel13'}
+            onChange={handleChange('panel13')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel13a-content"
+              id="panel13a-header"
+            >
+              <Typography variant="body1">
+                <strong>Can I revoke or cancel an API Key?</strong>
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography>
+                Yes. An active key can be revoked at any time, which
+                immediately stops it from working — this cannot be undone. A
+                key request that hasn&apos;t been activated yet (e.g., still
+                awaiting domain validation) can instead be cancelled. Both
+                actions are available from API Key Management and are
+                recorded in the audit log.
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+          <Accordion
+            expanded={expandedAccordion === 'panel14'}
+            onChange={handleChange('panel14')}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore />}
+              aria-controls="panel14a-content"
+              id="panel14a-header"
             >
               <Typography variant="body1">
                 <strong>
@@ -363,13 +509,13 @@ const Faq = () => {
             </AccordionDetails>
           </Accordion>
           <Accordion
-            expanded={expandedAccordion === 'panel11'}
-            onChange={handleChange('panel11')}
+            expanded={expandedAccordion === 'panel15'}
+            onChange={handleChange('panel15')}
           >
             <AccordionSummary
               expandIcon={<ExpandMore />}
-              aria-controls="panel11a-content"
-              id="panel11a-header"
+              aria-controls="panel15a-content"
+              id="panel15a-header"
             >
               <Typography variant="body1">
                 <strong>

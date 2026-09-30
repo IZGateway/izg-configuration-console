@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
@@ -22,4 +22,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-export default withMiddleware()(handler)
+// Verified zero callers in src/. Proposed for deletion; gated rather than
+// removed here because deletion is a product call, not a security one.
+export default withMiddleware({
+  capability: { page: 'accesscontrol', capability: 'canViewAccessControl' },
+})(handler)

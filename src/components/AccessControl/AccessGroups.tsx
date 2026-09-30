@@ -39,6 +39,19 @@ interface AccessGroupsProps {
   onAddGroup?: () => void
   onDeleteGroup?: (groupId: string) => void
   isLoading?: boolean
+  /**
+   * Whether to show the edit, delete and add controls (IGDD-3472).
+   *
+   * Threaded as a prop rather than read here: this component is presentational
+   * and its parent already computes the page's access flags, so a second
+   * `useRoleAccess` call would be a second thing to keep in step.
+   *
+   * Defaults to `false`, so a caller that forgets to pass it hides the
+   * controls rather than showing them. Before this change these three controls
+   * had no gate whatsoever — unlike the deny-list and ADS file-type controls
+   * beside them, which at least hid on `isAdmin`.
+   */
+  canManageAccessGroups?: boolean
 }
 
 const AccessGroups: React.FC<AccessGroupsProps> = ({
@@ -47,6 +60,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
   onAddGroup,
   onDeleteGroup,
   isLoading = false,
+  canManageAccessGroups = false,
 }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<AccessGroup | null>(null)
@@ -228,28 +242,32 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
                     />
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Tooltip arrow title="Edit">
-                      <IconButton
-                        sx={actionButtonStyle}
-                        size="small"
-                        color="primary"
-                        onClick={() => handleEditGroup(group.id)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip arrow title="Delete">
-                      <IconButton
-                        sx={actionButtonStyle}
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteGroup(group.id)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
+                  {/* Render on true, never hide on false: the flag is absent
+                      while the session loads, so this fails closed. */}
+                  {canManageAccessGroups && (
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Tooltip arrow title="Edit">
+                        <IconButton
+                          sx={actionButtonStyle}
+                          size="small"
+                          color="primary"
+                          onClick={() => handleEditGroup(group.id)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip arrow title="Delete">
+                        <IconButton
+                          sx={actionButtonStyle}
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteGroup(group.id)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  )}
                 </Box>
 
                 {/* Description */}
@@ -326,31 +344,33 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
       </Box>
 
       {/* Add Group Card at Bottom */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '8px',
-          backgroundColor: palette.white,
-          borderRadius: '60px',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-          marginTop: '24px',
-          width: 'fit-content',
-        }}
-      >
-        <Button
-          color="primary"
-          onClick={handleAddGroup}
-          variant="text"
-          startIcon={<AddIcon />}
+      {canManageAccessGroups && (
+        <Box
           sx={{
-            textTransform: 'none',
-            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            padding: '8px',
+            backgroundColor: palette.white,
+            borderRadius: '60px',
+            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+            marginTop: '24px',
+            width: 'fit-content',
           }}
         >
-          Add Group
-        </Button>
-      </Box>
+          <Button
+            color="primary"
+            onClick={handleAddGroup}
+            variant="text"
+            startIcon={<AddIcon />}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
+            Add Group
+          </Button>
+        </Box>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <CustomDialogBox

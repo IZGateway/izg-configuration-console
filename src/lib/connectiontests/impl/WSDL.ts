@@ -2,27 +2,34 @@ import ConnectionTest from '../ConnectionTest'
 import { ConnectionTestResult } from '../types/ConnectionTestResult'
 import { TestStatus } from '../TestStatus'
 import { https } from 'follow-redirects'
+import { createPinnedLookup } from '../../security/pinnedLookup'
 import { TestResponseMessages } from '../TestResponseMessages'
 import path from 'path'
 import fs from 'fs'
 import { DOMParser } from '@xmldom/xmldom'
 
-const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
+  ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
+  : 5000
 export default class WSDL extends ConnectionTest {
   private readonly TEST_NAME: string
   constructor(connectionTestRequest) {
     super(connectionTestRequest)
     this.TEST_NAME = `WSDL Test for ${this.connectionTestRequest.url}`
   }
-  skip = (msg : string): Promise<ConnectionTestResult[]> => {
-    return Promise.resolve([{
-      name: this.TEST_NAME,
-      order: this.connectionTestRequest.order,
-      status: TestStatus.SKIPPED,
-      message: msg ? msg : 'WSDL test skipped due to connectivity test failures',
-      detail: null,
-      type: 'wsdl'
-    }])
+  skip = (msg: string): Promise<ConnectionTestResult[]> => {
+    return Promise.resolve([
+      {
+        name: this.TEST_NAME,
+        order: this.connectionTestRequest.order,
+        status: TestStatus.SKIPPED,
+        message: msg
+          ? msg
+          : 'WSDL test skipped due to connectivity test failures',
+        detail: null,
+        type: 'wsdl',
+      },
+    ])
   }
   run = (): Promise<ConnectionTestResult[]> => {
     const wsdlConnectionTestResult: ConnectionTestResult = {
@@ -31,7 +38,7 @@ export default class WSDL extends ConnectionTest {
       message: '',
       detail: null,
       status: this.status,
-      type: 'wsdl'
+      type: 'wsdl',
     }
 
     const httpsAgentOptions = {
@@ -54,6 +61,8 @@ export default class WSDL extends ConnectionTest {
       path: this.connectionTestRequest.path + '?wsdl',
       method: 'GET',
       agent: new https.Agent(httpsAgentOptions),
+      // Pin to the address the guard validated (see createPinnedLookup).
+      lookup: createPinnedLookup(this.connectionTestRequest.ip),
     }
 
     return new Promise((resolve) => {
@@ -71,7 +80,7 @@ export default class WSDL extends ConnectionTest {
               if (
                 resXmlDoc.documentElement.localName == 'definitions' &&
                 resXmlDoc.documentElement.namespaceURI ==
-                'http://schemas.xmlsoap.org/wsdl/'
+                  'http://schemas.xmlsoap.org/wsdl/'
               ) {
                 resolve([
                   {

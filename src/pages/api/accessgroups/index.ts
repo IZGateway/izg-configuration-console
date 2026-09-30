@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
@@ -103,4 +103,11 @@ const handler = async (
     )
   }
 }
-export default withMiddleware()(handler)
+// Read and write in one handler, so one capability per file would conflate
+// viewing the access groups with changing them.
+export default withMiddleware({
+  byMethod: {
+    GET: { page: 'accesscontrol', capability: 'canViewAccessControl' },
+    POST: { page: 'accesscontrol', capability: 'canManageAccessGroups' },
+  },
+})(handler)

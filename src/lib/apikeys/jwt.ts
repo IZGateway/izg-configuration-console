@@ -1,9 +1,16 @@
 import crypto from 'crypto'
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager'
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager'
 
 function base64url(buf: Buffer | string): string {
   const b = typeof buf === 'string' ? Buffer.from(buf, 'utf8') : buf
-  return b.toString('base64').replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  return b
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
 }
 
 export function signJwt(
@@ -21,11 +28,16 @@ export function signJwt(
   return `${signingInput}.${base64url(sig)}`
 }
 
-export async function getJwtSigningSecret(): Promise<{ secretString: string; kid: string }> {
+export async function getJwtSigningSecret(): Promise<{
+  secretString: string
+  kid: string
+}> {
   const secretId = process.env.JWT_SIGNING_SECRET_ID
   if (!secretId) throw new Error('JWT_SIGNING_SECRET_ID env var not set')
   const client = new SecretsManagerClient({})
-  const response = await client.send(new GetSecretValueCommand({ SecretId: secretId }))
+  const response = await client.send(
+    new GetSecretValueCommand({ SecretId: secretId })
+  )
   const secretString = response.SecretString
   if (!secretString) throw new Error('Secret has no SecretString value')
   const kid = response.VersionId || ''
@@ -45,9 +57,10 @@ export function issueApiKeyJwt(params: {
   // Identity-only payload (IGDD-2707/3140 design decision): environment(s) and
   // useTypes are NOT JWT claims — the Hub reads them from the credential row by
   // jti at routing time, so they can change (e.g. multi-env) without reissuing
-  // the token. `roles` is retained for now pending confirmation that no
-  // izgw-hub/izgw-core path reads it; env was removed because it no longer has
-  // a single value once a credential can span multiple environments.
+  // the token. `roles` was removed (previously a hardcoded `['ads', 'soap']`,
+  // not a real per-credential value) once confirmed that no izgw-hub/izgw-core
+  // path reads it; env was removed because it no longer has a single value
+  // once a credential can span multiple environments.
   const payload: Record<string, unknown> = {
     iss: params.iss,
     sub: String(params.jurisdictionId),
@@ -55,7 +68,6 @@ export function issueApiKeyJwt(params: {
     iat: Math.floor(params.issuedAt.getTime() / 1000),
     exp: Math.floor(params.expiresAt.getTime() / 1000),
     upn: params.upn,
-    roles: ['ads', 'soap'],
   }
   return signJwt(payload, params.secretString, params.kid)
 }

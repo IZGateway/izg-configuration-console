@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../api/auth/[...nextauth]'
-import withMiddleware from '../api-middleware-helper'
+import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
@@ -192,6 +192,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
+    const actor = session.user.email || 'unknown'
     logger.info('Received POST request to upsert allowed user')
 
     try {
@@ -259,7 +260,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         principal: result.principal,
         environment: result.environment,
         destinationId: result.destinationId,
-        userName: body.updatedBy,
+        userName: actor,
         hasExistingUser: !!existingUser,
         operation: 'POST /api/allowedusers',
       })
@@ -270,7 +271,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           result.principal,
           result.environment,
           result.destinationId,
-          body.updatedBy,
+          actor,
           existingUser || null,
           result
         )
@@ -346,6 +347,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
+    const actor = session.user.email || 'unknown'
     logger.info('Received DELETE request to delete allowed user')
 
     try {
@@ -396,7 +398,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           principal: body.principal,
           environment: body.environment,
           destinationId: body.destinationId,
-          userName: body.deletedBy || 'unknown',
+          userName: actor,
           operation: 'DELETE /api/allowedusers',
         })
 
@@ -406,11 +408,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             body.principal,
             body.environment,
             body.destinationId,
-            body.deletedBy || 'unknown',
+            actor,
             {
               ...existingUser,
               updatedOn: deletionTimestamp,
-              updatedBy: body.deletedBy || 'unknown',
+              updatedBy: actor,
             },
             null
           )
@@ -476,4 +478,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware('captureErrors')(handler)
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
+// so any authenticated session could reach it. One capability across every
+// method, deliberately: splitting view from mutate needs a flag whose seed
+// value nobody has decided, and this closes the hole without inventing one.
+export default withMiddleware(
+  { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
+  'captureErrors'
+)(handler)

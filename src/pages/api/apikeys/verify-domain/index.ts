@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import withMiddleware from '../../api-middleware-helper'
+import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import { requireApiKeyAccess } from '../../../../lib/security/apiKeyAuthz'
+import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
 import dns from 'dns/promises'
 
 // DNS-verification bypass for local dev / automated tests ONLY. Requires BOTH a
@@ -183,7 +184,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // becomes active, so exp is computed from issuance (1 year), not from when
     // the request record was created. The bind/status checks already ran above,
     // but status is re-checked atomically in the DB write (`expectedStatus`).
-    const activateCredential = async (): Promise<{
+    const activatedBy = session.user.email || 'unknown'
+    const activateCredential = async (
+      verificationMethod: 'dns_txt' | 'bypass',
+      /**
+       * Per-environment provenance behind `verificationMethod`.
+       *
+       * The stored scalar is deliberately conservative: a multi-env credential
+       * can have been authorized differently per environment (one bypassed in
+       * dev, another genuinely DNS-verified), and it reports 'bypass' if ANY
+       * contributing authorization was bypassed. That is the safe direction
+       * for a compliance trail — but on its own it cannot say WHICH
+       * environment was bypassed. This breakdown carries that detail into the
+       * audit row, so a 'bypass' label can always be resolved to its cause.
+       */
+      verificationByEnvironment: { env: number; method: string }[]
+    ): Promise<{
       status: number
       error: string
     } | null> => {
@@ -196,14 +212,71 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         issuedAt: issuedAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         expiresAt: expiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         expectedStatus: 'ready_for_validation',
+        // Activation previously recorded only timestamps — nothing on the row
+        // said who satisfied the DNS challenge, or whether it was satisfied at
+        // all (see `bypass`).
+        activatedBy,
+        verificationMethod,
+      })
+
+      await recordApiKeyAudit(dbClient, {
+        changeType: 'Activate',
+        credentialSortKey: String(credentialSortKey),
+        userName: activatedBy,
+        oldValues: credential,
+        newValues: {
+          ...credential,
+          status: 'active',
+          issuedAt,
+          expiresAt,
+          activatedBy,
+          verificationMethod,
+        },
+        context: {
+          jurisdictionId: String(jurisdictionId),
+          domain: String(domain),
+          environments,
+          grantedBy: authz.grantedBy,
+          // 'bypass' means the real DNS TXT lookup was SKIPPED (non-production
+          // only). Recorded so a bypassed activation remains distinguishable
+          // from a genuinely verified one long after the log line ages out.
+          // Paired with the per-environment breakdown, since the scalar
+          // collapses a mixed multi-env activation to its weakest link.
+          verificationMethod,
+          verificationByEnvironment,
+        },
       })
       return null
     }
 
     if (pendingIndexes.length === 0) {
       // Every one of the credential's (or the single requested) environments
-      // is already authorized for this domain — nothing left to verify.
-      const activationError = await activateCredential()
+      // is already authorized for this domain — nothing left to verify, so
+      // this activation inherits the provenance of those prior
+      // authorizations rather than establishing its own.
+      //
+      // `domainRecords[i]` is the authorization for `environments[i]` — the
+      // credential's OWN environment list — so every entry contributes to
+      // this activation; there is no unrelated record in the array. A
+      // multi-env credential can still have been authorized differently per
+      // environment, though, and one scalar cannot express that. The scalar
+      // therefore reports the weakest link (any bypass ⇒ 'bypass'), which is
+      // the safe direction for a compliance trail, and the per-environment
+      // breakdown below preserves which environment was actually bypassed.
+      //
+      // Rows written before `verificationMethod` existed carry none; those
+      // read as 'dns_txt', since bypass has never been reachable in
+      // production (see DNS_VERIFY_BYPASS_ENABLED).
+      const verificationByEnvironment = environments.map((env, i) => ({
+        env,
+        method: domainRecords[i]?.verificationMethod ?? 'dns_txt',
+      }))
+      const activationError = await activateCredential(
+        verificationByEnvironment.some((e) => e.method === 'bypass')
+          ? 'bypass'
+          : 'dns_txt',
+        verificationByEnvironment
+      )
       if (activationError) {
         return res.status(activationError.status).json({ error: activationError.error })
       }
@@ -237,6 +310,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // regardless of how many environments are pending.
     const txtHost = domain
     let records: string[][]
+    // Persisted alongside the authorization (and the activation) so a skipped
+    // lookup stays visible on the record, not only in a log line.
+    const verificationMethod: 'dns_txt' | 'bypass' = DNS_VERIFY_BYPASS_ENABLED
+      ? 'bypass'
+      : 'dns_txt'
     try {
       if (DNS_VERIFY_BYPASS_ENABLED) {
         // Dev/test only, explicitly opted in via ALLOW_DNS_VERIFY_BYPASS (and
@@ -317,6 +395,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           jurisdictionId: String(jurisdictionId),
           status: 'authorized',
           validatedAt: now.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+          validatedBy: activatedBy,
+          verificationMethod,
+          // upsertApiKeyDomain is a Put (full overwrite), so the requester must
+          // be carried forward explicitly or it is erased at the exact moment
+          // the domain becomes authorized.
+          requestedBy: domainRecords[i]?.requestedBy,
           authExpiresAt: authExpiresAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
         })
       )
@@ -325,11 +409,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('DNS domain authorized', {
       domain,
       environments,
-      validatedBy: session.user.email,
+      validatedBy: activatedBy,
+      verificationMethod,
+      grantedBy: authz.grantedBy,
       operation: 'verifyDomain',
     })
 
-    const activationError = await activateCredential()
+    // This activation established its own provenance: a single TXT lookup (or
+    // a single bypass) authorized every environment that was still pending,
+    // so they all share one method — this path can never be mixed.
+    const activationError = await activateCredential(
+      verificationMethod,
+      environments.map((env) => ({ env, method: verificationMethod }))
+    )
     if (activationError) {
       return res.status(activationError.status).json({ error: activationError.error })
     }
@@ -344,4 +436,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware()(handler)
+export default withMiddleware({
+  inHandler: 'IGDD-3472: handler resolves the caller reach per credential',
+})(handler)

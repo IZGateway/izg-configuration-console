@@ -52,7 +52,8 @@ import fetcher from '../../lib/fetch'
 import { ApiKeyCredential } from '../../lib/type/ApiKeyCredential'
 import { Jurisdiction } from '../../lib/type/Jurisdiction'
 import useRoleAccess from '../../lib/security/useRoleAccess'
-import hasAccessToDestId from '../../lib/accesshelper'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { can } from '../../lib/security/policy'
 import { ApiKeyManagementPageAccessControl } from '../../lib/type/PageAccessControls'
 import {
   ALLOWED_USE_TYPES,
@@ -68,6 +69,157 @@ function useOrganizations(sessionStatus: string): Jurisdiction[] | undefined {
     fetcher
   )
   return data
+}
+
+// ─── Audit log ────────────────────────────────────────────────────────────────
+
+// Shape returned by GET /api/apikeysaudit (see lib/type/ApiKeyCredentialAudit).
+interface ApiKeyAuditRecord {
+  id: string
+  credentialSortKey: string
+  changeType: string
+  userName: string
+  createdAt: string
+  oldValues: Record<string, unknown> | null
+  newValues: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
+interface AuditLogRow {
+  id: string
+  event: string
+  details: string
+  timestamp: string
+  /** Epoch ms — the sort key, so ordering doesn't depend on parsing `timestamp`. */
+  sortValue: number
+  color: string
+}
+
+// Stored changeType → the event name shown in the log, plus its dot colour.
+// The wire values stay short ('Create'); the UI spells out the lifecycle event
+// ('Renew' is really "superseded by a successor", which the label makes plain).
+const AUDIT_EVENTS: Record<string, { label: string; color: string }> = {
+  Create: { label: 'API_KEY_CREATED', color: '#00796B' },
+  Activate: { label: 'API_KEY_ACTIVATED', color: '#2E7D32' },
+  Renew: { label: 'API_KEY_RENEWAL_SUPERSEDED', color: '#8D6E63' },
+  Reissue: { label: 'API_KEY_REISSUED', color: '#5E35B1' },
+  Revoke: { label: 'API_KEY_REVOKED', color: '#C62828' },
+  Cancel: { label: 'API_KEY_CANCELLED', color: '#EF6C00' },
+  TokenViewed: { label: 'API_KEY_TOKEN_VIEWED', color: '#1565C0' },
+}
+
+// `2025-05-27 09:14:03Z` — second precision, explicit UTC. Audit timestamps are
+// deliberately NOT localized: they are a compliance record, and a reader
+// comparing them against server logs needs the same zone the row was written in.
+function formatAuditTimestamp(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 19)}Z`
+}
+
+/**
+ * The `key: value · key: value` detail line under each event.
+ *
+ * Fields are chosen per event so the line answers the question that event
+ * raises — a revoke needs the actor and reason, a renewal needs the successor
+ * and the grace deadline. Absent fields are dropped rather than rendered empty.
+ */
+function buildAuditDetails(record: ApiKeyAuditRecord): string {
+  const values = (record.newValues ?? record.oldValues ?? {}) as Record<
+    string,
+    unknown
+  >
+  const pick = (key: string): unknown => record[key] ?? values[key]
+
+  const parts: [string, unknown][] = [['keyId', record.credentialSortKey]]
+  switch (record.changeType) {
+    case 'Create':
+      parts.push(
+        ['jurisdictionId', pick('jurisdictionId')],
+        ['renewedFrom', record.renewedFrom],
+        ['reissuedFrom', record.reissuedFrom],
+        ['createdBy', record.userName]
+      )
+      break
+    case 'Activate':
+      parts.push(
+        ['domain', pick('domain')],
+        ['verificationMethod', pick('verificationMethod')],
+        ['activatedBy', record.userName]
+      )
+      break
+    case 'Renew':
+      parts.push(
+        ['supersededBy', record.supersededBy],
+        ['graceExpiresAt', record.graceExpiresAt],
+        ['renewedBy', record.userName]
+      )
+      break
+    case 'Reissue':
+      parts.push(['reissuedAs', record.reissuedAs], ['reissuedBy', record.userName])
+      break
+    case 'Revoke':
+      parts.push(
+        ['jurisdictionId', pick('jurisdictionId')],
+        ['reason', record.reason],
+        ['revokedBy', record.userName]
+      )
+      break
+    case 'Cancel':
+      parts.push(
+        ['jurisdictionId', pick('jurisdictionId')],
+        ['cancelledBy', record.userName]
+      )
+      break
+    case 'TokenViewed':
+      parts.push(['domain', record.domain], ['viewedBy', record.userName])
+      break
+    default:
+      parts.push(['user', record.userName])
+  }
+
+  return parts
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([label, value]) => {
+      // graceExpiresAt and friends arrive as ISO strings; show the date only —
+      // the full timestamp is already in the TIMESTAMP column.
+      const text =
+        typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
+          ? value.slice(0, 10)
+          : String(value)
+      return `${label}: ${text}`
+    })
+    .join(' · ')
+}
+
+// Audit log data source. Fetched only while the tab is open — it is a
+// full-partition read, so there is no reason to pay for it on the Keys tab.
+function useApiKeyAuditLog(enabled: boolean) {
+  const { data, isLoading } = useSWR<ApiKeyAuditRecord[]>(
+    enabled ? '/api/apikeysaudit' : null,
+    fetcher
+  )
+  const rows = useMemo<AuditLogRow[]>(
+    () =>
+      Array.isArray(data)
+        ? data.map((record) => {
+            const event = AUDIT_EVENTS[record.changeType] ?? {
+              label: record.changeType?.toUpperCase() ?? 'UNKNOWN',
+              color: palette.greyText,
+            }
+            return {
+              id: record.id,
+              event: event.label,
+              color: event.color,
+              details: buildAuditDetails(record),
+              timestamp: formatAuditTimestamp(record.createdAt),
+              sortValue: new Date(record.createdAt).getTime(),
+            }
+          })
+        : [],
+    [data]
+  )
+  return { auditRows: rows, auditLoading: isLoading }
 }
 
 const ENV_DISPLAY_NAMES: Record<string, string> = {
@@ -155,34 +307,36 @@ function formatDate(value: string | Date | null | undefined): string {
   return d.toLocaleDateString()
 }
 
-// Client-side mirror of the server's `ownsJurisdiction` check
-// (lib/security/apiKeyAuthz), used to scope jurisdiction-bearing UI lists: the
-// Create dialog's Organization dropdown and the dashboard's Organization filter.
+// Client-side mirror of the server's `can()` check (lib/security/policy), used
+// to scope jurisdiction-bearing UI lists: the Create dialog's Organization
+// dropdown and the dashboard's Organization filter.
+//
+// MUST evaluate permission and reach from the SAME held role, exactly like the
+// server does. This used to call the reach-only `hasAccessToDestId`, which
+// returns true for every jurisdiction as soon as ANY held role has global
+// reach — regardless of whether that role (or any role) actually grants
+// `capability`. That is the exact escalation shape `policy.ts` exists to
+// prevent: a user holding `IZG Support` (global reach, no apikeys
+// permissions) alongside a jurisdiction-scoped role saw every organization in
+// this dropdown, not just their own, even though the server-side call
+// correctly rejected acting on the ones outside their scope. Caught during
+// manual testing of the escalation account.
 //
 // Matched on `prefix` (the jurisdiction's short code, e.g. "AINQ") because that
 // is what Okta group membership — and therefore `session.user.jurisdictions` — is
 // keyed on. NOT `jurisdictionId` (numeric, a different identifier space) and NOT
-// `name` (the long form, e.g. "Audacious Inquiry (operators)"). IZG
-// Operations/Support are global and short-circuit inside `hasAccessToDestId`.
+// `name` (the long form, e.g. "Audacious Inquiry (operators)").
 //
-// Fails closed: no session, no prefix, or a throw (non-admin with no assigned
-// jurisdictions) all mean "not owned". This is UI scoping only — the API routes
-// remain the authoritative gate.
-type SessionLike =
-  | { user?: { role?: string; jurisdictions?: string[] } }
-  | null
-  | undefined
-
+// Fails closed: no session or no prefix means "not owned". This is UI scoping
+// only — the API routes remain the authoritative gate.
 function ownsJurisdictionForUi(
   jurisdiction: Jurisdiction,
-  session: SessionLike
+  session: unknown,
+  capability: keyof ApiKeyManagementPageAccessControl
 ): boolean {
   if (!session || !jurisdiction.prefix) return false
-  try {
-    return hasAccessToDestId(String(jurisdiction.prefix), session)
-  } catch {
-    return false
-  }
+  return can(subjectOf(session), 'apikeys', capability, jurisdiction.prefix)
+    .allowed
 }
 
 // A credential's raw environment id is a number, or, for legacy rows, a
@@ -791,9 +945,12 @@ function CustomToolbar({
 
   return (
     <GridToolbarContainer>
+      {/* Search and Filters act on the Keys grid only — shown just for that tab
+          so they don't appear inert (or worse, silently ignored) over the
+          audit feed. */}
       <Box
         sx={{
-          display: 'flex',
+          display: tabValue === 0 ? 'flex' : 'none',
           alignItems: 'center',
           width: '100%',
           gap: 1,
@@ -1913,12 +2070,12 @@ function CreateKeyDialog({
   // NOTE: in an environment where no senders are seeded, this list is empty by
   // design (see IGDD-3140 seeding / Ticket 2).
   //
-  // Also scoped to organizations this caller actually owns (mirrors the
-  // server-side `ownsJurisdiction` check in POST /api/apikeys) — IZG Operations
-  // is global, other roles are limited to `session.user.jurisdictions`. Without
-  // this, a scoped role could pick an org it doesn't own, complete the entire
-  // multi-step create flow (including a DNS challenge), and only discover the
-  // 403 on final submit; the server-side check remains the authoritative gate.
+  // Also scoped to organizations this caller can actually create a key for
+  // (mirrors the server-side `can()` check in POST /api/apikeys, gated on
+  // `canCreateApiKey` specifically — not just reach). Without this, a scoped
+  // role could pick an org it doesn't own, complete the entire multi-step
+  // create flow (including a DNS challenge), and only discover the 403 on
+  // final submit; the server-side check remains the authoritative gate.
   //
   // See `ownsJurisdictionForUi` for why this matches on `prefix`. A row with no
   // prefix is excluded rather than shown-and-then-403'd on submit.
@@ -1927,7 +2084,8 @@ function CreateKeyDialog({
       Array.isArray(jurisdictions)
         ? jurisdictions.filter(
             (j) =>
-              (j.useTypes?.length ?? 0) > 0 && ownsJurisdictionForUi(j, session)
+              (j.useTypes?.length ?? 0) > 0 &&
+              ownsJurisdictionForUi(j, session, 'canCreateApiKey')
           )
         : [],
     [jurisdictions, session]
@@ -2701,17 +2859,18 @@ export default function ApiKeyManagement() {
   // (matched against each row's jurisdictionId), label = the description. Sourced
   // from /api/jurisdictions so the list is complete and page-independent.
   //
-  // Scoped to jurisdictions this caller owns (see `ownsJurisdictionForUi`).
-  // /api/jurisdictions is deliberately unscoped server-side (it serves other
-  // features too), and GET /api/apikeys already scopes the rows themselves — so
-  // without this an unowned org would be offered here and just filter the grid to
-  // nothing. Unlike the Create dropdown this list is NOT restricted to senders:
+  // Scoped to jurisdictions this caller can list keys for (see
+  // `ownsJurisdictionForUi`, gated on `canListApiKeys`). /api/jurisdictions is
+  // deliberately unscoped server-side (it serves other features too), and
+  // GET /api/apikeys already scopes the rows themselves — so without this an
+  // unowned org would be offered here and just filter the grid to nothing.
+  // Unlike the Create dropdown this list is NOT restricted to senders:
   // filtering is about what's in the grid, and a dual-role org can hold keys.
   const organizationOptions = useMemo<FilterOption[]>(
     () =>
       Array.isArray(jurisdictions)
         ? jurisdictions
-            .filter((j) => ownsJurisdictionForUi(j, session))
+            .filter((j) => ownsJurisdictionForUi(j, session, 'canListApiKeys'))
             .map((j) => ({
               value: String(j.jurisdictionId),
               label: j.description || j.name || String(j.jurisdictionId),
@@ -2722,6 +2881,8 @@ export default function ApiKeyManagement() {
   )
 
   const [tabValue, setTabValue] = useState(0)
+  const isAuditTab = tabValue === 1
+  const { auditRows, auditLoading } = useApiKeyAuditLog(isAuditTab)
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<ApiKeyFilters>(EMPTY_FILTERS)
   const [viewTarget, setViewTarget] = useState<ApiKey | null>(null)
@@ -2945,6 +3106,87 @@ export default function ApiKeyManagement() {
   )
   const handleTabChange = useCallback((value: number) => setTabValue(value), [])
 
+  // Two-column activity feed: the event name + its detail line on the left,
+  // the UTC timestamp on the right. Deliberately not one column per field —
+  // the events carry different fields, so a wide sparse grid would be mostly
+  // empty cells (see `buildAuditDetails`).
+  const auditColumns: GridColDef[] = useMemo(
+    () => [
+      {
+        field: 'event',
+        headerName: 'LOG',
+        flex: 1,
+        minWidth: 320,
+        renderCell: (params: GridRenderCellParams) => {
+          const row = params.row as AuditLogRow
+          return (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 1.5,
+                py: 1,
+                minWidth: 0,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: row.color,
+                  flexShrink: 0,
+                  mt: '4px',
+                }}
+              />
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                >
+                  {row.event}
+                </Typography>
+                <Tooltip title={row.details} arrow>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: 'monospace',
+                      color: palette.greyText,
+                      display: 'block',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {row.details}
+                  </Typography>
+                </Tooltip>
+              </Box>
+            </Box>
+          )
+        },
+      },
+      {
+        field: 'timestamp',
+        headerName: 'TIMESTAMP',
+        width: 200,
+        align: 'left',
+        headerAlign: 'left',
+        // Sort on the epoch value, not the rendered string, so ordering stays
+        // correct regardless of the display format.
+        sortComparator: (_a, _b, p1, p2) =>
+          (p1.api.getRow(p1.id) as AuditLogRow).sortValue -
+          (p2.api.getRow(p2.id) as AuditLogRow).sortValue,
+        renderCell: (params: GridRenderCellParams) => (
+          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+            {params.value as string}
+          </Typography>
+        ),
+      },
+    ],
+    []
+  )
+
   const columns: GridColDef[] = useMemo(
     () => [
       {
@@ -3144,19 +3386,34 @@ export default function ApiKeyManagement() {
             backgroundColor: '#E8F0FE',
           },
         }}
-        rows={tabValue === 0 ? filteredRows : []}
-        columns={columns}
+        rows={isAuditTab ? auditRows : filteredRows}
+        columns={isAuditTab ? auditColumns : columns}
+        loading={isAuditTab ? auditLoading : undefined}
+        getRowHeight={isAuditTab ? () => 'auto' : undefined}
         getRowClassName={(params) =>
-          (params.row as ApiKey).status === 'Validation' ? 'row-validation' : ''
+          !isAuditTab && (params.row as ApiKey).status === 'Validation'
+            ? 'row-validation'
+            : ''
         }
         autoHeight
-        pageSizeOptions={[5, 25, 50, 100]}
+        pageSizeOptions={[5, 10, 25, 50, 100]}
+        // Remounts the grid when the tab changes, so paging/sort state from the
+        // Keys tab can't leak into the audit feed (its columns don't exist
+        // there, which would otherwise leave the grid sorted by a missing field).
+        key={isAuditTab ? 'audit' : 'keys'}
         initialState={{
-          pagination: { paginationModel: { pageSize: 5 } },
-          // Newest keys first by default, so a just-created row is immediately
-          // visible on page 1 instead of wherever it lands in natural order.
-          // Still just the default — clicking any column header re-sorts.
-          sorting: { sortModel: [{ field: 'created', sort: 'desc' }] },
+          pagination: { paginationModel: { pageSize: isAuditTab ? 10 : 5 } },
+          // Newest first by default, so a just-created row (or the action you
+          // just performed) is immediately visible on page 1 instead of
+          // wherever it lands in natural order. Still just the default —
+          // clicking any column header re-sorts.
+          sorting: {
+            sortModel: [
+              isAuditTab
+                ? { field: 'timestamp', sort: 'desc' }
+                : { field: 'created', sort: 'desc' },
+            ],
+          },
         }}
         disableRowSelectionOnClick
         disableColumnMenu
@@ -3178,7 +3435,7 @@ export default function ApiKeyManagement() {
               }}
             >
               <Typography variant="body2" sx={{ color: palette.greyText }}>
-                {tabValue === 1 ? 'Audit log coming soon.' : noRowsMessage}
+                {isAuditTab ? 'No API key activity recorded yet.' : noRowsMessage}
               </Typography>
             </Box>
           ),
