@@ -1,5 +1,38 @@
 # Release Notes
 
+## [1.19.0] - 2026-09-30
+
+### Changes
+- IGDD-3173: Add destUri Guard ([#664](https://github.com/IZGateway/izg-configuration-console/pull/664))
+- feat: implement multi-role authorization model ([#666](https://github.com/IZGateway/izg-configuration-console/pull/666))
+- Add RBAC rejection logging (DO NOT MERGE) ([#672](https://github.com/IZGateway/izg-configuration-console/pull/672))
+- Sync release 1.18.0 back to develop ([#676](https://github.com/IZGateway/izg-configuration-console/pull/676))
+- chore(deps): security and dependency updates ([#677](https://github.com/IZGateway/izg-configuration-console/pull/677))
+- IGDD-2397: Automate release cutting ([#678](https://github.com/IZGateway/izg-configuration-console/pull/678))
+- chore(deps): security and dependency updates ([#679](https://github.com/IZGateway/izg-configuration-console/pull/679))
+- feat(ci): auto-merge dependency-update PRs once checks pass ([#680](https://github.com/IZGateway/izg-configuration-console/pull/680))
+- chore(deps): security and dependency updates ([#683](https://github.com/IZGateway/izg-configuration-console/pull/683))
+- chore(deps): security and dependency updates ([#686](https://github.com/IZGateway/izg-configuration-console/pull/686))
+- IGDD- 3335 Add Sender operations role ([#687](https://github.com/IZGateway/izg-configuration-console/pull/687))
+- chore(deps): security and dependency updates ([#688](https://github.com/IZGateway/izg-configuration-console/pull/688))
+- IGDD-3173: Restrict creation of CR for faulty uri ([#689](https://github.com/IZGateway/izg-configuration-console/pull/689))
+- FAQ updates ([#690](https://github.com/IZGateway/izg-configuration-console/pull/690))
+- chore(deps): security and dependency updates ([#691](https://github.com/IZGateway/izg-configuration-console/pull/691))
+- chore(deps): security and dependency updates ([#692](https://github.com/IZGateway/izg-configuration-console/pull/692))
+- chore(deps): security and dependency updates ([#693](https://github.com/IZGateway/izg-configuration-console/pull/693))
+- chore(deps): security and dependency updates ([#694](https://github.com/IZGateway/izg-configuration-console/pull/694))
+- chore(deps): security and dependency updates ([#695](https://github.com/IZGateway/izg-configuration-console/pull/695))
+- fix(denylist): derive audit identity from session, not request body (IGDD-3175) ([#696](https://github.com/IZGateway/izg-configuration-console/pull/696))
+- chore(deps): security and dependency updates ([#697](https://github.com/IZGateway/izg-configuration-console/pull/697))
+- IGDD-3083: Add API key audit logging ([#698](https://github.com/IZGateway/izg-configuration-console/pull/698))
+- chore(deps): security and dependency updates ([#699](https://github.com/IZGateway/izg-configuration-console/pull/699))
+- feat(authz): controlled read/write access to all admin console pages (IGDD-3472) ([#700](https://github.com/IZGateway/izg-configuration-console/pull/700))
+- chore(deps): security and dependency updates ([#701](https://github.com/IZGateway/izg-configuration-console/pull/701))
+- chore(deps): security and dependency updates ([#702](https://github.com/IZGateway/izg-configuration-console/pull/702))
+- chore(deps): bump brace-expansion ([#703](https://github.com/IZGateway/izg-configuration-console/pull/703))
+- chore: Update brace-expansion per npm audit ([#704](https://github.com/IZGateway/izg-configuration-console/pull/704))
+
+
 ## Release v1.18.0
 
 - IGDD-3444 — Add environment variable to be able to turn off/on API Key Feature
