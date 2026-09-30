@@ -328,10 +328,17 @@ ticket: IGDD-3106, IGDD-3140
       carries identity claims only; the Hub reads `environments` from `ApiKeyCredential`
       by `jti` at routing time — keeping it server-side allows environment scope changes
       without reissuance
-      — *Shipped as:* the claims are `jurisdictionId`, `jti`, `upn`, `iss`, plus the
-      issuance and expiry stamps. This is not the `jti, sub, upn, iat, exp` list the
-      original task named, but it carries no access control claim. A stale comment at
-      the top of `token.ts` still lists `env` among the claims.
+      — *Shipped as specified.* `issueApiKeyJwt()` in `src/lib/apikeys/jwt.ts` emits
+      `iss`, `sub`, `jti`, `iat`, `exp`, and `upn` — exactly the identity-only claim set
+      the task named, with `sub` carrying the jurisdiction id. No `env` claim, and no
+      `useTypes` claim. The hardcoded `roles` claim was removed in the same design
+      decision, once the Hub side confirmed nothing reads it.
+      — *Correction, 2026-09-30:* an earlier version of this note claimed the claims did
+      not match the `jti, sub, upn, iat, exp` list the task named. That was wrong. It
+      described the parameters of `issueApiKeyJwt()` rather than the payload the function
+      emits.
+      — One leftover: the comment at the top of `src/pages/api/apikeys/token.ts` still
+      lists `env` among the claims. The code is correct. Only the comment is stale.
 - [x] 3.6 Add multi-env credential creation for administrators: accept more than one
       value in the `environments` body param when the caller is an administrator
       — *Shipped as:* the gate is `session.user.isAdmin`, not the two named roles
