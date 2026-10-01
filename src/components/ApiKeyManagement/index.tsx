@@ -6,6 +6,7 @@ import {
   Box,
   Button,
   Card,
+  Chip,
   CircularProgress,
   FormControl,
   IconButton,
@@ -61,6 +62,36 @@ import {
   AllowedUseType,
 } from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
+
+// ─── Use types: one canonical reading of a row, shared by every surface ───
+//
+// Storage is a DynamoDB String Set, which is unordered, so the order the SDK
+// returns is not a promise and can differ between two rows holding the same
+// values. Filtering ALLOWED_USE_TYPES by membership (rather than iterating the
+// row's own array) gives canonical order — PATIENT, PROVIDER, PUBLIC_HEALTH —
+// and drops any stored value outside the enumeration, which is the same guard
+// the read path already applies via `isValidUseType`.
+//
+// Every surface goes through these two: the grid cell, the column's sort key,
+// the filter, the search term and the dialog fields. If each did its own
+// filtering, an unrecognized stored value could reach the sort key while the
+// chips dropped it, and two readers of the same row would disagree.
+function canonicalUseTypes(
+  useTypes: AllowedUseType[] | undefined
+): AllowedUseType[] {
+  const stored = (useTypes ?? []) as readonly string[]
+  return ALLOWED_USE_TYPES.filter((ut) => stored.includes(ut))
+}
+
+// Display string for the column's sort key, the search match and the read-only
+// dialog fields. The em dash for an empty set is deliberate and load-bearing:
+// MUI's default string comparator places '' before every letter, so returning
+// an empty string here would sort use-type-less rows FIRST ascending instead of
+// last.
+function formatUseTypes(useTypes: AllowedUseType[] | undefined): string {
+  const labels = canonicalUseTypes(useTypes).map((ut) => USE_TYPE_LABELS[ut])
+  return labels.length ? labels.join(', ') : '—'
+}
 
 // Organizations dropdown data source.
 function useOrganizations(sessionStatus: string): Jurisdiction[] | undefined {
@@ -236,6 +267,11 @@ interface ApiKeyFilters {
   environment: string
   status: string
   organization: string
+  // Single-select, like its three neighbours. Matches on membership, not on an
+  // exact set: choosing PATIENT returns a Patient-only key and a
+  // Patient + Provider key alike. Same treatment the environment filter already
+  // gives a multi-environment key.
+  useType: string
 }
 
 // A filter dropdown option. `value` is what gets stored in filter state and
@@ -250,6 +286,7 @@ const EMPTY_FILTERS: ApiKeyFilters = {
   environment: '',
   status: '',
   organization: '',
+  useType: '',
 }
 
 interface ApiKey {
@@ -620,6 +657,60 @@ function ViewKeyDialog({
   )
 }
 
+// Matches the Create dialog's use-type chips (SearchableMultiSelect with
+// chipColor="primary"), so the same value looks the same in the picker and in
+// the grid. Height is deliberately NOT carried over: the picker sets 32px,
+// which suits a form field but fills a density="comfortable" grid row edge to
+// edge and reads as an input control rather than a cell value. `size="small"`
+// (~24px) keeps the colour recognition without the form-field look.
+const USE_TYPE_CHIP_SX = {
+  backgroundColor: '#e3f2fd',
+  color: palette.primary,
+  border: `1px solid ${palette.primary}`,
+  fontSize: '0.875rem',
+}
+
+// Two chips, then a "+N" carrying the rest in a tooltip. Fixed height, never
+// wraps — the row height is shared with nine other columns, and DESCRIPTION and
+// DNS already set the precedent of pushing detail into a tooltip rather than
+// growing the row. The indicator is focusable so Tab opens the tooltip: a
+// hover-only disclosure is unreachable by keyboard, and @axe-core/react does
+// not catch that.
+function UseTypesCell({ row }: { row: ApiKey }) {
+  const useTypes = canonicalUseTypes(row.useTypes)
+  if (!useTypes.length) {
+    return (
+      <Typography variant="body2" sx={{ color: palette.greyText }}>
+        —
+      </Typography>
+    )
+  }
+  const shown = useTypes.slice(0, 2)
+  const overflow = useTypes.length - shown.length
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+      {shown.map((ut) => (
+        <Chip
+          key={ut}
+          size="small"
+          label={USE_TYPE_LABELS[ut]}
+          sx={USE_TYPE_CHIP_SX}
+        />
+      ))}
+      {overflow > 0 && (
+        <Tooltip arrow title={formatUseTypes(row.useTypes)}>
+          <Chip
+            size="small"
+            tabIndex={0}
+            label={`+${overflow}`}
+            sx={USE_TYPE_CHIP_SX}
+          />
+        </Tooltip>
+      )}
+    </Box>
+  )
+}
+
 function StatusCell({ row }: { row: ApiKey }) {
   const { status } = row
   if (status === 'Active') {
@@ -887,6 +978,7 @@ interface CustomToolbarProps extends GridToolbarProps {
   environmentOptions: FilterOption[]
   statusOptions: FilterOption[]
   organizationOptions: FilterOption[]
+  useTypeOptions: FilterOption[]
 }
 
 function CustomToolbar({
@@ -899,12 +991,14 @@ function CustomToolbar({
   environmentOptions,
   statusOptions,
   organizationOptions,
+  useTypeOptions,
 }: CustomToolbarProps) {
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null)
   const activeFilterCount =
     (filters.environment ? 1 : 0) +
     (filters.status ? 1 : 0) +
-    (filters.organization ? 1 : 0)
+    (filters.organization ? 1 : 0) +
+    (filters.useType ? 1 : 0)
 
   const setFilter = (key: keyof ApiKeyFilters, value: string) =>
     onFiltersChange({ ...filters, [key]: value })
@@ -1020,6 +1114,7 @@ function CustomToolbar({
           {renderFilterSelect('Environment', 'environment', environmentOptions)}
           {renderFilterSelect('Status', 'status', statusOptions)}
           {renderFilterSelect('Organization', 'organization', organizationOptions)}
+          {renderFilterSelect('Use Types', 'useType', useTypeOptions)}
         </Box>
       </Popover>
 
@@ -1401,6 +1496,12 @@ function RenewDialog({
             <PolicyField label="Jurisdiction" value={apiKey.jurisdiction} />
             <PolicyField label="Environment" value={apiKey.environment} />
           </Box>
+          {/* Read-only, like the Jurisdiction, Environment and Domain beside it.
+              Renewal takes use types from the credential record rather than from
+              the request (see the credential-lifecycle spec), so there is nothing
+              to change here — the field states a rule the server already
+              enforces. Same component, label and position as ReissueDialog. */}
+          <PolicyField label="Use Types" value={formatUseTypes(apiKey.useTypes)} />
           {error && (
             <Alert severity="error" sx={{ borderRadius: '8px' }}>
               {error}
@@ -2003,6 +2104,13 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   'Revoked',
   'Cancelled',
 ].map((s) => ({ value: s, label: s }))
+
+// Values are the canonical enum members, so a row match needs no label->enum
+// conversion; labels are what the operator reads in the menu.
+const USE_TYPE_FILTER_OPTIONS: FilterOption[] = ALLOWED_USE_TYPES.map((ut) => ({
+  value: ut,
+  label: USE_TYPE_LABELS[ut],
+}))
 
 // The Use Types picker shows human-readable labels ("Public Health") as the
 // visible option/chip text, while the credential is stored and validated by its
@@ -2922,7 +3030,11 @@ export default function ApiKeyManagement() {
           k.description.toLowerCase().includes(q) ||
           k.jurisdiction.toLowerCase().includes(q) ||
           (k.domain ?? '').toLowerCase().includes(q) ||
-          k.environment.toLowerCase().includes(q)
+          k.environment.toLowerCase().includes(q) ||
+          // The display labels ("Public Health"), not the stored enum values
+          // ("PUBLIC_HEALTH"). The stored form appears nowhere an operator can
+          // read it, and every other field here is matched as displayed.
+          formatUseTypes(k.useTypes).toLowerCase().includes(q)
         // k.environment may be a comma-joined list for multi-env credentials,
         // so match on membership rather than exact equality.
         const matchesEnv =
@@ -2935,7 +3047,21 @@ export default function ApiKeyManagement() {
           : k.status !== 'Cancelled'
         const matchesOrg =
           !filters.organization || k.jurisdictionId === filters.organization
-        return matchesSearch && matchesEnv && matchesStatus && matchesOrg
+        // Membership, not equality: a key scoped to Patient + Provider matches a
+        // Patient filter. An operator asks "which keys can submit patient data",
+        // never "which keys can submit patient data and nothing else".
+        const matchesUseType =
+          !filters.useType ||
+          canonicalUseTypes(k.useTypes).includes(
+            filters.useType as AllowedUseType
+          )
+        return (
+          matchesSearch &&
+          matchesEnv &&
+          matchesStatus &&
+          matchesOrg &&
+          matchesUseType
+        )
       }),
     [apiKeys, search, filters]
   )
@@ -2952,7 +3078,12 @@ export default function ApiKeyManagement() {
     const orgLabel = filters.organization
       ? organizationOptions.find((o) => o.value === filters.organization)?.label
       : undefined
-    const hasOtherFilters = !!(filters.environment || filters.status || search)
+    const hasOtherFilters = !!(
+      filters.environment ||
+      filters.status ||
+      filters.useType ||
+      search
+    )
     if (orgLabel && !hasOtherFilters) {
       return `No API keys for ${orgLabel}.`
     }
@@ -3242,6 +3373,31 @@ export default function ApiKeyManagement() {
         },
       },
       {
+        // Scope: which data populations this credential may submit. Sits between
+        // the identity columns (description/environment/organization/DNS) and the
+        // lifecycle columns (status/created/expires).
+        //
+        // `filterable: false` is NOT "no filter" — the filter lives in the
+        // toolbar's own popover alongside Environment/Status/Organization. The
+        // grid exposes no MUI filter panel at all (`disableColumnMenu` below, and
+        // the toolbar is a custom slot with no filter button), so a `true` here
+        // would be inert code that reads as a delivered feature.
+        //
+        // Sorting uses the valueGetter's canonical-order label string, so rows
+        // group by their first use type. In v7 valueGetter takes
+        // (value, row, column, apiRef) — not a params object.
+        field: 'useTypes',
+        headerName: 'USE TYPES',
+        flex: 1.5,
+        minWidth: 170,
+        sortable: true,
+        filterable: false,
+        valueGetter: (_value, row) => formatUseTypes((row as ApiKey).useTypes),
+        renderCell: (params: GridRenderCellParams) => (
+          <UseTypesCell row={params.row as ApiKey} />
+        ),
+      },
+      {
         field: 'status',
         headerName: 'STATUS',
         flex: 1.6,
@@ -3325,6 +3481,7 @@ export default function ApiKeyManagement() {
       environmentOptions: ENVIRONMENT_FILTER_OPTIONS,
       statusOptions: STATUS_FILTER_OPTIONS,
       organizationOptions,
+      useTypeOptions: USE_TYPE_FILTER_OPTIONS,
     }),
     [search, handleSearchChange, tabValue, handleTabChange, filters, organizationOptions]
   )

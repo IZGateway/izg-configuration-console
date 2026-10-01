@@ -5,7 +5,8 @@ See `proposal.md` — Why. The behaviour contract is in
 
 Constraints that shape the approach:
 
-- The grid is `@mui/x-data-grid` v5 community (`DataGrid`, not `DataGridPro`). Columns are a
+- The grid is `@mui/x-data-grid` v7 community (`DataGrid`, not `DataGridPro`). In v7
+  `valueGetter` takes `(value, row, column, apiRef)`, not a params object. Columns are a
   memoized `GridColDef[]` at `ApiKeyManagement/index.tsx:3190`.
 - The `DataGrid` sets `disableColumnMenu`, `disableColumnSelector` and
   `disableDensitySelector` (`index.tsx:3419`). The toolbar is a custom slot,
@@ -299,3 +300,57 @@ Rollback is the revert of one commit. The existing release flag,
 `FEATURE_API_KEY_MANAGEMENT_ENABLED`, already gates the entire page, so the column is
 invisible wherever the feature is off. No second flag is warranted.
 
+## Open Questions
+
+### The column cannot hold two chips at the width the grid can spare
+
+Found in manual testing on 2026-10-01, and the reason this change stops short of done.
+Decisions 2, 3, 4 and 9 chose chips at `minWidth: 170`. At that width a second chip clips
+mid-word: a row carrying Provider and Public Health renders "Public Healt".
+
+Measured cost of a `size="small"` chip at `0.875rem` — text, plus 16px padding, plus 2px
+border:
+
+| Content | Width |
+|---|---|
+| "Provider" chip | about 76px |
+| "Public Health" chip | about 108px |
+| "+1" chip | about 34px |
+| Cell padding and gaps | about 28px |
+| **Two chips** | **about 210px** |
+| **Two chips and "+1"** | **about 250px** |
+
+**Two use types is the common case in real data, not the rare one.** Four of five rows in
+the test environment carry Provider plus Public Health. So collapsing to one chip plus a
+count would make the overflow indicator the normal state, which defeats its purpose.
+
+**The deeper problem is the whole grid, not this column.** Four other columns already
+truncate at common widths — ORGANIZATION, DNS, CREATED BY, and the CREATED *header* itself.
+The grid was over-subscribed at nine columns. This change made it ten. No width for chips
+exists without taking it from a column that is already short.
+
+Three options, for the UI reviewer to choose between:
+
+| Option | Fits 170px | Cost |
+|---|---|---|
+| **A. Plain text, ellipsis, tooltip** — "Provider, Public Health" truncating to "Provider, Public H…", full value on hover, as the DNS column already behaves | Yes | Reverses Decision 2. No chips. |
+| **B. Keep chips, widen to about 250px** | No — needs about 80px from elsewhere | DESCRIPTION or CREATED BY gives up width, or the grid scrolls sideways at common window sizes |
+| **C. Keep chips, wrap to a second line** | Yes | `getRowHeight` returns `auto` for the Keys tab, so every row grows taller to serve one column |
+
+The question to settle is not "chips or text". It is **which of the ten columns earn their
+width**. That is a judgement about the whole grid.
+
+Option A is the smallest safe interim: it cannot look broken at any width, and it matches two
+neighbouring columns that already push detail into a tooltip. It is not implemented, because
+the decision is the reviewer's.
+
+### Not a defect: the Create picker offers two use types, not three
+
+Raised during the same manual test, and recorded so it is not reported again. The Create
+dialog's picker narrows to the selected organization's own registration, which the
+credential-lifecycle spec requires. The test organization's jurisdiction row carries
+`PROVIDER` and `PUBLIC_HEALTH` and no `PATIENT`, so the picker correctly offers two. All
+three remain in `ALLOWED_USE_TYPES`.
+
+The new **filter** dropdown deliberately offers all three, like the static Environment and
+Status filters, so choosing Patient in that environment returns no rows.
