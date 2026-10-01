@@ -25,14 +25,17 @@ Constraints that shape the approach:
 ## Goals
 
 - An operator reads a credential's use types from the keys list, with no click.
-- The same value looks the same in the grid as in the Create dialog.
-- One derived value serves display, sorting, and any filter added later.
+- An operator reads them again at the moment of renewing or re-issuing a key.
+- The same value looks the same everywhere it appears.
+- One derived value serves display, sorting, filtering and search.
 
 ## Non-Goals
 
-- **No filter by use type in this change.** See Decision 7.
-- **No change to the View key dialog** in this change, and no change to the search box. Both
-  wait on the team's answer to IGDD-3460 comment 116513. See Open Questions.
+- **No MUI column filter.** The filter is delivered through the toolbar popover, not through
+  the column's own `filterable` flag, which stays off. See Decisions 7 and 14.
+- **No change to the one-time token reveal dialog.** See Decision 13.
+- **No change to how renewal sources use types.** The Renew dialog displays them. It does not
+  submit them. The spec already states that renewal reads them from the record.
 - **No change to how use types are captured, validated, or inherited.** Every existing
   scenario in the "Use types are captured and validated on the credential" requirement stays
   exactly as it is.
@@ -134,24 +137,28 @@ comparator for a different reason: its sort key lives in a *separate* field, `cr
 because the displayed string is a locale date that sorts lexically and wrongly. This column
 has no such split — the derived string sorts correctly as it stands.
 
-### Decision 7 — Sortable, and deliberately not filterable
+### Decision 7 — Sortable, with the column's own filter flag off
 
 `sortable: true`. Sorting on the joined labels groups rows by their first use type, so all
 Patient keys sit together, then Patient+Provider, then Provider, and so on. A row with no
 use types renders an em dash, which sorts after every label in ascending order — a
 consistent position, not an arbitrary one.
 
-`filterable: false`, because **no filter UI is reachable in this grid.** `disableColumnMenu`
-removes the per-column menu, and the custom toolbar has no filter button, so MUI's filter
-panel never opens. A `filterable: true` flag would be inert code that reads as a delivered
-feature.
+`filterable: false` on the column, **and a filter is still delivered** — through the toolbar,
+not through the column. The two are separate things and it is worth being exact about which
+is which.
 
-Filtering by use type is deliverable, and cheap, as a fourth `Select` in the existing filter
-popover feeding `filteredRows`. That is item 3 on IGDD-3460 and it waits on the team.
+The column flag stays `false` because **no MUI filter UI is reachable in this grid.**
+`disableColumnMenu` removes the per-column menu, and the custom toolbar has no filter button,
+so MUI's filter panel never opens. A `filterable: true` flag would be inert code that reads
+as a delivered feature.
 
-*Alternative considered.* Set `filterable: true` now so the column is ready if the column
-menu is ever enabled — rejected as speculative. Enabling `disableColumnMenu` would be its
-own decision affecting all ten columns.
+The filter an operator actually uses is the toolbar popover, and the new dropdown goes there.
+See Decision 14.
+
+*Alternative considered.* Set `filterable: true` anyway so the column is ready if the column
+menu is ever enabled — rejected as speculative. Enabling `disableColumnMenu` would be its own
+decision affecting all ten columns.
 
 ### Decision 8 — A named `UseTypesCell` component, not an inline `renderCell`
 
@@ -170,8 +177,8 @@ This raises the sum of the columns' `minWidth` from 1220px to 1390px. See Risks.
 ### Decision 10 — Verification is a new Playwright spec
 
 `e2e/tests/` holds 16 specs and not one of them opens `/apikeys`. This change adds the
-first, with `e2e/helpers/oktaLogin.ts` for the login step. It asserts the column header and
-the chip text on a seeded row.
+first, with `e2e/helpers/oktaLogin.ts` for the login step. It covers the column header and
+chips, the Renew dialog field, the filter and the search — see tasks 4.4 and 5.6.
 
 Jest cannot do it. Every jsdom suite in this repo fails with `ERR_REQUIRE_ESM`, an upstream
 packaging problem in the `jsdom@28` → `html-encoding-sniffer@6` → `@exodus/bytes` chain,
@@ -181,6 +188,75 @@ would not run, and its failure would be invisible.
 *Alternative considered.* A manual test-plan table in Jira, which is how IGDD-3184 was
 verified. Rejected as the *only* verification, because a grid column is exactly the kind of
 thing a later refactor drops silently. The manual steps are still written, as task 4.
+
+### Decision 11 — The dialogs use a plain `PolicyField`, not chips
+
+In the grid, use types render as chips (Decision 2). In the three dialogs they render as a
+plain `PolicyField` — a label above a comma-joined value, which is the component every other
+read-only field in those dialogs already uses.
+
+Two reasons. First, the Re-issue dialog already does exactly this (`index.tsx:1652`), and the
+team approved that treatment when they approved the Re-issue display, so matching it keeps
+the three dialogs identical to each other. Second, a dialog field sits in a vertical stack of
+labelled values; a row of chips in that stack reads as an editable control, which is the
+opposite of what a read-only carry-over field must signal.
+
+The grid is a different context. A cell has no label of its own and sits in a dense row, so a
+chip is what makes a set look like a set there.
+
+*Alternative considered.* Chips everywhere, for one visual language — rejected because it
+would make a locked field look editable on the Renew dialog, which is the one dialog where an
+operator might expect to change something.
+
+### Decision 12 — Field placement inside each dialog
+
+The field goes directly after the Jurisdiction and Environment pair, which is where the
+Re-issue dialog already puts it. That groups the three scope values together, before the
+free-text Description.
+
+- `RenewDialog`: after the Jurisdiction + Environment row, before Description.
+- `ReissueDialog`: already there. No change.
+
+### Decision 13 — The one-time token reveal dialog stays as it is
+
+`KeyCreatedDialog` (`index.tsx:2650`) shows the key expiry, the token string and a COPY
+TOKEN button, and nothing else.
+
+It does not gain a use types field. The dialog exists for one task under time pressure: copy
+a secret that cannot be retrieved again. Every extra field on it competes with that task, and
+the operator can read the use types from the grid row behind it.
+
+### Decision 14 — The filter is a fourth single-select, and it matches on membership
+
+The filter popover holds three `Select` dropdowns driven by one `renderFilterSelect` helper
+(`index.tsx:1020`). Use Types becomes the fourth, built the same way, with
+`ALLOWED_USE_TYPES` as values and `USE_TYPE_LABELS` as labels.
+
+**Single-select, not multi-select.** It is the only control in a popover of three
+single-selects. A multi-select there would look and behave unlike its neighbours for a gain
+nobody asked for, and the search box already covers the "show me several things" case
+loosely.
+
+**It matches on membership, not on an exact set.** Choosing "Patient" returns a key scoped to
+Patient alone and a key scoped to Patient + Provider alike. This follows the Environment
+filter, which already splits a comma-joined multi-environment value and tests membership
+rather than equality (`index.tsx:2927`). An exact-set filter would answer a question nobody
+asks — an operator wants "which keys can submit patient data", never "which keys can submit
+patient data and nothing else".
+
+**The badge and Clear all come free.** `activeFilterCount` and `EMPTY_FILTERS` enumerate the
+filters explicitly, so adding the fourth key to `ApiKeyFilters` and one term to the count is
+all the wiring the existing controls need.
+
+### Decision 15 — Search matches the labels, not the stored values
+
+The search term is tested against the same joined label string the grid cell and the
+`valueGetter` use, so "public health" matches and `PUBLIC_HEALTH` does not.
+
+Matching the stored enumeration values as well was considered, for an operator pasting a
+value out of a log line or an API response. Rejected: the stored form appears nowhere in the
+UI, so matching it would make the search box behave on input the product never shows, and
+every other field the box matches is matched as displayed.
 
 ## Risks / Trade-offs
 
@@ -223,14 +299,3 @@ Rollback is the revert of one commit. The existing release flag,
 `FEATURE_API_KEY_MANAGEMENT_ENABLED`, already gates the entire page, so the column is
 invisible wherever the feature is off. No second flag is warranted.
 
-## Open Questions
-
-**Which of items 2 to 4 belong in this ticket?** Posted to IGDD-3460 as comment 116513 and
-awaiting the team. The items are: a Use Types field on the View key dialog (which closes the
-gap IGDD-3338 describes), a Use Types filter dropdown, and a search box that matches
-use-type labels.
-
-This question does not change the column, its spec, or Decisions 1 to 10. It changes the
-task list, and it changes whether Decision 7's "not filterable" holds. The plan is written
-for item 1 alone, by the user's direction. When the team answers, `/opsx:update` folds the
-confirmed items into the proposal, the delta spec and the tasks.

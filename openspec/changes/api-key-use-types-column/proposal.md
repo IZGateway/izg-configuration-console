@@ -10,11 +10,25 @@ to?":
 
 - The Create form picker collects them (`ApiKeyManagement/index.tsx:2394`). That is input,
   not display.
-- The Re-issue confirm dialog displays them (`index.tsx:1652`), and only for a key that is
-  already expired.
+- The Re-issue dialog displays them (`index.tsx:1652`), and only for a key that is already
+  **expired**.
 
-The **View key** dialog omits them. It shows Organization, Environment, Description,
-Status, Created, Expires, Created By and Key ID (`index.tsx:579`).
+**An Active key has no screen that states its scope.** The eye icon on an Active row opens
+the one-time token reveal dialog (`KeyCreatedDialog`, `index.tsx:2650`), which shows the key
+expiry and the token string and nothing about scope. That icon renders only while
+`!row.viewed`, so it disappears for good after one reveal. The Renew dialog
+(`index.tsx:1306`) shows Jurisdiction, Environment, Description and Domain, and no use
+types.
+
+So for a live, working key there is no screen in the product that states its use types.
+
+**The team resolved this in a meeting on 2026-09-30.** Use types go on the keys grid and on
+the Renew dialog. On the dialog they are read-only, like every other field it carries. The
+Re-issue dialog already shows them and needs no change. The one-time token reveal dialog
+stays exactly as it is.
+
+**The product owner then confirmed, on 2026-10-01**, that the keys list must also be
+narrowable by use type: a fourth filter dropdown, and a use-type match in the search box.
 
 IGDD-3184 task P3-UI states the requirement: *"Surface useTypes as a column in the keys
 grid."* The product-owner review of IGDD-3184 deferred it to the backlog, and IGDD-3460
@@ -28,11 +42,13 @@ backlog ticket.
 
 **A related ticket that the code contradicts.** IGDD-3338, *"There is no way to see the use
 types of an existing API key in the UI"*, is marked Resolved. No commit references it, and
-the View key dialog does not show use types. The status stays as it is, by decision. The
-two tickets are now linked as related, and item 2 below is the work that closes the gap
-IGDD-3338 describes.
+the statement in its title is still true for every key status. The status stays as it is, by
+decision, and the two tickets are now linked as related. **This change is what closes that
+gap for an Active key**, because the grid is the only surface an Active key has.
 
 ## What Changes
+
+### The grid column
 
 - **A new `USE TYPES` column in the API keys grid**, between DNS and STATUS. This groups
   the scope columns with the identity columns and keeps the lifecycle columns (STATUS,
@@ -68,23 +84,44 @@ IGDD-3338 describes.
   The Jest jsdom suites cannot verify it: they fail on this repo with `ERR_REQUIRE_ESM`, a
   known upstream packaging problem recorded in `.claude/CLAUDE.md`.
 
-- **No data-layer change.** The grid row already carries `useTypes: AllowedUseType[]`
-  (`index.tsx:265`, populated at `:431`), and `USE_TYPE_LABELS` already maps each value to a
-  human-readable label (`lib/type/AllowedUseType.ts`).
+### The dialogs
 
-### Scope that waits on the team
+- **The Renew dialog gains a read-only Use Types field** (`index.tsx:1306`). It joins
+  Jurisdiction, Environment and Domain, which are already carried over read-only because a
+  renewal cannot change them. Use types behave the same way: the spec already states that
+  renewal takes them from the record and not from the request, so showing them read-only
+  states a rule the code already enforces. This is the surface that answers the question for
+  an **Active** key.
 
-Three adjacent items are posted to IGDD-3460 as comment 116513 and wait for an answer. All
-three are cheap, because the row already carries the data and the grid filters client-side.
-They are **not** in the delta spec below. When the team answers, `/opsx:update` folds the
-confirmed items into these artifacts.
+- **The Re-issue dialog already shows use types** on its confirm step (`index.tsx:1652`), so
+  it needs no code. The delta spec states that behaviour anyway, because nothing specifies it
+  today and it would otherwise be free to disappear in a refactor.
 
-2. **The View key dialog** gains a Use Types field. This is the work that closes the gap
-   IGDD-3338 describes.
-3. **A Use Types filter** — a fourth `Select` in the custom filter popover, next to
-   Environment, Status and Organization.
-4. **The search box** matches use-type labels. It matches key id, description, organization,
-   DNS and environment today (`index.tsx:2919`).
+- **The one-time token reveal dialog does not change.** It handles a secret that is shown
+  once and never again, and its content is deliberately minimal.
+
+- **No data-layer change anywhere.** The grid row already carries
+  `useTypes: AllowedUseType[]` (`index.tsx:265`, populated at `:431`), and `RenewDialog` and
+  `ReissueDialog` each already receive that whole row as their `apiKey` prop. `USE_TYPE_LABELS` already maps each value to a human-readable label
+  (`lib/type/AllowedUseType.ts`). Nothing new is fetched or plumbed.
+
+### Narrowing the list
+
+- **A fourth filter dropdown, "Use Types"**, in the existing filter popover beside
+  Environment, Status and Organization (`index.tsx:1020`). Single-select, like its three
+  neighbours. It **matches on membership**: picking "Patient" shows every key that carries
+  Patient, whether or not it also carries Provider or Public Health. That is how the
+  Environment filter already treats a multi-environment key (`index.tsx:2927`), so the
+  popover behaves consistently.
+
+- **The search box matches use-type labels.** Typing "patient", "provider" or "public health"
+  finds keys carrying that use type. Case-insensitive substring, exactly like the five fields
+  the box already matches (`index.tsx:2919`). The labels only — the stored forms such as
+  `PUBLIC_HEALTH` appear nowhere in the UI.
+
+- **`ApiKeyFilters` gains a fourth key.** The interface, `EMPTY_FILTERS`, and the
+  `activeFilterCount` badge all enumerate the three filters explicitly, so each needs the
+  fourth. The badge and **Clear all** then cover the new dropdown with no further work.
 
 ## Capabilities
 
@@ -94,8 +131,9 @@ None.
 
 ### Modified Capabilities
 
-- `api-key-credential-lifecycle`: gains one new requirement, **"A credential's use types are
-  visible in the keys grid"**.
+- `api-key-credential-lifecycle`: gains three new requirements — **"A credential's use types
+  are visible in the keys grid"**, **"The dialogs that act on a credential state its use
+  types"**, and **"The keys list can be narrowed by use type"**.
 
   The capability's existing requirement, "Use types are captured and validated on the
   credential" (`openspec/specs/api-key-credential-lifecycle/spec.md:393`), covers capture,
@@ -107,14 +145,54 @@ None.
   new concern and no existing scenario changes behaviour. A partial `MODIFIED` block loses
   detail at archive time, and every scenario in the existing requirement stays true.
 
+## Branch dependency — sequencing, already planned
+
+**This change's delta targets a capability that does not exist on this branch yet.** Branch
+`IGDD-3460` is cut from `develop`. The main spec
+`openspec/specs/api-key-credential-lifecycle/spec.md` lives only on branch
+`openspec-cleanup`, which is **not** an ancestor of `develop`. On this branch
+`openspec list --specs` reports five capabilities, and `api-key-credential-lifecycle` is not
+one of them.
+
+Two consequences:
+
+1. **Every `openspec/specs/api-key-credential-lifecycle/...` line reference in these
+   artifacts resolves against `openspec-cleanup`, not against this branch.** They are
+   correct, and they do not resolve here.
+
+2. **Archiving this change before `openspec-cleanup` merges would write a wrong main spec.**
+   OpenSpec would create `api-key-credential-lifecycle` from this delta alone — three
+   requirements rather than the eighteen the capability then holds — and leave a `TBD` purpose
+   placeholder. `openspec validate --strict` does not catch this, because an `ADDED` delta
+   does not require the target capability to exist.
+
+**`openspec-cleanup` merges into `develop` before this work finishes** — confirmed by the
+author on 2026-10-01. That branch exists to land those spec files, so this is sequencing
+rather than new work. The only hard rule is the ordering: **do not archive this change until
+that merge has landed.**
+
+**One more delta is then owed.** The existing requirement "The credential list is returned
+whole and filtered client-side" carries a scenario, "Filters compose with the text search",
+that enumerates *environment, status and organization* explicitly. A fourth filter makes that
+enumeration incomplete. Once the main spec is present, add a `MODIFIED` block for that
+requirement extending the scenario to four filters. A `MODIFIED` block cannot be written now,
+because it must reproduce a requirement body that is absent from this branch.
+
 ## Impact
 
 **One component file, and one new test file.**
 
-- Modified: `src/components/ApiKeyManagement/index.tsx` — one new entry in the `columns`
-  array (`:3190`) and a small `UseTypesCell` component beside `StatusCell`.
-- New: an `e2e/tests/` spec for the API keys grid. `e2e/helpers/oktaLogin.ts` already
+- Modified: `src/components/ApiKeyManagement/index.tsx` — four edits in one file:
+  - a shared helper that returns a row's use types in canonical order,
+  - a `UseTypesCell` component beside `StatusCell`, plus one new entry in the `columns`
+    array (`:3190`),
+  - one `PolicyField` in `RenewDialog` (`:1306`),
+  - a fourth key on `ApiKeyFilters` plus a fourth `renderFilterSelect` call (`:1020`),
+  - two added clauses in `filteredRows` (`:2917`) — one for the filter, one for the search.
+- New: an `e2e/tests/` spec for the API keys page. `e2e/helpers/oktaLogin.ts` already
   provides the login step.
+- Unchanged, deliberately: `ReissueDialog` (already displays use types) and
+  `KeyCreatedDialog` (the token reveal).
 
 **No API, database, or authorization change.** The column reads a field that
 `GET /api/apikeys` already returns and that the row object already holds. That route is
