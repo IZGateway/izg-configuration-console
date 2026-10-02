@@ -5,6 +5,7 @@ import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import isOperationsRole from '../../../../lib/security/accessutils'
+import { serializeAllowedUser } from '../../../../lib/type/AllowedUser'
 
 /**
  * @swagger
@@ -104,20 +105,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
 
       // Serialize dates to ISO strings for JSON response
-      const serializedResult = result.map((user) => ({
-        principal: user.principal,
-        environment: user.environment,
-        destinationId: user.destinationId,
-        organization: user.organization,
-        enabled: user.enabled,
-        createdBy: user.createdBy,
-        createdOn: user.createdOn?.toISOString() || null,
-        updatedBy: user.updatedBy,
-        updatedOn: user.updatedOn?.toISOString() || null,
-        validatedOn: user.validatedOn?.toISOString() || null,
-      }))
-
-      return res.status(200).json(serializedResult)
+      return res.status(200).json(result.map(serializeAllowedUser))
     } catch (error) {
       logger.error('Failed to fetch allowed users by destination', {
         errorMessage: error?.message || 'Unknown error',
