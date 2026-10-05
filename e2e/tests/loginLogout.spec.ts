@@ -70,14 +70,24 @@ test('Verify connections table for non-admin user', async ({ page }) => {
     .soft(page.locator('#title-table'))
     .toContainText('My Connections')
 
-  // Get configured expected destination id's for non-admin user
-  const expectedDestinationIds =
-    process.env.OKTA_NONADMIN_EXPECTED_DEST_IDS.split(',')
+  // Get configured expected destination id's for non-admin user, sorted so
+  // the order in the env var doesn't matter
+  const expectedDestinationIds = process.env.OKTA_NONADMIN_EXPECTED_DEST_IDS
+    .split(',')
+    .map((id) => id.trim())
+    .sort()
   const expectedConnectionCount = expectedDestinationIds.length
 
+  // The grid defaults to 5 rows per page; widen it so every connection is
+  // rendered before counting
+  await page.locator('.MuiTablePagination-select').click()
+  await page.getByRole('option', { name: '25', exact: true }).click()
+  await page.waitForLoadState('networkidle')
+
   // Verify configured # of rows are visible
-  const gridRowCount = await page.locator('.MuiDataGrid-row').count()
-  await expect.soft(gridRowCount).toEqual(expectedConnectionCount)
+  await expect
+    .soft(page.locator('.MuiDataGrid-row'))
+    .toHaveCount(expectedConnectionCount)
 
   // Get DESTINATION ID values from the first column of each row
   const destinationIds = await page

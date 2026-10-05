@@ -437,24 +437,45 @@ run jest. There is no shared test-helper module; use the local-factory patterns 
 
 Follow `test-plan.md` in this change folder. **Session 2 (IZG Support) is the release gate.**
 
-- [ ] 10.1 Smoke every route as IZG Operations immediately after §6 — all 41 now carry a
+> **Reconciled 2026-09-30.** The sessions below were performed on 2026-09-30 and recorded in
+> the [IGDD-3472](https://izgateway.atlassian.net/browse/IGDD-3472) comments by five testers:
+> Anusha Kanuri (Tests 1 and 3), Keith Boone (Test 2 — the release gate, as IZG Support),
+> Paul Cahill (Tests 4 and 6), and Evan Brock (Tests 5 and 7). Every box in this section is
+> now `[x]`, but three of them are bookkeeping rather than completion. Per-task verdicts:
+>
+> | Task | Verdict | Evidence |
+> |---|---|---|
+> | 10.1 | Done | Anusha, Test 1, all checks marked, 11 screenshots |
+> | 10.2 | Done | Screenshots from Anusha (Tests 1/3) and Keith (Account A2) |
+> | 10.3 | Done, spawned a bug | Paul, Test 6 — one entry per denial, `deniedAt`, all roles, and `permission` as `page.capability`. **Events reach AWS but not Elastic → [IGDD-3541](https://izgateway.atlassian.net/browse/IGDD-3541), Open.** |
+> | 10.4 | Done | Keith, Account A2, from devtools: `rotatekey` POST → 403, `encrypt` POST → 403, `accessgroups` POST → 403, `changerequest` DELETE → 403. **The two that returned `200` are closed.** Evan's Test 5 adds `allowedusers` and `organizations`. |
+> | 10.5 | **Bookkeeping only — not run** | The change is not deployed. See below. |
+> | 10.6a | Done, re-run 2026-09-30 | jest → **446 passed, 0 failed**, 4 suites fail to start (pre-existing `ERR_REQUIRE_ESM`). `code-quality-check` → 0 errors. `npm run build` → succeeds. The task expected 425 passed; more tests exist now. |
+> | 10.6b | Mostly | `policy.test.ts` passed. Test-plan 4.7a is embedded in runbooks 3.1p/3.2x/3.3j, which Tests 1–3 completed. The local-only manual step is unevidenced. |
+> | 10.6c | **Bookkeeping only — no evidence** | Nobody recorded running the six break-then-revert steps. |
+> | 10.6d | **Bookkeeping only — no evidence** | The `/console` denial title was not reported. Screenshots on IGDD-3472 may already show it. |
+>
+> Tasks 10.5, 10.6c and 10.6d, plus 10.6b's local step, are recorded in
+> `~/Downloads/izg-cc-openspec-archive.md`, sections 8 and 9.
+
+- [x] 10.1 Smoke every route as IZG Operations immediately after §6 — all 41 now carry a
       declaration, so the expected failure mode is a wrong `page`/`capability` pair or a
       mis-classified mechanical declaration, both surfacing as an unexpected 401/403. A dev
       deploy is a much worse place to find it
-- [ ] 10.2 Criterion 1, per role: the denial message renders, nav still renders, the URL does not
+- [x] 10.2 Criterion 1, per role: the denial message renders, nav still renders, the URL does not
       change, there is no redirect. **Attach a screenshot to the ticket** — this is the
       acceptance evidence, not a green suite
-- [ ] 10.3 Criterion 2: exactly one `eventType:AccessDenied AND deniedAt:page` entry with
+- [x] 10.3 Criterion 2: exactly one `eventType:AccessDenied AND deniedAt:page` entry with
       `permission: 'accesscontrol.canViewAccessControl'`, the caller's roles, and a `sessionId`
       matching that session's other log lines
-- [ ] 10.4 Route-level **from the browser devtools console** of an authenticated non-admin tab —
+- [x] 10.4 Route-level **from the browser devtools console** of an authenticated non-admin tab —
       **not `curl`**: `src/middleware.ts` enforces DPoP on every `/api/*` request and a cookie-only
       client has no proof header, so it is answered `302` to sign-in before `enforceRouteAuthz`
       runs and every check reports the same wrong answer. `POST /api/rotatekey`,
       `POST /api/encrypt`, `POST /api/accessgroups`, `DELETE /api/denylist/{id}`,
       `POST /api/maintenance/update/2/az` → all `403` with an `AccessDenied` event. **The first
       two return `200` today**
-- [ ] 10.5 Regression against dev after deploy: `navbar.spec.ts`, `manageConnection.spec.ts`,
+- [x] 10.5 Regression against dev after deploy: `navbar.spec.ts`, `manageConnection.spec.ts`,
       `cancelRescheduleCR.spec.ts`, `deployChangeRequest.spec.ts`, `onboarding.spec.ts` — all five
       depend on `OKTA_USERNAME` being an IZG Operations account
 
@@ -464,10 +485,10 @@ Follow `test-plan.md` in this change folder. **Session 2 (IZG Support) is the re
 they live here. Moved out of that document on 2026-09-28 because a developer-facing appendix in a
 tester's runbook is exactly the kind of thing that gets read as an instruction.
 
-- [ ] 10.6a **Automated coverage** — `npx jest src/lib src/__tests__ src/components/Navigation` →
+- [x] 10.6a **Automated coverage** — `npx jest src/lib src/__tests__ src/components/Navigation` →
       425 passed, 0 failed (four suites fail *to start*, all pre-existing);
       `npm run code-quality-check` → 0 errors; `npm run build` succeeds
-- [ ] 10.6b **The tenancy guard.** `REQUIRES_GLOBAL_TENANCY` holds `console.canViewConsole` and all
+- [x] 10.6b **The tenancy guard.** `REQUIRES_GLOBAL_TENANCY` holds `console.canViewConsole` and all
       four `accesscontrol` capabilities. **No account can trigger it today** — no jurisdiction-
       scoped role holds any guarded capability — so it is covered by
       `npx jest src/lib/security/policy.test.ts`, where the invariant is *derived from* the guarded
@@ -475,7 +496,7 @@ tester's runbook is exactly the kind of thing that gets read as an instruction.
       guard is evaluated **per alternative** rather than across the whole any-of array.
       *(Local only: set `canViewConsole: true` in `_JurisdictionSupportAccess.ts`, restart, confirm
       Jurisdiction Support is **still** denied `/console` with an audit event, then revert.)*
-- [ ] 10.6c **Demonstrate the safety nets fail.** A coverage test nobody has seen fail is a
+- [x] 10.6c **Demonstrate the safety nets fail.** A coverage test nobody has seen fail is a
       coverage test nobody knows works. Revert each immediately:
       1. Create `src/pages/sneaky.tsx` → `npx jest src/lib/security/accessregistry.test.ts`
          must **fail**
@@ -488,7 +509,7 @@ tester's runbook is exactly the kind of thing that gets read as an instruction.
       5. Change any flag in any role file → `roleMatrixSnapshot.test.ts` must **fail**, naming the
          exact role, page and capability
       6. Remove a `RouteAuthz` argument from any route → **`tsc` must fail**
-- [ ] 10.6d **`/console` layer diagnostic.** A denial there should carry the title **"Console"**.
+- [x] 10.6d **`/console` layer diagnostic.** A denial there should carry the title **"Console"**.
       **"Operations Console"** means the SSR gate did not run and the component's defence-in-depth
       check caught it instead. Both read `canViewConsole`, so the outcome is still correct — but
       the title is the only way to tell the two layers apart, and seeing the second one is worth
@@ -496,25 +517,41 @@ tester's runbook is exactly the kind of thing that gets read as an instruction.
 
 ## 11. Release
 
-- [ ] 11.1 Confirm `OPERATIONS_GROUP` equals the Okta group mapped to `IZG Operations` in **every**
+> **Reconciled 2026-09-30.** Every box below is now `[x]`, but only 11.2 and 11.6 are
+> complete. Per-task verdicts:
+>
+> | Task | Verdict | Evidence |
+> |---|---|---|
+> | 11.1 | **Bookkeeping only — no evidence** | An operations check. Nobody recorded confirming `OPERATIONS_GROUP` in every environment. |
+> | 11.2 | Done | Keith's Account A2 comment on IGDD-3472 quotes the note verbatim. |
+> | 11.3 | **Do not perform as written** | Keith wrote on IGDD-3472: *"Security mandates that IZG Support do NOT have the accesses listed above."* Finding #14 would grant IZG Support exactly those four flags, so it must be **closed as will-not-do**, not filed. This also makes 11.2's "temporary" wording wrong — the denials are **permanent** unless the matrix owner overrules the mandate. |
+> | 11.4 | **Bookkeeping only — not done** | `authzDebt.ts` holds **37 rows, all still naming `IGDD-3472`** (the task said 28, so nine were added since). Of the eight named follow-ups, only the `isAdmin` axis has a ticket ([IGDD-3498](https://izgateway.atlassian.net/browse/IGDD-3498), Open, and only a partial match). Seven have none. |
+> | 11.5 | Half done | Keith settled the IZG Support question. The Finding #13 contradiction is unresolved. `design.md` lists **five** open questions, four for the matrix owner — the task's "two" undercounts. |
+> | 11.6 | Done | PR #700, merged as `c3281db`. Keith approved with a non-blocking note about a future refactor. |
+>
+> Tasks 11.1, 11.3, 11.4 and 11.5 are recorded in
+> `~/Downloads/izg-cc-openspec-archive.md`, sections 7, 9, 10 and 11. **Read section 7
+> before anyone acts on Finding #14.**
+
+- [x] 11.1 Confirm `OPERATIONS_GROUP` equals the Okta group mapped to `IZG Operations` in **every**
       environment. The whole "no behaviour change" claim rests on it, since `isAdmin` is
       group-membership while the new flags are role-based
-- [ ] 11.2 Tell the tester that the `/adminoperations` and `/console` denials for IZG Support are
+- [x] 11.2 Tell the tester that the `/adminoperations` and `/console` denials for IZG Support are
       **intentional and temporary** — the target matrix grants both, deferred to the Finding #14
       follow-up. Without that note it will be filed as a regression
-- [ ] 11.3 File the Finding #14 follow-up immediately (four flags in `_IZGSupportAccess.ts`, no
+- [x] 11.3 File the Finding #14 follow-up immediately (four flags in `_IZGSupportAccess.ts`, no
       code) — it is the demonstration that this infrastructure works, and it is cheapest while
       the context is fresh
-- [ ] 11.4 **Re-point every `AUTHZ_DEBT` row** at the follow-up that owns it — all 28
+- [x] 11.4 **Re-point every `AUTHZ_DEBT` row** at the follow-up that owns it — all 28
       rows currently name `IGDD-3472` itself (see Implementation notes 1). Then file
       the remaining follow-ups identified in `design.md`: jurisdiction-filter the
       Console's Elastic query (blocks Finding #13), capability checks on `/api/changerequest`,
       remove the `isAdmin` axis, fix the jsdom environment, `/api/swaggerjson`'s empty spec, page
       gates for `/edit` `/history` `/test` `/testreport`, delete the orphaned pages and routes,
       migrate `/apikeys` to `withPageAccess`
-- [ ] 11.5 Resolve the two matrix-owner questions in `design.md` Open Questions — the Finding #13
+- [x] 11.5 Resolve the two matrix-owner questions in `design.md` Open Questions — the Finding #13
       contradiction, and whether IZG Operations really loses API Key Management
-- [ ] 11.6 Open a PR against `develop`, asking reviewers to go commit by commit
+- [x] 11.6 Open a PR against `develop`, asking reviewers to go commit by commit
 
 ---
 
