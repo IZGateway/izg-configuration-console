@@ -46,6 +46,21 @@ export const loginToOkta = async (
   const passwordInput = page.locator(
     'input[name="credentials.passcode"], input[name="password"], input#okta-signin-password'
   )
+  const oktaError = page.locator('.okta-form-infobox-error')
+
+  // Fail fast when Okta rejects the account (locked, suspended, bad password)
+  // instead of timing out. A rejected account otherwise costs the full wait in
+  // every test, browser, and retry, and the repeated attempts can keep the
+  // account locked.
+  const failIfOktaRejected = async (step: string) => {
+    if (!(await oktaError.isVisible().catch(() => false))) return
+    const message = (await oktaError.innerText().catch(() => '')).trim()
+    throw new Error(
+      `loginToOkta: Okta rejected ${username} at the ${step} step: ` +
+        `"${message || 'unknown error'}". Check the account is active and ` +
+        'unlocked in Okta and that the credentials are current.'
+    )
+  }
 
   // If the app landing page shows a "Sign in with Okta" button, click it
   // before waiting for Okta form fields.
@@ -87,12 +102,16 @@ export const loginToOkta = async (
   // 1. Password input directly
   // 2. Old factor selector (.button.select-factor.link-button)
   // 3. New authenticator list screen (#form52 with Email/Password options)
+  // 4. An Okta error, if the account is rejected at the username step
   await page
     .locator(
       'input[name="credentials.passcode"], input[name="password"], .button.select-factor.link-button'
     )
     .first()
+    .or(oktaError)
+    .first()
     .waitFor({ state: 'visible', timeout: 30000 })
+  await failIfOktaRejected('username')
 
   const body = page.locator('body')
 
@@ -107,8 +126,12 @@ export const loginToOkta = async (
   }
   await setInputValue(passwordInput.first(), password)
   await page.locator('[type="submit"]').first().click()
-  await page.waitForSelector('#app-header', { timeout: 60000 })
-  await expect(page.locator('#app-header')).toContainText(userFullName)
+  await appHeader
+    .or(oktaError)
+    .first()
+    .waitFor({ state: 'visible', timeout: 60000 })
+  await failIfOktaRejected('password')
+  await expect(appHeader).toContainText(userFullName)
   await page.goto('/')
   await page.waitForLoadState('networkidle')
 }
