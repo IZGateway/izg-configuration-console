@@ -9,12 +9,11 @@ import { logout } from '../helpers/logout'
 // domain for the chosen environment. Names must match the dropdown labels.
 const TEST_ORG_NAME = 'Audacious Inquiry LLC'
 const TEST_ENV_NAME = 'Development'
-const AUTHORIZED_TEST_DOMAIN = 'createKey.fastTrack.playwright.org'
+const AUTHORIZED_TEST_DOMAIN = 'testmulti.testing.izgateway.org'
 const TEST_USE_TYPE = 'Provider'
 
 let context: BrowserContext
 let page: Page
-let createdDescription: string | null = null
 
 // Opens a MUI Select / Autocomplete wrapped in `testId` and picks `optionName`
 // (or the first option when omitted).
@@ -28,14 +27,9 @@ const chooseOption = async (
     ? page.getByRole('option', { name: optionName, exact: true })
     : page.getByRole('option').first()
   await option.click()
-  // Autocomplete multi-selects stay open after a pick. Autocomplete swallows
-  // Escape, so this closes only its popup — a plain Select has already closed
-  // by now, and an Escape there would reach (and close) the dialog instead.
-  const listbox = page.getByRole('listbox')
-  if (await listbox.isVisible()) {
-    await page.keyboard.press('Escape')
-    await expect(listbox).toBeHidden()
-  }
+  // Both Select and the Autocomplete multi-selects close themselves after a
+  // pick. Don't press Escape here: it reaches the dialog and resets the form.
+  await expect(page.getByRole('listbox')).toBeHidden()
 }
 
 const keyRow = (description: string) =>
@@ -50,23 +44,6 @@ test.beforeAll(async ({ browser }) => {
 test.beforeEach(async () => {
   await page.goto('/apikeys')
   await page.waitForLoadState('networkidle')
-})
-
-// Revoke the key this test minted so runs don't pile up Active keys (which
-// would also trip the duplicate-scope warning on every later run).
-test.afterEach(async () => {
-  if (!createdDescription) return
-  const description = createdDescription
-  createdDescription = null
-  try {
-    await page.keyboard.press('Escape')
-    const row = keyRow(description)
-    await row.getByTestId('RemoveCircleOutlineIcon').click()
-    await page.getByRole('button', { name: 'CONFIRM REVOCATION' }).click()
-    await expect(row).toContainText('Revoked')
-  } catch (err) {
-    console.warn(`Cleanup: could not revoke "${description}"`, err)
-  }
 })
 
 test.afterAll(async () => {
@@ -90,7 +67,7 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
     'Use Types',
     'DNS Name',
   ]) {
-    await expect(createDialog.getByText(field)).toBeVisible()
+    await expect(createDialog.getByText(field).first()).toBeVisible()
   }
 
   await chooseOption(createDialog, 'create-key-organization', TEST_ORG_NAME)
@@ -121,7 +98,6 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
   if (await createAnyway.isVisible()) await createAnyway.click()
 
   expect((await createResponse).status()).toBe(201)
-  createdDescription = description
 
   // No "Verify Domain Ownership" step — straight to the token.
   await expect(tokenDialog).toBeVisible()

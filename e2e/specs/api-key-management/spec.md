@@ -35,4 +35,4 @@ in active status immediately"
 
 **Test data:** constants at the top of the test file (organization, environment,
 pre-authorized domain, use type). The domain must already be authorized for that
-organization and environment. The test revokes the key it created when it finishes.
+organization and environment. The created key is left Active; each run adds one.
