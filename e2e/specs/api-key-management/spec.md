@@ -33,6 +33,6 @@ in active status immediately"
 - After the dialog is closed, the new key appears in the Keys table with status **Active**
   and no View (eye) action, because the token has already been revealed once
 
-**Test data** (`.env.test`): `E2E_APIKEY_ORG`, `E2E_APIKEY_ENV`, `E2E_APIKEY_DOMAIN`,
-and optionally `E2E_APIKEY_USE_TYPE`. The test skips when the required values are unset,
-and revokes the key it created when it finishes.
+**Test data:** constants at the top of the test file (organization, environment,
+pre-authorized domain, use type). The domain must already be authorized for that
+organization and environment. The test revokes the key it created when it finishes.

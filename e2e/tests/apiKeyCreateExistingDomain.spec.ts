@@ -6,15 +6,11 @@ import { logout } from '../helpers/logout'
 // → "Create Key: existing authorized domain".
 //
 // Requires a sender organization that already has an authorized (unexpired)
-// domain for the chosen environment. Supply via .env.test:
-//   E2E_APIKEY_ORG       Organization display name, as shown in the dropdown
-//   E2E_APIKEY_ENV       Environment display name, e.g. "Development"
-//   E2E_APIKEY_DOMAIN    The previously-authorized DNS name
-//   E2E_APIKEY_USE_TYPE  (optional) Use Type label; defaults to the first offered
-const TEST_ORG_NAME = process.env.E2E_APIKEY_ORG
-const TEST_ENV_NAME = process.env.E2E_APIKEY_ENV
-const AUTHORIZED_TEST_DOMAIN = process.env.E2E_APIKEY_DOMAIN
-const TEST_USE_TYPE = process.env.E2E_APIKEY_USE_TYPE
+// domain for the chosen environment. Names must match the dropdown labels.
+const TEST_ORG_NAME = 'Audacious Inquiry LLC'
+const TEST_ENV_NAME = 'Development'
+const AUTHORIZED_TEST_DOMAIN = 'createKey.fastTrack.playwright.org'
+const TEST_USE_TYPE = 'Provider'
 
 let context: BrowserContext
 let page: Page
@@ -44,11 +40,6 @@ const chooseOption = async (
 
 const keyRow = (description: string) =>
   page.getByRole('row').filter({ hasText: description })
-
-test.skip(
-  !TEST_ORG_NAME || !TEST_ENV_NAME || !AUTHORIZED_TEST_DOMAIN,
-  'Set E2E_APIKEY_ORG, E2E_APIKEY_ENV and E2E_APIKEY_DOMAIN in .env.test'
-)
 
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
@@ -152,7 +143,7 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
   const row = keyRow(description)
   await expect(row).toBeVisible()
   await expect(row).toContainText('Active')
-  await expect(row).toContainText(AUTHORIZED_TEST_DOMAIN!)
+  await expect(row).toContainText(AUTHORIZED_TEST_DOMAIN)
   // Token was revealed once already, so the View (eye) action is gone.
   await expect(row.getByTestId('VisibilityIcon')).toHaveCount(0)
 })
