@@ -6,12 +6,14 @@ import {
   Box,
   Button,
   Card,
+  Checkbox,
   Chip,
   CircularProgress,
   FormControl,
   IconButton,
   InputAdornment,
   InputLabel,
+  ListItemText,
   MenuItem,
   Popover,
   Select,
@@ -30,6 +32,10 @@ import {
   GridRenderCellParams,
   GridToolbarContainer,
   GridToolbarProps,
+  gridColumnDefinitionsSelector,
+  gridColumnVisibilityModelSelector,
+  useGridApiContext,
+  useGridSelector,
 } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
@@ -40,6 +46,7 @@ import FlagIcon from '@mui/icons-material/Flag'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import TuneIcon from '@mui/icons-material/Tune'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import VpnKeyIcon from '@mui/icons-material/VpnKey'
@@ -187,7 +194,10 @@ function buildAuditDetails(record: ApiKeyAuditRecord): string {
       )
       break
     case 'Reissue':
-      parts.push(['reissuedAs', record.reissuedAs], ['reissuedBy', record.userName])
+      parts.push(
+        ['reissuedAs', record.reissuedAs],
+        ['reissuedBy', record.userName]
+      )
       break
     case 'Revoke':
       parts.push(
@@ -210,7 +220,9 @@ function buildAuditDetails(record: ApiKeyAuditRecord): string {
   }
 
   return parts
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .filter(
+      ([, value]) => value !== undefined && value !== null && value !== ''
+    )
     .map(([label, value]) => {
       // graceExpiresAt and friends arrive as ISO strings; show the date only —
       // the full timestamp is already in the TIMESTAMP column.
@@ -303,7 +315,14 @@ interface ApiKey {
   jurisdiction: string
   jurisdictionId: string
   domain: string | null
-  status: 'Active' | 'Ready for Validation' | 'Validation' | 'Grace Period' | 'Revoked' | 'Cancelled' | string
+  status:
+    | 'Active'
+    | 'Ready for Validation'
+    | 'Validation'
+    | 'Grace Period'
+    | 'Revoked'
+    | 'Cancelled'
+    | string
   // The record's actual persisted `status`, alongside the (possibly derived)
   // display `status` above. See `pendingSweeperSync`.
   rawStatus: string
@@ -383,7 +402,9 @@ function envDisplayName(raw: number | string): string {
     const code = getEnvironmentName(raw)
     return ENV_DISPLAY_NAMES[code] ?? code
   }
-  const code = isNaN(Number(raw)) ? raw.toUpperCase() : getEnvironmentName(Number(raw))
+  const code = isNaN(Number(raw))
+    ? raw.toUpperCase()
+    : getEnvironmentName(Number(raw))
   return ENV_DISPLAY_NAMES[code] ?? code
 }
 
@@ -405,24 +426,31 @@ function envDisplayName(raw: number | string): string {
 //    stored status (still "Grace Period") instead of asserting "Revoked",
 //    and flags it via `pendingSweeperSync` so the UI can say the window has
 //    ended without claiming a DB state that may not exist.
-function computeDisplayStatus(
-  cred: ApiKeyCredential
-): { status: string; pendingSweeperSync: boolean } {
+function computeDisplayStatus(cred: ApiKeyCredential): {
+  status: string
+  pendingSweeperSync: boolean
+} {
   const now = Date.now()
   const exp = cred.expiresAt ? new Date(cred.expiresAt).getTime() : null
-  const graceEnd = cred.graceExpiresAt ? new Date(cred.graceExpiresAt).getTime() : null
+  const graceEnd = cred.graceExpiresAt
+    ? new Date(cred.graceExpiresAt).getTime()
+    : null
 
   // Explicit terminal stored statuses always win — a user revoke/cancel or
   // a grace-period sweeper that has already persisted the final status.
-  if (cred.status === 'revoked') return { status: 'Revoked', pendingSweeperSync: false }
-  if (cred.status === 'cancelled') return { status: 'Cancelled', pendingSweeperSync: false }
-  if (cred.status === 'expired') return { status: 'Expired', pendingSweeperSync: false }
+  if (cred.status === 'revoked')
+    return { status: 'Revoked', pendingSweeperSync: false }
+  if (cred.status === 'cancelled')
+    return { status: 'Cancelled', pendingSweeperSync: false }
+  if (cred.status === 'expired')
+    return { status: 'Expired', pendingSweeperSync: false }
 
   // Renewed key in/past its grace period. The JWT `exp` caps effective
   // validity, so the effective grace end is min(graceExpiresAt, exp).
   if (graceEnd !== null) {
     const effectiveGraceEnd = exp !== null ? Math.min(graceEnd, exp) : graceEnd
-    if (now < effectiveGraceEnd) return { status: 'Grace Period', pendingSweeperSync: false }
+    if (now < effectiveGraceEnd)
+      return { status: 'Grace Period', pendingSweeperSync: false }
     if (exp !== null && exp <= graceEnd) {
       // The JWT itself has expired first — safe, see comment above.
       return { status: 'Expired', pendingSweeperSync: false }
@@ -440,7 +468,8 @@ function computeDisplayStatus(
   if (cred.status === 'ready_for_validation') {
     return { status: 'Ready for Validation', pendingSweeperSync: false }
   }
-  if (cred.status === 'active') return { status: 'Active', pendingSweeperSync: false }
+  if (cred.status === 'active')
+    return { status: 'Active', pendingSweeperSync: false }
   return {
     status: cred.status
       ? cred.status.replace(/\b\w/g, (c) => c.toUpperCase())
@@ -538,6 +567,16 @@ const dataGridCustom = {
       alignItems: 'center',
     },
   },
+  '& .MuiDataGrid-cell.wrapCell': {
+    whiteSpace: 'normal !important',
+    lineHeight: '1.35 !important',
+    alignItems: 'flex-start',
+    py: 1,
+  },
+  '& .MuiDataGrid-cell.wrapCell .MuiTypography-root': {
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
+  },
   '& .MuiDataGrid-toolbarContainer': {
     backgroundColor: palette.white,
     padding: '24px 16px 0px 16px',
@@ -561,6 +600,7 @@ const dataGridCustom = {
     backgroundColor: 'transparent',
     boxShadow: 'none',
     borderRadius: 0,
+    borderTop: 'none',
   },
   '& .MuiTablePagination-actions': { color: palette.primary },
   '& .MuiTablePagination-selectIcon.MuiSelect-icon.MuiSelect-iconStandard.css-pqjvzy-MuiSvgIcon-root-MuiSelect-icon':
@@ -575,6 +615,9 @@ const dataGridCustom = {
   },
 }
 
+const DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL: Partial<Record<string, boolean>> =
+  {}
+
 // ─── Static sub-components (defined OUTSIDE main component to prevent infinite loops) ──
 
 function StatCard({ label, value }: { label: string; value: number }) {
@@ -582,17 +625,32 @@ function StatCard({ label, value }: { label: string; value: number }) {
     <Box
       sx={{
         borderRadius: '12px',
-        backgroundColor: palette.greyLight,
-        p: 2,
-        minWidth: 140,
+        backgroundColor: palette.white,
+        p: { xs: 1.5, md: 2 },
+        border: `1px solid ${palette.border}`,
+        // On small screens the three cards share the row instead of
+        // overflowing it at their fixed desktop width.
+        flex: { xs: 1, md: 'initial' },
+        minWidth: { xs: 0, md: 140 },
+        mr: { xs: 0, md: 4 },
       }}
     >
-      <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+      <Typography
+        sx={{
+          fontSize: { xs: '1.5rem', md: '1.75rem' },
+          fontWeight: 700,
+          lineHeight: 1.2,
+        }}
+      >
         {value}
       </Typography>
       <Typography
         variant="caption"
-        sx={{ color: palette.greyText, fontWeight: 600, letterSpacing: '0.03em' }}
+        sx={{
+          color: palette.greyText,
+          fontWeight: 600,
+          letterSpacing: '0.03em',
+        }}
       >
         {label.toUpperCase()}
       </Typography>
@@ -605,7 +663,7 @@ function StatCards({ apiKeys }: { apiKeys: ApiKey[] }) {
   const active = apiKeys.filter((k) => k.status === 'Active').length
   const revoked = apiKeys.filter((k) => k.status === 'Revoked').length
   return (
-    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+    <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, mb: { xs: 0, md: 3 } }}>
       <StatCard label="Total Keys" value={total} />
       <StatCard label="Active" value={active} />
       <StatCard label="Revoked" value={revoked} />
@@ -668,27 +726,40 @@ const USE_TYPE_CHIP_SX = {
   color: palette.primary,
   border: `1px solid ${palette.primary}`,
   fontSize: '0.875rem',
+  height: 24,
+  '& .MuiChip-label': {
+    lineHeight: 1.2,
+    display: 'flex',
+    alignItems: 'center',
+  },
 }
 
-// Two chips, then a "+N" carrying the rest in a tooltip. Fixed height, never
-// wraps — the row height is shared with nine other columns, and DESCRIPTION and
-// DNS already set the precedent of pushing detail into a tooltip rather than
-// growing the row. The indicator is focusable so Tab opens the tooltip: a
-// hover-only disclosure is unreachable by keyboard, and @axe-core/react does
-// not catch that.
+// Two chips, then a "+N" carrying the rest in a tooltip. The container wraps
+// when column width is tight so chips are never clipped; row height is dynamic.
+// The indicator is focusable so Tab opens the tooltip: a hover-only disclosure
+// is unreachable by keyboard, and @axe-core/react does not catch that.
 function UseTypesCell({ row }: { row: ApiKey }) {
   const useTypes = canonicalUseTypes(row.useTypes)
   if (!useTypes.length) {
     return (
       <Typography variant="body2" sx={{ color: palette.greyText }}>
-        —
+        None
       </Typography>
     )
   }
   const shown = useTypes.slice(0, 2)
   const overflow = useTypes.length - shown.length
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 0.5,
+        minWidth: 0,
+        width: '100%',
+      }}
+    >
       {shown.map((ut) => (
         <Chip
           key={ut}
@@ -702,7 +773,7 @@ function UseTypesCell({ row }: { row: ApiKey }) {
           <Chip
             size="small"
             tabIndex={0}
-            label={`+${overflow}`}
+            label={`+${overflow} more`}
             sx={USE_TYPE_CHIP_SX}
           />
         </Tooltip>
@@ -732,7 +803,14 @@ function StatusCell({ row }: { row: ApiKey }) {
   }
   if (status === 'Revoked') {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: palette.error }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.75,
+          color: palette.error,
+        }}
+      >
         <Typography variant="body2" sx={{ color: 'inherit', fontWeight: 500 }}>
           Revoked
         </Typography>
@@ -743,14 +821,19 @@ function StatusCell({ row }: { row: ApiKey }) {
   if (status === 'Grace Period') {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        <Typography variant="body2" sx={{ color: palette.warning ?? '#ed6c02' }}>
+        <Typography
+          variant="body2"
+          sx={{ color: palette.warning ?? '#ed6c02' }}
+        >
           {row.graceExpiresAt
             ? row.pendingSweeperSync
               ? `Grace period ended ${row.graceExpiresAt}`
               : `Grace period expires on ${row.graceExpiresAt}`
             : 'Grace Period'}
         </Typography>
-        {row.pendingSweeperSync && <GraceSweeperOverdueIndicator rawStatus={row.rawStatus} />}
+        {row.pendingSweeperSync && (
+          <GraceSweeperOverdueIndicator rawStatus={row.rawStatus} />
+        )}
       </Box>
     )
   }
@@ -774,7 +857,9 @@ function GraceSweeperOverdueIndicator({ rawStatus }: { rawStatus: string }) {
       arrow
       title={`The 10-business-day grace window has ended, but the stored status is still "${rawStatus}" — the Hub treats grace_period as usable until its background revocation sweeper actually revokes it. This key may still work; don't assume it's rejected until the stored status changes to revoked.`}
     >
-      <WarningAmberIcon sx={{ fontSize: 16, color: palette.warning ?? '#ed6c02' }} />
+      <WarningAmberIcon
+        sx={{ fontSize: 16, color: palette.warning ?? '#ed6c02' }}
+      />
     </Tooltip>
   )
 }
@@ -806,7 +891,13 @@ function ActionIconButton({
             height: 32,
           }}
         >
-          <Box sx={{ display: 'flex', fontSize: 18, color: color ?? palette.greyText }}>
+          <Box
+            sx={{
+              display: 'flex',
+              fontSize: 18,
+              color: color ?? palette.greyText,
+            }}
+          >
             {children}
           </Box>
         </IconButton>
@@ -872,7 +963,9 @@ function ActionCell({
     if (row.reissuedAs) {
       return (
         <Typography variant="body2" sx={{ color: palette.greyText }}>
-          {row.expires ? `Expired ${row.expires} — re-issued` : 'Expired — re-issued'}
+          {row.expires
+            ? `Expired ${row.expires} — re-issued`
+            : 'Expired — re-issued'}
         </Typography>
       )
     }
@@ -897,7 +990,11 @@ function ActionCell({
     return (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
         {canRevoke && (
-          <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+          <ActionIconButton
+            title="Revoke key"
+            onClick={() => onRevoke(row)}
+            color={palette.error}
+          >
             <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
           </ActionIconButton>
         )}
@@ -917,7 +1014,11 @@ function ActionCell({
           <CheckIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
         {canCancel && (
-          <ActionIconButton title="Cancel key" onClick={() => onCancel(row)} color={palette.error}>
+          <ActionIconButton
+            title="Cancel key"
+            onClick={() => onCancel(row)}
+            color={palette.error}
+          >
             <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
           </ActionIconButton>
         )}
@@ -928,11 +1029,19 @@ function ActionCell({
   if (row.status === 'Validation') {
     return (
       <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton title="View key" onClick={() => onView(row)} color={palette.primary}>
+        <ActionIconButton
+          title="View key"
+          onClick={() => onView(row)}
+          color={palette.primary}
+        >
           <VisibilityIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
         {canCancel && (
-          <ActionIconButton title="Cancel key" onClick={() => onCancel(row)} color={palette.error}>
+          <ActionIconButton
+            title="Cancel key"
+            onClick={() => onCancel(row)}
+            color={palette.error}
+          >
             <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
           </ActionIconButton>
         )}
@@ -944,7 +1053,11 @@ function ActionCell({
   return (
     <Box sx={{ display: 'flex', gap: 0.5 }}>
       {!row.viewed && (
-        <ActionIconButton title="View key" onClick={() => onRevealToken(row)} color={palette.primary}>
+        <ActionIconButton
+          title="View key"
+          onClick={() => onRevealToken(row)}
+          color={palette.primary}
+        >
           <VisibilityIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
       )}
@@ -958,7 +1071,11 @@ function ActionCell({
         </ActionIconButton>
       )}
       {canRevoke && (
-        <ActionIconButton title="Revoke key" onClick={() => onRevoke(row)} color={palette.error}>
+        <ActionIconButton
+          title="Revoke key"
+          onClick={() => onRevoke(row)}
+          color={palette.error}
+        >
           <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
         </ActionIconButton>
       )}
@@ -966,13 +1083,9 @@ function ActionCell({
   )
 }
 
-// ─── Toolbar — hoisted outside main component, receives props via slotProps ───
+// ─── Filters — shared by the desktop toolbar and the mobile toolbar ───────────
 
-interface CustomToolbarProps extends GridToolbarProps {
-  search: string
-  onSearchChange: (value: string) => void
-  tabValue: number
-  onTabChange: (value: number) => void
+interface FiltersButtonProps {
   filters: ApiKeyFilters
   onFiltersChange: (filters: ApiKeyFilters) => void
   environmentOptions: FilterOption[]
@@ -981,18 +1094,14 @@ interface CustomToolbarProps extends GridToolbarProps {
   useTypeOptions: FilterOption[]
 }
 
-function CustomToolbar({
-  search,
-  onSearchChange,
-  tabValue,
-  onTabChange,
+function FiltersButton({
   filters,
   onFiltersChange,
   environmentOptions,
   statusOptions,
   organizationOptions,
   useTypeOptions,
-}: CustomToolbarProps) {
+}: FiltersButtonProps) {
   const [filterAnchor, setFilterAnchor] = useState<HTMLElement | null>(null)
   const activeFilterCount =
     (filters.environment ? 1 : 0) +
@@ -1038,50 +1147,24 @@ function CustomToolbar({
   )
 
   return (
-    <GridToolbarContainer>
-      {/* Search and Filters act on the Keys grid only — shown just for that tab
-          so they don't appear inert (or worse, silently ignored) over the
-          audit feed. */}
-      <Box
-        sx={{
-          display: tabValue === 0 ? 'flex' : 'none',
-          alignItems: 'center',
-          width: '100%',
-          gap: 1,
-          pb: 1,
-        }}
-      >
-        <TextField
-          size="small"
-          placeholder="Search by key ID or jurisdiction"
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
+    <>
+      <Badge badgeContent={activeFilterCount} color="primary">
+        <Button
+          variant="text"
+          startIcon={<FilterListIcon />}
+          onClick={(e) => setFilterAnchor(e.currentTarget)}
           sx={{
-            width: '32vw',
-            '& .MuiOutlinedInput-root': { borderRadius: '4px' },
-            '@media (max-width: 768px)': { width: '100%', maxWidth: '200px' },
+            borderRadius: '24px',
+            padding: '8px 16px',
+            textTransform: 'none',
+            fontWeight: 500,
+            color: palette.greyDarkTypography,
+            backgroundColor: activeFilterCount ? '#E8F0FE' : 'transparent',
           }}
-        />
-        <Box sx={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-          <Badge badgeContent={activeFilterCount} color="primary">
-            <Button
-              variant="text"
-              startIcon={<TuneIcon />}
-              onClick={(e) => setFilterAnchor(e.currentTarget)}
-              sx={{
-                borderRadius: '24px',
-                padding: '8px 16px',
-                textTransform: 'none',
-                fontWeight: 500,
-                color: palette.greyDarkTypography,
-                backgroundColor: activeFilterCount ? '#E8F0FE' : 'transparent',
-              }}
-            >
-              Filters
-            </Button>
-          </Badge>
-        </Box>
-      </Box>
+        >
+          Filters
+        </Button>
+      </Badge>
 
       <Popover
         open={Boolean(filterAnchor)}
@@ -1113,48 +1196,593 @@ function CustomToolbar({
           </Box>
           {renderFilterSelect('Environment', 'environment', environmentOptions)}
           {renderFilterSelect('Status', 'status', statusOptions)}
-          {renderFilterSelect('Organization', 'organization', organizationOptions)}
+          {renderFilterSelect(
+            'Organization',
+            'organization',
+            organizationOptions
+          )}
           {renderFilterSelect('Use Types', 'useType', useTypeOptions)}
         </Box>
       </Popover>
+    </>
+  )
+}
 
-      <Box sx={{ width: '100%' }}>
-        <Tabs
-          value={tabValue}
-          onChange={(_, v) => onTabChange(v)}
-          aria-label="API key management tabs"
-          TabIndicatorProps={{ style: { display: 'none' } }}
+// ─── Toolbar — hoisted outside main component, receives props via slotProps ───
+
+interface CustomToolbarProps extends GridToolbarProps {
+  search: string
+  onSearchChange: (value: string) => void
+  tabValue: number
+  onTabChange: (value: number) => void
+  filters: ApiKeyFilters
+  onFiltersChange: (filters: ApiKeyFilters) => void
+  environmentOptions: FilterOption[]
+  statusOptions: FilterOption[]
+  organizationOptions: FilterOption[]
+  useTypeOptions: FilterOption[]
+}
+
+function CustomToolbar({
+  search,
+  onSearchChange,
+  tabValue,
+  onTabChange,
+  filters,
+  onFiltersChange,
+  environmentOptions,
+  statusOptions,
+  organizationOptions,
+  useTypeOptions,
+}: CustomToolbarProps) {
+  const apiRef = useGridApiContext()
+  const gridColumns = useGridSelector(apiRef, gridColumnDefinitionsSelector)
+  const columnVisibilityModel = useGridSelector(
+    apiRef,
+    gridColumnVisibilityModelSelector
+  )
+
+  const [columnsAnchor, setColumnsAnchor] = useState<HTMLElement | null>(null)
+
+  const columnOptions = useMemo(
+    () =>
+      gridColumns.filter(
+        (col) =>
+          col.hideable !== false &&
+          col.field !== '__check__' &&
+          col.field !== '__detail_panel_toggle__'
+      ),
+    [gridColumns]
+  )
+
+  const setColumnVisible = (field: string, visible: boolean) => {
+    apiRef.current.setColumnVisibility(field, visible)
+  }
+
+  const applyDefaultColumns = () => {
+    columnOptions.forEach((col) => {
+      const visible = DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL[col.field] !== false
+      setColumnVisible(col.field, visible)
+    })
+  }
+
+  return (
+    <GridToolbarContainer>
+      {/* Search and Filters act on the Keys grid only — shown just for that tab
+          so they don't appear inert (or worse, silently ignored) over the
+          audit feed. */}
+      <Box
+        sx={{
+          display: tabValue === 0 ? 'flex' : 'none',
+          alignItems: 'center',
+          width: '100%',
+          pb: 1,
+        }}
+      >
+        <TextField
+          size="small"
+          placeholder="Search by key ID or jurisdiction"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
           sx={{
-            minHeight: 40,
-            gap: 1,
-            '& .MuiTab-root': {
-              minHeight: 40,
-              py: 0,
-              borderRadius: '20px',
-              fontWeight: 700,
-              fontSize: '0.75rem',
-            },
-            '& .MuiTab-root.Mui-selected': {
-              backgroundColor: '#E8F0FE',
-              color: palette.primary,
-            },
+            minWidth: '64vw',
+            '& .MuiOutlinedInput-root': { borderRadius: '4px' },
+            '@media (max-width: 768px)': { width: '100%', maxWidth: '200px' },
           }}
-        >
-          <Tab
-            icon={<VpnKeyIcon sx={{ fontSize: 16 }} />}
-            label="KEYS"
-            iconPosition="start"
-            id="apikeys-tab-0"
+        />
+        <Box sx={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+          <Button
+            variant="text"
+            startIcon={<TuneIcon />}
+            onClick={(e) => setColumnsAnchor(e.currentTarget)}
+            sx={{
+              borderRadius: '24px',
+              padding: '8px 16px',
+              textTransform: 'none',
+              fontWeight: 500,
+              color: palette.greyDarkTypography,
+            }}
+          >
+            Columns
+          </Button>
+          <FiltersButton
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            environmentOptions={environmentOptions}
+            statusOptions={statusOptions}
+            organizationOptions={organizationOptions}
+            useTypeOptions={useTypeOptions}
           />
-          <Tab
-            icon={<ListAltIcon sx={{ fontSize: 16 }} />}
-            label="AUDIT LOG"
-            iconPosition="start"
-            id="apikeys-tab-1"
-          />
-        </Tabs>
+        </Box>
+      </Box>
+
+      <Popover
+        open={Boolean(columnsAnchor)}
+        anchorEl={columnsAnchor}
+        onClose={() => setColumnsAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: { sx: { borderRadius: '12px', p: 2, mt: 1, minWidth: 260 } },
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <Typography sx={{ fontWeight: 700 }}>Columns</Typography>
+            <Button
+              size="small"
+              onClick={applyDefaultColumns}
+              sx={{ textTransform: 'none' }}
+            >
+              Default view
+            </Button>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            {columnOptions.map((col) => {
+              const checked = columnVisibilityModel[col.field] !== false
+              return (
+                <MenuItem
+                  key={col.field}
+                  onClick={() => setColumnVisible(col.field, !checked)}
+                  dense
+                >
+                  <Checkbox checked={checked} size="small" />
+                  <ListItemText
+                    primary={
+                      typeof col.headerName === 'string'
+                        ? col.headerName
+                        : col.field
+                    }
+                  />
+                </MenuItem>
+              )
+            })}
+          </Box>
+        </Box>
+      </Popover>
+
+      <Box
+        sx={{ mt: -2, width: '100%', borderBottom: 1, borderColor: 'divider' }}
+      >
+        <ApiKeyTabs tabValue={tabValue} onTabChange={onTabChange} />
       </Box>
     </GridToolbarContainer>
+  )
+}
+
+// Shared by the desktop toolbar and the mobile toolbar; `fullWidth` stretches
+// the two tabs across a phone screen instead of leaving them bunched left.
+function ApiKeyTabs({
+  tabValue,
+  onTabChange,
+  fullWidth = false,
+}: {
+  tabValue: number
+  onTabChange: (value: number) => void
+  fullWidth?: boolean
+}) {
+  return (
+    <Tabs
+      value={tabValue}
+      onChange={(_, v) => onTabChange(v)}
+      aria-label="API key management tabs"
+      variant={fullWidth ? 'fullWidth' : 'standard'}
+    >
+      <Tab
+        icon={<VpnKeyIcon />}
+        label="KEYS"
+        iconPosition="start"
+        id="apikeys-tab-0"
+        sx={{ fontWeight: 'bold' }}
+      />
+      <Tab
+        icon={<ListAltIcon />}
+        label="AUDIT LOG"
+        iconPosition="start"
+        id="apikeys-tab-1"
+        sx={{ fontWeight: 'bold' }}
+      />
+    </Tabs>
+  )
+}
+
+// ─── Mobile view — card layout, same pattern as ConnectionsTable ──────────────
+
+// Same breakpoint and debounced resize check as ConnectionsTable, so both
+// pages switch from grid to cards at the same width.
+const MOBILE_BREAKPOINT = 992
+const MOBILE_PAGE_SIZE = 10
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout>
+    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const handleResize = () => {
+      clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(check, 100)
+    }
+    check()
+    window.addEventListener('resize', handleResize)
+    return () => {
+      clearTimeout(resizeTimer)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+  return isMobile
+}
+
+const MOBILE_CARD_SX = {
+  marginBottom: '12px',
+  padding: '16px',
+  border: '1px solid #e0e0e0',
+  borderRadius: '8px',
+  boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+}
+
+function MobileField({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <Typography
+      variant="body2"
+      color="textSecondary"
+      component="div"
+      sx={{ marginBottom: '4px', overflowWrap: 'anywhere' }}
+    >
+      <strong>{label}:</strong> {children}
+    </Typography>
+  )
+}
+
+type ApiKeyActionProps = Omit<
+  React.ComponentProps<typeof ActionCell>,
+  'row' | 'validating' | 'renewing' | 'reissuing'
+> & {
+  validatingSortKey: string | null
+  renewingSortKey: string | null
+  reissuingSortKey: string | null
+}
+
+function ApiKeyMobileCard({
+  row,
+  actionProps,
+}: {
+  row: ApiKey
+  actionProps: ApiKeyActionProps
+}) {
+  const { validatingSortKey, renewingSortKey, reissuingSortKey, ...handlers } =
+    actionProps
+  return (
+    <Card
+      sx={{
+        ...MOBILE_CARD_SX,
+        backgroundColor: row.status === 'Validation' ? '#E8F0FE' : 'white',
+      }}
+    >
+      {/* Header Row */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '8px',
+          marginBottom: '12px',
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 'bold',
+              color: palette.primary,
+              fontSize: '1rem',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {row.description || 'Untitled key'}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: palette.greyText,
+              fontFamily: 'monospace',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {row.keyId}
+          </Typography>
+        </Box>
+        <Box sx={{ flexShrink: 0 }}>
+          <StatusCell row={row} />
+        </Box>
+      </Box>
+      {/* Content */}
+      <Box sx={{ marginBottom: '12px' }}>
+        <MobileField label="Organization">{row.jurisdiction}</MobileField>
+        <MobileField label="Environment">{row.environment}</MobileField>
+        <MobileField label="DNS">{row.domain ?? '—'}</MobileField>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '4px',
+          }}
+        >
+          <Typography variant="body2" color="textSecondary">
+            <strong>Use Types:</strong>
+          </Typography>
+          <UseTypesCell row={row} />
+        </Box>
+        <MobileField label="Created">{row.created || '—'}</MobileField>
+        <MobileField label="Expires">{row.expires || '—'}</MobileField>
+        <MobileField label="Created By">{row.createdBy || '—'}</MobileField>
+      </Box>
+      {/* Action Buttons */}
+      <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <ActionCell
+          row={row}
+          {...handlers}
+          validating={validatingSortKey === row.sortKey}
+          renewing={renewingSortKey === row.sortKey}
+          reissuing={reissuingSortKey === row.sortKey}
+        />
+      </Box>
+    </Card>
+  )
+}
+
+function AuditMobileCard({ row }: { row: AuditLogRow }) {
+  return (
+    <Card sx={{ ...MOBILE_CARD_SX, backgroundColor: 'white' }}>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+        <Box
+          sx={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            bgcolor: row.color,
+            flexShrink: 0,
+            mt: '5px',
+          }}
+        />
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+          >
+            {row.event}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              fontFamily: 'monospace',
+              color: palette.greyText,
+              display: 'block',
+              marginBottom: '4px',
+            }}
+          >
+            {row.timestamp}
+          </Typography>
+          {/* Wraps instead of truncating — there's no hover tooltip on touch. */}
+          <Typography
+            variant="caption"
+            sx={{
+              fontFamily: 'monospace',
+              color: palette.greyText,
+              display: 'block',
+              overflowWrap: 'anywhere',
+            }}
+          >
+            {row.details}
+          </Typography>
+        </Box>
+      </Box>
+    </Card>
+  )
+}
+
+interface MobileApiKeyViewProps {
+  tabValue: number
+  onTabChange: (value: number) => void
+  search: string
+  onSearchChange: (value: string) => void
+  filtersProps: FiltersButtonProps
+  keyRows: ApiKey[]
+  auditRows: AuditLogRow[]
+  auditLoading: boolean
+  noRowsMessage: string
+  actionProps: ApiKeyActionProps
+  canCreate: boolean
+  onCreateKey: () => void
+}
+
+function MobileApiKeyView({
+  tabValue,
+  onTabChange,
+  search,
+  onSearchChange,
+  filtersProps,
+  keyRows,
+  auditRows,
+  auditLoading,
+  noRowsMessage,
+  actionProps,
+  canCreate,
+  onCreateKey,
+}: MobileApiKeyViewProps) {
+  const isAuditTab = tabValue === 1
+  const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE)
+
+  // Start back at the first page whenever the result set changes, so a new
+  // search doesn't leave the user part-way down a list that no longer exists.
+  useEffect(() => {
+    setVisibleCount(MOBILE_PAGE_SIZE)
+  }, [tabValue, search, filtersProps.filters])
+
+  // Newest first, matching the desktop grid's default sort.
+  const sortedKeys = useMemo(
+    () =>
+      [...keyRows].sort(
+        (a, b) =>
+          (b.createdOnRaw ? new Date(b.createdOnRaw).getTime() : 0) -
+          (a.createdOnRaw ? new Date(a.createdOnRaw).getTime() : 0)
+      ),
+    [keyRows]
+  )
+  const sortedAudit = useMemo(
+    () => [...auditRows].sort((a, b) => b.sortValue - a.sortValue),
+    [auditRows]
+  )
+
+  const total = isAuditTab ? sortedAudit.length : sortedKeys.length
+  const remaining = total - visibleCount
+
+  return (
+    <Box>
+      {/* Mobile Toolbar */}
+      <Box
+        sx={{
+          backgroundColor: palette.white,
+          padding: '16px',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+          border: `1px solid ${palette.border}`,
+          marginBottom: '16px',
+          marginTop: '16px',
+          borderRadius: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}
+      >
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <ApiKeyTabs tabValue={tabValue} onTabChange={onTabChange} fullWidth />
+        </Box>
+
+        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+          {isAuditTab
+            ? `${total} Audit Events`
+            : `${total} API Key${total === 1 ? '' : 's'} Found`}
+        </Typography>
+
+        {/* Search and Filters act on the Keys list only, as on desktop. */}
+        {!isAuditTab && (
+          <>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search by key ID or jurisdiction"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '4px' } }}
+            />
+            <Box
+              sx={{
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <FiltersButton {...filtersProps} />
+              {canCreate && (
+                <Button
+                  color="secondary"
+                  onClick={onCreateKey}
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  sx={{
+                    borderRadius: '24px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  Create Key
+                </Button>
+              )}
+            </Box>
+          </>
+        )}
+      </Box>
+
+      {/* Mobile Cards */}
+      <Box sx={{ padding: '0 8px' }}>
+        {isAuditTab && auditLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : total === 0 ? (
+          <Typography
+            variant="body2"
+            sx={{ color: palette.greyText, textAlign: 'center', py: 4 }}
+          >
+            {isAuditTab ? 'No API key activity recorded yet.' : noRowsMessage}
+          </Typography>
+        ) : isAuditTab ? (
+          sortedAudit
+            .slice(0, visibleCount)
+            .map((row) => <AuditMobileCard key={row.id} row={row} />)
+        ) : (
+          sortedKeys
+            .slice(0, visibleCount)
+            .map((row) => (
+              <ApiKeyMobileCard
+                key={row.id}
+                row={row}
+                actionProps={actionProps}
+              />
+            ))
+        )}
+
+        {remaining > 0 && !(isAuditTab && auditLoading) && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', pb: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => setVisibleCount((c) => c + MOBILE_PAGE_SIZE)}
+              sx={{ borderRadius: '24px', textTransform: 'none' }}
+            >
+              Show {Math.min(remaining, MOBILE_PAGE_SIZE)} more ({remaining}{' '}
+              remaining)
+            </Button>
+          </Box>
+        )}
+      </Box>
+    </Box>
   )
 }
 
@@ -1173,24 +1801,33 @@ function CustomFooter({ onCreateKey, canCreate }: CustomFooterProps) {
         width: '100%',
         justifyContent: 'space-between',
         alignItems: 'center',
-        px: 2,
+        px: 0.2,
+        border: 'none',
       }}
     >
       {canCreate ? (
-        <Button
-          color="secondary"
-          onClick={onCreateKey}
-          variant="outlined"
-          startIcon={<AddIcon />}
+        <Box
           sx={{
-            borderRadius: '24px',
+            borderRadius: '60px',
+            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+            backgroundColor: palette.white,
             padding: '8px 16px',
-            textTransform: 'none',
-            fontWeight: 500,
           }}
         >
-          Create Key
-        </Button>
+          <Button
+            color="secondary"
+            onClick={onCreateKey}
+            startIcon={<AddIcon />}
+            sx={{
+              borderRadius: '24px',
+              textTransform: 'none',
+              fontWeight: 500,
+              zIndex: 1000,
+            }}
+          >
+            Create Key
+          </Button>
+        </Box>
       ) : (
         // Keep the footer's space-between layout intact when the Create action
         // is hidden for the current role.
@@ -1202,6 +1839,10 @@ function CustomFooter({ onCreateKey, canCreate }: CustomFooterProps) {
           boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
           backgroundColor: palette.white,
           overflow: 'hidden',
+          border: 'none',
+          '& .MuiDataGrid-footerContainer': {
+            borderTop: 'none',
+          },
         }}
       >
         <GridFooter />
@@ -1212,17 +1853,28 @@ function CustomFooter({ onCreateKey, canCreate }: CustomFooterProps) {
 
 // ─── Dialog helpers ───────────────────────────────────────────────────────────
 
-function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+function FieldLabel({
+  label,
+  required,
+}: {
+  label: string
+  required?: boolean
+}) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Typography
         variant="body2"
-        sx={{ fontWeight: 500, color: palette.greyDarkTypography, whiteSpace: 'nowrap' }}
+        sx={{
+          fontWeight: 500,
+          color: palette.greyDarkTypography,
+          whiteSpace: 'nowrap',
+        }}
       >
         {label}
         {required && (
           <Box component="span" sx={{ color: palette.error }}>
-            {' '}*
+            {' '}
+            *
           </Box>
         )}
       </Typography>
@@ -1379,8 +2031,8 @@ function CancelDialog({
           </Typography>
           <Typography variant="body2" sx={{ color: palette.greyText }}>
             This key has not been activated yet, so nothing is using it. The
-            pending request will be cancelled and hidden from the default
-            list; the record is retained for audit.
+            pending request will be cancelled and hidden from the default list;
+            the record is retained for audit.
           </Typography>
         </Box>
       }
@@ -1501,7 +2153,10 @@ function RenewDialog({
               the request (see the credential-lifecycle spec), so there is nothing
               to change here — the field states a rule the server already
               enforces. Same component, label and position as ReissueDialog. */}
-          <PolicyField label="Use Types" value={formatUseTypes(apiKey.useTypes)} />
+          <PolicyField
+            label="Use Types"
+            value={formatUseTypes(apiKey.useTypes)}
+          />
           {error && (
             <Alert severity="error" sx={{ borderRadius: '8px' }}>
               {error}
@@ -1547,7 +2202,10 @@ function RenewDialog({
             color: palette.primary,
             fontWeight: 700,
             py: 1.5,
-            '&:hover': { backgroundColor: '#F0F6FF', borderColor: palette.primary },
+            '&:hover': {
+              backgroundColor: '#F0F6FF',
+              borderColor: palette.primary,
+            },
           }}
         >
           {submitting ? 'RENEWING...' : 'RENEW KEY'}
@@ -1634,7 +2292,9 @@ function ReissueDialog({
       // authorized+unexpired intersection the create 'existing' path accepts,
       // so it is a reliable predictor of which path will succeed.
       const domainsRes = await fetch(
-        `/api/apikeys/domains?envId=${environments.join(',')}&jurisdictionId=${jurisdictionId}`
+        `/api/apikeys/domains?envId=${environments.join(
+          ','
+        )}&jurisdictionId=${jurisdictionId}`
       )
       const authorizedDomains: { domain: string }[] = domainsRes.ok
         ? await domainsRes.json()
@@ -1737,9 +2397,12 @@ function ReissueDialog({
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="body2">
         This key expired
-        {apiKey.expires && apiKey.expires !== '—' ? ` on ${apiKey.expires}` : ''}.
-        A new key will be issued with the same scope, valid for{' '}
-        <strong>1 year</strong> from issuance. The expired key is not reactivated.
+        {apiKey.expires && apiKey.expires !== '—'
+          ? ` on ${apiKey.expires}`
+          : ''}
+        . A new key will be issued with the same scope, valid for{' '}
+        <strong>1 year</strong> from issuance. The expired key is not
+        reactivated.
       </Typography>
       <Typography variant="body2" sx={{ color: palette.greyText }}>
         If this domain’s authorization has lapsed, you’ll be asked to re-verify
@@ -1793,7 +2456,9 @@ function ReissueDialog({
         This domain’s authorization has lapsed. Add the following DNS TXT record
         at your DNS provider to re-verify ownership, then validate:
       </Typography>
-      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+      <Box
+        sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}
+      >
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
           {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
@@ -1879,7 +2544,10 @@ function ReissueDialog({
       onClose={handleClose}
       maxWidth="sm"
       title={
-        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+        <Typography
+          component="div"
+          sx={{ fontSize: '1.5rem', fontWeight: 500 }}
+        >
           {titleByStep[step]}
         </Typography>
       }
@@ -1938,12 +2606,16 @@ function ValidateChallengeDialog({
     ;(async () => {
       try {
         const res = await fetch(
-          `/api/apikeys/verify-domain?sortKey=${encodeURIComponent(apiKey.sortKey)}`
+          `/api/apikeys/verify-domain?sortKey=${encodeURIComponent(
+            apiKey.sortKey
+          )}`
         )
         const body = await res.json().catch(() => ({}))
         if (cancelled) return
         if (!res.ok) {
-          setError(body.error || 'Unable to load the DNS challenge for this key.')
+          setError(
+            body.error || 'Unable to load the DNS challenge for this key.'
+          )
           setStep('error')
           return
         }
@@ -1999,10 +2671,12 @@ function ValidateChallengeDialog({
   const challengeContent = challenge && (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Typography variant="body2">
-        Add the following DNS TXT record at your DNS provider to prove
-        ownership of this domain, then validate:
+        Add the following DNS TXT record at your DNS provider to prove ownership
+        of this domain, then validate:
       </Typography>
-      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+      <Box
+        sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}
+      >
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
           {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
@@ -2037,7 +2711,10 @@ function ValidateChallengeDialog({
       onClose={handleClose}
       maxWidth="sm"
       title={
-        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+        <Typography
+          component="div"
+          sx={{ fontSize: '1.5rem', fontWeight: 500 }}
+        >
           {stepTitle[step]}
         </Typography>
       }
@@ -2067,13 +2744,11 @@ function ValidateChallengeDialog({
   )
 }
 
-const ENV_OPTIONS = DEST_TYPES.reduce(
-  (acc, name, id) => {
-    if (name && name !== 'UNKNOWN') acc.push({ id, name, displayName: ENV_DISPLAY_NAMES[name] ?? name })
-    return acc
-  },
-  [] as { id: number; name: string; displayName: string }[]
-)
+const ENV_OPTIONS = DEST_TYPES.reduce((acc, name, id) => {
+  if (name && name !== 'UNKNOWN')
+    acc.push({ id, name, displayName: ENV_DISPLAY_NAMES[name] ?? name })
+  return acc
+}, [] as { id: number; name: string; displayName: string }[])
 
 // Environments selectable when creating a new key — filtered down to what's
 // relevant for the app's own deploy environment (same single source of truth
@@ -2092,10 +2767,12 @@ const CREATE_ENV_OPTIONS = ENV_OPTIONS.filter((opt) =>
 // CREATE_ENV_OPTIONS (getAllowedEnvironmentValues / NEXT_PUBLIC_APP_ENV), the
 // same single source of truth used by the Create Key dropdown and the other
 // env selectors in the app (operations console, onboarding senders).
-const ENVIRONMENT_FILTER_OPTIONS: FilterOption[] = CREATE_ENV_OPTIONS.map((o) => ({
-  value: o.displayName,
-  label: o.displayName,
-}))
+const ENVIRONMENT_FILTER_OPTIONS: FilterOption[] = CREATE_ENV_OPTIONS.map(
+  (o) => ({
+    value: o.displayName,
+    label: o.displayName,
+  })
+)
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   'Active',
   'Ready for Validation',
@@ -2126,7 +2803,9 @@ const LABEL_TO_USE_TYPE = Object.fromEntries(
 // multi-env Create-form picker (IZG Operations only — see isAdmin gating in
 // CreateKeyDialog). CREATE_ENV_OPTIONS ids are numbers; component state keeps
 // them as strings (matching envIds elsewhere in this dialog).
-const CREATE_ENV_OPTION_LABELS: string[] = CREATE_ENV_OPTIONS.map((o) => o.displayName)
+const CREATE_ENV_OPTION_LABELS: string[] = CREATE_ENV_OPTIONS.map(
+  (o) => o.displayName
+)
 const LABEL_TO_ENV_ID = Object.fromEntries(
   CREATE_ENV_OPTIONS.map((o) => [o.displayName, String(o.id)])
 ) as Record<string, string>
@@ -2223,7 +2902,9 @@ function CreateKeyDialog({
 
   const { data: existingDomains } = useSWR<{ domain: string }[]>(
     envIds.length && jurisdictionId
-      ? `/api/apikeys/domains?envId=${envIds.join(',')}&jurisdictionId=${jurisdictionId}`
+      ? `/api/apikeys/domains?envId=${envIds.join(
+          ','
+        )}&jurisdictionId=${jurisdictionId}`
       : null,
     fetcher
   )
@@ -2263,14 +2944,19 @@ function CreateKeyDialog({
       ? { options: org.useTypes, constrained: true }
       : { options: ALLOWED_USE_TYPES, constrained: false }
   }
-  const { options: allowedUseTypesForOrg, constrained: useTypesAreConstrained } =
-    useTypesForOrg(jurisdictionId)
+  const {
+    options: allowedUseTypesForOrg,
+    constrained: useTypesAreConstrained,
+  } = useTypesForOrg(jurisdictionId)
   const useTypeOptionLabels = allowedUseTypesForOrg.map(
     (ut) => USE_TYPE_LABELS[ut]
   )
 
   const environmentDisplayName = envIds
-    .map((id) => CREATE_ENV_OPTIONS.find((opt) => String(opt.id) === id)?.displayName)
+    .map(
+      (id) =>
+        CREATE_ENV_OPTIONS.find((opt) => String(opt.id) === id)?.displayName
+    )
     .filter(Boolean)
     .join(', ')
 
@@ -2316,7 +3002,12 @@ function CreateKeyDialog({
 
   const handleNext = async () => {
     const upn = isOther ? customDomain.trim() : dnsSelection
-    if (!jurisdictionId || envIds.length === 0 || !upn || useTypes.length === 0) {
+    if (
+      !jurisdictionId ||
+      envIds.length === 0 ||
+      !upn ||
+      useTypes.length === 0
+    ) {
       setError('Please fill in all fields.')
       return
     }
@@ -2409,7 +3100,11 @@ function CreateKeyDialog({
         {jurisdictionDescription || 'the selected jurisdiction'}
         {environmentDisplayName ? ` (${environmentDisplayName})` : ''}.
       </Typography>
-      {error && <Alert severity="error" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: '8px' }}>
+          {error}
+        </Alert>
+      )}
       {showDuplicateWarning && duplicateKey && (
         <Alert severity="warning" sx={{ borderRadius: '8px' }}>
           An active key with this exact scope already exists
@@ -2437,7 +3132,9 @@ function CreateKeyDialog({
           sx={roundedFieldSx['& .MuiOutlinedInput-root']}
           renderValue={(value) => {
             if (!value) {
-              return <Box sx={{ color: palette.greyText }}>Select organization</Box>
+              return (
+                <Box sx={{ color: palette.greyText }}>Select organization</Box>
+              )
             }
             const j = Array.isArray(jurisdictions)
               ? jurisdictions.find((j) => String(j.jurisdictionId) === value)
@@ -2480,12 +3177,20 @@ function CreateKeyDialog({
             fullWidth
             sx={roundedFieldSx['& .MuiOutlinedInput-root']}
             renderValue={(value) => {
-              if (!value) return <Box sx={{ color: palette.greyText }}>Select environment</Box>
-              return CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)?.displayName ?? value
+              if (!value)
+                return (
+                  <Box sx={{ color: palette.greyText }}>Select environment</Box>
+                )
+              return (
+                CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)
+                  ?.displayName ?? value
+              )
             }}
           >
             {CREATE_ENV_OPTIONS.map((opt) => (
-              <MenuItem key={opt.id} value={String(opt.id)}>{opt.displayName}</MenuItem>
+              <MenuItem key={opt.id} value={String(opt.id)}>
+                {opt.displayName}
+              </MenuItem>
             ))}
           </Select>
         )}
@@ -2502,9 +3207,7 @@ function CreateKeyDialog({
       <LabeledField label="Use Types" required>
         <SearchableMultiSelect
           label=""
-          value={useTypes.map(
-            (v) => USE_TYPE_LABELS[v as AllowedUseType] ?? v
-          )}
+          value={useTypes.map((v) => USE_TYPE_LABELS[v as AllowedUseType] ?? v)}
           options={useTypeOptionLabels}
           onChange={(labels) =>
             setUseTypes(labels.map((l) => LABEL_TO_USE_TYPE[l] ?? l))
@@ -2517,7 +3220,9 @@ function CreateKeyDialog({
           disabled={!jurisdictionId}
           helperText={
             useTypesAreConstrained
-              ? `Limited to what ${jurisdictionDescription || 'this organization'} is registered for`
+              ? `Limited to what ${
+                  jurisdictionDescription || 'this organization'
+                } is registered for`
               : undefined
           }
           chipColor="primary"
@@ -2544,7 +3249,9 @@ function CreateKeyDialog({
         >
           {Array.isArray(existingDomains) &&
             existingDomains.map((d) => (
-              <MenuItem key={d.domain} value={d.domain}>{d.domain}</MenuItem>
+              <MenuItem key={d.domain} value={d.domain}>
+                {d.domain}
+              </MenuItem>
             ))}
           <MenuItem value={OTHER_DNS_VALUE}>Other</MenuItem>
         </Select>
@@ -2575,7 +3282,14 @@ function CreateKeyDialog({
         Add the following DNS TXT record at your DNS provider to verify domain
         ownership:
       </Typography>
-      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2, fontFamily: 'monospace' }}>
+      <Box
+        sx={{
+          backgroundColor: palette.greyLight,
+          borderRadius: '8px',
+          p: 2,
+          fontFamily: 'monospace',
+        }}
+      >
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
           {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
@@ -2592,11 +3306,17 @@ function CreateKeyDialog({
         Your validation for{' '}
         {jurisdictionDescription ||
           challenge.environments
-            .map((id) => CREATE_ENV_OPTIONS.find((opt) => opt.id === id)?.displayName ?? id)
+            .map(
+              (id) =>
+                CREATE_ENV_OPTIONS.find((opt) => opt.id === id)?.displayName ??
+                id
+            )
             .join(', ')}{' '}
         was confirmed. You can now remove this record.
       </Typography>
-      <Box sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}>
+      <Box
+        sx={{ backgroundColor: palette.greyLight, borderRadius: '8px', p: 2 }}
+      >
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
           {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
@@ -2615,7 +3335,11 @@ function CreateKeyDialog({
           {challenge.txtRecord} → &quot;{challenge.txtValue}&quot;
         </Typography>
       </Box>
-      {error && <Alert severity="warning" sx={{ borderRadius: '8px' }}>{error}</Alert>}
+      {error && (
+        <Alert severity="warning" sx={{ borderRadius: '8px' }}>
+          {error}
+        </Alert>
+      )}
     </Box>
   )
 
@@ -2668,8 +3392,8 @@ function CreateKeyDialog({
         {submitting
           ? 'CHECKING...'
           : showDuplicateWarning
-            ? 'CREATE ANYWAY'
-            : 'NEXT'}
+          ? 'CREATE ANYWAY'
+          : 'NEXT'}
       </Button>
     ),
     challenge: (
@@ -2734,7 +3458,10 @@ function CreateKeyDialog({
       onClose={handleClose}
       maxWidth="sm"
       title={
-        <Typography component="div" sx={{ fontSize: '1.5rem', fontWeight: 500 }}>
+        <Typography
+          component="div"
+          sx={{ fontSize: '1.5rem', fontWeight: 500 }}
+        >
           {titleByStep[step]}
         </Typography>
       }
@@ -2855,7 +3582,11 @@ function RenewSuccessDialog({
   onViewKey,
   onClose,
 }: {
-  info: { sortKey: string; jurisdiction: string; mode: 'renew' | 'reissue' } | null
+  info: {
+    sortKey: string
+    jurisdiction: string
+    mode: 'renew' | 'reissue'
+  } | null
   onViewKey: () => void
   onClose: () => void
 }) {
@@ -2946,7 +3677,9 @@ export default function ApiKeyManagement() {
   // loaded rows) so they're complete and page-independent.
   const jurisdictions = useOrganizations(sessionStatus)
 
-  const [validatingSortKey, setValidatingSortKey] = useState<string | null>(null)
+  const [validatingSortKey, setValidatingSortKey] = useState<string | null>(
+    null
+  )
   const [renewingSortKey, setRenewingSortKey] = useState<string | null>(null)
   const [reissuingSortKey, setReissuingSortKey] = useState<string | null>(null)
 
@@ -2988,6 +3721,7 @@ export default function ApiKeyManagement() {
     [jurisdictions, session]
   )
 
+  const isMobile = useIsMobile()
   const [tabValue, setTabValue] = useState(0)
   const isAuditTab = tabValue === 1
   const { auditRows, auditLoading } = useApiKeyAuditLog(isAuditTab)
@@ -3015,7 +3749,11 @@ export default function ApiKeyManagement() {
   } | null>(null)
 
   const showSnackbar = useCallback(
-    (severity: 'success' | 'error' | 'warning' | 'info', title: string, subtitle?: string) => {
+    (
+      severity: 'success' | 'error' | 'warning' | 'info',
+      title: string,
+      subtitle?: string
+    ) => {
       setSnackbar({ severity, title, subtitle })
     },
     []
@@ -3098,7 +3836,10 @@ export default function ApiKeyManagement() {
   const handleCancel = useCallback((key: ApiKey) => setCancelTarget(key), [])
   const handleRenew = useCallback((key: ApiKey) => setRenewTarget(key), [])
   const handleReissue = useCallback((key: ApiKey) => setReissueTarget(key), [])
-  const handleValidateClick = useCallback((key: ApiKey) => setValidateTarget(key), [])
+  const handleValidateClick = useCallback(
+    (key: ApiKey) => setValidateTarget(key),
+    []
+  )
   const handleRenewSubmittingChange = useCallback(
     (sortKey: string, submitting: boolean) =>
       setRenewingSortKey(submitting ? sortKey : null),
@@ -3110,26 +3851,37 @@ export default function ApiKeyManagement() {
     []
   )
 
-  const confirmRevoke = useCallback(async (reason?: string) => {
-    if (!revokeTarget) return
-    const { sortKey, jurisdiction } = revokeTarget
-    setRevokeTarget(null)
-    try {
-      const res = await fetch('/api/apikeys', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sortKey, reason: reason || undefined }),
-      })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || 'Failed to revoke key')
+  const confirmRevoke = useCallback(
+    async (reason?: string) => {
+      if (!revokeTarget) return
+      const { sortKey, jurisdiction } = revokeTarget
+      setRevokeTarget(null)
+      try {
+        const res = await fetch('/api/apikeys', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sortKey, reason: reason || undefined }),
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body.error || 'Failed to revoke key')
+        }
+        mutate('/api/apikeys')
+        showSnackbar(
+          'success',
+          `${jurisdiction} API Key revoked`,
+          'This key can no longer be used.'
+        )
+      } catch (err) {
+        showSnackbar(
+          'error',
+          'Failed to revoke key',
+          err instanceof Error ? err.message : 'Please try again.'
+        )
       }
-      mutate('/api/apikeys')
-      showSnackbar('success', `${jurisdiction} API Key revoked`, 'This key can no longer be used.')
-    } catch (err) {
-      showSnackbar('error', 'Failed to revoke key', err instanceof Error ? err.message : 'Please try again.')
-    }
-  }, [revokeTarget, showSnackbar])
+    },
+    [revokeTarget, showSnackbar]
+  )
 
   const confirmCancel = useCallback(async () => {
     if (!cancelTarget) return
@@ -3146,9 +3898,17 @@ export default function ApiKeyManagement() {
         throw new Error(body.error || 'Failed to cancel key')
       }
       mutate('/api/apikeys')
-      showSnackbar('success', `${jurisdiction} API Key request cancelled`, 'The pending request has been cancelled.')
+      showSnackbar(
+        'success',
+        `${jurisdiction} API Key request cancelled`,
+        'The pending request has been cancelled.'
+      )
     } catch (err) {
-      showSnackbar('error', 'Failed to cancel key', err instanceof Error ? err.message : 'Please try again.')
+      showSnackbar(
+        'error',
+        'Failed to cancel key',
+        err instanceof Error ? err.message : 'Please try again.'
+      )
     }
   }, [cancelTarget, showSnackbar])
 
@@ -3158,28 +3918,38 @@ export default function ApiKeyManagement() {
   // again through this endpoint. Used by create/renew/validate success AND
   // by the table's own View action for any Active key that hasn't been
   // viewed yet (e.g. the create/validate modal was closed before viewing).
-  const revealToken = useCallback(async (sortKey: string) => {
-    try {
-      const res = await fetch('/api/apikeys/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sortKey }),
-      })
-      const body = await res.json()
-      if (!res.ok) {
-        showSnackbar('error', 'Unable to retrieve key', body.error || 'Please try again.')
-        return
+  const revealToken = useCallback(
+    async (sortKey: string) => {
+      try {
+        const res = await fetch('/api/apikeys/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sortKey }),
+        })
+        const body = await res.json()
+        if (!res.ok) {
+          showSnackbar(
+            'error',
+            'Unable to retrieve key',
+            body.error || 'Please try again.'
+          )
+          return
+        }
+        mutate('/api/apikeys')
+        setCreatedToken(body.token)
+      } catch {
+        showSnackbar('error', 'Unable to retrieve key', 'Network error.')
       }
-      mutate('/api/apikeys')
-      setCreatedToken(body.token)
-    } catch {
-      showSnackbar('error', 'Unable to retrieve key', 'Network error.')
-    }
-  }, [showSnackbar])
+    },
+    [showSnackbar]
+  )
 
-  const handleRevealToken = useCallback((key: ApiKey) => {
-    revealToken(key.sortKey)
-  }, [revealToken])
+  const handleRevealToken = useCallback(
+    (key: ApiKey) => {
+      revealToken(key.sortKey)
+    },
+    [revealToken]
+  )
 
   // Called after a successful renewal: do NOT auto-reveal the token. Show a
   // success dialog that confirms the new key + grace window and lets the user
@@ -3190,44 +3960,62 @@ export default function ApiKeyManagement() {
 
   // Re-issue completion mirrors renewal's success dialog (View Key now/later),
   // but with re-issue wording (no grace period) via the shared dialog's mode.
-  const handleReissued = useCallback((sortKey: string, jurisdiction: string) => {
-    setRenewSuccess({ sortKey, jurisdiction, mode: 'reissue' })
-  }, [])
+  const handleReissued = useCallback(
+    (sortKey: string, jurisdiction: string) => {
+      setRenewSuccess({ sortKey, jurisdiction, mode: 'reissue' })
+    },
+    []
+  )
 
-  const handleValidateRow = useCallback(async (key: ApiKey) => {
-    if (!key.domain) {
-      showSnackbar('error', 'Unable to validate key', 'No DNS domain recorded for this key.')
-      return
-    }
-    setValidatingSortKey(key.sortKey)
-    try {
-      const res = await fetch('/api/apikeys/verify-domain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          domain: key.domain,
-          sortKey: key.sortKey,
-          jti: key.keyId,
-          jurisdictionId: key.jurisdictionId,
-        }),
-      })
-      const body = await res.json()
-      mutate('/api/apikeys')
-      if (!res.ok || !body.verified) {
+  const handleValidateRow = useCallback(
+    async (key: ApiKey) => {
+      if (!key.domain) {
         showSnackbar(
           'error',
-          'DNS validation failed',
-          body.error || "We couldn't find the expected DNS record."
+          'Unable to validate key',
+          'No DNS domain recorded for this key.'
         )
         return
       }
-      showSnackbar('success', `${key.jurisdiction} API Key is active`, 'DNS domain successfully verified.')
-    } catch {
-      showSnackbar('error', 'DNS validation failed', 'Network error while validating domain.')
-    } finally {
-      setValidatingSortKey(null)
-    }
-  }, [showSnackbar])
+      setValidatingSortKey(key.sortKey)
+      try {
+        const res = await fetch('/api/apikeys/verify-domain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain: key.domain,
+            sortKey: key.sortKey,
+            jti: key.keyId,
+            jurisdictionId: key.jurisdictionId,
+          }),
+        })
+        const body = await res.json()
+        mutate('/api/apikeys')
+        if (!res.ok || !body.verified) {
+          showSnackbar(
+            'error',
+            'DNS validation failed',
+            body.error || "We couldn't find the expected DNS record."
+          )
+          return
+        }
+        showSnackbar(
+          'success',
+          `${key.jurisdiction} API Key is active`,
+          'DNS domain successfully verified.'
+        )
+      } catch {
+        showSnackbar(
+          'error',
+          'DNS validation failed',
+          'Network error while validating domain.'
+        )
+      } finally {
+        setValidatingSortKey(null)
+      }
+    },
+    [showSnackbar]
+  )
 
   const handleCreateKey = useCallback(() => setCreateDialogOpen(true), [])
 
@@ -3325,6 +4113,7 @@ export default function ApiKeyManagement() {
         headerName: 'DESCRIPTION',
         flex: 1.8,
         minWidth: 140,
+        cellClassName: 'wrapCell',
         renderCell: (params: GridRenderCellParams) => (
           <Tooltip
             title={
@@ -3336,9 +4125,7 @@ export default function ApiKeyManagement() {
             }
             arrow
           >
-            <Typography variant="body2" noWrap>
-              {params.value}
-            </Typography>
+            <Typography variant="body2">{params.value}</Typography>
           </Tooltip>
         ),
       },
@@ -3353,6 +4140,7 @@ export default function ApiKeyManagement() {
         headerName: 'ORGANIZATION',
         flex: 1.5,
         minWidth: 130,
+        cellClassName: 'wrapCell',
       },
       {
         // An organization can have multiple credentials, so surface the DNS
@@ -3361,13 +4149,12 @@ export default function ApiKeyManagement() {
         headerName: 'DNS',
         flex: 1.5,
         minWidth: 150,
+        cellClassName: 'wrapCell',
         renderCell: (params: GridRenderCellParams) => {
           const upn = (params.row as ApiKey).domain
           return (
             <Tooltip title={upn ?? ''} arrow>
-              <Typography variant="body2" noWrap>
-                {upn ?? '—'}
-              </Typography>
+              <Typography variant="body2">{upn ?? '—'}</Typography>
             </Tooltip>
           )
         },
@@ -3416,7 +4203,10 @@ export default function ApiKeyManagement() {
         sortComparator: ((_v1, _v2, param1, param2) => {
           const t1 = (param1.api.getRow(param1.id) as ApiKey).createdOnRaw
           const t2 = (param2.api.getRow(param2.id) as ApiKey).createdOnRaw
-          return (t1 ? new Date(t1).getTime() : 0) - (t2 ? new Date(t2).getTime() : 0)
+          return (
+            (t1 ? new Date(t1).getTime() : 0) -
+            (t2 ? new Date(t2).getTime() : 0)
+          )
         }) as GridComparatorFn,
       },
       { field: 'expires', headerName: 'EXPIRES', flex: 1, minWidth: 100 },
@@ -3425,6 +4215,7 @@ export default function ApiKeyManagement() {
         headerName: 'CREATED BY',
         flex: 1.5,
         minWidth: 140,
+        cellClassName: 'wrapCell',
       },
       {
         field: 'actions',
@@ -3483,12 +4274,64 @@ export default function ApiKeyManagement() {
       organizationOptions,
       useTypeOptions: USE_TYPE_FILTER_OPTIONS,
     }),
-    [search, handleSearchChange, tabValue, handleTabChange, filters, organizationOptions]
+    [
+      search,
+      handleSearchChange,
+      tabValue,
+      handleTabChange,
+      filters,
+      organizationOptions,
+    ]
   )
 
   const footerProps = useMemo(
     () => ({ onCreateKey: handleCreateKey, canCreate }),
     [handleCreateKey, canCreate]
+  )
+
+  const mobileFiltersProps: FiltersButtonProps = useMemo(
+    () => ({
+      filters,
+      onFiltersChange: setFilters,
+      environmentOptions: ENVIRONMENT_FILTER_OPTIONS,
+      statusOptions: STATUS_FILTER_OPTIONS,
+      organizationOptions,
+      useTypeOptions: USE_TYPE_FILTER_OPTIONS,
+    }),
+    [filters, organizationOptions]
+  )
+
+  const mobileActionProps: ApiKeyActionProps = useMemo(
+    () => ({
+      onView: handleView,
+      onRevoke: handleRevoke,
+      onCancel: handleCancel,
+      onRenew: handleRenew,
+      onReissue: handleReissue,
+      onValidate: handleValidateClick,
+      onRevealToken: handleRevealToken,
+      validatingSortKey,
+      renewingSortKey,
+      reissuingSortKey,
+      canRevoke,
+      canRenew,
+      canCancel,
+    }),
+    [
+      handleView,
+      handleRevoke,
+      handleCancel,
+      handleRenew,
+      handleReissue,
+      handleValidateClick,
+      handleRevealToken,
+      validatingSortKey,
+      renewingSortKey,
+      reissuingSortKey,
+      canRevoke,
+      canRenew,
+      canCancel,
+    ]
   )
 
   if (isLoading) {
@@ -3510,98 +4353,134 @@ export default function ApiKeyManagement() {
   return (
     <div>
       {/* Header card — identical to ConnectionsTable */}
-      <Box>
-        <Card
-          sx={{
-            position: 'relative',
-            zIndex: 10,
-            height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-            marginBottom: '-16px',
-          }}
+      <Card
+        sx={{
+          position: 'relative',
+          zIndex: 10,
+          height: 'auto',
+          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          marginBottom: '-16px',
+        }}
+      >
+        <Box
+          display="flex"
+          flexDirection={{ xs: 'column', md: 'row' }}
+          gap={{ xs: 2, md: 4 }}
+          alignItems={{ xs: 'flex-start', md: 'baseline' }}
+          justifyContent="space-between"
         >
           <Box sx={{ padding: 2 }}>
             <Typography sx={{ fontSize: '1.75rem', fontWeight: 700 }}>
               API key management
             </Typography>
             <Typography variant="body2" sx={{ color: palette.greyText }}>
-              Monitor traffic, restrict permissions, and optimize your API
-              keys from a single dashboard.
+              Monitor traffic, restrict permissions, and optimize your API keys
+              from a single dashboard.
             </Typography>
           </Box>
-        </Card>
-      </Box>
 
-      <Box sx={{ mt: 3 }}>
-        <StatCards apiKeys={apiKeys} />
-      </Box>
-
-      <DataGrid
-        sx={{
-          ...dataGridCustom,
-          '& .MuiDataGrid-row.row-validation': {
-            backgroundColor: '#E8F0FE',
-          },
-        }}
-        rows={isAuditTab ? auditRows : filteredRows}
-        columns={isAuditTab ? auditColumns : columns}
-        loading={isAuditTab ? auditLoading : undefined}
-        getRowHeight={isAuditTab ? () => 'auto' : undefined}
-        getRowClassName={(params) =>
-          !isAuditTab && (params.row as ApiKey).status === 'Validation'
-            ? 'row-validation'
-            : ''
-        }
-        autoHeight
-        pageSizeOptions={[5, 10, 25, 50, 100]}
-        // Remounts the grid when the tab changes, so paging/sort state from the
-        // Keys tab can't leak into the audit feed (its columns don't exist
-        // there, which would otherwise leave the grid sorted by a missing field).
-        key={isAuditTab ? 'audit' : 'keys'}
-        initialState={{
-          pagination: { paginationModel: { pageSize: isAuditTab ? 10 : 5 } },
-          // Newest first by default, so a just-created row (or the action you
-          // just performed) is immediately visible on page 1 instead of
-          // wherever it lands in natural order. Still just the default —
-          // clicking any column header re-sorts.
-          sorting: {
-            sortModel: [
-              isAuditTab
-                ? { field: 'timestamp', sort: 'desc' }
-                : { field: 'created', sort: 'desc' },
-            ],
-          },
-        }}
-        disableRowSelectionOnClick
-        disableColumnMenu
-        disableColumnSelector
-        disableDensitySelector
-        density="comfortable"
-        pagination
-        slots={{
-          toolbar: CustomToolbar,
-          footer: CustomFooter,
-          noRowsOverlay: () => (
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100%',
-                py: 6,
-              }}
-            >
-              <Typography variant="body2" sx={{ color: palette.greyText }}>
-                {isAuditTab ? 'No API key activity recorded yet.' : noRowsMessage}
-              </Typography>
-            </Box>
-          ),
-        }}
-        slotProps={{
-          toolbar: toolbarProps as CustomToolbarProps,
-          footer: footerProps as unknown as Record<string, unknown>,
-        }}
-      />
+          <Box
+            sx={{
+              mt: { xs: 0, md: 3 },
+              px: { xs: 2, md: 0 },
+              pb: { xs: 2, md: 0 },
+              width: { xs: '100%', md: 'auto' },
+              boxSizing: 'border-box',
+            }}
+          >
+            <StatCards apiKeys={apiKeys} />
+          </Box>
+        </Box>
+      </Card>
+      {isMobile ? (
+        <MobileApiKeyView
+          tabValue={tabValue}
+          onTabChange={handleTabChange}
+          search={search}
+          onSearchChange={handleSearchChange}
+          filtersProps={mobileFiltersProps}
+          keyRows={filteredRows}
+          auditRows={auditRows}
+          auditLoading={auditLoading}
+          noRowsMessage={noRowsMessage}
+          actionProps={mobileActionProps}
+          canCreate={canCreate}
+          onCreateKey={handleCreateKey}
+        />
+      ) : (
+        <DataGrid
+          sx={{
+            ...dataGridCustom,
+            '& .MuiDataGrid-row.row-validation': {
+              backgroundColor: '#E8F0FE',
+            },
+          }}
+          rows={isAuditTab ? auditRows : filteredRows}
+          columns={isAuditTab ? auditColumns : columns}
+          loading={isAuditTab ? auditLoading : undefined}
+          getRowHeight={() => 'auto'}
+          getRowClassName={(params) =>
+            !isAuditTab && (params.row as ApiKey).status === 'Validation'
+              ? 'row-validation'
+              : ''
+          }
+          autoHeight
+          pageSizeOptions={[5, 10, 25, 50, 100]}
+          // Remounts the grid when the tab changes, so paging/sort state from the
+          // Keys tab can't leak into the audit feed (its columns don't exist
+          // there, which would otherwise leave the grid sorted by a missing field).
+          key={isAuditTab ? 'audit' : 'keys'}
+          initialState={{
+            pagination: { paginationModel: { pageSize: isAuditTab ? 10 : 5 } },
+            columns: {
+              columnVisibilityModel: isAuditTab
+                ? {}
+                : DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL,
+            },
+            // Newest first by default, so a just-created row (or the action you
+            // just performed) is immediately visible on page 1 instead of
+            // wherever it lands in natural order. Still just the default —
+            // clicking any column header re-sorts.
+            sorting: {
+              sortModel: [
+                isAuditTab
+                  ? { field: 'timestamp', sort: 'desc' }
+                  : { field: 'created', sort: 'desc' },
+              ],
+            },
+          }}
+          disableRowSelectionOnClick
+          disableColumnMenu
+          disableDensitySelector
+          density="comfortable"
+          pagination
+          slots={{
+            toolbar: CustomToolbar,
+            footer: CustomFooter,
+            noRowsOverlay: () => (
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                  py: 6,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: palette.greyText }}>
+                  {isAuditTab
+                    ? 'No API key activity recorded yet.'
+                    : noRowsMessage}
+                </Typography>
+              </Box>
+            ),
+          }}
+          slotProps={{
+            toolbar: toolbarProps as CustomToolbarProps,
+            footer: footerProps as unknown as Record<string, unknown>,
+          }}
+        />
+      )}
 
       <CustomSnackbar
         open={!!snackbar}
