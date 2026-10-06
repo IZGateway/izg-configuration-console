@@ -13,7 +13,9 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
+  ListItemIcon,
   ListItemText,
+  Menu,
   MenuItem,
   Popover,
   Select,
@@ -44,6 +46,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import FlagIcon from '@mui/icons-material/Flag'
 import ListAltIcon from '@mui/icons-material/ListAlt'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline'
 import TuneIcon from '@mui/icons-material/Tune'
 import FilterListIcon from '@mui/icons-material/FilterList'
@@ -560,6 +563,9 @@ const dataGridCustom = {
   },
   '& .MuiDataGrid-cell': {
     alignContent: 'center',
+    // Rows are auto-height (getRowHeight), so this vertical padding sets the
+    // breathing room around each row's content.
+    py: 1.5,
     '@media (max-width: 768px)': {
       fontSize: '0.75rem',
       padding: '4px 8px',
@@ -571,7 +577,7 @@ const dataGridCustom = {
     whiteSpace: 'normal !important',
     lineHeight: '1.35 !important',
     alignItems: 'flex-start',
-    py: 1,
+    py: 1.5,
   },
   '& .MuiDataGrid-cell.wrapCell .MuiTypography-root': {
     whiteSpace: 'normal',
@@ -734,7 +740,9 @@ const USE_TYPE_CHIP_SX = {
   },
 }
 
-// Two chips, then a "+N" carrying the rest in a tooltip. The container wraps
+// Two chips, then a "+N" carrying the rest in a tooltip — but only when 2+ are
+// hidden; a lone extra is shown as its own chip, since "+1 more" takes about
+// the same space as the chip it hides. The container wraps
 // when column width is tight so chips are never clipped; row height is dynamic.
 // The indicator is focusable so Tab opens the tooltip: a hover-only disclosure
 // is unreachable by keyboard, and @axe-core/react does not catch that.
@@ -747,7 +755,7 @@ function UseTypesCell({ row }: { row: ApiKey }) {
       </Typography>
     )
   }
-  const shown = useTypes.slice(0, 2)
+  const shown = useTypes.length - 2 >= 2 ? useTypes.slice(0, 2) : useTypes
   const overflow = useTypes.length - shown.length
   return (
     <Box
@@ -864,6 +872,14 @@ function GraceSweeperOverdueIndicator({ rawStatus }: { rawStatus: string }) {
   )
 }
 
+interface RowAction {
+  label: string
+  icon: React.ReactNode
+  onClick: () => void
+  disabled?: boolean
+  color?: string
+}
+
 function ActionIconButton({
   title,
   onClick,
@@ -884,6 +900,7 @@ function ActionIconButton({
           size="small"
           onClick={onClick}
           disabled={disabled}
+          aria-label={title}
           sx={{
             border: `1px solid ${palette.border}`,
             borderRadius: '50%',
@@ -906,6 +923,129 @@ function ActionIconButton({
   )
 }
 
+// Same "More Options" button + menu as Manage Connections' row actions
+// (ConnectionTable/popOverActionButtons). Used when the grid is too narrow for
+// the full strip of icon buttons, so the ACTION column stays narrow.
+const ROW_ACTION_BUTTON_SX = {
+  borderRadius: 90,
+  background: palette.white,
+  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  width: 35,
+  height: 35,
+}
+
+function RowActionsMenu({
+  row,
+  actions,
+  note,
+  compact,
+}: {
+  row: ApiKey
+  actions: RowAction[]
+  // Why there's nothing to do (e.g. "Revoked 01/02/2026") — shown as text, or
+  // as the disabled menu button's tooltip when compact.
+  note?: string
+  // true → collapse into the "More Options" menu; false → full icon buttons.
+  compact: boolean
+}) {
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
+  const open = Boolean(anchorEl)
+  const menuId = `apikey-actions-${row.sortKey}`
+
+  if (!compact) {
+    if (!actions.length) {
+      return note ? (
+        <Typography variant="body2" sx={{ color: palette.greyText }}>
+          {note}
+        </Typography>
+      ) : null
+    }
+    return (
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        {actions.map((action) => (
+          <ActionIconButton
+            key={action.label}
+            title={action.label}
+            onClick={action.onClick}
+            disabled={action.disabled}
+            color={action.color}
+          >
+            {action.icon}
+          </ActionIconButton>
+        ))}
+      </Box>
+    )
+  }
+
+  if (!actions.length) {
+    // Kept (disabled) rather than left blank so the column reads consistently.
+    return (
+      <Tooltip title={note ?? 'No actions available'} arrow>
+        <span>
+          <IconButton
+            disabled
+            aria-label={note ?? 'No actions available'}
+            sx={ROW_ACTION_BUTTON_SX}
+          >
+            <MoreVertIcon fontSize="small" />
+          </IconButton>
+        </span>
+      </Tooltip>
+    )
+  }
+
+  return (
+    <>
+      <Tooltip title="More Options" arrow>
+        <IconButton
+          aria-label={`Actions for ${row.description || row.keyId}`}
+          color="secondary"
+          sx={ROW_ACTION_BUTTON_SX}
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          aria-controls={open ? menuId : undefined}
+          aria-haspopup="true"
+          aria-expanded={open ? 'true' : undefined}
+        >
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Menu
+        id={menuId}
+        anchorEl={anchorEl}
+        open={open}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        sx={{ marginTop: '4px' }}
+        slotProps={{
+          root: { sx: { '.MuiList-root': { padding: '0px' } } },
+        }}
+      >
+        {actions.map((action, i) => (
+          <MenuItem
+            key={action.label}
+            disabled={action.disabled}
+            onClick={() => {
+              setAnchorEl(null)
+              action.onClick()
+            }}
+            sx={
+              i < actions.length - 1
+                ? { borderBottom: `1px solid ${palette.divider}` }
+                : undefined
+            }
+          >
+            <ListItemIcon sx={{ color: action.color ?? palette.greyText }}>
+              {action.icon}
+            </ListItemIcon>
+            <ListItemText>{action.label}</ListItemText>
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  )
+}
+
 function ActionCell({
   row,
   onView,
@@ -921,8 +1061,10 @@ function ActionCell({
   canRevoke,
   canRenew,
   canCancel,
+  compact = false,
 }: {
   row: ApiKey
+  compact?: boolean
   onView: (key: ApiKey) => void
   onRevoke: (key: ApiKey) => void
   onCancel: (key: ApiKey) => void
@@ -937,23 +1079,27 @@ function ActionCell({
   canRenew: boolean
   canCancel: boolean
 }) {
+  const revoke: RowAction = {
+    label: 'Revoke key',
+    icon: <RemoveCircleOutlineIcon fontSize="small" />,
+    onClick: () => onRevoke(row),
+    color: palette.error,
+  }
+  const cancel: RowAction = {
+    label: 'Cancel key',
+    icon: <RemoveCircleOutlineIcon fontSize="small" />,
+    onClick: () => onCancel(row),
+    color: palette.error,
+  }
+
+  const actions: RowAction[] = []
+  let note: string | undefined
+
   if (row.status === 'Revoked') {
-    return (
-      <Typography variant="body2" sx={{ color: palette.greyText }}>
-        {row.revokedAt ? `Revoked ${row.revokedAt}` : 'Revoked'}
-      </Typography>
-    )
-  }
-
-  if (row.status === 'Cancelled') {
-    return (
-      <Typography variant="body2" sx={{ color: palette.greyText }}>
-        {row.cancelledAt ? `Cancelled ${row.cancelledAt}` : 'Cancelled'}
-      </Typography>
-    )
-  }
-
-  if (row.status === 'Expired') {
+    note = row.revokedAt ? `Revoked ${row.revokedAt}` : 'Revoked'
+  } else if (row.status === 'Cancelled') {
+    note = row.cancelledAt ? `Cancelled ${row.cancelledAt}` : 'Cancelled'
+  } else if (row.status === 'Expired') {
     // Expired keys can be re-issued (Q8): a fresh key, same scope, no grace
     // overlap. Gated on the renew capability. Unlike renew, re-issue never
     // changes this row's own `status` (D13 — nothing to overlap with a dead
@@ -961,125 +1107,61 @@ function ActionCell({
     // hide the action once set, rather than leaving an action that would now
     // just 409 every time.
     if (row.reissuedAs) {
-      return (
-        <Typography variant="body2" sx={{ color: palette.greyText }}>
-          {row.expires
-            ? `Expired ${row.expires} — re-issued`
-            : 'Expired — re-issued'}
-        </Typography>
-      )
+      note = row.expires
+        ? `Expired ${row.expires} — re-issued`
+        : 'Expired — re-issued'
+    } else if (canRenew) {
+      actions.push({
+        label: reissuing ? 'Re-issue in progress…' : 'Re-issue key',
+        icon: <AutorenewIcon fontSize="small" />,
+        onClick: () => onReissue(row),
+        disabled: reissuing,
+      })
+    } else {
+      note = row.expires ? `Expired ${row.expires}` : 'Expired'
     }
-    return canRenew ? (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton
-          title={reissuing ? 'Re-issue in progress…' : 'Re-issue key'}
-          onClick={() => onReissue(row)}
-          disabled={reissuing}
-        >
-          <AutorenewIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-      </Box>
-    ) : (
-      <Typography variant="body2" sx={{ color: palette.greyText }}>
-        {row.expires ? `Expired ${row.expires}` : 'Expired'}
-      </Typography>
-    )
+  } else if (row.status === 'Grace Period') {
+    if (canRevoke) actions.push(revoke)
+  } else if (row.status === 'Ready for Validation') {
+    actions.push({
+      label: 'Validate domain',
+      icon: <CheckIcon fontSize="small" />,
+      onClick: () => onValidate(row),
+      disabled: validating,
+      color: palette.primary,
+    })
+    if (canCancel) actions.push(cancel)
+  } else if (row.status === 'Validation') {
+    actions.push({
+      label: 'View key',
+      icon: <VisibilityIcon fontSize="small" />,
+      onClick: () => onView(row),
+      color: palette.primary,
+    })
+    if (canCancel) actions.push(cancel)
+  } else {
+    // Active
+    if (!row.viewed) {
+      actions.push({
+        label: 'View key',
+        icon: <VisibilityIcon fontSize="small" />,
+        onClick: () => onRevealToken(row),
+        color: palette.primary,
+      })
+    }
+    if (canRenew) {
+      actions.push({
+        label: renewing ? 'Renewal in progress…' : 'Renew key',
+        icon: <AutorenewIcon fontSize="small" />,
+        onClick: () => onRenew(row),
+        disabled: renewing,
+      })
+    }
+    if (canRevoke) actions.push(revoke)
   }
 
-  if (row.status === 'Grace Period') {
-    return (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        {canRevoke && (
-          <ActionIconButton
-            title="Revoke key"
-            onClick={() => onRevoke(row)}
-            color={palette.error}
-          >
-            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-          </ActionIconButton>
-        )}
-      </Box>
-    )
-  }
-
-  if (row.status === 'Ready for Validation') {
-    return (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton
-          title="Validate domain"
-          onClick={() => onValidate(row)}
-          disabled={validating}
-          color={palette.primary}
-        >
-          <CheckIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-        {canCancel && (
-          <ActionIconButton
-            title="Cancel key"
-            onClick={() => onCancel(row)}
-            color={palette.error}
-          >
-            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-          </ActionIconButton>
-        )}
-      </Box>
-    )
-  }
-
-  if (row.status === 'Validation') {
-    return (
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
-        <ActionIconButton
-          title="View key"
-          onClick={() => onView(row)}
-          color={palette.primary}
-        >
-          <VisibilityIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-        {canCancel && (
-          <ActionIconButton
-            title="Cancel key"
-            onClick={() => onCancel(row)}
-            color={palette.error}
-          >
-            <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-          </ActionIconButton>
-        )}
-      </Box>
-    )
-  }
-
-  // Active
   return (
-    <Box sx={{ display: 'flex', gap: 0.5 }}>
-      {!row.viewed && (
-        <ActionIconButton
-          title="View key"
-          onClick={() => onRevealToken(row)}
-          color={palette.primary}
-        >
-          <VisibilityIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-      )}
-      {canRenew && (
-        <ActionIconButton
-          title={renewing ? 'Renewal in progress…' : 'Renew key'}
-          onClick={() => onRenew(row)}
-          disabled={renewing}
-        >
-          <AutorenewIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-      )}
-      {canRevoke && (
-        <ActionIconButton
-          title="Revoke key"
-          onClick={() => onRevoke(row)}
-          color={palette.error}
-        >
-          <RemoveCircleOutlineIcon sx={{ fontSize: 'inherit' }} />
-        </ActionIconButton>
-      )}
-    </Box>
+    <RowActionsMenu row={row} actions={actions} note={note} compact={compact} />
   )
 }
 
@@ -1415,16 +1497,20 @@ function ApiKeyTabs({
 
 // ─── Mobile view — card layout, same pattern as ConnectionsTable ──────────────
 
-// Same breakpoint and debounced resize check as ConnectionsTable, so both
-// pages switch from grid to cards at the same width.
-const MOBILE_BREAKPOINT = 992
+// Same debounced resize check as ConnectionsTable, but a wider breakpoint
+// (ConnectionsTable uses 992): this grid has too many columns to fit on
+// smaller laptops, so it switches to cards sooner.
+const MOBILE_BREAKPOINT = 1344
 const MOBILE_PAGE_SIZE = 10
+// Below this width the grid has too many columns to fit the full strip of
+// row action buttons, so they collapse into the "More Options" menu.
+const FULL_ACTIONS_BREAKPOINT = 1600
 
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false)
+function useIsBelowWidth(breakpoint: number): boolean {
+  const [isBelow, setIsBelow] = useState(false)
   useEffect(() => {
     let resizeTimer: ReturnType<typeof setTimeout>
-    const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    const check = () => setIsBelow(window.innerWidth < breakpoint)
     const handleResize = () => {
       clearTimeout(resizeTimer)
       resizeTimer = setTimeout(check, 100)
@@ -1435,8 +1521,8 @@ function useIsMobile(): boolean {
       clearTimeout(resizeTimer)
       window.removeEventListener('resize', handleResize)
     }
-  }, [])
-  return isMobile
+  }, [breakpoint])
+  return isBelow
 }
 
 const MOBILE_CARD_SX = {
@@ -1468,7 +1554,7 @@ function MobileField({
 
 type ApiKeyActionProps = Omit<
   React.ComponentProps<typeof ActionCell>,
-  'row' | 'validating' | 'renewing' | 'reissuing'
+  'row' | 'validating' | 'renewing' | 'reissuing' | 'compact'
 > & {
   validatingSortKey: string | null
   renewingSortKey: string | null
@@ -1529,26 +1615,43 @@ function ApiKeyMobileCard({
         </Box>
       </Box>
       {/* Content */}
-      <Box sx={{ marginBottom: '12px' }}>
-        <MobileField label="Organization">{row.jurisdiction}</MobileField>
-        <MobileField label="Environment">{row.environment}</MobileField>
-        <MobileField label="DNS">{row.domain ?? '—'}</MobileField>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            marginBottom: '4px',
-          }}
-        >
-          <Typography variant="body2" color="textSecondary">
-            <strong>Use Types:</strong>
-          </Typography>
-          <UseTypesCell row={row} />
+      {/* Two columns (identity | lifecycle) to fill the card's width; stacks
+          to one column on narrow phones. */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+          columnGap: '24px',
+          marginBottom: '12px',
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <MobileField label="Organization">{row.jurisdiction}</MobileField>
+          <MobileField label="Environment">{row.environment}</MobileField>
+          <MobileField label="DNS">{row.domain ?? '—'}</MobileField>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '4px',
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="textSecondary"
+              sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <strong>Use Types:</strong>
+            </Typography>
+            <UseTypesCell row={row} />
+          </Box>
         </Box>
-        <MobileField label="Created">{row.created || '—'}</MobileField>
-        <MobileField label="Expires">{row.expires || '—'}</MobileField>
-        <MobileField label="Created By">{row.createdBy || '—'}</MobileField>
+        <Box sx={{ minWidth: 0 }}>
+          <MobileField label="Created">{row.created || '—'}</MobileField>
+          <MobileField label="Expires">{row.expires || '—'}</MobileField>
+          <MobileField label="Created By">{row.createdBy || '—'}</MobileField>
+        </Box>
       </Box>
       {/* Action Buttons */}
       <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -3721,7 +3824,8 @@ export default function ApiKeyManagement() {
     [jurisdictions, session]
   )
 
-  const isMobile = useIsMobile()
+  const isMobile = useIsBelowWidth(MOBILE_BREAKPOINT)
+  const compactActions = useIsBelowWidth(FULL_ACTIONS_BREAKPOINT)
   const [tabValue, setTabValue] = useState(0)
   const isAuditTab = tabValue === 1
   const { auditRows, auditLoading } = useApiKeyAuditLog(isAuditTab)
@@ -4188,16 +4292,22 @@ export default function ApiKeyManagement() {
         field: 'status',
         headerName: 'STATUS',
         flex: 1.6,
-        minWidth: 160,
+        minWidth: 120,
+        maxWidth: 150,
+        // Wraps so long grace-period text isn't clipped at the capped width.
+        cellClassName: 'wrapCell',
         renderCell: (params: GridRenderCellParams) => (
           <StatusCell row={params.row as ApiKey} />
         ),
       },
       {
+        // Created and expiry dates in one cell. Keeps the `created` field so the
+        // default newest-first sort (initialState below) still applies, and
+        // sorts by created date.
         field: 'created',
-        headerName: 'CREATED',
-        flex: 1,
-        minWidth: 100,
+        headerName: 'DURATION',
+        flex: 1.4,
+        minWidth: 150,
         // Compares the raw ISO timestamp, not the displayed locale date string
         // (which has no time component and sorts lexically, not chronologically).
         sortComparator: ((_v1, _v2, param1, param2) => {
@@ -4208,8 +4318,26 @@ export default function ApiKeyManagement() {
             (t2 ? new Date(t2).getTime() : 0)
           )
         }) as GridComparatorFn,
+        renderCell: (params: GridRenderCellParams) => {
+          const row = params.row as ApiKey
+          return (
+            <Box>
+              <Typography variant="body2">
+                <Box component="span" sx={{ color: palette.greyText }}>
+                  Created:
+                </Box>{' '}
+                {row.created || '—'}
+              </Typography>
+              <Typography variant="body2">
+                <Box component="span" sx={{ color: palette.greyText }}>
+                  Expires:
+                </Box>{' '}
+                {row.expires || '—'}
+              </Typography>
+            </Box>
+          )
+        },
       },
-      { field: 'expires', headerName: 'EXPIRES', flex: 1, minWidth: 100 },
       {
         field: 'createdBy',
         headerName: 'CREATED BY',
@@ -4220,8 +4348,15 @@ export default function ApiKeyManagement() {
       {
         field: 'actions',
         headerName: 'ACTION',
-        flex: 1.8,
-        minWidth: 180,
+        // Full strip of action buttons when the screen is wide enough; one
+        // narrow "More Options" menu button otherwise (see RowActionsMenu).
+        ...(compactActions
+          ? {
+              width: 90,
+              align: 'center' as const,
+              headerAlign: 'center' as const,
+            }
+          : { flex: 1.8, minWidth: 180 }),
         sortable: false,
         filterable: false,
         renderCell: (params: GridRenderCellParams) => (
@@ -4240,11 +4375,13 @@ export default function ApiKeyManagement() {
             canRevoke={canRevoke}
             canRenew={canRenew}
             canCancel={canCancel}
+            compact={compactActions}
           />
         ),
       },
     ],
     [
+      compactActions,
       handleView,
       handleRevoke,
       handleCancel,
