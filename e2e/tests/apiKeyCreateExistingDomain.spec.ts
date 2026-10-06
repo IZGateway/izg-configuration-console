@@ -9,7 +9,7 @@ import { logout } from '../helpers/logout'
 // domain for the chosen environment. Names must match the dropdown labels.
 const TEST_ORG_NAME = 'Audacious Inquiry LLC'
 const TEST_ENV_NAME = 'Development'
-const AUTHORIZED_TEST_DOMAIN = 'testmulti.testing.izgateway.org'
+const AUTHORIZED_TEST_DOMAIN = 'createKey.fastTrack.playwright.org'
 const TEST_USE_TYPE = 'Provider'
 
 let context: BrowserContext
@@ -77,7 +77,11 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
     .getByRole('textbox')
     .fill(description)
   await chooseOption(createDialog, 'create-key-use-types', TEST_USE_TYPE)
-  await chooseOption(createDialog, 'create-key-dns-name', AUTHORIZED_TEST_DOMAIN)
+  await chooseOption(
+    createDialog,
+    'create-key-dns-name',
+    AUTHORIZED_TEST_DOMAIN
+  )
 
   // 201 = existing-domain fast path; 202 would mean a DNS challenge was issued.
   const createResponse = page.waitForResponse(
@@ -90,8 +94,12 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
   // A same-scope Active key from an earlier run triggers the soft duplicate
   // warning; it must not block creation. An error alert also ends the wait so
   // a rejected request fails on the status check below, not a timeout.
-  const createAnyway = createDialog.getByRole('button', { name: 'CREATE ANYWAY' })
-  const tokenDialog = page.getByRole('dialog').filter({ hasText: 'View API Key' })
+  const createAnyway = createDialog.getByRole('button', {
+    name: 'CREATE ANYWAY',
+  })
+  const tokenDialog = page
+    .getByRole('dialog')
+    .filter({ hasText: 'View API Key' })
   await expect(
     createAnyway.or(tokenDialog).or(createDialog.getByRole('alert')).first()
   ).toBeVisible()
@@ -106,12 +114,16 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
     tokenDialog.getByText('Validation Completed. Copy this token now')
   ).toBeVisible()
   await expect(
-    tokenDialog.getByText('The secret cannot be retrieved after closing this dialog')
+    tokenDialog.getByText(
+      'The secret cannot be retrieved after closing this dialog'
+    )
   ).toBeVisible()
   await expect(
     tokenDialog.getByTestId('api-key-token').getByRole('textbox')
   ).toHaveValue(/^eyJ[\w-]+\.[\w-]+\.[\w-]+$/)
-  await expect(tokenDialog.getByRole('button', { name: 'COPY TOKEN' })).toBeVisible()
+  await expect(
+    tokenDialog.getByRole('button', { name: 'COPY TOKEN' })
+  ).toBeVisible()
 
   await tokenDialog.getByRole('button', { name: 'CLOSE' }).click()
   await expect(tokenDialog).toBeHidden()
