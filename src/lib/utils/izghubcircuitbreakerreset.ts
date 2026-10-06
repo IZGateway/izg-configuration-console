@@ -5,6 +5,7 @@ import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
 import { getDestinationType } from '../desttypehelper'
+import { toEcsUrl } from './ecsUrl'
 
 /**
  * Hub circuit-breaker reset REST path, relative to the hub's `/rest/` base.
@@ -46,7 +47,7 @@ const resetCircuitBreakersForBaseUrls = async (
     baseUrls.map((baseUrl) => {
       const url = `${baseUrl}${CIRCUIT_BREAKER_RESET_PATH}`
       logger.info('Signaling hub to reset all circuit breakers', {
-        url,
+        url: toEcsUrl(url),
         operation: 'reset_circuit_breakers',
         ...metadata,
       })

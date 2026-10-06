@@ -2,6 +2,7 @@
 import winston from 'winston'
 import ecsFormat from '@elastic/ecs-winston-format'
 import { asyncRequestContext } from './src/lib/Context'
+import { toEcsUrl } from './src/lib/utils/ecsUrl'
 
 let appVersion = 'unknown'
 try {
@@ -54,6 +55,32 @@ export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
 
 const userContextFormat = winston.format(injectUserContext)
 
+/**
+ * Backstop: rewrite a top-level string `url` into the ECS object shape
+ * (IGDD-3541).
+ *
+ * The Elastic index maps `url` as an object, so a document with a scalar `url`
+ * is rejected and filebeat drops it — while the event still prints to stdout,
+ * so CloudWatch looks correct and nothing signals the loss. Call sites should
+ * pass `toEcsUrl(...)` themselves; this catches the next one that doesn't.
+ * Only a string or `URL` is touched: any other object (including what
+ * `convertReqRes` builds from `req`) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUrl = (info: winston.Logform.TransformableInfo) => {
+  if (typeof info.url === 'string') {
+    info.url = toEcsUrl(info.url)
+  } else if (info.url instanceof URL) {
+    // A URL object serializes to a plain string (URL#toJSON), so it would be
+    // rejected exactly like a string.
+    info.url = toEcsUrl(info.url.href)
+  }
+  return info
+}
+
+const ecsUrlFormat = winston.format(normalizeEcsUrl)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
@@ -61,6 +88,7 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     versionFormat(),
     userContextFormat(),
+    ecsUrlFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],
