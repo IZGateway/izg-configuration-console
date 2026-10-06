@@ -143,12 +143,37 @@ with `ERR_REQUIRE_ESM` from an upstream packaging bug. Both new tests must decla
 
 ## Risks / Trade-offs
 
-**The access grant is not confirmed.** → This change widens IZG Support from
-jurisdiction-scoped to global on the destination list. It is Open Decision 1 in
-`openspec/changes/archive/2026-09-30-admin-page-authorization/design.md:417-434`, which
-records that it needs the RBAC matrix owner's confirmation. Mitigation: state the grant in
-the pull request as its own line, and hold the merge for that confirmation. The live 500 is
-evidence that today's behaviour is unintended, but the grant is still a grant.
+**The reach row's authority rests on one person's notes.** → The target RBAC matrix already
+gives IZG Support the reach value `All` on its `CC | Tenancy — Reach` row ([Role Based
+Access Control for IZ
+Gateway](https://izgateway.atlassian.net/wiki/spaces/IGDD/pages/1006043137), version 7,
+2026-09-24, Keith W. Boone). The code matrix agrees, and the archived `admin-page-access`
+spec asserts in "Tenancy reach already agrees" that the two match. So this change is
+conformance with a decision already recorded, and not a new grant. Open Decision 1 in
+`openspec/changes/archive/2026-09-30-admin-page-authorization/design.md:417-434` predates
+that row.
+
+The residual risk is narrow. That row's enforcement column reads "Per Anusha's notes"
+rather than a ratified state, so its provenance is one person's notes. Mitigation: ask for
+a one-line confirmation on IGDD-3542 that the row is ratified. Anusha Kanuri reported this
+ticket, so the asker and the source are already in the same place. State the reach change
+in the pull request either way.
+
+**The matrix says IZG Support must not add or edit onboarding senders.** → The
+`CC | Onboarding Senders — add / edit` row gives IZG Support `—`, and its enforcement column
+reads "Not enforced". The code has one onboarding capability, `canViewOnboarding`, which
+IZG Support holds, and `src/pages/api/allowedusers/index.ts:485-486` gates `POST` and
+`DELETE` on that one flag. So IZG Support can submit senders today. The 500 on the
+destination list is the only thing that stops the form from working.
+
+This change therefore removes an accidental barrier that happens to match a target-matrix
+row that nothing enforces. The change does not cause the condition and does not fix it.
+Separating read from write is IGDD-3471, which is already linked to this ticket, and the
+archived `admin-page-access` spec records the separation as deliberately deferred.
+
+Mitigation: this is a sequencing question for the team, not a code question. The row affects
+the release note and the test plan, not this diff. Either ship this change and accept that
+IZG Support can add senders until IGDD-3471 splits the flag, or land IGDD-3471 first.
 
 **A tester cannot tell the widening from a regression.** → IGDD-3472 nominates an IZG
 Support account as its release gate, and that account now sees more destinations than the

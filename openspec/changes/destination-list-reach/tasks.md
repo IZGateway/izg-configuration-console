@@ -111,10 +111,19 @@ disappears.
   change widens IZG Support from jurisdiction-scoped to global on `/api/destinations`.
   Verify that the line names the role, the endpoint, and the reach before and after.
 
-- [ ] 4.2 Obtain the RBAC matrix owner's confirmation of that grant, and record it on
-  IGDD-3542. Verify that the confirmation is written on the ticket before merge. It is Open
-  Decision 1 in `openspec/changes/archive/2026-09-30-admin-page-authorization/design.md`,
-  which states that it needs confirmation rather than assumption.
+- [ ] 4.2 Ask on IGDD-3542 for a one-line confirmation that the `CC | Tenancy — Reach` row
+  of the target matrix is ratified for IZG Support, whose value is already `All`. Verify
+  that the confirmation is written on the ticket before merge. The row's enforcement column
+  reads "Per Anusha's notes", and Anusha Kanuri reported this ticket. This is a provenance
+  check and not a new grant. See design Risks.
+
+- [ ] 4.5 Raise the onboarding sequencing question with the team, and record the answer on
+  IGDD-3542. The target matrix gives IZG Support `—` on
+  `CC | Onboarding Senders — add / edit`, yet one capability gates both view and write today
+  and IZG Support holds it. Verify that the ticket records which option the team chose:
+  ship this change and accept that IZG Support can add senders until IGDD-3471 splits the
+  flag, or land IGDD-3471 first. This affects the release note and the test plan, not this
+  change's code.
 
 - [ ] 4.3 Add the expected test delta to the release notes for testers: an IZG Support
   account now sees every destination where it previously saw an error. Verify that the note

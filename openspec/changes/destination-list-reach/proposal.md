@@ -27,13 +27,18 @@ Tracked as IGDD-3542. The failure is pre-existing and reproduces on `develop`.
   honour that intent.
 - **A test covers the empty-jurisdiction case**, which is the input that produces the
   malformed expression.
-- **Access change (not breaking).** This widens IZG Support from jurisdiction-scoped to
-  global on `/api/destinations`. No API response shape changes and no client changes, so
-  nothing breaks. It is still a real grant. The RBAC matrix owner has **not** confirmed it.
-  It is recorded as Open Decision 1 in
-  `openspec/changes/archive/2026-09-30-admin-page-authorization/design.md:417-434`. The
-  live 500 is evidence that today's behaviour is unintended, but the grant must be confirmed
-  before merge, not assumed.
+- **Conformance, not a grant.** This widens IZG Support from jurisdiction-scoped to global
+  on `/api/destinations`. No API response shape changes and no client changes. The target
+  RBAC matrix already specifies this reach: the `CC | Tenancy — Reach` row gives IZG Support
+  the value `All` ([Role Based Access Control for IZ
+  Gateway](https://izgateway.atlassian.net/wiki/spaces/IGDD/pages/1006043137), version 7,
+  2026-09-24). The code matrix already agrees, and the archived `admin-page-access` spec
+  asserts that the two match in its scenario "Tenancy reach already agrees". Only this route
+  disagreed. Open Decision 1 in
+  `openspec/changes/archive/2026-09-30-admin-page-authorization/design.md:417-434` was
+  raised before that row was confirmed. One caveat remains: the row's enforcement column
+  reads "Per Anusha's notes" rather than a ratified state, so the row's authority needs a
+  one-line confirmation. See `design.md` Risks.
 
 ## Capabilities
 
