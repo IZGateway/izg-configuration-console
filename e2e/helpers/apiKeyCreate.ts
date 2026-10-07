@@ -38,6 +38,7 @@ export const VERIFY_DOMAIN_URL = '**/api/apikeys/verify-domain*'
 export const ActionIcon = {
   viewKey: 'VisibilityIcon',
   renewKey: 'AutorenewIcon',
+  revokeKey: 'RemoveCircleOutlineIcon',
   validateDomain: 'CheckIcon',
 } as const
 
@@ -182,3 +183,36 @@ export const findRowByDescription = async (page: Page, description: string) => {
 /** An ACTION-column button in a key row, addressed by its MUI icon testid. */
 export const rowAction = (row: Locator, icon: string) =>
   row.locator(`[data-field="actions"] button:has([data-testid="${icon}"])`)
+
+/**
+ * Creates a credential through the DNS challenge and validates it, then closes
+ * the success dialog with CLOSE rather than VIEW KEY — leaving the key Active
+ * with its token still unviewed (`viewedAt` unset), which is the precondition
+ * for §9.4.
+ *
+ * Expects the caller to have already logged in and navigated to /apikeys; it
+ * starts from the grid's own Create Key button. Callers must also have invoked
+ * `requiresDnsBypass()`, since this drives a real challenge to completion.
+ */
+export const createActiveUnviewedKey = async (
+  page: Page,
+  { domain, description }: { domain: string; description: string }
+) => {
+  await page.getByRole('button', { name: 'Create Key' }).click()
+  await expect(createDialog(page)).toBeVisible()
+  await fillCreateFormForNewDomain(page, { domain, description })
+  await submitCreateForm(page)
+
+  await stepDialog(page, 'Verify Domain Ownership')
+    .getByRole('button', { name: 'VALIDATE' })
+    .click()
+
+  const successDialog = stepDialog(page, 'Validation Completed!')
+  await expect(successDialog).toBeVisible({ timeout: 20000 })
+  // Walking away here is what leaves the token unviewed.
+  await successDialog.getByRole('button', { name: 'CLOSE' }).click()
+  // Not `expect(successDialog).toBeHidden()`: handleClose resets the step in
+  // the same commit as onClose, so that text-filtered locator resolves to zero
+  // elements either way and the assertion could never fail.
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+}
