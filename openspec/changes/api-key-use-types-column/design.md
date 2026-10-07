@@ -140,15 +140,21 @@ to the grid, so the column declares a `valueGetter`. It calls the Decision 5 hel
 joins the resulting labels with a comma — `"Patient, Provider"`.
 
 **For a row with no use types the `valueGetter` returns the em dash, not an empty string.**
-This is what makes Decision 7's sort claim true. MUI's default string comparator places an
-empty string before every letter, so an empty return would sort those rows *first*
-ascending. The em dash (U+2014) sorts after every Latin letter, so they sort last instead,
-which is the position the spec scenario calls consistent.
+This gives those rows one shared sort key, so they group together instead of scattering.
+
+**Corrected 2026-10-07 by observation.** An earlier draft of this decision claimed that the
+em dash (U+2014) sorts after every Latin letter, and that rows with no use types therefore
+land last in ascending order. That claim is wrong. MUI compares the derived strings with
+the platform collation, which places punctuation **before** letters. Manual testing against
+88 rows confirmed it: on the first click of the header the "None" rows appear at the top.
+The spec scenario was relaxed to require a predictable group position, not the last
+position. The behavior is unchanged, and the alternative below was reconsidered and
+rejected again — the position is deterministic, and the change author accepted it
+(Austin Moody, 2026-10-07).
 
 `renderCell` ignores the derived string. It calls the same helper and maps the result to
 chips. For an empty set it renders "None" (set by the UI review), not the em dash. The
-display and the sort key are therefore separate values. The sort key keeps the em dash,
-because that is what sorts the empty rows last.
+display and the sort key are therefore separate values.
 
 One derived value then serves three purposes: the sort key now, the filter value if item 3
 lands, and the accessible text of the cell.
@@ -163,8 +169,9 @@ has no such split — the derived string sorts correctly as it stands.
 
 `sortable: true`. Sorting on the joined labels groups rows by their first use type, so all
 Patient keys sit together, then Patient+Provider, then Provider, and so on. A row with no
-use types has the em dash as its sort key, which sorts after every label in ascending order — a
-consistent position, not an arbitrary one.
+use types has the em dash as its sort key, so all such rows group at one end of the list — at
+the start in ascending order, at the end in descending order. The position is consistent,
+not arbitrary. See the correction in Decision 6.
 
 `filterable: false` on the column, **and a filter is still delivered** — through the toolbar,
 not through the column. The two are separate things and it is worth being exact about which

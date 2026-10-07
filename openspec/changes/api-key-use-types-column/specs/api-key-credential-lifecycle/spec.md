@@ -58,8 +58,13 @@ Both forms SHALL display the use types the same way.
 
 - **WHEN** the operator sorts the keys grid by the use types column
 - **THEN** rows SHALL order by their use-type labels taken in canonical order
-- **AND** a row with no use types SHALL sort after every row that carries one in ascending
-  order, rather than at an arbitrary position
+- **AND** rows with no use types SHALL group together rather than scatter through the list
+
+> The column sorts on a derived string, so rows with no use types carry the em dash as
+> their sort key. The grid compares that string with the platform collation, which places
+> punctuation before letters. Those rows therefore group at the start in ascending order
+> and at the end in descending order. The requirement is that their position is
+> predictable, not that it is the last position.
 
 #### Scenario: The use types column is in the default column view
 
