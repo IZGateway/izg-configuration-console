@@ -249,7 +249,10 @@ Re-issue dialog already puts it. That groups the three scope values together, be
 free-text Description.
 
 - `RenewDialog`: after the Jurisdiction + Environment row, before Description.
-- `ReissueDialog`: already there. No change.
+- `ReissueDialog`: already there; position unchanged. Its value now comes from
+  `formatUseTypes` instead of its own inline mapping, which showed stored order. That one-line
+  change is required by the spec scenario "Every surface uses the same labels and the same
+  order" (found by `/opsx:verify`, 2026-10-07).
 
 ### Decision 16 — The card view reuses the grid cell
 
