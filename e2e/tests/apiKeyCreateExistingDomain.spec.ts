@@ -35,6 +35,64 @@ const chooseOption = async (
 const keyRow = (description: string) =>
   page.getByRole('row').filter({ hasText: description })
 
+const createDialog = () =>
+  page.getByRole('dialog').filter({ hasText: 'Create API Key' })
+const tokenDialog = () =>
+  page.getByRole('dialog').filter({ hasText: 'View API Key' })
+const createAnyway = () =>
+  createDialog().getByRole('button', { name: 'CREATE ANYWAY' })
+const duplicateWarning = () =>
+  createDialog()
+    .getByRole('alert')
+    .filter({ hasText: 'An active key with this exact scope already exists' })
+
+// Every key created here has the same scope (org, env, use type, domain), so
+// any earlier key from these tests is a same-scope duplicate of the next one.
+const openCreateDialog = async () => {
+  await page.getByRole('button', { name: 'Create Key' }).click()
+  await expect(createDialog()).toBeVisible()
+}
+
+const fillCreateForm = async (description: string) => {
+  await chooseOption(createDialog(), 'create-key-organization', TEST_ORG_NAME)
+  await chooseOption(createDialog(), 'create-key-environment', TEST_ENV_NAME)
+  await createDialog()
+    .getByTestId('create-key-description')
+    .getByRole('textbox')
+    .fill(description)
+  await chooseOption(createDialog(), 'create-key-use-types', TEST_USE_TYPE)
+  await chooseOption(
+    createDialog(),
+    'create-key-dns-name',
+    AUTHORIZED_TEST_DOMAIN
+  )
+}
+
+const waitForCreateResponse = () =>
+  page.waitForResponse(
+    (r) =>
+      r.request().method() === 'POST' &&
+      new URL(r.url()).pathname === '/api/apikeys'
+  )
+
+// Submits the filled form and returns the POST /api/apikeys response. Keys
+// are never cleaned up, so whether the duplicate warning shows depends on
+// earlier runs; this tolerates it either way. The duplicate test below asserts
+// the warning without this tolerance. An error alert also ends the wait so a
+// rejected request fails on the caller's status check, not a timeout.
+const submitCreate = async () => {
+  const createResponse = waitForCreateResponse()
+  await createDialog().getByRole('button', { name: 'NEXT' }).click()
+  await expect(
+    createAnyway()
+      .or(tokenDialog())
+      .or(createDialog().getByRole('alert'))
+      .first()
+  ).toBeVisible()
+  if (await createAnyway().isVisible()) await createAnyway().click()
+  return createResponse
+}
+
 test.beforeAll(async ({ browser }) => {
   context = await browser.newContext()
   page = await context.newPage()
@@ -55,11 +113,7 @@ test.afterAll(async () => {
 test('Create key with a pre-authorized domain issues token immediately, no DNS step', async () => {
   const description = `E2E existing domain ${Date.now()}`
 
-  await page.getByRole('button', { name: 'Create Key' }).click()
-  const createDialog = page
-    .getByRole('dialog')
-    .filter({ hasText: 'Create API Key' })
-  await expect(createDialog).toBeVisible()
+  await openCreateDialog()
   for (const field of [
     'Organization',
     'Environment',
@@ -67,66 +121,30 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
     'Use Types',
     'DNS Name',
   ]) {
-    await expect(createDialog.getByText(field).first()).toBeVisible()
+    await expect(createDialog().getByText(field).first()).toBeVisible()
   }
+  await fillCreateForm(description)
 
-  await chooseOption(createDialog, 'create-key-organization', TEST_ORG_NAME)
-  await chooseOption(createDialog, 'create-key-environment', TEST_ENV_NAME)
-  await createDialog
-    .getByTestId('create-key-description')
-    .getByRole('textbox')
-    .fill(description)
-  await chooseOption(createDialog, 'create-key-use-types', TEST_USE_TYPE)
-  await chooseOption(
-    createDialog,
-    'create-key-dns-name',
-    AUTHORIZED_TEST_DOMAIN
-  )
+  // 201 = existing-domain fast path; 202 would mean a DNS challenge was issued
+  // and the "Verify Domain Ownership" step shown. The status is the assertion.
+  expect((await submitCreate()).status()).toBe(201)
 
-  // 201 = existing-domain fast path; 202 would mean a DNS challenge was issued.
-  const createResponse = page.waitForResponse(
-    (r) =>
-      r.request().method() === 'POST' &&
-      new URL(r.url()).pathname === '/api/apikeys'
-  )
-  await createDialog.getByRole('button', { name: 'NEXT' }).click()
-
-  // A same-scope Active key from an earlier run triggers the soft duplicate
-  // warning; it must not block creation. An error alert also ends the wait so
-  // a rejected request fails on the status check below, not a timeout.
-  const createAnyway = createDialog.getByRole('button', {
-    name: 'CREATE ANYWAY',
-  })
-  const tokenDialog = page
-    .getByRole('dialog')
-    .filter({ hasText: 'View API Key' })
+  // Straight to the token — the create dialog closed on 201.
+  const token = tokenDialog()
+  await expect(token).toBeVisible()
   await expect(
-    createAnyway.or(tokenDialog).or(createDialog.getByRole('alert')).first()
-  ).toBeVisible()
-  if (await createAnyway.isVisible()) await createAnyway.click()
-
-  expect((await createResponse).status()).toBe(201)
-
-  // No "Verify Domain Ownership" step — straight to the token.
-  await expect(tokenDialog).toBeVisible()
-  await expect(page.getByText('Verify Domain Ownership')).toHaveCount(0)
-  await expect(
-    tokenDialog.getByText('Validation Completed. Copy this token now')
+    token.getByText('Validation Completed. Copy this token now')
   ).toBeVisible()
   await expect(
-    tokenDialog.getByText(
-      'The secret cannot be retrieved after closing this dialog'
-    )
+    token.getByText('The secret cannot be retrieved after closing this dialog')
   ).toBeVisible()
   await expect(
-    tokenDialog.getByTestId('api-key-token').getByRole('textbox')
+    token.getByTestId('api-key-token').getByRole('textbox')
   ).toHaveValue(/^eyJ[\w-]+\.[\w-]+\.[\w-]+$/)
-  await expect(
-    tokenDialog.getByRole('button', { name: 'COPY TOKEN' })
-  ).toBeVisible()
+  await expect(token.getByRole('button', { name: 'COPY TOKEN' })).toBeVisible()
 
-  await tokenDialog.getByRole('button', { name: 'CLOSE' }).click()
-  await expect(tokenDialog).toBeHidden()
+  await token.getByRole('button', { name: 'CLOSE' }).click()
+  await expect(token).toBeHidden()
 
   const row = keyRow(description)
   await expect(row).toBeVisible()
@@ -134,4 +152,37 @@ test('Create key with a pre-authorized domain issues token immediately, no DNS s
   await expect(row).toContainText(AUTHORIZED_TEST_DOMAIN)
   // Token was revealed once already, so the View (eye) action is gone.
   await expect(row.getByTestId('VisibilityIcon')).toHaveCount(0)
+})
+
+test('Same-scope duplicate shows the warning, and CREATE ANYWAY still creates the key', async () => {
+  // Seed a same-scope Active key so the duplicate exists on a clean
+  // environment too, rather than relying on keys left by earlier runs.
+  await openCreateDialog()
+  await fillCreateForm(`E2E duplicate seed ${Date.now()}`)
+  expect((await submitCreate()).status()).toBe(201)
+  await tokenDialog().getByRole('button', { name: 'CLOSE' }).click()
+  await expect(tokenDialog()).toBeHidden()
+
+  // Reload so the dialog's credential list includes the seeded key.
+  await page.goto('/apikeys')
+  await page.waitForLoadState('networkidle')
+
+  const description = `E2E duplicate ${Date.now()}`
+  await openCreateDialog()
+  await fillCreateForm(description)
+
+  // First click only arms the warning; it sends no request.
+  await createDialog().getByRole('button', { name: 'NEXT' }).click()
+  await expect(duplicateWarning()).toBeVisible()
+  await expect(createAnyway()).toBeVisible()
+
+  // Warns, does not block: the second click creates the key.
+  const createResponse = waitForCreateResponse()
+  await createAnyway().click()
+  expect((await createResponse).status()).toBe(201)
+
+  await expect(tokenDialog()).toBeVisible()
+  await tokenDialog().getByRole('button', { name: 'CLOSE' }).click()
+  await expect(tokenDialog()).toBeHidden()
+  await expect(keyRow(description)).toContainText('Active')
 })
