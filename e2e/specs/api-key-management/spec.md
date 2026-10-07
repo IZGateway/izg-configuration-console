@@ -36,5 +36,36 @@ in active status immediately"
 
 **Test data:** constants at the top of the test file (organization, environment,
 pre-authorized domain, use type). The domain must already be authorized for that
-organization and environment. Created keys are left Active; each run adds three (one
-from the first test, a seed and a duplicate from the second).
+organization and environment. The created key is left Active; each run adds one.
+
+---
+
+## Create Key: new domain (DNS challenge)
+
+**Test:** `e2e/tests/apiKeyCreateNewDomain.spec.ts`
+**Source scenario:** credential-lifecycle, "New domain requires DNS TXT challenge
+before the credential becomes active"
+
+- Choosing **Other** in DNS Name reveals a Custom DNS Name field that rejects malformed
+  values inline ("Enter a valid domain name") and keeps **NEXT** disabled until the value
+  is a real FQDN
+- Submitting an unauthorized domain issues a challenge instead of a token: the dialog
+  moves to **"Verify Domain Ownership"**, showing the TXT record host (the domain apex
+  itself) and an `izg-challenge=<uuid>` value, plus the 48-hour propagation notice
+- **VALIDATE** on a satisfied challenge shows **"Validation Completed!"** with a green
+  check, repeats the same host/value pair for cleanup, and offers **VIEW KEY**, which
+  reveals the one-time JWT; the row then appears **Active** with no View (eye) action
+- **VALIDATE** on an unsatisfied challenge shows **"Validation Failed"** with a warning
+  icon and repeats the TXT instructions; **TRY AGAIN** re-posts the identical lookup and
+  mints no new challenge UUID (no second `POST /api/apikeys`)
+- Closing the dialog at the challenge step leaves the row **Ready for Validation** with
+  its own Validate domain action, which re-reads the same persisted challenge, reports
+  success/failure as a snackbar rather than a dialog step, and moves the row to
+  **Active** without reopening the create dialog
+
+**Test data** (`.env.test`): optionally `E2E_APIKEY_ORG`, `E2E_APIKEY_ENV`,
+`E2E_APIKEY_USE_TYPE` to pin the pickers; each test mints its own throwaway domain.
+The three tests that drive a challenge to success require
+`ALLOW_DNS_VERIFY_BYPASS=true` on the console under test and are opted in with
+`DNS_VERIFY_BYPASS_AVAILABLE=true`; they skip with a reason otherwise. These tests do
+not revoke the keys they create.
