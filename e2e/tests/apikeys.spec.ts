@@ -12,11 +12,18 @@ import { loginToOkta } from '../helpers/oktaLogin'
 // These tests read the grid to find a row that fits each case, instead of
 // assuming the data holds one. Where no row fits, the test skips with a reason.
 // That keeps a data gap distinguishable from a defect.
+//
+// The page shows one card per key below 1344px and collapses the row actions
+// into a "More Options" menu below 1600px. These tests read the grid and click
+// the "Renew key" button directly, so they run at a viewport wider than both.
 
 let context: BrowserContext
 let page: Page
 
 const GRID = '.MuiDataGrid-root'
+// Wide enough for the grid (>= 1344px) and the full action-button strip
+// (>= 1600px).
+const VIEWPORT = { width: 1680, height: 1050 }
 const header = (field: string) =>
   page.locator(`[role="columnheader"][data-field="${field}"]`)
 const cells = (field: string) =>
@@ -44,7 +51,9 @@ const openApiKeysPage = async () => {
 }
 
 test.beforeAll(async ({ browser }) => {
-  context = await browser.newContext()
+  // A context made here does not inherit test.use() options, so the viewport
+  // is set on it directly.
+  context = await browser.newContext({ viewport: VIEWPORT })
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
   await openApiKeysPage()
@@ -86,8 +95,7 @@ test('USE TYPES column sits between DNS and STATUS', async () => {
     'domain',
     'useTypes',
     'status',
-    'created',
-    'expires',
+    'created', // headed DURATION: created and expiry dates in one cell
     'createdBy',
     'actions',
   ])
@@ -110,39 +118,19 @@ test('a key with two use types renders both labels as chips', async () => {
   expect(positions[0]).toBeLessThan(positions[1])
 })
 
-test('a key with three use types shows two chips and an overflow indicator', async () => {
-  const total = await rowCount()
-  let found = -1
-  for (let i = 0; i < total; i += 1) {
-    const labels = await chipLabelsInCell(i)
-    if (labels.some((l) => l.trim().startsWith('+'))) {
-      found = i
-      break
-    }
-  }
+test('a key with three use types shows every label and no overflow count', async () => {
+  // The cell collapses use types behind a "+N more" count only when two or
+  // more would be hidden. With three use types in the enumeration no key
+  // reaches that, so all three render as chips and wrap if the cell is narrow.
+  const index = await findRowWithChipCount(3)
   test.skip(
-    found === -1,
-    'No key in this environment carries more than two use types.'
+    index === -1,
+    'No key in this environment carries all three use types.'
   )
 
-  const labels = (await chipLabelsInCell(found)).map((l) => l.trim())
-  // Two real labels, then the count of the remainder.
-  expect(labels).toHaveLength(3)
-  expect(labels[2]).toMatch(/^\+\d+$/)
-
-  // The indicator is focusable, so a keyboard user can reach its tooltip.
-  const indicator = cells('useTypes')
-    .nth(found)
-    .locator('.MuiChip-root')
-    .last()
-  await expect(indicator).toHaveAttribute('tabindex', '0')
-
-  await indicator.hover()
-  const tooltip = page.getByRole('tooltip')
-  await expect(tooltip).toBeVisible()
-  // The tooltip carries every use type, not just the hidden ones.
-  await expect(tooltip).toContainText(labels[0])
-  await expect(tooltip).toContainText(labels[1])
+  const labels = (await chipLabelsInCell(index)).map((l) => l.trim())
+  expect(labels).toEqual(['Patient', 'Provider', 'Public Health'])
+  expect(labels.some((l) => l.startsWith('+'))).toBeFalsy()
 })
 
 test('the USE TYPES column sorts', async () => {
@@ -271,10 +259,7 @@ test('the Renew dialog shows a read-only Use Types field', async () => {
   let target = -1
   for (let i = 0; i < total; i += 1) {
     const hasRenew =
-      (await rows
-        .nth(i)
-        .getByRole('button', { name: 'Renew key' })
-        .count()) > 0
+      (await rows.nth(i).getByRole('button', { name: 'Renew key' }).count()) > 0
     if (hasRenew) {
       target = i
       break
@@ -288,9 +273,7 @@ test('the Renew dialog shows a read-only Use Types field', async () => {
   const row = rows.nth(target)
   const expected = (
     await row.locator('[data-field="useTypes"] .MuiChip-label').allInnerTexts()
-  )
-    .map((l) => l.trim())
-    .filter((l) => !l.startsWith('+'))
+  ).map((l) => l.trim())
 
   await row.getByRole('button', { name: 'Renew key' }).click()
   const dialog = page.getByRole('dialog')
@@ -302,12 +285,12 @@ test('the Renew dialog shows a read-only Use Types field', async () => {
   // Read-only, like the Jurisdiction, Environment and Domain fields beside it.
   await expect(field).toHaveAttribute('readonly', '')
 
-  // The value states every use type the credential carries. The grid cell may
-  // have collapsed a third behind "+1", so assert containment of what was
-  // visible rather than an exact string.
-  for (const label of expected) {
-    await expect(field).toHaveValue(new RegExp(label))
-  }
+  // The value states every use type the credential carries, in the same
+  // canonical order as the grid's chips. No key can reach the "+N more" count
+  // today, so the chips are the full list and the value must match exactly.
+  // A key with no use types shows "None" in the grid (no chips) but an em dash
+  // in the dialog, like every other empty read-only field there.
+  await expect(field).toHaveValue(expected.length ? expected.join(', ') : '—')
 
   await page.keyboard.press('Escape')
 })

@@ -3,15 +3,25 @@
 See `proposal.md` — Why. The behaviour contract is in
 `specs/api-key-credential-lifecycle/spec.md`.
 
+**The UI review is authoritative.** mattystank's commits `7d1f70e` and `55275da` (PR #711)
+changed the page after this design was first written. Where they differ from a decision
+below, the decision has been rewritten to match the code. See `proposal.md` — The UI review.
+Line numbers in this document predate those commits and are approximate.
+
 Constraints that shape the approach:
 
 - The grid is `@mui/x-data-grid` v7 community (`DataGrid`, not `DataGridPro`). In v7
   `valueGetter` takes `(value, row, column, apiRef)`, not a params object. Columns are a
   memoized `GridColDef[]` at `ApiKeyManagement/index.tsx:3190`.
-- The `DataGrid` sets `disableColumnMenu`, `disableColumnSelector` and
-  `disableDensitySelector` (`index.tsx:3419`). The toolbar is a custom slot,
-  `CustomToolbar`, and it holds a search box and a filter popover with three `Select`
-  dropdowns. There is no MUI filter panel, and no CSV export.
+- The `DataGrid` sets `disableColumnMenu` and `disableDensitySelector`. The toolbar is a
+  custom slot, `CustomToolbar`, and it holds a search box, a Columns popover (hide and show
+  columns, with a "Default view" button) and a filter popover of `Select` dropdowns. There
+  is no MUI filter panel, and no CSV export.
+- The page has two layouts. At 1344px and wider it shows the `DataGrid`. Below 1344px it
+  shows one card per key (`MobileApiKeyView`). Both read the same `filteredRows`. Below
+  1600px the grid's row actions collapse into a "More Options" menu.
+- Every grid row is auto-height (`getRowHeight={() => 'auto'}`) with vertical cell padding,
+  on both tabs.
 - Every row is already in the browser. `filteredRows` (`index.tsx:2917`) filters client-side
   over the whole list. The spec records this as "The credential list is returned whole and
   filtered client-side".
@@ -40,16 +50,17 @@ Constraints that shape the approach:
 - **No change to how use types are captured, validated, or inherited.** Every existing
   scenario in the "Use types are captured and validated on the credential" requirement stays
   exactly as it is.
-- No column-visibility control for the operator. `disableColumnSelector` is already set and
-  this change does not revisit that.
+- No change to the Columns popover. The UI review added it. This change requires only that
+  USE TYPES is visible in the default view, which it is: the default visibility model hides
+  nothing.
 
 ## Decisions
 
 ### Decision 1 — Position: after DNS, before STATUS
 
 The grid reads left to right as identity, then scope, then lifecycle, then action. DNS ends
-the identity group. STATUS begins the lifecycle group with CREATED and EXPIRES. Use types
-are scope, so they belong between the two.
+the identity group. STATUS begins the lifecycle group with DURATION (the UI review merged
+CREATED and EXPIRES into it). Use types are scope, so they belong between the two.
 
 *Alternatives considered.* **After ENVIRONMENT**, which puts the two scope columns side by
 side — rejected because it splits the identity group, and because ORGANIZATION and DNS
@@ -81,20 +92,28 @@ input control rather than a cell value. The grid chips therefore use MUI's `size
 This is a deliberate divergence from Decision 2's "reuse the picker styling". Colour carries
 the recognition; height does not.
 
-### Decision 4 — Two chips, then `+N`, with the full list in a tooltip
+### Decision 4 — Show every chip and wrap; collapse only when two or more would be hidden
 
-A credential can carry all three use types. The cell shows the first two chips in canonical
-order and then a `+N` indicator. The indicator carries a tooltip listing every use type.
+*Set by the UI review. This replaces the first draft, which showed two chips and then `+N`
+and kept a fixed row height.*
 
-This follows a pattern the grid already uses twice: DESCRIPTION puts the key id in a
-tooltip, and DNS puts the full domain in one (`index.tsx:3196`, `:3235`).
+The cell is a wrapping flex container. Every chip is shown, and when the column is narrow
+the chips move onto a second line. They are never clipped. Rows are auto-height, so the row
+grows to fit.
 
-*Alternatives considered.* **Always show all three**, which needs roughly 240px of column
-width — rejected because it takes that width from DESCRIPTION and ORGANIZATION on every row,
-to serve the minority of rows that carry three. **Wrap onto a second line**, which needs
-`getRowHeight` to return `auto` for the Keys tab — rejected because it changes the height of
-every row in the grid to accommodate a few, and `getRowHeight` is currently `auto` for the
-audit tab only (`index.tsx:3392`).
+A "+N more" chip appears only when two or more use types would be hidden. It then follows
+the first two chips, and its tooltip lists every use type. A single extra use type is shown
+as its own chip, because "+1 more" takes as much room as the chip it hides.
+
+The enumeration holds three use types, so no credential reaches the count today. The rule
+stays in the code and in the spec so that a fourth use type does not change the display
+without a decision.
+
+*Why the first draft changed.* Manual testing found that a second chip clipped at
+`minWidth: 170` ("Public Healt"), and two use types is the common case in real data. The
+first draft rejected wrapping because it would change the height of every row. The UI
+review made every row auto-height anyway, for its own reasons, so that cost no longer
+applies.
 
 ### Decision 5 — Canonical order, never stored order
 
@@ -127,7 +146,9 @@ ascending. The em dash (U+2014) sorts after every Latin letter, so they sort las
 which is the position the spec scenario calls consistent.
 
 `renderCell` ignores the derived string. It calls the same helper and maps the result to
-chips.
+chips. For an empty set it renders "None" (set by the UI review), not the em dash. The
+display and the sort key are therefore separate values. The sort key keeps the em dash,
+because that is what sorts the empty rows last.
 
 One derived value then serves three purposes: the sort key now, the filter value if item 3
 lands, and the accessible text of the cell.
@@ -142,7 +163,7 @@ has no such split — the derived string sorts correctly as it stands.
 
 `sortable: true`. Sorting on the joined labels groups rows by their first use type, so all
 Patient keys sit together, then Patient+Provider, then Provider, and so on. A row with no
-use types renders an em dash, which sorts after every label in ascending order — a
+use types has the em dash as its sort key, which sorts after every label in ascending order — a
 consistent position, not an arbitrary one.
 
 `filterable: false` on the column, **and a filter is still delivered** — through the toolbar,
@@ -159,7 +180,7 @@ See Decision 14.
 
 *Alternative considered.* Set `filterable: true` anyway so the column is ready if the column
 menu is ever enabled — rejected as speculative. Enabling `disableColumnMenu` would be its own
-decision affecting all ten columns.
+decision affecting all nine columns.
 
 ### Decision 8 — A named `UseTypesCell` component, not an inline `renderCell`
 
@@ -169,17 +190,22 @@ becomes testable on its own if the Jest suite is ever repaired.
 
 ### Decision 9 — Width: `flex: 1.5`, `minWidth: 170`
 
-Two small chips plus the `+N` indicator and the cell padding need about 170px. `flex: 1.5`
-matches ORGANIZATION and DNS, so the new column grows at the same rate as its neighbours
-rather than dominating.
+`flex: 1.5` matches ORGANIZATION and DNS, so the new column grows at the same rate as its
+neighbours rather than dominating. `minWidth: 170` holds two chips side by side when there
+is room. When there is not, they wrap (Decision 4).
 
-This raises the sum of the columns' `minWidth` from 1220px to 1390px. See Risks.
+The grid only renders at 1344px and wider. Below that the page shows cards, so the grid no
+longer needs to scroll sideways on a narrow screen.
 
 ### Decision 10 — Verification is a new Playwright spec
 
 `e2e/tests/` holds 16 specs and not one of them opens `/apikeys`. This change adds the
 first, with `e2e/helpers/oktaLogin.ts` for the login step. It covers the column header and
 chips, the Renew dialog field, the filter and the search — see tasks 4.4 and 5.6.
+
+**The spec sets its own viewport of at least 1600px wide.** `playwright.config.ts` uses
+1280px. At that width the page shows cards, so no grid selector matches. Below 1600px the
+"Renew key" button sits inside the "More Options" menu, so a direct button lookup fails.
 
 Jest cannot do it. Every jsdom suite in this repo fails with `ERR_REQUIRE_ESM`, an upstream
 packaging problem in the `jsdom@28` → `html-encoding-sniffer@6` → `@exodus/bytes` chain,
@@ -217,6 +243,13 @@ free-text Description.
 
 - `RenewDialog`: after the Jurisdiction + Environment row, before Description.
 - `ReissueDialog`: already there. No change.
+
+### Decision 16 — The card view reuses the grid cell
+
+*Set by the UI review.* Below 1344px each key is a card. The card shows its use types with
+the same `UseTypesCell`, after a "Use Types:" label in the identity half of the card. So the
+labels, the order, the guard, the wrap and "None" are the same in both layouts, with no
+second implementation to keep in step.
 
 ### Decision 13 — The one-time token reveal dialog stays as it is
 
@@ -261,22 +294,22 @@ every other field the box matches is matched as displayed.
 
 ## Risks / Trade-offs
 
-**The grid needs 170px more horizontal room.** → Every column keeps its `minWidth`, so a
-narrow viewport scrolls horizontally instead of crushing a column. The tooltip carries the
-overflow, so the column can stay at its minimum and still show every value. Confirm the
-1390px total against the narrowest supported viewport during review.
+**The "+N more" path has never run.** → No credential can reach it while the enumeration
+holds three values, so it is untested in practice. If a fourth use type is added, the
+indicator must be checked then. It is focusable (`tabIndex={0}`), so `Tab` opens its
+tooltip. `@axe-core/react` does not catch a hover-only disclosure, so check it by hand.
 
-**The `+N` indicator hides data behind a hover.** → A hover-only disclosure is not reachable
-by keyboard or by a screen reader. The indicator must therefore be a focusable element, so
-that `Tab` opens the tooltip, and the cell's accessible text must be the full joined label
-string from Decision 6 rather than the truncated visual. This repo runs `@axe-core/react` in
-development (`src/pages/_app.tsx`), which catches a missing accessible name but will not
-catch a hover-only disclosure. Check it by hand.
+**An operator can hide the USE TYPES column.** → The Columns popover allows it, and the
+choice is not persisted: the grid remounts on a tab change and returns to the default view,
+where the column is visible. "Default view" restores it at once.
 
 **Sorting groups by first label, which can surprise.** → Sorting "Public Health" keys after
 "Provider" keys is alphabetical and correct, but an operator can expect a sort by breadth
 (one use type, then two, then three). Documented here and in the test plan. If operators ask
 for breadth, the comparator is a one-line change.
+
+**Playwright sees cards, not the grid, at its default viewport.** → The spec sets a viewport
+of at least 1600px itself (Decision 10).
 
 **Playwright cannot reach `/apikeys` unless the release flag is on, and the column does not
 exist in a deployed environment until this change deploys there.** → The new spec is
@@ -302,47 +335,17 @@ invisible wherever the feature is off. No second flag is warranted.
 
 ## Open Questions
 
-### The column cannot hold two chips at the width the grid can spare
+### Resolved: the column cannot hold two chips at the width the grid can spare
 
-Found in manual testing on 2026-10-01, and the reason this change stops short of done.
-Decisions 2, 3, 4 and 9 chose chips at `minWidth: 170`. At that width a second chip clips
-mid-word: a row carrying Provider and Public Health renders "Public Healt".
+Found in manual testing on 2026-10-01: at `minWidth: 170` a second chip clipped mid-word
+("Public Healt"), and two use types is the common case in real data. Three options went to
+the UI reviewer: plain text with a tooltip, a wider column, or chips that wrap onto a second
+line.
 
-Measured cost of a `size="small"` chip at `0.875rem` — text, plus 16px padding, plus 2px
-border:
-
-| Content | Width |
-|---|---|
-| "Provider" chip | about 76px |
-| "Public Health" chip | about 108px |
-| "+1" chip | about 34px |
-| Cell padding and gaps | about 28px |
-| **Two chips** | **about 210px** |
-| **Two chips and "+1"** | **about 250px** |
-
-**Two use types is the common case in real data, not the rare one.** Four of five rows in
-the test environment carry Provider plus Public Health. So collapsing to one chip plus a
-count would make the overflow indicator the normal state, which defeats its purpose.
-
-**The deeper problem is the whole grid, not this column.** Four other columns already
-truncate at common widths — ORGANIZATION, DNS, CREATED BY, and the CREATED *header* itself.
-The grid was over-subscribed at nine columns. This change made it ten. No width for chips
-exists without taking it from a column that is already short.
-
-Three options, for the UI reviewer to choose between:
-
-| Option | Fits 170px | Cost |
-|---|---|---|
-| **A. Plain text, ellipsis, tooltip** — "Provider, Public Health" truncating to "Provider, Public H…", full value on hover, as the DNS column already behaves | Yes | Reverses Decision 2. No chips. |
-| **B. Keep chips, widen to about 250px** | No — needs about 80px from elsewhere | DESCRIPTION or CREATED BY gives up width, or the grid scrolls sideways at common window sizes |
-| **C. Keep chips, wrap to a second line** | Yes | `getRowHeight` returns `auto` for the Keys tab, so every row grows taller to serve one column |
-
-The question to settle is not "chips or text". It is **which of the ten columns earn their
-width**. That is a judgement about the whole grid.
-
-Option A is the smallest safe interim: it cannot look broken at any width, and it matches two
-neighbouring columns that already push detail into a tooltip. It is not implemented, because
-the decision is the reviewer's.
+**The UI reviewer chose wrapping**, in `55275da` (2026-10-06), and made every row
+auto-height. The same review merged CREATED and EXPIRES into DURATION and added a card view
+below 1344px, which together relieve the width pressure across the whole grid. See
+Decision 4.
 
 ### Not a defect: the Create picker offers two use types, not three
 
