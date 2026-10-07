@@ -3219,6 +3219,7 @@ function CreateKeyDialog({
       )}
       <LabeledField label="Organization" required>
         <Select
+          data-testid="create-key-organization"
           value={jurisdictionId}
           onChange={(e) => {
             const newId = e.target.value
@@ -3257,6 +3258,7 @@ function CreateKeyDialog({
           // Multi-env is an admin-only capability (server-enforced too, not
           // just this UI gate) — matches the useTypes multi-select pattern.
           <SearchableMultiSelect
+            data-testid="create-key-environment"
             label=""
             value={envIds.map((id) => ENV_ID_TO_LABEL[id] ?? id)}
             options={CREATE_ENV_OPTION_LABELS}
@@ -3270,6 +3272,7 @@ function CreateKeyDialog({
           />
         ) : (
           <Select
+            data-testid="create-key-environment"
             value={envIds[0] ?? ''}
             onChange={(e) => {
               setEnvIds(e.target.value ? [e.target.value] : [])
@@ -3300,6 +3303,7 @@ function CreateKeyDialog({
       </LabeledField>
       <LabeledField label="Description (optional)">
         <TextField
+          data-testid="create-key-description"
           placeholder="e.g AAMBAE"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -3309,6 +3313,7 @@ function CreateKeyDialog({
       </LabeledField>
       <LabeledField label="Use Types" required>
         <SearchableMultiSelect
+          data-testid="create-key-use-types"
           label=""
           value={useTypes.map((v) => USE_TYPE_LABELS[v as AllowedUseType] ?? v)}
           options={useTypeOptionLabels}
@@ -3333,6 +3338,7 @@ function CreateKeyDialog({
       </LabeledField>
       <LabeledField label="DNS Name" required>
         <Select
+          data-testid="create-key-dns-name"
           value={dnsSelection}
           onChange={(e) => setDnsSelection(e.target.value)}
           disabled={envIds.length === 0 || !jurisdictionId}
@@ -3630,6 +3636,7 @@ function KeyCreatedDialog({
               Full token string
             </Typography>
             <TextField
+              data-testid="api-key-token"
               fullWidth
               size="small"
               value={token}
