@@ -2,6 +2,7 @@
 import winston from 'winston'
 import ecsFormat from '@elastic/ecs-winston-format'
 import { asyncRequestContext } from './src/lib/Context'
+import { toEcsUrl } from './src/lib/utils/ecsUrl'
 
 let appVersion = 'unknown'
 try {
@@ -54,6 +55,59 @@ export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
 
 const userContextFormat = winston.format(injectUserContext)
 
+/**
+ * Backstop: rewrite a top-level string `url` into the ECS object shape
+ * (IGDD-3541).
+ *
+ * The Elastic index maps `url` as an object, so a document with a scalar `url`
+ * is rejected and filebeat drops it — while the event still prints to stdout,
+ * so CloudWatch looks correct and nothing signals the loss. Call sites should
+ * pass `toEcsUrl(...)` themselves; this catches the next one that doesn't.
+ * Only a string or `URL` is touched: any other object (including what
+ * `convertReqRes` builds from `req`) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUrl = (info: winston.Logform.TransformableInfo) => {
+  if (typeof info.url === 'string') {
+    info.url = toEcsUrl(info.url)
+  } else if (info.url instanceof URL) {
+    // A URL object serializes to a plain string (URL#toJSON), so it would be
+    // rejected exactly like a string.
+    info.url = toEcsUrl(info.url.href)
+  }
+  return info
+}
+
+const ecsUrlFormat = winston.format(normalizeEcsUrl)
+
+/**
+ * Backstop: rewrite a top-level string `user` into the ECS object shape
+ * `{ name }` (IGDD-3541).
+ *
+ * metricbeat writes to the same data stream and sends `user` as an object
+ * (`user.id` / `user.name` / `user.full_name`). The index template does not
+ * pin `user`, so each new backing index types it from whichever document
+ * arrives first. When metricbeat wins, every event with a string `user` —
+ * every `API Request`, every AccessDenied — is rejected and filebeat drops
+ * it. Writing the object here makes both writers agree, so the type no
+ * longer depends on that race.
+ *
+ * Done only at serialization: call sites, the request context and the
+ * DynamoDB audit records keep the plain string. A non-string `user`
+ * (an object, or null) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUser = (info: winston.Logform.TransformableInfo) => {
+  if (typeof info.user === 'string') {
+    info.user = { name: info.user }
+  }
+  return info
+}
+
+const ecsUserFormat = winston.format(normalizeEcsUser)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
@@ -61,6 +115,8 @@ const logger = winston.createLogger({
     winston.format.errors({ stack: true }),
     versionFormat(),
     userContextFormat(),
+    ecsUrlFormat(),
+    ecsUserFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],
