@@ -133,6 +133,11 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   key and reading the existing Use Types field, then confirming that the diff does not touch
   `ReissueDialog`.
 
+  **Corrected by `/opsx:verify`, 2026-10-07.** The existing field mapped the stored array
+  in stored order (`useTypes.map(... ?? u)`), so it broke the spec scenario "Every surface
+  uses the same labels and the same order" and task 2.1's rule that every surface calls the
+  helper. Its value now comes from `formatUseTypes`. Field, label and position are unchanged.
+
 - [x] 4.3 Confirm `KeyCreatedDialog` is unchanged. Verify by revealing a token and seeing
   only the key expiry and the token string, and by confirming the diff does not touch that
   component.

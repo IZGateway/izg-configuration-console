@@ -94,10 +94,10 @@ function canonicalUseTypes(
 }
 
 // Display string for the column's sort key, the search match and the read-only
-// dialog fields. The em dash for an empty set is deliberate and load-bearing:
-// MUI's default string comparator places '' before every letter, so returning
-// an empty string here would sort use-type-less rows FIRST ascending instead of
-// last.
+// dialog fields. The em dash for an empty set is deliberate: it gives every
+// use-type-less row one shared, non-empty sort key, so those rows group
+// together. The platform collation places punctuation before letters, so the
+// group lands first ascending and last descending.
 function formatUseTypes(useTypes: AllowedUseType[] | undefined): string {
   const labels = canonicalUseTypes(useTypes).map((ut) => USE_TYPE_LABELS[ut])
   return labels.length ? labels.join(', ') : '—'
@@ -2515,10 +2515,7 @@ function ReissueDialog({
         <PolicyField label="Jurisdiction" value={apiKey.jurisdiction} />
         <PolicyField label="Environment" value={apiKey.environment} />
       </Box>
-      <PolicyField
-        label="Use Types"
-        value={useTypes.map((u) => USE_TYPE_LABELS[u] ?? u).join(', ') || '—'}
-      />
+      <PolicyField label="Use Types" value={formatUseTypes(useTypes)} />
       {error && (
         <Alert severity="error" sx={{ borderRadius: '8px' }}>
           {error}
