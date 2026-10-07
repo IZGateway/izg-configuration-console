@@ -5,7 +5,20 @@ import { Page, expect } from '@playwright/test'
 // apiKeyManagementEnabled release flag (see menuItems.tsx), so a direct visit
 // is the more reliable path for a test that only cares about the page itself.
 export const openApiKeyManagement = async (page: Page) => {
+  // The `/api/apikeys` SWR fetch only starts once the session resolves to
+  // "authenticated", and its `isLoading` flag is false both before that
+  // fetch has started AND after it completes — the empty-state copy ("No API
+  // keys yet.") renders identically in both cases. So "the page looks
+  // loaded" is not a reliable signal that data has actually arrived; wait
+  // for the real network response instead.
+  const apiKeysResponse = page.waitForResponse(
+    (res) =>
+      new URL(res.url()).pathname === '/api/apikeys' &&
+      res.request().method() === 'GET',
+    { timeout: 30000 }
+  )
   await page.goto('/apikeys')
+  await apiKeysResponse
   await page.waitForLoadState('networkidle')
   await expect(
     page.getByText('API key management', { exact: true })

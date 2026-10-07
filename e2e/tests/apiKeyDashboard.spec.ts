@@ -92,7 +92,13 @@ test.describe('API Key Management dashboard', () => {
 
   test('search filters the table and stat cards keep counting the full unfiltered list', async () => {
     const totalKeysBefore = await getStatCardValue(page, 'TOTAL KEYS')
-    test.skip(totalKeysBefore === 0, 'No API keys in this environment to search for')
+
+    // TOTAL KEYS counts every fetched key, including Cancelled ones that the
+    // Keys tab hides by default (`matchesStatus` in filteredRows) — so a
+    // non-zero TOTAL KEYS doesn't guarantee the grid has a visible row to
+    // read an organization from. Check the grid itself instead.
+    const rowCount = await page.locator('.MuiDataGrid-row').count()
+    test.skip(rowCount === 0, 'No visible API key rows to search for')
 
     const firstOrganization = (
       await page
