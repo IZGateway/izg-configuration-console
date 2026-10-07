@@ -137,7 +137,7 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   only the key expiry and the token string, and by confirming the diff does not touch that
   component.
 
-- [ ] 4.4 Add `e2e/tests/apikeys.spec.ts` — the first Playwright coverage for `/apikeys`. Use
+- [x] 4.4 Add `e2e/tests/apikeys.spec.ts` — the first Playwright coverage for `/apikeys`. Use
   `e2e/helpers/oktaLogin.ts` for login. Build the context with a 1680×1050 viewport: the
   config's 1280px shows cards and no grid, and below 1600px "Renew key" is inside the
   "More Options" menu. A `browser.newContext()` context ignores `test.use()`, so set the
@@ -157,18 +157,25 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   Verify by running `BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts
   --project=Chrome --retries=0` against the local server from task 1.1, and seeing it pass.
 
-  **Rewritten 2026-10-07 to this list; run pending.** The earlier draft hunted for a
-  two-use-type row and a three-use-type row. Task 1.2 established that no organization
-  permits all three, so that test could only ever skip. It was dropped. It passes Prettier,
-  ESLint and `tsc --noEmit`.
+  **Rewritten and verified 2026-10-07.** The earlier draft hunted for a two-use-type row
+  and a three-use-type row. Task 1.2 established that no organization permits all three, so
+  that test could only ever skip. It was dropped. All 11 tests pass against the local app on
+  port 80, with no skips. It passes Prettier, ESLint and `tsc --noEmit`.
 
-- [ ] 4.5 Cover the column chooser in the same spec. The toolbar's **Columns** button opens a
+  **One test bug was fixed during the run.** `.MuiPopover-paper` matched two elements while
+  a Select dropdown was open, because a MUI Select renders its own dropdown as a popover
+  carrying the extra class `MuiMenu-paper`. Playwright rejected the ambiguous locator before
+  judging visibility. The helper now excludes that class, and a new `chooseFilterOption`
+  waits for the dropdown to leave the DOM before anything touches the popover behind it.
+  No application code changed.
+
+- [x] 4.5 Cover the column chooser in the same spec. The toolbar's **Columns** button opens a
   popover listing every hideable column with a checkbox, plus a **Default view** button
   (`index.tsx:1399`). Assert that the popover lists `USE TYPES` with its box checked, that
   unchecking it removes the column header, and that **Default view** restores it.
   `DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL` is empty (`index.tsx:624`), so every column is
   visible in the default view. Nothing persists the model, so the state resets on reload.
-  Verify by the same local run as task 4.4. **Code present 2026-10-07; run pending.**
+  Verify by the same local run as task 4.4. **Verified 2026-10-07; both tests pass.**
 
 ## 5. Narrowing the list
 
@@ -195,7 +202,7 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   only keys carrying Public Health, and by confirming that typing `PUBLIC_HEALTH` matches
   nothing.
 
-- [ ] 5.6 Extend `e2e/tests/apikeys.spec.ts` from task 4.4 to cover the filter, the badge and
+- [x] 5.6 Extend `e2e/tests/apikeys.spec.ts` from task 4.4 to cover the filter, the badge and
   the search. Read the label off the page first, then act on it. Assert:
 
   1. the Filters popover lists four dropdowns — Environment, Status, Organization, Use Types
@@ -209,8 +216,8 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   matches the description, the DNS name, the jurisdiction and the environment, so a
   description holding the word "patient" would match without a Patient use type.
 
-  Verify by running the spec against the local server and seeing it pass. **Rewritten
-  2026-10-07; run pending.**
+  Verify by running the spec against the local server and seeing it pass. **Rewritten and
+  verified 2026-10-07; all four filter and search tests pass.**
 
 ## 6. Documentation and integration
 
@@ -295,7 +302,7 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
 
 Checkboxes above track **implementation**. All code is written.
 `npm run code-quality-check` passes with exit 0 and no warnings from the edited files.
-28 of 31 tasks are complete. Only the Playwright run is outstanding.
+All 31 tasks are complete.
 
 ### What manual testing confirmed
 
@@ -329,20 +336,27 @@ the column set (DURATION) and the layout (cards below 1344px, an actions menu be
 a Columns popover). The proposal, design, delta spec and tasks were revised to match. The
 code was not changed. Everything that review left open is now closed.
 
-### What remains blocked or waiting
+### The e2e run
 
-- **Playwright run (4.4, 4.5, 5.6).** `e2e/tests/apikeys.spec.ts` is rewritten. It passes
-  Prettier, ESLint and `tsc --noEmit`. **The run is blocked on a stale credential:** Okta
-  rejected `cc_test_automation@izgateway.org` at the password step. Update `OKTA_PASSWORD`
-  in `.env.test`, then run against the local app with `--retries=0`. The change author runs
-  this by hand, and expects a delay of about a day.
+**All 11 tests pass, 2026-10-07**, against the local app on port 80, one browser, no
+retries, no skips:
 
-  **Do not dispatch `playwright-nightly.yml` against the deployed dev environment yet.** It
-  points `BASE_URL` at dev, and the feature commit `8139a98` is not on `develop`, so the new
-  tests would fail on a column that is not deployed there.
+```
+BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts --project=Chrome --retries=0
+```
 
-- **Archive gating.** 6.7, 6.8 and 6.9 are done. Strict validate passed again on 2026-10-07
-  after the sort correction. Re-run 6.9 before archiving if the delta changes again.
+The stale `OKTA_PASSWORD` in `.env.test` blocked the first attempt. The change author
+updated it. Pass `--retries=0`: the config retries twice, and repeated Okta rejections can
+lock the account.
+
+**Do not dispatch `playwright-nightly.yml` against the deployed dev environment until this
+branch merges.** It points `BASE_URL` at dev, and the feature commit `8139a98` is not on
+`develop`, so the new tests would fail on a column that is not deployed there.
+
+### Archive gating
+
+6.7, 6.8 and 6.9 are done. Strict validate passed again on 2026-10-07 after the sort
+correction. Re-run 6.9 before archiving if the delta changes again.
 
 ### Notes on the implementation
 

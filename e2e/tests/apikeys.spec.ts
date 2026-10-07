@@ -75,15 +75,35 @@ const openApiKeysPage = async () => {
   await showAllRows()
 }
 
-// The Filters popover and the Columns popover share a class. Only one is open
-// at a time, so one locator serves both.
-const popover = () => page.locator('.MuiPopover-paper')
+// The Filters popover and the Columns popover share a class, and only one is
+// open at a time, so one locator serves both. A MUI Select renders its own
+// dropdown as a second popover carrying the extra class MuiMenu-paper, so that
+// class is excluded here. Without the exclusion the locator matches two
+// elements while a dropdown is open, and Playwright rejects it as ambiguous
+// before it judges visibility.
+const popover = () => page.locator('.MuiPopover-paper:not(.MuiMenu-paper)')
+
+// The dropdown of a Select inside one of those popovers.
+const selectMenu = () => page.locator('.MuiMenu-paper')
+
+// Pick a value in the nth dropdown of the open Filters popover. The dropdown
+// closes itself on the click, but it stays in the DOM through its close
+// transition, so wait for it before acting on the popover behind it.
+const chooseFilterOption = async (index: number, label: string) => {
+  await popover().getByRole('combobox').nth(index).click()
+  await page.getByRole('option', { name: label, exact: true }).click()
+  await expect(selectMenu()).toBeHidden()
+}
+
+const closePopover = async () => {
+  await page.keyboard.press('Escape')
+  await expect(popover()).toBeHidden()
+}
 
 const clearAllFilters = async () => {
   await page.getByRole('button', { name: 'Filters' }).click()
   await popover().getByText('Clear all').click()
-  await page.keyboard.press('Escape')
-  await expect(popover()).toBeHidden()
+  await closePopover()
 }
 
 test.beforeAll(async ({ browser }) => {
@@ -240,10 +260,8 @@ test('the Use Types filter narrows the list to that use type', async () => {
     'Use Types',
   ])
 
-  await popover().getByRole('combobox').nth(3).click()
-  await page.getByRole('option', { name: label, exact: true }).click()
-  await page.keyboard.press('Escape')
-  await expect(popover()).toBeHidden()
+  await chooseFilterOption(3, label)
+  await closePopover()
 
   // Every remaining row carries the chosen use type. The filter matches on
   // membership, so a key scoped to it plus another stays listed.
@@ -260,9 +278,8 @@ test('the filter is counted in the badge and cleared by Clear all', async () => 
   const [label] = await chipLabelsInCell(index)
 
   await page.getByRole('button', { name: 'Filters' }).click()
-  await popover().getByRole('combobox').nth(3).click()
-  await page.getByRole('option', { name: label, exact: true }).click()
-  await page.keyboard.press('Escape')
+  await chooseFilterOption(3, label)
+  await closePopover()
 
   await expect(page.locator('.MuiBadge-badge')).toContainText('1')
 
@@ -363,7 +380,7 @@ test('the column chooser lists USE TYPES and hides it', async () => {
 
   await option.click()
   await expect(option.locator('input[type="checkbox"]')).not.toBeChecked()
-  await page.keyboard.press('Escape')
+  await closePopover()
   await expect(header('useTypes')).toHaveCount(0)
 })
 
@@ -373,7 +390,7 @@ test('Default view restores the USE TYPES column', async () => {
 
   await page.getByRole('button', { name: 'Columns' }).click()
   await popover().getByRole('button', { name: 'Default view' }).click()
-  await page.keyboard.press('Escape')
+  await closePopover()
 
   await expect(header('useTypes')).toBeVisible()
   await expect(header('useTypes')).toContainText('USE TYPES')
