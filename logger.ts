@@ -81,6 +81,33 @@ export const normalizeEcsUrl = (info: winston.Logform.TransformableInfo) => {
 
 const ecsUrlFormat = winston.format(normalizeEcsUrl)
 
+/**
+ * Backstop: rewrite a top-level string `user` into the ECS object shape
+ * `{ name }` (IGDD-3541).
+ *
+ * metricbeat writes to the same data stream and sends `user` as an object
+ * (`user.id` / `user.name` / `user.full_name`). The index template does not
+ * pin `user`, so each new backing index types it from whichever document
+ * arrives first. When metricbeat wins, every event with a string `user` —
+ * every `API Request`, every AccessDenied — is rejected and filebeat drops
+ * it. Writing the object here makes both writers agree, so the type no
+ * longer depends on that race.
+ *
+ * Done only at serialization: call sites, the request context and the
+ * DynamoDB audit records keep the plain string. A non-string `user`
+ * (an object, or null) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUser = (info: winston.Logform.TransformableInfo) => {
+  if (typeof info.user === 'string') {
+    info.user = { name: info.user }
+  }
+  return info
+}
+
+const ecsUserFormat = winston.format(normalizeEcsUser)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
@@ -89,6 +116,7 @@ const logger = winston.createLogger({
     versionFormat(),
     userContextFormat(),
     ecsUrlFormat(),
+    ecsUserFormat(),
     ecsFormat({ convertReqRes: true, apmIntegration: false })
   ),
   transports: [new winston.transports.Console()],
