@@ -68,3 +68,24 @@ The three tests that drive a challenge to success require
 `ALLOW_DNS_VERIFY_BYPASS=true` on the console under test and are opted in with
 `DNS_VERIFY_BYPASS_AVAILABLE=true`; they skip with a reason otherwise. These tests do
 not revoke the keys they create.
+
+---
+
+## View / reveal token
+
+**Test:** `e2e/tests/apiKeyViewToken.spec.ts`
+**Source scenario:** credential-lifecycle, "Token is retrievable exactly once"
+
+- An **Active** credential whose token has never been viewed shows the eye
+  ("View key") action under ACTION
+- Clicking it opens the "View API Key" dialog with the full JWT, a **COPY TOKEN**
+  button, and the warning that the secret cannot be retrieved after closing
+- **COPY TOKEN** acknowledges with "COPIED!" and then reverts to "COPY TOKEN"
+- After closing, the eye action is gone and only Renew and Revoke remain — and it
+  stays gone across a page reload, because the one-shot is persisted as `viewedAt`
+  rather than held in client state
+
+**Test data** (`.env.test`): same optional picker pins as above. The spec provisions its
+own unviewed key by running the DNS challenge and closing the success dialog with CLOSE
+instead of VIEW KEY, so it requires `DNS_VERIFY_BYPASS_AVAILABLE=true` and skips
+otherwise. The key it creates is left in place.
