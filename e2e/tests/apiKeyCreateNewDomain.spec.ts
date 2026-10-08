@@ -47,11 +47,16 @@ import {
   tokenDialog,
   VERIFY_DOMAIN_URL,
 } from '../helpers/apiKeyCreate'
+import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // loginToOkta alone budgets a 60s navigation retry plus 45s/30s/60s internal
 // waits before the create flow even starts, so the config's 60s default is not
 // enough. Matches loginLogout.spec.ts (120s) and connectionHistory.spec.ts (180s).
 test.describe.configure({ timeout: 120000 })
+
+// The grid and the row action buttons show only on a wide viewport. See
+// API_KEYS_VIEWPORT.
+test.use({ viewport: API_KEYS_VIEWPORT })
 
 test.beforeAll(() => {
   const missing = ['OKTA_USERNAME', 'OKTA_PASSWORD'].filter(
