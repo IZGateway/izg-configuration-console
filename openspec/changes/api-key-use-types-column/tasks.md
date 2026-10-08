@@ -6,8 +6,9 @@ his UI. Do not change it during apply. Adapt tests to it instead.
 
 Scope settled by the team on 2026-09-30 and completed by the product owner on 2026-10-01:
 the grid column, a read-only field on the Renew dialog, a fourth filter dropdown, and a
-use-type match in the search box. The Re-issue dialog already displays use types and needs no
-code. The one-time token reveal dialog does not change. Nothing is outstanding.
+use-type match in the search box. The Re-issue dialog already displays use types. One line
+changes, so that its value comes from the shared helper in canonical order. The one-time
+token reveal dialog does not change. Nothing is outstanding.
 
 ## 1. Preconditions
 
@@ -134,9 +135,10 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   component, same label, same position. Verify by opening Renew on an Active key with two use
   types and reading both labels, with no control that changes them.
 
-- [x] 4.2 Confirm `ReissueDialog` needs no change. Verify by opening Re-issue on an Expired
-  key and reading the existing Use Types field, then confirming that the diff does not touch
-  `ReissueDialog`.
+- [x] 4.2 Route the existing `ReissueDialog` Use Types field through `formatUseTypes`, so
+  that it shows canonical order like every other surface. Its field, label and position do
+  not change. Verify by opening Re-issue on an Expired key and reading the use types in
+  canonical order.
 
   **Corrected by `/opsx:verify`, 2026-10-07.** The existing field mapped the stored array
   in stored order (`useTypes.map(... ?? u)`), so it broke the spec scenario "Every surface

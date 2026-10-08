@@ -1,7 +1,8 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 
-// First Playwright coverage for the API Key Management page. Covers the USE
+// Focused Playwright coverage for use types on the API Key Management page.
+// apiKeyDashboard.spec.ts covers the page itself. This spec covers the USE
 // TYPES column, the Renew dialog's read-only Use Types field, the Use Types
 // filter, the use-type search match, the column chooser and the card layout.
 //
@@ -123,6 +124,11 @@ const clearAllFilters = async () => {
   await popover().getByText('Clear all').click()
   await closePopover()
 }
+
+// loginToOkta alone budgets a 60s navigation retry plus 45s/30s/60s internal
+// waits, so the config's 60s default is not enough for the beforeAll login.
+// Matches the API key lifecycle specs.
+test.describe.configure({ timeout: 120000 })
 
 test.beforeAll(async ({ browser }) => {
   // A context made here does not inherit test.use() options, so the viewport

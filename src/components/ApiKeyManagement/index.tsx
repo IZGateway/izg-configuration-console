@@ -1609,7 +1609,11 @@ function ApiKeyMobileCard({
               overflowWrap: 'anywhere',
             }}
           >
-            {row.description || 'Untitled key'}
+            {/* toRow stores '—' for a missing description, so treat it as
+                missing, as RowActionsMenu does. */}
+            {row.description && row.description !== '—'
+              ? row.description
+              : 'Untitled key'}
           </Typography>
           <Typography
             variant="caption"
