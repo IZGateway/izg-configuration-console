@@ -8,8 +8,11 @@ the tests check, not how they do it. The requirements themselves live in
 
 **Selectors:** use the `data-testid` hooks on the Create Key dialog
 (`create-key-organization`, `create-key-environment`, `create-key-description`,
-`create-key-use-types`, `create-key-dns-name`) and the token dialog (`api-key-token`).
-Do not select by CSS class or field label: the form labels are not linked to their inputs.
+`create-key-use-types`, `create-key-dns-name`), the token dialog (`api-key-token`), and the
+stat cards (`stat-card-total-keys`, `stat-card-active`, `stat-card-revoked`, each with a
+`stat-card-value`). Do not select by CSS class or by the Create Key form labels: those
+labels are not linked to their inputs. Real `<label>`s (e.g. Revoke's "Reason (optional)")
+and action tooltips (e.g. "Revoke key") can be selected with `getByLabel`.
 
 ---
 
@@ -90,3 +93,29 @@ not revoke the keys they create.
 own unviewed key by running the DNS challenge and closing the success dialog with CLOSE
 instead of VIEW KEY, so it requires `DNS_VERIFY_BYPASS_AVAILABLE=true` and skips
 otherwise. The key it creates is left in place.
+
+---
+
+## Revoke an active key
+
+**Test:** `e2e/tests/apiKeyRevoke.spec.ts`
+**Source scenario:** credential-lifecycle, "Revoke sets status and timestamp on an active
+or grace_period credential"
+
+**Precondition:** the test creates a fresh Active key on the already-authorized domain
+`revokeKey.fastTrack.playwright.org` (same fast path as Create Key above), so it never
+revokes a key someone else is using.
+
+- Clicking the row's Revoke action (red circle-minus) opens the "Revoke API Key" dialog,
+  which names the jurisdiction and key ID and says the action cannot be undone
+- The dialog shows the red warning that any integration using the key stops working
+  immediately, and an optional **Reason** field
+- After entering a reason and clicking **CONFIRM REVOCATION**, a success snackbar reads
+  "{Jurisdiction} API Key revoked" / "This key can no longer be used."
+- The row's status changes to **Revoked** with a flag icon, and the Action column shows
+  "Revoked {date}" with no action buttons left
+- The **Revoked** stat card count goes up by exactly one
+
+**Manual only (not in the Playwright test):** an `API_KEY_REVOKED` event appears in
+Elasticsearch with the reason, actor, and timestamp, and contains no token material. The
+browser can't see Elasticsearch, so this stays a manual check.
