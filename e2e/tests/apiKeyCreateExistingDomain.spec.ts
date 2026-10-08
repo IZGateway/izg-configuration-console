@@ -1,6 +1,7 @@
 import { Page, Locator, BrowserContext, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
+import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Create Key: existing authorized domain".
@@ -94,7 +95,9 @@ const submitCreate = async () => {
 }
 
 test.beforeAll(async ({ browser }) => {
-  context = await browser.newContext()
+  // A context made here does not inherit test.use(), so the viewport is set
+  // on it directly. See API_KEYS_VIEWPORT.
+  context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
 })
