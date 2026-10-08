@@ -349,11 +349,26 @@ code was not changed. Everything that review left open is now closed.
 ### The e2e run
 
 **All 12 tests pass, 2026-10-07**, against the local app on port 80, one browser, no
-retries, no skips. The change author ran the suite again after `7bba9f9`, which added the
+retries, no skips. The change author ran the suite again after `ea5da2f`, which added the
 card-view test as the twelfth test. The first run had 11 tests:
 
 ```
 BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts --project=Chrome --retries=0
+```
+
+**All five API key specs pass, 2026-10-08**, after the second Copilot review of PR 723
+(`168d79c`). That review found that this change's layout breaks the other API key specs:
+at the config's 1280px viewport the page shows cards, so their grid locators find nothing.
+`apiKeyDashboard`, `apiKeyViewToken`, `apiKeyCreateNewDomain` and
+`apiKeyCreateExistingDomain` now run at `API_KEYS_VIEWPORT` (1680×1050, in
+`e2e/helpers/apiKeyHelpers.ts`). The dashboard spec now expects USE TYPES and DURATION.
+
+`4e6b7e2` fixed one more test problem during that run. `closePopover` pressed Escape on
+the page, and the key press was lost when "Clear all" disabled itself and left focus on
+`document.body`. It now presses Escape on the popover. No application code changed.
+
+```
+BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts e2e/tests/apiKeyDashboard.spec.ts e2e/tests/apiKeyViewToken.spec.ts e2e/tests/apiKeyCreateNewDomain.spec.ts e2e/tests/apiKeyCreateExistingDomain.spec.ts --project=Chrome --retries=0
 ```
 
 The stale `OKTA_PASSWORD` in `.env.test` blocked the first attempt. The change author
