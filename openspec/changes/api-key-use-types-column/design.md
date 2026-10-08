@@ -206,13 +206,18 @@ longer needs to scroll sideways on a narrow screen.
 
 ### Decision 10 — Verification is a new Playwright spec
 
-`e2e/tests/` holds 16 specs and not one of them opens `/apikeys`. This change adds the
-first, with `e2e/helpers/oktaLogin.ts` for the login step. It covers the column header and
-chips, the Renew dialog field, the filter and the search — see tasks 4.4 and 5.6.
+Other specs already open `/apikeys`: `apiKeyDashboard.spec.ts` checks the header, the
+columns and the search, and the lifecycle specs create, reveal and validate keys. None of
+them covers use types. This change adds a focused spec, `apikeys.spec.ts`, for the column,
+the Renew dialog field, the filter, the search and the card view — see tasks 4.4 and 5.6. A
+separate spec keeps the use-type tests independent of the lifecycle specs, which create real
+keys. It uses `e2e/helpers/oktaLogin.ts` for the login step.
 
 **The spec sets its own viewport of at least 1600px wide.** `playwright.config.ts` uses
 1280px. At that width the page shows cards, so no grid selector matches. Below 1600px the
 "Renew key" button sits inside the "More Options" menu, so a direct button lookup fails.
+The other API key specs now also use a wide viewport (`API_KEYS_VIEWPORT`), because this
+change's layout shows cards at 1280px.
 
 Jest cannot do it. Every jsdom suite in this repo fails with `ERR_REQUIRE_ESM`, an upstream
 packaging problem in the `jsdom@28` → `html-encoding-sniffer@6` → `@exodus/bytes` chain,

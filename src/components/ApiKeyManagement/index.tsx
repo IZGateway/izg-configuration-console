@@ -1000,7 +1000,13 @@ function RowActionsMenu({
     <>
       <Tooltip title="More Options" arrow>
         <IconButton
-          aria-label={`Actions for ${row.description || row.keyId}`}
+          // toRow stores '—' for a missing description, so treat it as missing:
+          // otherwise every such row is announced as "Actions for —".
+          aria-label={`Actions for ${
+            row.description && row.description !== '—'
+              ? row.description
+              : row.keyId
+          }`}
           color="secondary"
           sx={ROW_ACTION_BUTTON_SX}
           onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -1202,13 +1208,17 @@ function FiltersButton({
     options: FilterOption[]
   ) => (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      {/* labelId links this caption to the Select, so a screen reader names
+          the filter instead of reading only "combobox, All". */}
       <Typography
+        id={`apikey-filter-${key}-label`}
         variant="caption"
         sx={{ fontWeight: 600, color: palette.greyText }}
       >
         {label}
       </Typography>
       <Select
+        labelId={`apikey-filter-${key}-label`}
         size="small"
         value={filters[key]}
         onChange={(e) => setFilter(key, e.target.value)}

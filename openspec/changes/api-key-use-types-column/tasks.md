@@ -147,8 +147,8 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   only the key expiry and the token string, and by confirming the diff does not touch that
   component.
 
-- [x] 4.4 Add `e2e/tests/apikeys.spec.ts` — the first Playwright coverage for `/apikeys`. Use
-  `e2e/helpers/oktaLogin.ts` for login. Build the context with a 1680×1050 viewport: the
+- [x] 4.4 Add `e2e/tests/apikeys.spec.ts` — focused Playwright coverage for the use-types
+  behavior on `/apikeys`. Use `e2e/helpers/oktaLogin.ts` for login. Build the context with a 1680×1050 viewport: the
   config's 1280px shows cards and no grid, and below 1600px "Renew key" is inside the
   "More Options" menu. A `browser.newContext()` context ignores `test.use()`, so set the
   viewport on the context. Set the page size to 100 rows, or the suite reads 5 of ~90 rows.

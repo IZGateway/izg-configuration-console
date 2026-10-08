@@ -78,13 +78,16 @@ Line numbers in this section predate the UI review (PR #711) and are approximate
   schemaless, so a malformed or legacy row must still render. The dialog fields show an em
   dash for the same case, like every other empty read-only field there.
 
-- **Sortable, not filterable.** A `sortComparator` sorts on the canonical-order joined
-  labels. The column is not filterable, because the grid exposes no filter panel to a user:
-  the `DataGrid` sets `disableColumnMenu` and the toolbar holds a custom filter popover with
-  `Select` dropdowns instead. A `filterable: true` flag would have no reachable effect.
+- **Sortable, not filterable.** A `valueGetter` gives the column one derived string: the
+  labels in canonical order, joined by ", ". The grid sorts on that string with its default
+  comparator. There is no custom `sortComparator` (design Decision 6). The column is not
+  filterable, because the grid exposes no filter panel to a user: the `DataGrid` sets
+  `disableColumnMenu` and the toolbar holds a custom filter popover with `Select` dropdowns
+  instead. A `filterable: true` flag would have no reachable effect.
 
-- **The first Playwright coverage for `/apikeys`.** The 16 specs in `e2e/tests/` do not touch
-  the page. This change adds a spec that asserts the column header and the rendered chips.
+- **Focused Playwright coverage for use types.** `apiKeyDashboard.spec.ts` and the
+  lifecycle specs already open `/apikeys`, but none of them covers use types. This change
+  adds a spec for the column header and the rendered chips.
   The Jest jsdom suites cannot verify it: they fail on this repo with `ERR_REQUIRE_ESM`, a
   known upstream packaging problem recorded in `.claude/CLAUDE.md`.
 

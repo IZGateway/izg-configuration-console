@@ -54,6 +54,16 @@ const allChipLabels = async (): Promise<string[][]> => {
   return result
 }
 
+// A label that at least one row carries and at least one row lacks, so a
+// search for it must narrow the list. Undefined when no label qualifies, for
+// example when every row carries the same use types.
+const pickNarrowingLabel = (rows: string[][]): string | undefined =>
+  CANONICAL.find(
+    (label) =>
+      rows.some((labels) => labels.includes(label)) &&
+      rows.some((labels) => !labels.includes(label))
+  )
+
 // Index of the first row that renders at least one chip, or -1.
 const findRowWithAnyChip = async (): Promise<number> => {
   const labels = await allChipLabels()
@@ -291,9 +301,8 @@ test('the filter is counted in the badge and cleared by Clear all', async () => 
 })
 
 test('search matches a use-type label', async () => {
-  const index = await findRowWithAnyChip()
-  test.skip(index === -1, 'No key on the page carries a use type.')
-  const [label] = await chipLabelsInCell(index)
+  const label = pickNarrowingLabel(await allChipLabels())
+  test.skip(!label, 'Every key on the page carries the same use types.')
 
   const before = await rowCount()
   const search = page.getByPlaceholder('Search by key ID or jurisdiction')
@@ -313,9 +322,27 @@ test('search matches a use-type label', async () => {
   expect(matched.some((labels) => labels.includes(label))).toBeTruthy()
 
   // The stored enumeration value is not matched — it appears nowhere an
-  // operator can read it.
+  // operator can read it. A row can still match through a field that holds the
+  // text, for example a description, so each remaining row must show the token
+  // in its own visible text. The chip reads "Public Health", with a space, so
+  // the chip alone never satisfies this.
+  const token = 'public_health'
   await search.fill('PUBLIC_HEALTH')
-  await expect.poll(async () => rowCount()).toBe(0)
+  // Poll, so the check also waits for the search to apply.
+  await expect
+    .poll(
+      async () =>
+        (
+          await cells('useTypes')
+            .locator('xpath=ancestor::*[@role="row"][1]')
+            .allInnerTexts()
+        ).filter((text) => !text.toLowerCase().includes(token)).length,
+      {
+        message:
+          'A row matched PUBLIC_HEALTH only through its stored use type.',
+      }
+    )
+    .toBe(0)
 
   await search.fill('')
   await expect.poll(async () => rowCount()).toBe(before)
@@ -408,8 +435,7 @@ test('Default view restores the USE TYPES column', async () => {
 // The card has no test id, so the locators find it by its "Use Types:" label.
 // The cards page 10 at a time, so the test reads only the cards on screen and
 // uses the "N API Keys Found" heading for counts.
-test('the card view shows use types and narrows by filter and search', async () => {
-  await page.setViewportSize(NARROW_VIEWPORT)
+const checkCardView = async () => {
   await expect(page.locator(GRID)).toHaveCount(0)
 
   const useTypesLabel = page.getByText('Use Types:', { exact: true })
@@ -466,19 +492,29 @@ test('the card view shows use types and narrows by filter and search', async () 
 
   // The search narrows the cards and still finds a card carrying the label.
   // Other fields can also match the term, so not every card must carry it.
+  const searchLabel = pickNarrowingLabel(before)
+  test.skip(!searchLabel, 'Every card on screen carries the same use types.')
   const search = page.getByPlaceholder('Search by key ID or jurisdiction')
-  await search.fill(label)
+  await search.fill(searchLabel)
   await expect
     .poll(keysFound, {
-      message: `Search for "${label}" did not narrow the cards.`,
+      message: `Search for "${searchLabel}" did not narrow the cards.`,
     })
     .toBeLessThan(total)
-  expect((await cardUseTypes()).some((labels) => labels.includes(label))).toBe(
-    true
-  )
+  expect(
+    (await cardUseTypes()).some((labels) => labels.includes(searchLabel))
+  ).toBe(true)
   await search.fill('')
   await expect.poll(keysFound).toBe(total)
+}
 
-  await page.setViewportSize(VIEWPORT)
+test('the card view shows use types and narrows by filter and search', async () => {
+  await page.setViewportSize(NARROW_VIEWPORT)
+  try {
+    await checkCardView()
+  } finally {
+    // A skip or a failure must not leave the narrow viewport behind.
+    await page.setViewportSize(VIEWPORT)
+  }
   await expect(page.locator(GRID)).toBeVisible()
 })
