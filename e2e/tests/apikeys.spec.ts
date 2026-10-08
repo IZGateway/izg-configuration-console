@@ -108,8 +108,13 @@ const chooseFilterOption = async (index: number, label: string) => {
   await expect(selectMenu()).toBeHidden()
 }
 
+// Press Escape on the popover itself rather than on the page. `locator.press`
+// focuses the target first, so the keydown lands inside the Modal root that
+// carries MUI's Escape handler. A plain `page.keyboard.press` is lost whenever
+// the previous click left focus on `document.body` — which "Clear all" does,
+// because it disables itself once the filters are empty.
 const closePopover = async () => {
-  await page.keyboard.press('Escape')
+  await popover().press('Escape')
   await expect(popover()).toBeHidden()
 }
 
