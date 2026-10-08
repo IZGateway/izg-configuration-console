@@ -3,8 +3,9 @@ import { loginToOkta } from '../helpers/oktaLogin'
 
 // Focused Playwright coverage for use types on the API Key Management page.
 // apiKeyDashboard.spec.ts covers the page itself. This spec covers the USE
-// TYPES column, the Renew dialog's read-only Use Types field, the Use Types
-// filter, the use-type search match, the column chooser and the card layout.
+// TYPES column, the Renew and Re-issue dialogs' read-only Use Types fields, the
+// Use Types filter, the use-type search match, the column chooser and the card
+// layout.
 //
 // The page is gated by FEATURE_API_KEY_MANAGEMENT_ENABLED. Where the flag is
 // off, the page redirects and every test here fails on the beforeAll guard with
@@ -408,13 +409,60 @@ test('the Renew dialog shows a read-only Use Types field', async () => {
   await expect(dialog).toBeHidden()
 })
 
+// Re-issue is offered only on an Expired key that was not re-issued before,
+// and only to an account that can renew keys. Opening it shows a confirm step
+// and calls no API, and Escape closes it, so this test never re-issues a key.
+test('the Re-issue dialog shows the use types in canonical order', async () => {
+  await openApiKeysPage()
+
+  const rows = page.locator('.MuiDataGrid-row')
+  const total = await rows.count()
+  let target = -1
+  for (let i = 0; i < total; i += 1) {
+    const hasReissue =
+      (await rows
+        .nth(i)
+        .getByRole('button', { name: 'Re-issue key' })
+        .count()) > 0
+    if (hasReissue) {
+      target = i
+      break
+    }
+  }
+  test.skip(
+    target === -1,
+    'No Expired key that can be re-issued in this environment.'
+  )
+
+  const row = rows.nth(target)
+  const expected = (
+    await row.locator('[data-field="useTypes"] .MuiChip-label').allInnerTexts()
+  ).map((l) => l.trim())
+
+  await row.getByRole('button', { name: 'Re-issue key' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toContainText('Re-issue API Key')
+
+  const field = dialog.getByLabel('Use Types')
+  await expect(field).toBeVisible()
+  await expect(field).toHaveAttribute('readonly', '')
+  // The grid's chips are in canonical order, so the field must match them
+  // exactly. A field that iterated the stored set could differ.
+  await expect(field).toHaveValue(expected.length ? expected.join(', ') : '—')
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+})
+
+// The USE TYPES item in the open Columns popover.
+const useTypesColumnOption = () =>
+  popover().getByRole('menuitem').filter({ hasText: 'USE TYPES' })
+
 test('the column chooser lists USE TYPES and hides it', async () => {
   await page.getByRole('button', { name: 'Columns' }).click()
   await expect(popover()).toBeVisible()
 
-  const option = popover()
-    .getByRole('menuitem')
-    .filter({ hasText: 'USE TYPES' })
+  const option = useTypesColumnOption()
   await expect(option).toHaveCount(1)
   // Every column is visible in the default view, so the box starts checked.
   await expect(option.locator('input[type="checkbox"]')).toBeChecked()
@@ -426,7 +474,14 @@ test('the column chooser lists USE TYPES and hides it', async () => {
 })
 
 test('Default view restores the USE TYPES column', async () => {
-  // Runs after the test above, which left the column hidden.
+  // The test above leaves the column hidden, but a retry runs in a new worker
+  // where it is visible. Hide it here, so this test does not depend on the
+  // test above.
+  if ((await header('useTypes').count()) > 0) {
+    await page.getByRole('button', { name: 'Columns' }).click()
+    await useTypesColumnOption().click()
+    await closePopover()
+  }
   await expect(header('useTypes')).toHaveCount(0)
 
   await page.getByRole('button', { name: 'Columns' }).click()

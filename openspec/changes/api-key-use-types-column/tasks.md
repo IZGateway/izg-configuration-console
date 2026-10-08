@@ -53,17 +53,19 @@ token reveal dialog does not change. Nothing is outstanding.
 
 ## 2. The shared helper
 
-- [x] 2.1 Add one helper to `src/components/ApiKeyManagement/index.tsx` that takes an `ApiKey`
-  row and returns its use types as `AllowedUseType[]`, filtered by membership in
-  `ALLOWED_USE_TYPES`. This gives canonical order and drops any stored value outside the
+- [x] 2.1 Add one helper, `canonicalUseTypes`, to `src/components/ApiKeyManagement/index.tsx`.
+  It takes a row's `useTypes` array and returns it as `AllowedUseType[]`, filtered by
+  membership in `ALLOWED_USE_TYPES`. This gives canonical order and drops any stored value outside the
   enumeration. Every surface in tasks 3 and 4 MUST call it, so no two surfaces can disagree
   about the same row. Verify by a row whose `useTypes` holds an unrecognized value: no
   surface shows it.
 
-- [x] 2.2 Add a second helper, or an option on the first, that returns the canonical-order
-  **labels** joined by `", "`, and the em dash when the row carries none. The grid's
-  `valueGetter` and all three dialog fields use it. Verify by a unit check of three inputs —
-  two values, three values, and none — read against `USE_TYPE_LABELS`.
+- [x] 2.2 Add a second helper, `formatUseTypes`, that returns the canonical-order **labels**
+  joined by `", "`, and the em dash when the row carries none. The grid's `valueGetter`, the
+  search and the two dialog fields (Renew and Re-issue) use it. Verify through the e2e spec:
+  the grid, the search, and both dialogs' fields compare against `USE_TYPE_LABELS`. A Jest
+  unit check is not possible, because the jsdom suites fail on this repo (see
+  `.claude/CLAUDE.md`).
 
 ## 3. The USE TYPES column
 

@@ -1441,20 +1441,23 @@ function CustomToolbar({
           <Box sx={{ display: 'flex', flexDirection: 'column' }}>
             {columnOptions.map((col) => {
               const checked = columnVisibilityModel[col.field] !== false
+              const name =
+                typeof col.headerName === 'string' ? col.headerName : col.field
               return (
                 <MenuItem
                   key={col.field}
                   onClick={() => setColumnVisible(col.field, !checked)}
                   dense
                 >
-                  <Checkbox checked={checked} size="small" />
-                  <ListItemText
-                    primary={
-                      typeof col.headerName === 'string'
-                        ? col.headerName
-                        : col.field
-                    }
+                  {/* The checkbox is the only tab stop here (these MenuItems sit
+                      outside a Menu, so MUI makes them tabIndex -1). Name it, so
+                      a screen reader reads the column and not only "checkbox". */}
+                  <Checkbox
+                    checked={checked}
+                    size="small"
+                    inputProps={{ 'aria-label': name }}
                   />
+                  <ListItemText primary={name} />
                 </MenuItem>
               )
             })}
