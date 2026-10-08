@@ -352,9 +352,13 @@ code was not changed. Everything that review left open is now closed.
 
 ### The e2e run
 
-**All 12 tests pass, 2026-10-07**, against the local app on port 80, one browser, no
-retries, no skips. The change author ran the suite again after `ea5da2f`, which added the
-card-view test as the twelfth test. The first run had 11 tests:
+**All 13 tests pass, 2026-10-08**, against the local app on port 80, one browser, no
+retries, no skips. The change author ran the spec after `8470abd`, which added the
+Re-issue dialog test as the thirteenth test. That test found an Expired key that can be
+re-issued, and it passed. It did not skip.
+
+**Earlier runs, 2026-10-07.** 12 tests passed after `ea5da2f`, which added the card-view
+test as the twelfth test. The first run had 11 tests:
 
 ```
 BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts --project=Chrome --retries=0

@@ -197,7 +197,7 @@ compose with the text search" from three filters to four.
 
 ## Impact
 
-**One component file, and one new test file.**
+**One component file, one new test file, and compatibility updates to five test files.**
 
 - Modified: `src/components/ApiKeyManagement/index.tsx`:
   - a shared helper that returns a row's use types in canonical order,
@@ -205,11 +205,21 @@ compose with the text search" from three filters to four.
     array. The card view reuses the same component,
   - one `PolicyField` in `RenewDialog`,
   - a fourth key on `ApiKeyFilters` plus a fourth `renderFilterSelect` call,
-  - two added clauses in `filteredRows` — one for the filter, one for the search.
+  - two added clauses in `filteredRows` — one for the filter, one for the search,
+  - accessible names for the compact actions button, the filter dropdowns and the column
+    chooser checkboxes, and the "Untitled key" card heading. These come from the Copilot
+    reviews of PR 723.
 - The same file carries the UI review's changes, listed above.
-- New: `e2e/tests/apikeys.spec.ts`. `e2e/helpers/oktaLogin.ts` already provides the login
-  step. The spec runs at 1680px for the grid tests. Its last test narrows the viewport to
-  1280px to cover the cards, then restores it.
+- New: `e2e/tests/apikeys.spec.ts`. It covers the column, the Renew and Re-issue dialog
+  fields, the filter, the search, the column chooser and the card view.
+  `e2e/helpers/oktaLogin.ts` already provides the login step. The spec runs at 1680px for
+  the grid tests. Its last test narrows the viewport to 1280px to cover the cards, then
+  restores it.
+- Modified for compatibility: `apiKeyDashboard.spec.ts`, `apiKeyViewToken.spec.ts`,
+  `apiKeyCreateNewDomain.spec.ts` and `apiKeyCreateExistingDomain.spec.ts` run at the new
+  `API_KEYS_VIEWPORT` (1680×1050) from `e2e/helpers/apiKeyHelpers.ts`, because the page
+  shows cards at the default 1280px. The dashboard spec expects the USE TYPES and DURATION
+  columns.
 - Unchanged, deliberately: `KeyCreatedDialog` (the token reveal). `ReissueDialog` changes
   by one line, so that it uses the shared helper.
 
