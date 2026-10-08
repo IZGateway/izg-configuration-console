@@ -121,6 +121,11 @@ code. The one-time token reveal dialog does not change. Nothing is outstanding.
   chip as the grid. The Use Types filter narrowed 88 cards to 49 and the badge read 1.
   A search for "Public Health" narrowed the cards to the same 49.
 
+  **Automated 2026-10-07** (`7bba9f9`, from the Copilot review of PR 723). The last test in
+  `e2e/tests/apikeys.spec.ts` sets the viewport to 1280px and makes sure that each card
+  shows known labels in canonical order, or "None". It also makes sure that the filter and
+  the search narrow the cards. Then it restores the 1680px viewport.
+
 ## 4. The dialog fields
 
 - [x] 4.1 Add a read-only `PolicyField label="Use Types"` to `RenewDialog`
@@ -343,8 +348,9 @@ code was not changed. Everything that review left open is now closed.
 
 ### The e2e run
 
-**All 11 tests pass, 2026-10-07**, against the local app on port 80, one browser, no
-retries, no skips:
+**All 12 tests pass, 2026-10-07**, against the local app on port 80, one browser, no
+retries, no skips. The change author ran the suite again after `7bba9f9`, which added the
+card-view test as the twelfth test. The first run had 11 tests:
 
 ```
 BASE_URL=http://localhost npx playwright test e2e/tests/apikeys.spec.ts --project=Chrome --retries=0
