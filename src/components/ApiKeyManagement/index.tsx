@@ -979,9 +979,11 @@ function RowActionsMenu({
 
   if (!actions.length) {
     // Kept (disabled) rather than left blank so the column reads consistently.
+    // A disabled button cannot take focus, so the wrapper does: without it a
+    // keyboard user never opens the tooltip that carries the note.
     return (
       <Tooltip title={note ?? 'No actions available'} arrow>
-        <span>
+        <span tabIndex={0}>
           <IconButton
             disabled
             aria-label={note ?? 'No actions available'}
