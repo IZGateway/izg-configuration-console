@@ -97,8 +97,10 @@ Line numbers in this section predate the UI review (PR #711) and are approximate
   states a rule the code already enforces. This is the surface that answers the question for
   an **Active** key.
 
-- **The Re-issue dialog already shows use types** on its confirm step (`index.tsx:1652`), so
-  it needs no code. The delta spec states that behaviour anyway, because nothing specifies it
+- **The Re-issue dialog already shows use types** on its confirm step (`index.tsx:1652`).
+  Its position and label do not change. One line changes: the value now comes from the
+  shared helper, so the dialog shows the canonical order and not the stored order. The
+  delta spec states that behaviour anyway, because nothing specifies it
   today and it would otherwise be free to disappear in a refactor.
 
 - **The one-time token reveal dialog does not change.** It handles a secret that is shown
@@ -138,7 +140,8 @@ page around the new column:
   with vertical cell padding. The "+N more" chip appears only when two or more use types
   would be hidden. This is Option C from the old Open Question.
 - **An empty use-type cell reads "None"**, not an em dash. The sort key is still the em
-  dash, so empty rows still sort last.
+  dash, so empty rows group together. They sort first in ascending order and last in
+  descending order.
 - **CREATED and EXPIRES merge into one DURATION column.** It keeps the `created` field, so
   the newest-first default sort and the created-date comparator still apply. The grid has
   nine columns with USE TYPES, not ten.
@@ -202,10 +205,10 @@ compose with the text search" from three filters to four.
   - two added clauses in `filteredRows` — one for the filter, one for the search.
 - The same file carries the UI review's changes, listed above.
 - New: `e2e/tests/apikeys.spec.ts`. `e2e/helpers/oktaLogin.ts` already provides the login
-  step. The spec must run at a viewport of at least 1600px wide. The default Playwright
-  viewport is 1280px, where the page shows cards and no grid.
-- Unchanged, deliberately: `ReissueDialog` (already displays use types) and
-  `KeyCreatedDialog` (the token reveal).
+  step. The spec runs at 1680px for the grid tests. Its last test narrows the viewport to
+  1280px to cover the cards, then restores it.
+- Unchanged, deliberately: `KeyCreatedDialog` (the token reveal). `ReissueDialog` changes
+  by one line, so that it uses the shared helper.
 
 **No API, database, or authorization change.** The column reads a field that
 `GET /api/apikeys` already returns and that the row object already holds. That route is

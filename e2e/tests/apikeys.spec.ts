@@ -3,7 +3,7 @@ import { loginToOkta } from '../helpers/oktaLogin'
 
 // First Playwright coverage for the API Key Management page. Covers the USE
 // TYPES column, the Renew dialog's read-only Use Types field, the Use Types
-// filter, the use-type search match and the column chooser.
+// filter, the use-type search match, the column chooser and the card layout.
 //
 // The page is gated by FEATURE_API_KEY_MANAGEMENT_ENABLED. Where the flag is
 // off, the page redirects and every test here fails on the beforeAll guard with
@@ -17,6 +17,7 @@ import { loginToOkta } from '../helpers/oktaLogin'
 // The page shows one card per key below 1344px and collapses the row actions
 // into a "More Options" menu below 1600px. These tests read the grid and click
 // the "Renew key" button directly, so they run at a viewport wider than both.
+// The last test narrows the viewport to cover the card layout, then restores it.
 
 let context: BrowserContext
 let page: Page
@@ -25,6 +26,8 @@ const GRID = '.MuiDataGrid-root'
 // Wide enough for the grid (>= 1344px) and the full action-button strip
 // (>= 1600px).
 const VIEWPORT = { width: 1680, height: 1050 }
+// Narrow enough for the card layout (< 1344px).
+const NARROW_VIEWPORT = { width: 1280, height: 1050 }
 
 // Canonical enumeration order. The cell renders use types in this order, never
 // in stored order.
@@ -394,4 +397,88 @@ test('Default view restores the USE TYPES column', async () => {
 
   await expect(header('useTypes')).toBeVisible()
   await expect(header('useTypes')).toContainText('USE TYPES')
+})
+
+// Below 1344px the page shows one card per key instead of the grid. The card
+// reuses the grid's use-type cell, and the same filtered list feeds both
+// layouts, so this test guards the card layout itself: that each card still
+// carries its use types, and that the filter and the search narrow the cards.
+// It runs last and restores the wide viewport, so it leaves no state behind.
+//
+// The card has no test id, so the locators find it by its "Use Types:" label.
+// The cards page 10 at a time, so the test reads only the cards on screen and
+// uses the "N API Keys Found" heading for counts.
+test('the card view shows use types and narrows by filter and search', async () => {
+  await page.setViewportSize(NARROW_VIEWPORT)
+  await expect(page.locator(GRID)).toHaveCount(0)
+
+  const useTypesLabel = page.getByText('Use Types:', { exact: true })
+  await expect(useTypesLabel.first()).toBeVisible()
+
+  // The label is a <strong> inside a Typography, beside the use-type cell.
+  // Two levels up is the row that holds both, which scopes the chips away
+  // from the status chip in the card header.
+  const cardUseTypes = async (): Promise<string[][]> => {
+    const rows = useTypesLabel.locator('xpath=../..')
+    const total = await rows.count()
+    const result: string[][] = []
+    for (let i = 0; i < total; i += 1) {
+      const labels = await rows.nth(i).locator('.MuiChip-label').allInnerTexts()
+      result.push(labels.map((label) => label.trim()))
+    }
+    return result
+  }
+  const keysFound = async (): Promise<number> => {
+    const text = await page.getByText(/\d+ API Keys? Found/).innerText()
+    return Number.parseInt(text, 10)
+  }
+
+  // Every card carries known labels in canonical order, or reads None.
+  const before = await cardUseTypes()
+  expect(before.length).toBeGreaterThan(0)
+  for (const [i, labels] of before.entries()) {
+    if (labels.length === 0) {
+      await expect(useTypesLabel.nth(i).locator('xpath=../..')).toContainText(
+        'None'
+      )
+      continue
+    }
+    const positions = labels.map((label) => CANONICAL.indexOf(label))
+    expect(positions).not.toContain(-1)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+  }
+
+  const withChip = before.find((labels) => labels.length > 0)
+  test.skip(!withChip, 'No card on screen carries a use type.')
+  const label = (withChip as string[])[0]
+  const total = await keysFound()
+
+  // The filter narrows the cards to those carrying the chosen use type.
+  await page.getByRole('button', { name: 'Filters' }).click()
+  await expect(popover()).toBeVisible()
+  await chooseFilterOption(3, label)
+  await closePopover()
+  const filtered = await cardUseTypes()
+  expect(filtered.length).toBeGreaterThan(0)
+  for (const labels of filtered) expect(labels).toContain(label)
+  await clearAllFilters()
+  await expect.poll(keysFound).toBe(total)
+
+  // The search narrows the cards and still finds a card carrying the label.
+  // Other fields can also match the term, so not every card must carry it.
+  const search = page.getByPlaceholder('Search by key ID or jurisdiction')
+  await search.fill(label)
+  await expect
+    .poll(keysFound, {
+      message: `Search for "${label}" did not narrow the cards.`,
+    })
+    .toBeLessThan(total)
+  expect((await cardUseTypes()).some((labels) => labels.includes(label))).toBe(
+    true
+  )
+  await search.fill('')
+  await expect.poll(keysFound).toBe(total)
+
+  await page.setViewportSize(VIEWPORT)
+  await expect(page.locator(GRID)).toBeVisible()
 })
