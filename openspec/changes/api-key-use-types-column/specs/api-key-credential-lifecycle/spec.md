@@ -94,8 +94,9 @@ the key, and MUST NOT be able to change it there.
 - **THEN** it SHALL display that credential's use types, read-only, alongside the
   Jurisdiction and Environment
 
-> This states behaviour that already exists. It is written down because nothing specified it,
-> and an unspecified display is free to disappear in a refactor.
+> This states behaviour that already exists. This change only routes the field through the
+> shared helper, so that its order is canonical. It is written down because nothing
+> specified it, and an unspecified display is free to disappear in a refactor.
 
 #### Scenario: The one-time token reveal does not state the use types
 

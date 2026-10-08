@@ -38,7 +38,8 @@ Constraints that shape the approach:
 - An operator reads a credential's use types from the keys list, with no click.
 - An operator reads them again at the moment of renewing or re-issuing a key.
 - The same value looks the same everywhere it appears.
-- One derived value serves display, sorting, filtering and search.
+- Every surface reads a row's use types through the same two shared helpers,
+  `canonicalUseTypes` and `formatUseTypes`, so no two surfaces can disagree.
 
 ## Non-Goals
 
@@ -50,9 +51,10 @@ Constraints that shape the approach:
 - **No change to how use types are captured, validated, or inherited.** Every existing
   scenario in the "Use types are captured and validated on the credential" requirement stays
   exactly as it is.
-- No change to the Columns popover. The UI review added it. This change requires only that
-  USE TYPES is visible in the default view, which it is: the default visibility model hides
-  nothing.
+- No functional change to the Columns popover. The UI review added it. This change requires
+  only that USE TYPES is visible in the default view, which it is: the default visibility
+  model hides nothing. A Copilot review of PR 723 gave its checkboxes accessible names.
+  Nothing else in the popover changed.
 
 ## Decisions
 
@@ -127,17 +129,18 @@ membership rather than iterating the row's array.
 That filter also drops any stored value outside the enumeration, which is the same guard the
 read path already applies (`isValidUseType`).
 
-**One helper does the filter, and both readers use it.** A single function takes a row and
-returns its use types as `AllowedUseType[]` in canonical order, already filtered. The
-`valueGetter` of Decision 6 and the cell renderer both call it. If each did its own filter,
+**One helper does the filter, and every reader uses it.** `canonicalUseTypes` takes a row's
+`useTypes` array and returns it as `AllowedUseType[]` in canonical order, already filtered.
+The cell renderer and the filter call it directly. The `valueGetter` of Decision 6 calls it
+through `formatUseTypes`. If each did its own filter,
 a stored value outside the enumeration could reach the sort key while the chips dropped it,
 and two readers of the same row would disagree.
 
 ### Decision 6 — A `valueGetter` produces one derived string, and sorting uses it
 
 The column's `field` is `useTypes`, whose value is an array. Sorting an array is meaningless
-to the grid, so the column declares a `valueGetter`. It calls the Decision 5 helper and
-joins the resulting labels with a comma — `"Patient, Provider"`.
+to the grid, so the column declares a `valueGetter`. It calls `formatUseTypes`, which calls
+the Decision 5 helper and joins the resulting labels with a comma — `"Patient, Provider"`.
 
 **For a row with no use types the `valueGetter` returns the em dash, not an empty string.**
 This gives those rows one shared sort key, so they group together instead of scattering.
@@ -156,11 +159,12 @@ rejected again — the position is deterministic, and the change author accepted
 chips. For an empty set it renders "None" (set by the UI review), not the em dash. The
 display and the sort key are therefore separate values.
 
-One derived value then serves three purposes: the sort key now, the filter value if item 3
-lands, and the accessible text of the cell.
+The derived string is the sort key and the search text. The filter and the chips call
+`canonicalUseTypes` directly. All four therefore share one canonicalization, even though
+they do not share one value.
 
 *Alternative considered.* A `sortComparator` that reads the row through `api.getRow`, which
-is what the CREATED column does (`index.tsx:3260`). Rejected here because CREATED needs a
+is what the DURATION column (field `created`) does. Rejected here because DURATION needs a
 comparator for a different reason: its sort key lives in a *separate* field, `createdOnRaw`,
 because the displayed string is a locale date that sorts lexically and wrongly. This column
 has no such split — the derived string sorts correctly as it stands.
@@ -186,7 +190,7 @@ The filter an operator actually uses is the toolbar popover, and the new dropdow
 See Decision 14.
 
 *Alternative considered.* Set `filterable: true` anyway so the column is ready if the column
-menu is ever enabled — rejected as speculative. Enabling `disableColumnMenu` would be its own
+menu is ever enabled — rejected as speculative. Removing `disableColumnMenu` would be its own
 decision affecting all nine columns.
 
 ### Decision 8 — A named `UseTypesCell` component, not an inline `renderCell`
@@ -209,7 +213,8 @@ longer needs to scroll sideways on a narrow screen.
 Other specs already open `/apikeys`: `apiKeyDashboard.spec.ts` checks the header, the
 columns and the search, and the lifecycle specs create, reveal and validate keys. None of
 them covers use types. This change adds a focused spec, `apikeys.spec.ts`, for the column,
-the Renew dialog field, the filter, the search and the card view — see tasks 4.4 and 5.6. A
+the Renew and Re-issue dialog fields, the filter, the search, the column chooser and the
+card view — see tasks 4.4, 4.5 and 5.6. A
 separate spec keeps the use-type tests independent of the lifecycle specs, which create real
 keys. It uses `e2e/helpers/oktaLogin.ts` for the login step.
 
@@ -230,13 +235,13 @@ thing a later refactor drops silently. The manual steps are still written, as ta
 
 ### Decision 11 — The dialogs use a plain `PolicyField`, not chips
 
-In the grid, use types render as chips (Decision 2). In the three dialogs they render as a
-plain `PolicyField` — a label above a comma-joined value, which is the component every other
+In the grid, use types render as chips (Decision 2). In the two dialogs, Renew and Re-issue,
+they render as a plain `PolicyField` — a label above a comma-joined value, which is the component every other
 read-only field in those dialogs already uses.
 
 Two reasons. First, the Re-issue dialog already does exactly this (`index.tsx:1652`), and the
 team approved that treatment when they approved the Re-issue display, so matching it keeps
-the three dialogs identical to each other. Second, a dialog field sits in a vertical stack of
+the two dialogs identical to each other. Second, a dialog field sits in a vertical stack of
 labelled values; a row of chips in that stack reads as an editable control, which is the
 opposite of what a read-only carry-over field must signal.
 
@@ -259,17 +264,10 @@ free-text Description.
   change is required by the spec scenario "Every surface uses the same labels and the same
   order" (found by `/opsx:verify`, 2026-10-07).
 
-### Decision 16 — The card view reuses the grid cell
-
-*Set by the UI review.* Below 1344px each key is a card. The card shows its use types with
-the same `UseTypesCell`, after a "Use Types:" label in the identity half of the card. So the
-labels, the order, the guard, the wrap and "None" are the same in both layouts, with no
-second implementation to keep in step.
-
 ### Decision 13 — The one-time token reveal dialog stays as it is
 
-`KeyCreatedDialog` (`index.tsx:2650`) shows the key expiry, the token string and a COPY
-TOKEN button, and nothing else.
+`KeyCreatedDialog` (`index.tsx:2650`) shows the key expiry, the token string, a COPY TOKEN
+button and short instructions to store the token. It shows no scope fields.
 
 It does not gain a use types field. The dialog exists for one task under time pressure: copy
 a secret that cannot be retrieved again. Every extra field on it competes with that task, and
@@ -299,13 +297,20 @@ all the wiring the existing controls need.
 
 ### Decision 15 — Search matches the labels, not the stored values
 
-The search term is tested against the same joined label string the grid cell and the
-`valueGetter` use, so "public health" matches and `PUBLIC_HEALTH` does not.
+The search term is tested against the same joined label string that the `valueGetter` uses
+(`formatUseTypes`), so "public health" matches and `PUBLIC_HEALTH` does not.
 
 Matching the stored enumeration values as well was considered, for an operator pasting a
 value out of a log line or an API response. Rejected: the stored form appears nowhere in the
 UI, so matching it would make the search box behave on input the product never shows, and
 every other field the box matches is matched as displayed.
+
+### Decision 16 — The card view reuses the grid cell
+
+*Set by the UI review.* Below 1344px each key is a card. The card shows its use types with
+the same `UseTypesCell`, after a "Use Types:" label in the identity half of the card. So the
+labels, the order, the guard, the wrap and "None" are the same in both layouts, with no
+second implementation to keep in step.
 
 ## Risks / Trade-offs
 
@@ -321,7 +326,7 @@ where the column is visible. "Default view" restores it at once.
 **Sorting groups by first label, which can surprise.** → Sorting "Public Health" keys after
 "Provider" keys is alphabetical and correct, but an operator can expect a sort by breadth
 (one use type, then two, then three). Documented here and in the test plan. If operators ask
-for breadth, the comparator is a one-line change.
+for breadth, a `sortComparator` on this column is a small addition.
 
 **Playwright sees cards, not the grid, at its default viewport.** → The spec sets a viewport
 of at least 1600px itself (Decision 10).
@@ -344,7 +349,7 @@ signal — green for Active, red for Revoked, amber for Grace Period.
 None. This change adds a read-only column over a field the response already carries. There
 is no data change, no API change, and no new environment variable.
 
-Rollback is the revert of one commit. The existing release flag,
+Rollback is the revert of this change's pull request (PR 723). The existing release flag,
 `FEATURE_API_KEY_MANAGEMENT_ENABLED`, already gates the entire page, so the column is
 invisible wherever the feature is off. No second flag is warranted.
 

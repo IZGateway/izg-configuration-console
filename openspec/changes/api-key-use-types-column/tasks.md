@@ -55,8 +55,8 @@ token reveal dialog does not change. Nothing is outstanding.
 
 - [x] 2.1 Add one helper, `canonicalUseTypes`, to `src/components/ApiKeyManagement/index.tsx`.
   It takes a row's `useTypes` array and returns it as `AllowedUseType[]`, filtered by
-  membership in `ALLOWED_USE_TYPES`. This gives canonical order and drops any stored value outside the
-  enumeration. Every surface in tasks 3 and 4 MUST call it, so no two surfaces can disagree
+  membership in `ALLOWED_USE_TYPES`. This gives canonical order and drops any stored value
+  outside the enumeration. Every surface in tasks 3 and 4 MUST call it, so no two surfaces can disagree
   about the same row. Verify by a row whose `useTypes` holds an unrecognized value: no
   surface shows it.
 
@@ -75,7 +75,7 @@ token reveal dialog does not change. Nothing is outstanding.
   Verify by rendering the page and comparing three rows — one use type, two, and none —
   against their `useTypes` values in the API response.
 
-- [x] 3.2 Render the first two labels as `Chip` elements with `size="small"`, the
+- [x] 3.2 Render each label as a `Chip` element with `size="small"`, the
   `SearchableMultiSelect` `chipColor="primary"` palette (`#e3f2fd` background,
   `palette.primary` text and 1px border) and `fontSize: '0.875rem'`. Verify by opening the
   Create dialog beside the grid and confirming that the same use type looks the same in both.
@@ -124,7 +124,7 @@ token reveal dialog does not change. Nothing is outstanding.
   chip as the grid. The Use Types filter narrowed 88 cards to 49 and the badge read 1.
   A search for "Public Health" narrowed the cards to the same 49.
 
-  **Automated 2026-10-07** (`7bba9f9`, from the Copilot review of PR 723). The last test in
+  **Automated 2026-10-07** (`ea5da2f`, from the Copilot review of PR 723). The last test in
   `e2e/tests/apikeys.spec.ts` sets the viewport to 1280px and makes sure that each card
   shows known labels in canonical order, or "None". It also makes sure that the filter and
   the search narrow the cards. Then it restores the 1680px viewport.
@@ -148,12 +148,12 @@ token reveal dialog does not change. Nothing is outstanding.
   helper. Its value now comes from `formatUseTypes`. Field, label and position are unchanged.
 
 - [x] 4.3 Confirm `KeyCreatedDialog` is unchanged. Verify by revealing a token and seeing
-  only the key expiry and the token string, and by confirming the diff does not touch that
-  component.
+  the key expiry and the token string and no use types, and by confirming the diff does not
+  touch that component.
 
 - [x] 4.4 Add `e2e/tests/apikeys.spec.ts` — focused Playwright coverage for the use-types
-  behavior on `/apikeys`. Use `e2e/helpers/oktaLogin.ts` for login. Build the context with a 1680×1050 viewport: the
-  config's 1280px shows cards and no grid, and below 1600px "Renew key" is inside the
+  behavior on `/apikeys`. Use `e2e/helpers/oktaLogin.ts` for login. Build the context with a
+  1680×1050 viewport: the config's 1280px shows cards and no grid, and below 1600px "Renew key" is inside the
   "More Options" menu. A `browser.newContext()` context ignores `test.use()`, so set the
   viewport on the context. Set the page size to 100 rows, or the suite reads 5 of ~90 rows.
 
@@ -197,9 +197,10 @@ token reveal dialog does not change. Nothing is outstanding.
   `EMPTY_FILTERS`. Verify by `tsc --noEmit` passing, which it will only do once every reader
   of that type handles the new key.
 
-- [x] 5.2 Add a fourth `renderFilterSelect('Use Types', 'useType', useTypeFilterOptions)`
-  call after the Organization dropdown (`index.tsx:1022`), with options built from
-  `ALLOWED_USE_TYPES` as values and `USE_TYPE_LABELS` as labels. Verify by opening the filter
+- [x] 5.2 Add a fourth `renderFilterSelect('Use Types', 'useType', useTypeOptions)` call
+  after the Organization dropdown (`index.tsx:1022`). The options are
+  `USE_TYPE_FILTER_OPTIONS`, built from `ALLOWED_USE_TYPES` as values and `USE_TYPE_LABELS`
+  as labels. Verify by opening the filter
   popover and seeing four dropdowns with Patient, Provider and Public Health in the fourth.
 
 - [x] 5.3 Add the `useType` term to `activeFilterCount` beside the existing three. Verify by
@@ -207,7 +208,8 @@ token reveal dialog does not change. Nothing is outstanding.
   and seeing the dropdown reset with the badge gone.
 
 - [x] 5.4 Add the filter clause to `filteredRows` (`index.tsx:2917`): a row matches when no
-  use-type filter is set, or when `row.useTypes` **contains** the selected value. Verify by
+  use-type filter is set, or when `canonicalUseTypes(row.useTypes)` **contains** the
+  selected value. Verify by
   filtering to Patient and confirming that a Patient-only key and a Patient + Provider key
   both appear, and a Provider-only key does not.
 
@@ -222,16 +224,19 @@ token reveal dialog does not change. Nothing is outstanding.
   1. the Filters popover lists four dropdowns — Environment, Status, Organization, Use Types
   2. filtering to the read label leaves every remaining cell carrying that label
   3. the badge reads 1, and **Clear all** clears it
-  4. searching the label narrows the list, keeps it non-empty, and still finds the key the
-     label was read from
-  5. searching `PUBLIC_HEALTH` matches nothing
+  4. searching a label that some rows carry and some rows lack narrows the list, keeps it
+     non-empty, and still finds a row carrying that label
+  5. searching `PUBLIC_HEALTH` leaves only rows that show "public_health" in their own
+     visible text, so the stored value never matches
 
   **Assertion 4 does not require every matched row to carry the label.** The search also
   matches the description, the DNS name, the jurisdiction and the environment, so a
   description holding the word "patient" would match without a Patient use type.
 
   Verify by running the spec against the local server and seeing it pass. **Rewritten and
-  verified 2026-10-07; all four filter and search tests pass.**
+  verified 2026-10-07; all three filter and search tests pass.** Assertions 4 and 5 took
+  their current form in the second Copilot review of PR 723 (`168d79c`), because the
+  earlier forms assumed data that a shared environment does not promise.
 
 ## 6. Documentation and integration
 
@@ -239,16 +244,16 @@ token reveal dialog does not change. Nothing is outstanding.
   960888833). Its column list reads "Description …, Environment, Organization, DNS, Status,
   Created, Expires, Created By, Action". It must name USE TYPES in its grid position, and
   DURATION in place of Created and Expires. Add one sentence stating that below 1344px the
-  page shows one card per key. Verify by re-reading §3 against the shipped grid. Confirm the edit with the
-  page owner before posting — the page is shared and marked DRAFT.
+  page shows one card per key. Verify by re-reading §3 against the shipped grid. Confirm the
+  edit with the page owner before posting — the page is shared and marked DRAFT.
 
   Update the same section's **Search** and **Filters** sentences. Search reads "matches key
   ID, description, jurisdiction, DNS name, or environment" and must add use types. Filters
   reads "Environment, Status, Organization" and must add Use Types.
 
   **Done 2026-10-07**, page version 22. The page owner is the author of this change, so no
-  separate agreement was needed. Four edits landed: the column list now reads Use Types and
-  Duration in place of Status, Created and Expires; Search names use types and states that
+  separate agreement was needed. Four edits landed: the column list now names Use Types,
+  and Duration in place of Created and Expires; Search names use types and states that
   the stored value does not match; Filters names Use Types and states that it matches on
   membership; one new paragraph describes the card view below 1344 pixels.
 
@@ -295,11 +300,10 @@ token reveal dialog does not change. Nothing is outstanding.
   UT-03 is marked blocked in the table itself: no organization permits all three use types,
   so a key carrying all three cannot exist without a database edit.
 
-- [x] 6.7 Confirm the branch dependency has landed before archiving.
-  `openspec/specs/api-key-credential-lifecycle/spec.md` exists only on branch
-  `openspec-cleanup`, which is not yet an ancestor of `develop`, so this delta currently
-  targets a capability that is absent here. The merge is planned and confirmed; only the
-  ordering matters. Verify by `openspec list --specs` reporting `api-key-credential-lifecycle`.
+- [x] 6.7 Confirm the branch dependency has landed before archiving. When this change was
+  written, `openspec/specs/api-key-credential-lifecycle/spec.md` existed only on branch
+  `openspec-cleanup`, which was not yet an ancestor of `develop`, so this delta targeted a
+  capability that was absent here. Verify by `openspec list --specs` reporting `api-key-credential-lifecycle`.
   See `proposal.md` — Branch dependency. **Landed:** `5efc9bb` ("OpenSpec Archive (#705)")
   brought the spec to `develop`, and `openspec list --specs` reports it on this branch.
 
@@ -312,7 +316,7 @@ token reveal dialog does not change. Nothing is outstanding.
 - [x] 6.9 Run `openspec validate "api-key-use-types-column" --strict` and verify it reports
   the change as valid.
 
-## Verification status — 2026-10-07
+## Verification status
 
 Checkboxes above track **implementation**. All code is written.
 `npm run code-quality-check` passes with exit 0 and no warnings from the edited files.
@@ -347,8 +351,11 @@ All 31 tasks are complete.
 mattystank's commits `7d1f70e` and `55275da` were merged in PR #711. They resolved task 3.6
 (chips wrap, rows are auto-height) and changed the empty cell to "None", the overflow rule,
 the column set (DURATION) and the layout (cards below 1344px, an actions menu below 1600px,
-a Columns popover). The proposal, design, delta spec and tasks were revised to match. The
-code was not changed. Everything that review left open is now closed.
+a Columns popover). The proposal, design, delta spec and tasks were revised to match. Apply
+did not change that code. The Copilot reviews of PR 723 later made small fixes in it: an
+accessible name for the compact actions button and its focusable wrapper, accessible names
+for the column chooser checkboxes, and the "Untitled key" card heading. Everything that
+review left open is now closed.
 
 ### The e2e run
 
@@ -389,15 +396,20 @@ branch merges.** It points `BASE_URL` at dev, and the feature commit `8139a98` i
 
 ### Archive gating
 
-6.7, 6.8 and 6.9 are done. Strict validate passed again on 2026-10-07 after the sort
-correction. Re-run 6.9 before archiving if the delta changes again.
+6.7, 6.8 and 6.9 are done. Strict validate passed again on 2026-10-08, after the last
+documentation fixes from the Copilot reviews. Re-run 6.9 before archiving if the delta changes again.
 
 ### Notes on the implementation
 
-One edit was made beyond the task list. `noRowsMessage` enumerates the active filters
+One edit was made beyond the task list during apply. `noRowsMessage` enumerates the active filters
 explicitly to decide its wording (`index.tsx`, `hasOtherFilters`). Without the new `useType`
 term it would report "No API keys for <org>." while a use-type filter was also narrowing the
 list, which states something untrue about that organization. Added under task 5.3.
+
+The Copilot reviews of PR 723 made more edits beyond the task list. They are recorded in
+the commits `ea5da2f`, `168d79c`, `e867066`, `8470abd` and `096a608`, and in the Impact
+section of `proposal.md`. The largest one: the four other API key specs now run at
+`API_KEYS_VIEWPORT`, because this change's layout shows cards at 1280px.
 
 The grid is `@mui/x-data-grid` **v7**, not v5 as the Context section first recorded. In v7
 `valueGetter` takes `(value, row, column, apiRef)` rather than a params object. The code uses

@@ -24,8 +24,9 @@ So for a live, working key there is no screen in the product that states its use
 
 **The team resolved this in a meeting on 2026-09-30.** Use types go on the keys grid and on
 the Renew dialog. On the dialog they are read-only, like every other field it carries. The
-Re-issue dialog already shows them and needs no change. The one-time token reveal dialog
-stays exactly as it is.
+Re-issue dialog already shows them and needs no change. (One line later changed, so that its
+order is canonical. See The dialogs.) The one-time token reveal dialog stays exactly as it
+is.
 
 **The product owner then confirmed, on 2026-10-01**, that the keys list must also be
 narrowable by use type: a fourth filter dropdown, and a use-type match in the search box.
@@ -48,7 +49,7 @@ gap for an Active key**, because the grid is the only surface an Active key has.
 
 ## What Changes
 
-Line numbers in this section predate the UI review (PR #711) and are approximate.
+Line numbers in this proposal predate the UI review (PR #711) and are approximate.
 
 ### The grid column
 
@@ -87,8 +88,8 @@ Line numbers in this section predate the UI review (PR #711) and are approximate
 
 - **Focused Playwright coverage for use types.** `apiKeyDashboard.spec.ts` and the
   lifecycle specs already open `/apikeys`, but none of them covers use types. This change
-  adds a spec for the column header and the rendered chips.
-  The Jest jsdom suites cannot verify it: they fail on this repo with `ERR_REQUIRE_ESM`, a
+  adds a spec for the column, the Renew and Re-issue dialog fields, the filter, the search,
+  the column chooser and the card view. The Jest jsdom suites cannot verify it: they fail on this repo with `ERR_REQUIRE_ESM`, a
   known upstream packaging problem recorded in `.claude/CLAUDE.md`.
 
 ### The dialogs
@@ -111,7 +112,8 @@ Line numbers in this section predate the UI review (PR #711) and are approximate
 
 - **No data-layer change anywhere.** The grid row already carries
   `useTypes: AllowedUseType[]` (`index.tsx:265`, populated at `:431`), and `RenewDialog` and
-  `ReissueDialog` each already receive that whole row as their `apiKey` prop. `USE_TYPE_LABELS` already maps each value to a human-readable label
+  `ReissueDialog` each already receive that whole row as their `apiKey` prop.
+  `USE_TYPE_LABELS` already maps each value to a human-readable label
   (`lib/type/AllowedUseType.ts`). Nothing new is fetched or plumbed.
 
 ### Narrowing the list
@@ -135,8 +137,9 @@ Line numbers in this section predate the UI review (PR #711) and are approximate
 ### The UI review — mattystank, 2026-10-05 and 2026-10-06
 
 The UI reviewer refined the page in two commits, `7d1f70e` and `55275da` (merged in PR
-#711). **That work is authoritative: these artifacts describe it, and nothing here changes
-it.** It settles the chip-width question that `design.md` had left open, and it changes the
+#711). **That work is authoritative: these artifacts describe it, and this change did not
+redesign it.** The Copilot reviews of PR 723 later made small accessibility and text fixes
+in it, listed under Impact. It settles the chip-width question that `design.md` had left open, and it changes the
 page around the new column:
 
 - **Chips wrap, and every row grows to fit.** `getRowHeight` returns `auto` for both tabs,
@@ -200,7 +203,8 @@ compose with the text search" from three filters to four.
 **One component file, one new test file, and compatibility updates to five test files.**
 
 - Modified: `src/components/ApiKeyManagement/index.tsx`:
-  - a shared helper that returns a row's use types in canonical order,
+  - two shared helpers: `canonicalUseTypes` returns a row's use types in canonical order,
+    and `formatUseTypes` joins their labels for the sort key, the search and the dialogs,
   - a `UseTypesCell` component beside `StatusCell`, plus one new entry in the `columns`
     array. The card view reuses the same component,
   - one `PolicyField` in `RenewDialog`,
