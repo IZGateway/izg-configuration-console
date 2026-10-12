@@ -6,6 +6,7 @@ jest.mock('next-auth/jwt', () => ({ getToken: jest.fn() }))
 jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
 const mockFetchAllowedUser = jest.fn()
+const mockFetchAllowedUsers = jest.fn()
 const mockUpsertAllowedUser = jest.fn()
 const mockDeleteAllowedUser = jest.fn()
 const mockCreateAllowedUserAudit = jest.fn()
@@ -14,6 +15,8 @@ jest.mock('../../../lib/db/DbClientFactory', () => ({
   default: {
     getDbClient: jest.fn().mockResolvedValue({
       fetchAllowedUser: (...args: unknown[]) => mockFetchAllowedUser(...args),
+      fetchAllowedUsers: (...args: unknown[]) =>
+        mockFetchAllowedUsers(...args),
       upsertAllowedUser: (...args: unknown[]) => mockUpsertAllowedUser(...args),
       deleteAllowedUser: (...args: unknown[]) => mockDeleteAllowedUser(...args),
       createAllowedUserAudit: (...args: unknown[]) =>
@@ -112,5 +115,114 @@ describe('POST/DELETE /api/allowedusers audit identity (IGDD-3175)', () => {
     expect(actorArg).toBe('real-user@example.com')
     expect(actorArg).not.toBe('forged-admin@example.com')
     expect(snapshotArg.updatedBy).toBe('real-user@example.com')
+  })
+})
+
+describe('GET/POST/DELETE /api/allowedusers write capability split (IGDD-3546)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    mockFetchAllowedUser.mockResolvedValue(null)
+    mockFetchAllowedUsers.mockResolvedValue([])
+    mockUpsertAllowedUser.mockResolvedValue({
+      principal: 'p',
+      environment: 1,
+      destinationId: 'd',
+      organization: 'o',
+      enabled: true,
+      createdBy: 'support@example.com',
+      createdOn: new Date(),
+      updatedBy: 'support@example.com',
+      updatedOn: new Date(),
+      validatedOn: null,
+    })
+    mockDeleteAllowedUser.mockResolvedValue(true)
+    mockCreateAllowedUserAudit.mockResolvedValue(true)
+  })
+
+  it('a view-only role (Jurisdiction Support) can GET the sender list', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'support@example.com', roles: ['Jurisdiction Support'] },
+    })
+
+    const { req, res } = buildReqRes('GET', {})
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('a view-only role (Jurisdiction Support) is refused on POST', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'support@example.com', roles: ['Jurisdiction Support'] },
+    })
+
+    const { req, res } = buildReqRes('POST', {
+      principal: 'p',
+      environment: 1,
+      destinationId: 'd',
+      organization: 'o',
+      enabled: true,
+    })
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(mockUpsertAllowedUser).not.toHaveBeenCalled()
+  })
+
+  it('a view-only role (Jurisdiction Support) is refused on DELETE', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'support@example.com', roles: ['Jurisdiction Support'] },
+    })
+
+    const { req, res } = buildReqRes('DELETE', {
+      principal: 'p',
+      environment: 1,
+      destinationId: 'd',
+    })
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(mockDeleteAllowedUser).not.toHaveBeenCalled()
+  })
+
+  it('a write-capable role (Jurisdiction Operations) can POST', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: {
+        email: 'jops@example.com',
+        roles: ['Jurisdiction Operations'],
+      },
+    })
+
+    const { req, res } = buildReqRes('POST', {
+      principal: 'p',
+      environment: 1,
+      destinationId: 'd',
+      organization: 'o',
+      enabled: true,
+      createdBy: 'jops@example.com',
+      updatedBy: 'jops@example.com',
+    })
+    await handler(req, res)
+
+    expect(res.status).not.toHaveBeenCalledWith(403)
+    expect(mockUpsertAllowedUser).toHaveBeenCalled()
+  })
+
+  it('IZG Support (view-only) behaves the same as Jurisdiction Support on POST', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'izgsupport@example.com', roles: ['IZG Support'] },
+    })
+
+    const { req, res } = buildReqRes('POST', {
+      principal: 'p',
+      environment: 1,
+      destinationId: 'd',
+      organization: 'o',
+      enabled: true,
+    })
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(mockUpsertAllowedUser).not.toHaveBeenCalled()
   })
 })

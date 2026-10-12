@@ -26,6 +26,7 @@ import {
   Wifi as WifiIcon,
 } from '@mui/icons-material'
 import { useSession } from 'next-auth/react'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 import SessionContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
 import { type SenderData } from './SenderData'
@@ -171,6 +172,10 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 }) => {
   const { pageSize, setPageSize } = useContext(SessionContext)
   const { data: session } = useSession()
+  // Render on true, not hide on false (IGDD-3546): a view-only role sees the
+  // sender list, but add/edit/promote/demote/delete controls stay hidden while
+  // this is loading, not just while it is explicitly false.
+  const { canManageSenders } = useRoleAccess('onboarding')
   const [filterButtonEl, setFilterButtonEl] =
     React.useState<HTMLButtonElement | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -761,6 +766,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
             sender={params.row}
             onStatusChange={handleStatusUpdate}
             size="small"
+            canManageSenders={canManageSenders}
           />
         )
       },
@@ -773,50 +779,51 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
       flex: 0.3,
       minWidth: 120,
       maxWidth: 350,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Tooltip arrow title="Edit">
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              color="primary"
-              onClick={() => handleEditSender(params.row.id)}
+      renderCell: (params) =>
+        canManageSenders ? (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Tooltip arrow title="Edit">
+              <IconButton
+                sx={actionButtonStyle}
+                size="small"
+                color="primary"
+                onClick={() => handleEditSender(params.row.id)}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip
+              arrow
+              title={params.row.isConnected ? 'Disconnect' : 'Connect'}
             >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip
-            arrow
-            title={params.row.isConnected ? 'Disconnect' : 'Connect'}
-          >
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              color="secondary"
-              onClick={() => handleWifiToggle(params.row.id)}
-            >
-              {params.row.isConnected ? (
-                <WifiIcon color="secondary" fontSize="small" />
-              ) : (
-                <WifiOffIcon
-                  sx={{ color: palette.secondaryDark }}
-                  fontSize="small"
-                />
-              )}
-            </IconButton>
-          </Tooltip>
-          <Tooltip arrow title="Delete">
-            <IconButton
-              sx={actionButtonStyle}
-              size="small"
-              color="error"
-              onClick={() => handleDeleteSender(params.row.id)}
-            >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      ),
+              <IconButton
+                sx={actionButtonStyle}
+                size="small"
+                color="secondary"
+                onClick={() => handleWifiToggle(params.row.id)}
+              >
+                {params.row.isConnected ? (
+                  <WifiIcon color="secondary" fontSize="small" />
+                ) : (
+                  <WifiOffIcon
+                    sx={{ color: palette.secondaryDark }}
+                    fontSize="small"
+                  />
+                )}
+              </IconButton>
+            </Tooltip>
+            <Tooltip arrow title="Delete">
+              <IconButton
+                sx={actionButtonStyle}
+                size="small"
+                color="error"
+                onClick={() => handleDeleteSender(params.row.id)}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        ) : null,
     },
   ]
 
@@ -857,6 +864,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
               sender={row}
               onStatusChange={handleStatusUpdate}
               size="small"
+              canManageSenders={canManageSenders}
             />
           </Box>
         </Box>
@@ -897,45 +905,47 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         </Box>
 
         {/* Action Buttons */}
-        <Box
-          sx={{
-            display: 'flex',
-            gap: '8px',
-            flexWrap: 'wrap',
-            justifyContent: 'flex-start',
-          }}
-        >
-          <IconButton
-            size="small"
-            color="primary"
-            sx={actionButtonStyle}
-            onClick={() => handleEditSender(row.id)}
+        {canManageSenders && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-start',
+            }}
           >
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton
-            sx={actionButtonStyle}
-            size="small"
-            onClick={() => handleWifiToggle(row.id)}
-          >
-            {row.isConnected ? (
-              <WifiIcon color="secondary" fontSize="small" />
-            ) : (
-              <WifiOffIcon
-                sx={{ color: palette.secondaryDark }}
-                fontSize="small"
-              />
-            )}
-          </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            sx={actionButtonStyle}
-            onClick={() => handleDeleteSender(row.id)}
-          >
-            <DeleteOutlineIcon fontSize="small" />
-          </IconButton>
-        </Box>
+            <IconButton
+              size="small"
+              color="primary"
+              sx={actionButtonStyle}
+              onClick={() => handleEditSender(row.id)}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+              sx={actionButtonStyle}
+              size="small"
+              onClick={() => handleWifiToggle(row.id)}
+            >
+              {row.isConnected ? (
+                <WifiIcon color="secondary" fontSize="small" />
+              ) : (
+                <WifiOffIcon
+                  sx={{ color: palette.secondaryDark }}
+                  fontSize="small"
+                />
+              )}
+            </IconButton>
+            <IconButton
+              size="small"
+              color="error"
+              sx={actionButtonStyle}
+              onClick={() => handleDeleteSender(row.id)}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        )}
       </Box>
     )
   })
@@ -953,28 +963,30 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
           width: '100%',
         }}
       >
-        <Box
-          sx={{
-            backgroundColor: 'white',
-            padding: '8px',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
-            borderRadius: '64px',
-          }}
-        >
-          <Button
-            color="primary"
-            onClick={handleAddSenderClick}
-            variant="text"
-            startIcon={<AddIcon />}
+        {canManageSenders && (
+          <Box
             sx={{
-              borderRadius: '24px',
-              textTransform: 'none',
-              fontWeight: 500,
+              backgroundColor: 'white',
+              padding: '8px',
+              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.25)',
+              borderRadius: '64px',
             }}
           >
-            Add Sender
-          </Button>
-        </Box>
+            <Button
+              color="primary"
+              onClick={handleAddSenderClick}
+              variant="text"
+              startIcon={<AddIcon />}
+              sx={{
+                borderRadius: '24px',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+            >
+              Add Sender
+            </Button>
+          </Box>
+        )}
         <GridFooter />
       </Box>
     )
@@ -1129,29 +1141,31 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
           </Box>
 
           {/* Mobile Add Button */}
-          <Box
-            sx={{
-              padding: '16px',
-              display: 'flex',
-              justifyContent: 'center',
-              marginTop: '16px',
-            }}
-          >
-            <Button
-              color="primary"
-              onClick={handleAddSenderClick}
-              variant="outlined"
-              startIcon={<AddIcon />}
+          {canManageSenders && (
+            <Box
               sx={{
-                borderRadius: '24px',
-                padding: '12px 24px',
-                textTransform: 'none',
-                fontWeight: 500,
+                padding: '16px',
+                display: 'flex',
+                justifyContent: 'center',
+                marginTop: '16px',
               }}
             >
-              Add Sender
-            </Button>
-          </Box>
+              <Button
+                color="primary"
+                onClick={handleAddSenderClick}
+                variant="outlined"
+                startIcon={<AddIcon />}
+                sx={{
+                  borderRadius: '24px',
+                  padding: '12px 24px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Add Sender
+              </Button>
+            </Box>
+          )}
         </Box>
       ) : (
         /* Desktop DataGrid */

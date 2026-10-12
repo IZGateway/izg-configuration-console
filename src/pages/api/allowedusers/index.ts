@@ -478,11 +478,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
-// so any authenticated session could reach it. One capability across every
-// method, deliberately: splitting view from mutate needs a flag whose seed
-// value nobody has decided, and this closes the hole without inventing one.
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization, so
+// any authenticated session could reach it. IGDD-3472 closed that with one
+// capability across every method. IGDD-3546 narrows further: GET (view) and
+// POST/DELETE (mutate) now require separate capabilities, so a view-only role
+// can see the list without being able to change it.
 export default withMiddleware(
-  { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
+  {
+    byMethod: {
+      GET: { page: 'onboarding', capability: 'canViewOnboarding' },
+      POST: { page: 'onboarding', capability: 'canManageSenders' },
+      DELETE: { page: 'onboarding', capability: 'canManageSenders' },
+    },
+  },
   'captureErrors'
 )(handler)
