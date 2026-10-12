@@ -34,7 +34,7 @@ export interface ApiKeyCredential extends DbAudit {
   // *when* a live bearer credential was handed out, not to whom.
   viewedBy?: string
   // Who activated the credential by satisfying its DNS challenge, and how the
-  // challenge was satisfied. `bypass` is only ever reachable in non-production
+  // challenge was satisfied. `bypass` is only ever reachable in development
   // with ALLOW_DNS_VERIFY_BYPASS=true (see verify-domain), and is recorded so a
   // bypassed activation stays distinguishable from a genuinely verified one
   // long after the log line has aged out.

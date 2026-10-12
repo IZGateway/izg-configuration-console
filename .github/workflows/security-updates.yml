@@ -389,7 +389,21 @@ jobs:
           if [ -z "$BRANCH_SHA" ]; then
             echo "Merged branch is already deleted."
           elif [ "$BRANCH_SHA" = "$EXPECTED_HEAD_SHA" ]; then
-            gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$EXPECTED_BRANCH"
+            if gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$EXPECTED_BRANCH"; then
+              echo "Deleted merged branch: $EXPECTED_BRANCH"
+            else
+              # Automatic branch deletion may race with our DELETE request.
+              # A failed verification request still fails this step.
+              REMAINING_REFS=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/$EXPECTED_BRANCH")
+              if printf '%s\n' "$REMAINING_REFS" | jq -e \
+                --arg ref "refs/heads/$EXPECTED_BRANCH" \
+                'all(.[]; .ref != $ref)' > /dev/null; then
+                echo "Merged branch is already deleted."
+              else
+                echo "::error::Branch cleanup failed; the branch still exists."
+                exit 1
+              fi
+            fi
           else
             echo "::warning::The branch changed after merging; leaving it intact."
           fi
