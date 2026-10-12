@@ -74,6 +74,7 @@ const JurisdictionOperationsAccess: RoleAccess = {
   onboarding: {
     ...defaultOnboardingPageAccessControl,
     canViewOnboarding: true,
+    canManageSenders: true,
   } as OnboardingPageAccessControl,
 
   // The four admin blocks below carry no `as` assertion, deliberately: an

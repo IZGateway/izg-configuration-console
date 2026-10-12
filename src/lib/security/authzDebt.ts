@@ -43,16 +43,6 @@ export type AuthzDebt = {
      * reach. Added PR #700.
      */
     | 'split-decision'
-    /**
-     * The route declares one capability across methods that read *and* write,
-     * so a view-only flag authorizes mutation. Narrower than what it replaces
-     * — these routes carried no authorization at all — but a `byMethod` split
-     * needs a write capability that does not exist in the matrix yet, and
-     * inventing one here means choosing its seed value without the matrix
-     * owner. Counted rather than only commented, so it reads as an open gap
-     * and not as a settled design. Added PR #700.
-     */
-    | 'coarse-capability'
   /** A page key, a route path under `src/pages/api/`, or `page.capability`. */
   subject: string
   /**
@@ -105,33 +95,6 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
       'As changerequest/index.ts. Also the route whose reach half answers 401 where the capability ' +
       'half answers 403 — 403 is correct for both, but the reach middleware is shared with five ' +
       'other routes and changing its status code can affect client retry behaviour.',
-  },
-  // ---------------------------------------------------------------------
-  // Routes authorized by one capability across read and write.
-  // ---------------------------------------------------------------------
-  {
-    kind: 'coarse-capability',
-    subject: 'allowedusers/index.ts',
-    ticket: 'IGDD-3472',
-    note:
-      'GET, POST and DELETE are all authorized by onboarding.canViewOnboarding, so a view flag ' +
-      'authorizes mutation. Every role holds it, so the practical narrowing here is Sender ' +
-      'Operations only — but the route had NO authorization before this change, so this is a ' +
-      'strict improvement, not a widening. Closing it means a write capability for onboarding ' +
-      'and a byMethod split; the spike review already tracks that as "Finding #5 — role-gate ' +
-      'Onboarding Senders", which is where the seed value gets decided.',
-  },
-  {
-    kind: 'coarse-capability',
-    subject: 'allowedusers/bydestination/index.ts',
-    ticket: 'IGDD-3472',
-    note: 'As allowedusers/index.ts.',
-  },
-  {
-    kind: 'coarse-capability',
-    subject: 'allowedusersaudit/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'As allowedusers/index.ts.',
   },
   {
     kind: 'ungated-page',
