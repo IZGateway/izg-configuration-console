@@ -56,13 +56,19 @@ test('Revoking an active key sets status to Revoked and disables further actions
   )
   const revokedBefore = await revokedCount()
 
+  const descriptionCell = row.locator('[data-field="description"][role="gridcell"]')
+  await descriptionCell.locator('p').first().hover()
+  const tooltip = page.getByRole('tooltip')
+  await expect(tooltip).toBeVisible()
+  const keyId = (await tooltip.innerText()).replace(/^ID\s*/i, '').trim()
+  expect(keyId).not.toBe('')
   await row.getByLabel('Revoke key').click()
 
   const revokeDialog = page
     .getByRole('dialog')
     .filter({ hasText: 'Revoke API Key' })
   await expect(revokeDialog).toBeVisible()
-  await expect(revokeDialog).toContainText(`Revoking ${TEST_ORG_NAME} |`)
+  await expect(revokeDialog).toContainText(`Revoking ${TEST_ORG_NAME} | ${keyId}`)
   await expect(revokeDialog).toContainText('this cannot be undone')
   await expect(
     revokeDialog.getByText(
