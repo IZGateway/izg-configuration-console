@@ -1,7 +1,12 @@
 /**
  * @jest-environment node
  */
-import logger, { normalizeEcsUrl, normalizeEcsUser } from '../../logger'
+import https from 'https'
+import logger, {
+  normalizeEcsError,
+  normalizeEcsUrl,
+  normalizeEcsUser,
+} from '../../logger'
 
 const MESSAGE = Symbol.for('message')
 
@@ -38,6 +43,15 @@ describe('normalizeEcsUrl (IGDD-3541 logger backstop)', () => {
     })
   })
 
+  it('rewrites a number url, which would also be rejected', () => {
+    const out = normalizeEcsUrl({
+      level: 'info',
+      message: 'm',
+      url: 7,
+    } as never)
+    expect(out.url).toEqual({ path: '7' })
+  })
+
   it('leaves an object url untouched', () => {
     const url = { full: 'https://h/p', path: '/p' }
     const out = normalizeEcsUrl({ level: 'info', message: 'm', url } as never)
@@ -60,6 +74,15 @@ describe('normalizeEcsUser (IGDD-3541 logger backstop)', () => {
     expect(out.user).toEqual({ name: 'IZG Support Tester' })
   })
 
+  it('rewrites a number user, which would also be rejected', () => {
+    const out = normalizeEcsUser({
+      level: 'info',
+      message: 'm',
+      user: 42,
+    } as never)
+    expect(out.user).toEqual({ name: '42' })
+  })
+
   it('leaves an object user untouched', () => {
     const user = { name: 'n', id: '1' }
     const out = normalizeEcsUser({ level: 'info', message: 'm', user } as never)
@@ -67,7 +90,11 @@ describe('normalizeEcsUser (IGDD-3541 logger backstop)', () => {
   })
 
   it('leaves a null user as null', () => {
-    const out = normalizeEcsUser({ level: 'info', message: 'm', user: null } as never)
+    const out = normalizeEcsUser({
+      level: 'info',
+      message: 'm',
+      user: null,
+    } as never)
     expect(out.user).toBeNull()
   })
 
@@ -77,7 +104,101 @@ describe('normalizeEcsUser (IGDD-3541 logger backstop)', () => {
   })
 })
 
+describe('normalizeEcsError (IGDD-3541 logger backstop)', () => {
+  it('rewrites an Error as its safe error.* fields, without running its toJSON', () => {
+    const err = Object.assign(new Error('boom'), {
+      toJSON: () => ({ secret: 'SECRET' }),
+    })
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: err,
+    } as never)
+    expect(out.error).toMatchObject({ type: 'Error', message: 'boom' })
+    expect(JSON.stringify(out.error)).not.toContain('SECRET')
+  })
+
+  it('writes error.related as an array of error.* objects', () => {
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: { message: 'm', related: 'r' },
+    } as never)
+    expect(out.error).toEqual({ message: 'm', related: [{ message: 'r' }] })
+  })
+
+  it('rewrites a string error into the ECS object', () => {
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: 'bad request',
+    } as never)
+    expect(out.error).toEqual({ message: 'bad request' })
+  })
+
+  it('rewrites a number or boolean error as a string message', () => {
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: 500,
+    } as never)
+    expect(out.error).toEqual({ message: '500' })
+  })
+
+  it('rewrites an array error as its JSON message', () => {
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: ['a required', 'b invalid'],
+    } as never)
+    expect(out.error).toEqual({ message: '["a required","b invalid"]' })
+  })
+
+  it('leaves an object error untouched', () => {
+    const error = { type: 'AxiosError', message: 'boom' }
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error,
+    } as never)
+    expect(out.error).toBe(error)
+  })
+
+  it.each([
+    ['a network object', new https.Agent(), '[Agent]'],
+    ['a Date', new Date(0), '1970-01-01T00:00:00.000Z'],
+    ['a bigint', BigInt(5), '5'],
+  ])(
+    'rewrites %s, which would serialize as a scalar',
+    (_kind, error, message) => {
+      const out = normalizeEcsError({
+        level: 'error',
+        message: 'm',
+        error,
+      } as never)
+      expect(out.error).toEqual({ message })
+    }
+  )
+
+  it('leaves a null error as null', () => {
+    const out = normalizeEcsError({
+      level: 'error',
+      message: 'm',
+      error: null,
+    } as never)
+    expect(out.error).toBeNull()
+  })
+})
+
 describe('logger pipeline output (IGDD-3541)', () => {
+  // The shape of ~30 error logs (`error: err.message`), which were dropped
+  // whenever the backing index typed `error` as an object.
+  it('never serializes a top-level string error', () => {
+    const doc = serialized({ error: 'Unknown error', stack: 's' })
+    expect(doc.error).toEqual({ message: 'Unknown error' })
+    expect(doc.stack).toBe('s')
+  })
+
   // The shape of the API Request log, whose `user` falls back to 'unknown'
   // even for unauthenticated calls — so every one was dropped whenever the
   // backing index typed `user` as an object.
@@ -109,7 +230,10 @@ describe('logger pipeline output (IGDD-3541)', () => {
 
   it('never serializes a URL object as a string', () => {
     const doc = serialized({ url: new URL('https://h/rest/reset') })
-    expect(doc.url).toEqual({ full: 'https://h/rest/reset', path: '/rest/reset' })
+    expect(doc.url).toEqual({
+      full: 'https://h/rest/reset',
+      path: '/rest/reset',
+    })
   })
 
   it('still expands req into url.full / url.path (the healthcheck shape)', () => {
