@@ -114,8 +114,9 @@ describe.each<[string, AnyGssp, string, string]>([
       deniedAt: 'page',
       permission,
       // resolvedUrl, not req.url: on a client-side transition req.url is the
-      // /_next/data/... path, not what the browser shows.
-      url,
+      // /_next/data/... path, not what the browser shows. Written as the ECS
+      // object, never a string, or Elastic rejects the event (IGDD-3541).
+      url: { path: url },
       method: 'GET',
       roles: ['Jurisdiction Support'],
     })

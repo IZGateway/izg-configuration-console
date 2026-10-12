@@ -6,6 +6,7 @@ import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
 import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../lib/security/authzsubject'
+import { toEcsUrl } from '../../lib/utils/ecsUrl'
 import {
   CapabilityRef,
   decideCapability,
@@ -94,7 +95,7 @@ const captureErrors: Middleware = async (req, res, next) => {
     await next()
   } catch (error) {
     logger.error('Unhandled error in request', {
-      url: req.url,
+      url: toEcsUrl(req.url),
       method: req.method,
       query: req.query,
       statusCode: 500,
