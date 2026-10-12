@@ -5,6 +5,7 @@ import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
 import { getDestinationType } from '../desttypehelper'
+import { toEcsUrl } from './ecsUrl'
 
 /**
  * Hub refresh REST path, relative to the hub's `/rest/` base. Signals a hub to
@@ -52,7 +53,7 @@ const refreshHubsForBaseUrls = async (
     baseUrls.map((baseUrl) => {
       const url = `${baseUrl}${HUB_REFRESH_PATH}`
       logger.info('Signaling hub to refresh from database', {
-        url,
+        url: toEcsUrl(url),
         operation: 'refresh_database',
         ...metadata,
       })
