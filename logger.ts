@@ -168,6 +168,85 @@ const logger = winston.createLogger({
   exitOnError: false,
 })
 
+/**
+ * A log call never throws (IGDD-3541). winston reads its arguments before any
+ * format runs: it writes `level` onto a logged Error (`logger.error(err)`) and
+ * copies a meta object's properties into the event (`logger.error('msg',
+ * err)`), so a frozen Error, a throwing getter or a Proxy throws out of the
+ * call. Such a call logs its message and the safe `error.*` fields of what was
+ * logged instead (toEcsErrorValue never throws).
+ */
+type LogMethod = (...args: unknown[]) => winston.Logger
+const methods = logger as unknown as Record<string, LogMethod>
+const writeLog = methods.log.bind(logger)
+
+const levelOf = (info: unknown) => {
+  try {
+    const level = (info as { level?: unknown }).level
+    return typeof level === 'string' && level in logger.levels ? level : 'error'
+  } catch {
+    return 'error'
+  }
+}
+
+const unreadableEvent = (level: string, args: unknown[]) => {
+  const [first, second] = args
+  const message = typeof first === 'string' ? first : undefined
+  const error = toEcsErrorValue(message === undefined ? first : second) as
+    | { message?: unknown }
+    | undefined
+  return {
+    level,
+    message:
+      message ??
+      (typeof error?.message === 'string'
+        ? error.message
+        : '[log event could not be read]'),
+    error,
+  }
+}
+
+for (const name of ['log', ...Object.keys(logger.levels)]) {
+  const method = methods[name]
+  methods[name] = function (this: unknown, ...args: unknown[]) {
+    try {
+      return method.apply(this, args)
+    } catch {
+      // logger.log(level, msg, ...meta) or logger.log(info)
+      const [first, ...rest] = args
+      const isLog = name === 'log'
+      const level = !isLog
+        ? name
+        : typeof first === 'string'
+        ? first
+        : levelOf(first)
+      try {
+        writeLog(
+          unreadableEvent(
+            level,
+            isLog && typeof first === 'string' ? rest : args
+          )
+        )
+      } catch {
+        // nothing more can be written
+      }
+      return logger
+    }
+  }
+}
+
+/**
+ * winston's child loggers copy a logged Error into a plain object before any
+ * format runs (`child.error(err)`), so ecsErrors could no longer recognise it
+ * and its request config would be written. The app has none: pass the
+ * metadata in each log call, or set `logger.defaultMeta`, instead.
+ */
+logger.child = () => {
+  throw new Error(
+    'logger.child() is not supported (IGDD-3541): pass the metadata in each log call'
+  )
+}
+
 if (process.env.NODE_ENV === 'production') {
   logger.add(
     new winston.transports.File({

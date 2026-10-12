@@ -352,13 +352,30 @@ describe('error.* fields (IGDD-3541)', () => {
       port: 443,
       $metadata: { requestId: 'R1' },
       url: { full: 'https://hub/x?q=1', path: '/x', query: 'q=1' },
-      reason: { kept: true },
     })
 
     logger.error('x', { err: new Error('e'), error: { message: { a: 1 } } })
     expect(JSON.parse(await lastLine()).error.related).toEqual([
       { message: '{"a":1}' },
     ])
+  })
+
+  it("leaves out an object error's keys that are not error.* fields", async () => {
+    // Without a fixed type, `reason` could be text in one event and an object
+    // in the next, which Elasticsearch rejects.
+    for (const reason of ['text', { kept: true }]) {
+      logger.error('x', { error: { message: 'm', code: 'E1', reason } })
+      expect(JSON.parse(await lastLine()).error).toEqual({
+        message: 'm',
+        code: 'E1',
+      })
+    }
+  })
+
+  it('returns an error object that is already in the ECS shape as it is', async () => {
+    const error = { message: 'm', code: 'E1' }
+    logger.error('x', { error })
+    expect(JSON.parse(await lastLine()).error).toEqual(error)
   })
 
   it('keeps status, statusCode and errno numeric, or drops them', async () => {
@@ -612,26 +629,11 @@ describe('the serializer never writes Error or network object internals (IGDD-35
     expect(doc.circular.err.type).toBe('AxiosError')
   })
 
-  it.each([
-    [
-      'logger.child(meta).error(err)',
-      (child: winston.Logger) => child.error(hubAxiosError()),
-    ],
-    [
-      "logger.child(meta).error('msg', err)",
-      (child: winston.Logger) =>
-        child.error('Hub call failed', hubAxiosError()),
-    ],
-    [
-      'logger.child({ err }).info(msg)',
-      (child: winston.Logger) =>
-        child.child({ err: hubAxiosError() }).info('x'),
-    ],
-  ])('%s: child loggers', async (_shape, log) => {
-    log(logger.child({ requestId: 'r1' }))
-    const line = await lastLine()
-    expectNoSecrets(line)
-    expect(JSON.parse(line).requestId).toBe('r1')
+  it('does not allow child loggers, which flatten an Error before any format runs', () => {
+    // child.error(err) would write the AxiosError's config as plain data.
+    expect(() => logger.child({ requestId: 'r1' })).toThrow(
+      /logger\.child\(\) is not supported/
+    )
   })
 
   it("reduces an Error in a caller's error.related, without running its toJSON", async () => {
@@ -777,6 +779,80 @@ describe('the serializer never writes Error or network object internals (IGDD-35
     expect(JSON.parse(await lastLine())).toMatchObject({
       message: 'x',
       requestId: 'r1',
+    })
+  })
+
+  // winston itself reads these before any format runs.
+  const throwingGetterError = () =>
+    Object.defineProperty(new Error('boom'), 'detail', {
+      enumerable: true,
+      get() {
+        throw new Error('getter exploded')
+      },
+    })
+  const unlistableError = () =>
+    new Proxy(new Error('boom'), {
+      ownKeys() {
+        throw new Error('ownKeys exploded')
+      },
+    })
+
+  it.each([
+    [
+      "logger.error('msg', err) with a throwing getter",
+      () => logger.error('Hub failed', throwingGetterError()),
+    ],
+    [
+      "logger.error('msg', err) whose keys cannot be listed",
+      () => logger.error('Hub failed', unlistableError()),
+    ],
+    [
+      "logger.log('error', 'msg', err) with a throwing getter",
+      () => logger.log('error', 'Hub failed', throwingGetterError()),
+    ],
+    [
+      "console.error('msg', err) with a throwing getter",
+      () => console.error('Hub failed', throwingGetterError()),
+    ],
+  ])(
+    '%s: never throws, and logs the message and error',
+    async (_shape, log) => {
+      expect(log).not.toThrow()
+      const doc = JSON.parse(await lastLine())
+      expect(doc).toMatchObject({
+        message: 'Hub failed',
+        'log.level': 'error',
+        error: { type: 'Error', message: 'boom' },
+      })
+      expect(doc).not.toHaveProperty('detail')
+    }
+  )
+
+  it.each([
+    ['a frozen Error', () => Object.freeze(new Error('boom'))],
+    [
+      'a Proxy that refuses writes',
+      () =>
+        new Proxy(new Error('boom'), {
+          set() {
+            throw new Error('set exploded')
+          },
+        }),
+    ],
+  ])('logger.error(err) for %s: never throws', async (_shape, err) => {
+    expect(() => logger.error(err())).not.toThrow()
+    expect(JSON.parse(await lastLine())).toMatchObject({
+      message: 'boom',
+      error: { type: 'Error', message: 'boom' },
+    })
+  })
+
+  it('logger.log(info) for a frozen event: never throws, at its level', async () => {
+    const info = Object.freeze({ level: 'warn', message: 'frozen' })
+    expect(() => logger.log(info)).not.toThrow()
+    expect(JSON.parse(await lastLine())).toMatchObject({
+      message: 'frozen',
+      'log.level': 'warn',
     })
   })
 

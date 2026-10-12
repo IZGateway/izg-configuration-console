@@ -399,9 +399,11 @@ const serializedForm = (value: unknown) =>
  * - a scalar becomes `{ message }`, an array `{ message: <its JSON> }`, and so
  *   does an object that serializes as a scalar (a Date, a URL, a network
  *   object);
- * - an object keeps its fields, each `error.*` field written as its type in
- *   `ERROR_FIELD_TYPES`; one that cannot be (`status: 'FAILED'`) is left out,
- *   as `toEcsError` does. The object is copied only if a field changes.
+ * - an object keeps only the `error.*` fields in `ERROR_FIELD_TYPES`, each
+ *   written as its type; one that cannot be (`status: 'FAILED'`) is left out,
+ *   as `toEcsError` does. Any other key is left out too: it would have no fixed
+ *   type, so one event could map it as text and the next be rejected for
+ *   writing an object. The object itself is returned if nothing changes.
  *   Without `withRelated` (an item of error.related), `related` is left out.
  */
 const errorValue = (value: unknown, withRelated: boolean): unknown => {
@@ -417,7 +419,8 @@ const errorValue = (value: unknown, withRelated: boolean): unknown => {
   if (json === null || typeof json !== 'object') return value
 
   const fields = json as Fields
-  let copy: Fields | undefined
+  const typed: Fields = {}
+  let changed = false
   for (const [key, type] of Object.entries(ERROR_FIELD_TYPES)) {
     const field = read(() => fields[key])
     if (field === undefined || field === null) continue
@@ -425,12 +428,17 @@ const errorValue = (value: unknown, withRelated: boolean): unknown => {
       type === 'related' && !withRelated
         ? undefined
         : read(() => fromCaller[type](field))
-    if (normalized === field) continue
-    copy ??= copyOwn(fields)
-    if (normalized === undefined) delete copy[key]
-    else copy[key] = normalized
+    if (normalized !== field) changed = true
+    if (normalized !== undefined) typed[key] = normalized
   }
-  return copy ?? value
+  const unchanged =
+    !changed &&
+    read(() =>
+      Object.keys(fields).every((key) =>
+        Object.prototype.hasOwnProperty.call(ERROR_FIELD_TYPES, key)
+      )
+    ) === true
+  return unchanged ? value : typed
 }
 
 /**
@@ -477,8 +485,8 @@ const WINSTON_KEYS = new Set<string | symbol>([
  *
  * The first of these Errors becomes `error`, any others `error.related`, after
  * any non-Error `error` the caller set. Errors anywhere else are left to
- * `safeStringify`. So is `child.error(err)`: winston's child flattens the Error
- * into a plain object before any format runs (the app has no child loggers).
+ * `safeStringify`. (`child.error(err)` would flatten the Error into a plain
+ * object before any format runs, so logger.ts does not allow child loggers.)
  *
  * `defaultMeta` returns the logger's defaultMeta, which winston merges into
  * the event in ways this has to undo or restore.
