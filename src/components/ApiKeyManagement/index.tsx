@@ -543,6 +543,7 @@ const dataGridCustom = {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <Box
+      data-testid={`stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`}
       sx={{
         borderRadius: '12px',
         backgroundColor: palette.greyLight,
@@ -550,7 +551,10 @@ function StatCard({ label, value }: { label: string; value: number }) {
         minWidth: 140,
       }}
     >
-      <Typography sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}>
+      <Typography
+        data-testid="stat-card-value"
+        sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}
+      >
         {value}
       </Typography>
       <Typography
