@@ -1,7 +1,8 @@
 // Canonical use-type categories (IGDD-2707). Used as `AllowedUseType[]` for
 // `ApiKeyCredential.useTypes` (the categories a credential is scoped to) and,
 // in a later change, `Jurisdiction.allowedUseTypes`. The array of this union is
-// the TypeScript type everywhere; storage is a plain DynamoDB List of strings.
+// the TypeScript type everywhere; storage is a DynamoDB String Set (see
+// createApiKeyCredential in src/lib/db/dynamo.ts), which is unordered.
 export type AllowedUseType = 'PATIENT' | 'PROVIDER' | 'PUBLIC_HEALTH'
 
 export const ALLOWED_USE_TYPES: readonly AllowedUseType[] = [
