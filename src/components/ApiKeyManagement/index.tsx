@@ -629,6 +629,7 @@ const DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL: Partial<Record<string, boolean>> =
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <Box
+      data-testid={`stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`}
       sx={{
         borderRadius: '12px',
         backgroundColor: palette.white,
@@ -642,11 +643,8 @@ function StatCard({ label, value }: { label: string; value: number }) {
       }}
     >
       <Typography
-        sx={{
-          fontSize: { xs: '1.5rem', md: '1.75rem' },
-          fontWeight: 700,
-          lineHeight: 1.2,
-        }}
+        data-testid="stat-card-value"
+        sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}
       >
         {value}
       </Typography>
