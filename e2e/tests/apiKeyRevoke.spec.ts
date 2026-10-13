@@ -52,8 +52,7 @@ test('Revoking an active key sets status to Revoked and disables further actions
       domain: AUTHORIZED_TEST_DOMAIN,
       useType: TEST_USE_TYPE,
       description,
-    })
-  )
+    }))
   const revokedBefore = await revokedCount()
 
   await row.getByLabel('Revoke key').click()
@@ -74,16 +73,12 @@ test('Revoking an active key sets status to Revoked and disables further actions
   await revokeDialog.getByRole('button', { name: 'CONFIRM REVOCATION' }).click()
   await expect(revokeDialog).toBeHidden()
 
-  await expect(
-    page.getByText(`${TEST_ORG_NAME} API Key revoked`)
-  ).toBeVisible()
+  await expect(page.getByText(`${TEST_ORG_NAME} API Key revoked`)).toBeVisible()
   await expect(page.getByText('This key can no longer be used.')).toBeVisible()
 
   await expect(row.getByTestId('FlagIcon')).toBeVisible()
   await expect(row).toContainText(/Revoked \d{1,2}\/\d{1,2}\/\d{4}/)
   await expect(row.getByRole('button')).toHaveCount(0)
 
-  await expect
-    .poll(revokedCount)
-    .toBe(revokedBefore + 1)
+  await expect.poll(revokedCount).toBe(revokedBefore + 1)
 })

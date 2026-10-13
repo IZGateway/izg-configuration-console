@@ -1,5 +1,11 @@
 import { Page, expect } from '@playwright/test'
 
+// The API keys page shows one card per key below 1344px and collapses the row
+// actions into one "More Options" button below 1600px. Specs that read grid
+// rows, grid cells or the row action buttons must run wider than both. The
+// config's default 1280px viewport shows cards.
+export const API_KEYS_VIEWPORT = { width: 1680, height: 1050 }
+
 // Navigates directly to the API Key Management page rather than clicking the
 // nav link — the nav entry is gated behind both a role check and the
 // apiKeyManagementEnabled release flag (see menuItems.tsx), so a direct visit
