@@ -1,7 +1,11 @@
 import { test, expect, Page } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
-import { openApiKeyManagement, getStatCardValue } from '../helpers/apiKeyHelpers'
+import {
+  API_KEYS_VIEWPORT,
+  openApiKeyManagement,
+  getStatCardValue,
+} from '../helpers/apiKeyHelpers'
 
 const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
 
@@ -15,7 +19,9 @@ test.describe('API Key Management dashboard', () => {
       test.skip(true, `Missing env vars: ${missing.join(', ')}`)
     }
 
-    context = await browser.newContext()
+    // A context made here does not inherit test.use(), so the viewport is set
+    // on it directly. See API_KEYS_VIEWPORT.
+    context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
     page = await context.newPage()
 
     await loginToOkta(
@@ -51,9 +57,11 @@ test.describe('API Key Management dashboard', () => {
       ['environment', 'ENVIRONMENT'],
       ['jurisdiction', 'ORGANIZATION'],
       ['domain', 'DNS'],
+      ['useTypes', 'USE TYPES'],
       ['status', 'STATUS'],
-      ['created', 'CREATED'],
-      ['expires', 'EXPIRES'],
+      // One DURATION column replaced CREATED and EXPIRES. It keeps the
+      // `created` field, so the default sort still applies to it.
+      ['created', 'DURATION'],
       ['createdBy', 'CREATED BY'],
       ['actions', 'ACTION'],
     ]
@@ -61,7 +69,7 @@ test.describe('API Key Management dashboard', () => {
       // Matched by data-field (mirroring the repo's existing gridcell
       // convention) rather than accessible name: MUI appends hidden sort
       // text ("sorted descending") to whichever header is actively sorted
-      // (CREATED, by default here), which breaks a plain/exact name match.
+      // (DURATION, by default here), which breaks a plain/exact name match.
       const header = page.locator(
         `div[data-field="${field}"][role="columnheader"]`
       )
@@ -81,7 +89,13 @@ test.describe('API Key Management dashboard', () => {
     await expect(descriptionText).toBeVisible()
     await descriptionText.hover()
 
-    const tooltip = page.getByRole('tooltip')
+    // Scoped by accessible name, not just role: the grid's DNS column has its
+    // own Tooltip on truncated domains (same pattern as DESCRIPTION), and
+    // Playwright's hover() can graze that cell en route, leaving both open —
+    // a bare getByRole('tooltip') then resolves to 2 elements and throws
+    // under strict mode (seen in nightly CI once another spec's leftover
+    // test key with a long domain sorted to the first row).
+    const tooltip = page.getByRole('tooltip', { name: /^ID\b/ })
     await expect(tooltip).toBeVisible()
     const tooltipText = (await tooltip.innerText()).trim()
     // Tooltip renders as "ID\n<jti>" (ApiKeyManagement/index.tsx) — assert
