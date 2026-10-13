@@ -212,7 +212,8 @@ describe('enforceRouteAuthz: capability rules', () => {
       // Page-qualified: a bare capability is ambiguous, since
       // canViewChangeRequest exists on two page blocks.
       permission: 'adminoperations.canManagePasswordEncryption',
-      url: '/api/rotatekey',
+      // The ECS object, never a string, or Elastic rejects it (IGDD-3541).
+      url: { path: '/api/rotatekey' },
       method: 'POST',
       roles: ['Jurisdiction Operations'],
     })
@@ -473,5 +474,34 @@ describe('a refused request always gets a response', () => {
 
     expect(handler).not.toHaveBeenCalled()
     expect(res.status).toHaveBeenCalledWith(403)
+  })
+})
+
+// IGDD-3541: a string `url` makes Elastic reject the whole document, so the
+// error trap's log silently never arrived. Assert the emitted shape directly —
+// nothing else would notice, since the event still prints to stdout.
+describe('captureErrors log shape (IGDD-3541)', () => {
+  it('logs the request url as the ECS object, never a string', async () => {
+    signIn(['IZG Operations'])
+    const errorSpy = jest
+      .spyOn(logger, 'error')
+      .mockImplementation(() => undefined as never)
+    const res = response()
+    const handler = jest.fn(async () => {
+      throw new Error('boom')
+    })
+
+    await withMiddleware({ session: true }, 'captureErrors')(handler)(
+      request('POST', '/api/status/reset?env=dev'),
+      res
+    )
+
+    const call: any = errorSpy.mock.calls.find(
+      (c: any) => c[0] === 'Unhandled error in request'
+    )
+    expect(call).toBeDefined()
+    expect(call[1].url).toEqual({ path: '/api/status/reset', query: 'env=dev' })
+    expect(res.status).toHaveBeenCalledWith(500)
+    errorSpy.mockRestore()
   })
 })
