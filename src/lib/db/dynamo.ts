@@ -586,6 +586,17 @@ class Dynamo implements DbClient {
     destinations: Array<string>
   ): Promise<Destination[]> {
     // DONE
+    if (!isAdmin && destinations.length === 0) {
+      // Fail closed rather than build `destId IN ()`, which DynamoDB rejects.
+      // A scoped caller with no jurisdictions assigned is a reachable state
+      // (Okta userinfo failure, or a user not yet assigned one) and not an
+      // invariant violation — see accesshelper.ts:29-39 for the same guard one
+      // layer up.
+      logger.warn(
+        'Returning empty destination list: scoped caller has no assigned jurisdictions'
+      )
+      return []
+    }
     const params: QueryCommandInput = {
       TableName: TABLE_NAME,
       KeyConditionExpression: 'entityType = :entityType',
