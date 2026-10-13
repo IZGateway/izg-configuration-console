@@ -57,6 +57,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-to-print": "^2.15.1",
+    "safe-stable-stringify": "^2.5.0",
     "swagger-ui-react": "^5.33.2",
     "swr": "^2.5.1",
     "waait": "^1.0.5",
