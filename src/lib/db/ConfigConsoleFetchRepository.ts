@@ -48,7 +48,6 @@ export default interface ConfigConsoleFetchRepository {
     destinationId: string,
     principal: string
   ): Promise<AllowedUser | null>
-  fetchAllowedUsers(): Promise<AllowedUser[]>
   fetchAllowedUsersByDestination(
     isAdmin: boolean,
     destinations: Array<string>

@@ -22,6 +22,9 @@ type ManageConnectionsPageAccessControl = {
 
 type OnboardingPageAccessControl = {
   canViewOnboarding: boolean
+  // Add, edit, promote, demote and delete a sender (IGDD-3546). Separate from
+  // canViewOnboarding so a view-only role cannot mutate the list it can see.
+  canManageSenders: boolean
 }
 
 type TestPageAccessControl = {
