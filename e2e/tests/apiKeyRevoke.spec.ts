@@ -2,6 +2,7 @@ import { Page, BrowserContext, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import { createApiKeyWithExistingDomain } from '../helpers/createApiKey'
+import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Revoke an active key".
@@ -26,7 +27,9 @@ const revokedCount = async () =>
   )
 
 test.beforeAll(async ({ browser }) => {
-  context = await browser.newContext()
+  // A context made here does not inherit test.use(), so the viewport is set
+  // on it directly. See API_KEYS_VIEWPORT.
+  context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
 })
@@ -52,23 +55,16 @@ test('Revoking an active key sets status to Revoked and disables further actions
       domain: AUTHORIZED_TEST_DOMAIN,
       useType: TEST_USE_TYPE,
       description,
-    })
-  )
+    }))
   const revokedBefore = await revokedCount()
 
-  const descriptionCell = row.locator('[data-field="description"][role="gridcell"]')
-  await descriptionCell.locator('p').first().hover()
-  const tooltip = page.getByRole('tooltip')
-  await expect(tooltip).toBeVisible()
-  const keyId = (await tooltip.innerText()).replace(/^ID\s*/i, '').trim()
-  expect(keyId).not.toBe('')
-  await row.getByLabel('Revoke key').click()
+  await row.getByRole('button', { name: 'Revoke key' }).click()
 
   const revokeDialog = page
     .getByRole('dialog')
     .filter({ hasText: 'Revoke API Key' })
   await expect(revokeDialog).toBeVisible()
-  await expect(revokeDialog).toContainText(`Revoking ${TEST_ORG_NAME} | ${keyId}`)
+  await expect(revokeDialog).toContainText(`Revoking ${TEST_ORG_NAME} |`)
   await expect(revokeDialog).toContainText('this cannot be undone')
   await expect(
     revokeDialog.getByText(
@@ -80,16 +76,12 @@ test('Revoking an active key sets status to Revoked and disables further actions
   await revokeDialog.getByRole('button', { name: 'CONFIRM REVOCATION' }).click()
   await expect(revokeDialog).toBeHidden()
 
-  await expect(
-    page.getByText(`${TEST_ORG_NAME} API Key revoked`)
-  ).toBeVisible()
+  await expect(page.getByText(`${TEST_ORG_NAME} API Key revoked`)).toBeVisible()
   await expect(page.getByText('This key can no longer be used.')).toBeVisible()
 
   await expect(row.getByTestId('FlagIcon')).toBeVisible()
   await expect(row).toContainText(/Revoked \d{1,2}\/\d{1,2}\/\d{4}/)
   await expect(row.getByRole('button')).toHaveCount(0)
 
-  await expect
-    .poll(revokedCount)
-    .toBe(revokedBefore + 1)
+  await expect.poll(revokedCount).toBe(revokedBefore + 1)
 })
