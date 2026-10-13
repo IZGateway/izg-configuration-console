@@ -89,7 +89,13 @@ test.describe('API Key Management dashboard', () => {
     await expect(descriptionText).toBeVisible()
     await descriptionText.hover()
 
-    const tooltip = page.getByRole('tooltip')
+    // Scoped by accessible name, not just role: the grid's DNS column has its
+    // own Tooltip on truncated domains (same pattern as DESCRIPTION), and
+    // Playwright's hover() can graze that cell en route, leaving both open —
+    // a bare getByRole('tooltip') then resolves to 2 elements and throws
+    // under strict mode (seen in nightly CI once another spec's leftover
+    // test key with a long domain sorted to the first row).
+    const tooltip = page.getByRole('tooltip', { name: /^ID\b/ })
     await expect(tooltip).toBeVisible()
     const tooltipText = (await tooltip.innerText()).trim()
     // Tooltip renders as "ID\n<jti>" (ApiKeyManagement/index.tsx) — assert
