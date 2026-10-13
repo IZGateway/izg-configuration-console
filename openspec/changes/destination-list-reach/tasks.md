@@ -33,10 +33,13 @@ disappears.
   Verify that `logger` is already imported at `src/lib/db/dynamo.ts:42` and that the entry
   names the condition, so an operator can find a user with no jurisdiction assigned.
 
-- [x] 1.4 Do not change the branch shape of `fetchAllowedUsersByDestination`
-  (`src/lib/db/dynamo.ts:2506`). Verify that it is untouched in `git diff`. It tests
-  `isAdmin || destinations.length === 0` and then runs an **unfiltered** query, which is
-  fail-open and the opposite of this change. It belongs to IGDD-3552. See design Risks.
+- [x] 1.4 ~~Do not change the branch shape of `fetchAllowedUsersByDestination`~~ — superseded
+  by group 6. At the time this task was written, `fetchAllowedUsersByDestination`
+  (`src/lib/db/dynamo.ts:2510`) tested `isAdmin || destinations.length === 0` and then ran an
+  **unfiltered** query, fail-open, and this task deferred fixing it to IGDD-3552. PR #729
+  review marked that deferral Blocking once `GET /api/allowedusers` started calling this same
+  function directly (group 6) and Jurisdiction Operations gained write access through it. See
+  task 6.1 and design Decision 7.
 
 - [x] 1.5 Create `src/lib/db/dynamo.destinationReach.test.ts` with a
   `@jest-environment node` docblock, built on the `dynamo.upsertAllowedUser.test.ts` mock
@@ -216,26 +219,88 @@ disappears.
   the authority, so implementation-time confirmation is not a substitute for that signoff.
   Record it on IGDD-3546 before merge.
 
-- [ ] 5.10 Note in the PR description: `canManageSenders` is granted to Jurisdiction
-  Operations, a `globalTenancy: false` role, on a write path
-  (`fetchAllowedUsers`/`upsertAllowedUser`/`deleteAllowedUser`) that applies no jurisdiction
-  filter. So Jurisdiction Operations can write onboarding senders in any jurisdiction, not
-  only its own. This is pre-existing — the same was already true under the single
-  `canViewOnboarding` gate — and this change does not widen it; `canManageSenders`
-  deliberately stays out of `REQUIRES_GLOBAL_TENANCY` because adding it there would incorrectly
-  deny the very grant the matrix owner is being asked to confirm. Flagging this only so the
-  matrix owner ratifying "Jurisdiction Operations = write" does not assume the write is
-  jurisdiction-scoped. Actually scoping the write path is a separate ticket, not this one.
+- [x] 5.10 ~~Note in the PR description that the write path applies no jurisdiction
+  filter~~ — superseded by group 6. This task originally recorded that
+  `canManageSenders` granted write on any jurisdiction's senders, deliberately deferring the
+  fix. PR #729 review marked that gap Blocking; it is fixed, not merely disclosed. See task
+  6.3.
+
+## 6. PR #729 review: jurisdiction-scope the onboarding write path (2026-10-13)
+
+Two 🔴 Blocking findings from human review: the IGDD-3546 capability split (group 5) answered
+*who* may write but never restricted *which* jurisdiction's rows GET returned or POST/DELETE
+could touch. The design had deferred this to IGDD-3552; the reviewer's Blocking severity
+overrides that deferral. See design.md Decision 7 and proposal.md "Scope expansion: PR #729
+review".
+
+- [x] 6.1 Add the same empty-jurisdiction fail-closed guard from task 1.2 to
+  `fetchAllowedUsersByDestination` (`src/lib/db/dynamo.ts`). Verify with the new
+  `src/lib/db/dynamo.allowedUsersByDestination.test.ts` (5/5 pass): a global caller reads
+  with no filter, a scoped caller with one destination reads with that filter, an empty list
+  returns `[]` and sends no command, and the empty case logs a warning.
+
+- [x] 6.2 Change `GET /api/allowedusers` (`src/pages/api/allowedusers/index.ts`) to call
+  `fetchAllowedUsersByDestination(hasGlobalTenancy(subject), subject.jurisdictions)` instead
+  of the unfiltered `fetchAllowedUsers()`. Verify with new cases in
+  `src/__tests__/api/allowedusers/index.test.ts`: a scoped role's GET passes its own
+  jurisdiction claim, not an unfiltered read; a global role's GET passes no filter.
+
+- [x] 6.3 Add `hasAccessToDestId(body.destinationId, session)` to `POST` and `DELETE` in the
+  same file, returning `403` with a `logAccessDenied` entry when the destination is outside
+  the caller's reach. Verify with new cases: a Jurisdiction Operations caller is refused
+  outside its own jurisdiction on both POST and DELETE (and the DB write is never called),
+  and still succeeds within its own jurisdiction; a global role (IZG Operations) is
+  unaffected.
+
+- [x] 6.4 Delete `fetchAllowedUsers()` — after 6.2 it has no caller. Verify it is removed from
+  `src/lib/db/dynamo.ts`, `src/lib/db/ConfigConsoleFetchRepository.ts`, and
+  `src/lib/db/DbClientFactory.ts`, and that `npx tsc --noEmit` is clean.
+
+- [x] 6.5 Switch `src/pages/api/allowedusers/bydestination/index.ts` and
+  `src/pages/onboarding/index.tsx`'s `getServerSideProps` from `isOperationsRole` to
+  `subjectOf` + `hasGlobalTenancy`, matching defect 1's fix on `/api/destinations`. Verify
+  with the new `src/__tests__/pages/onboarding/index.test.ts` (3/3 pass): a global role reads
+  with no filter, a scoped role reads with its claim, and an empty claim is passed through as
+  scoped rather than promoted to global.
+
+- [x] 6.6 Add a `split-decision` row to `authzDebt.ts` for `allowedusers/index.ts`, naming the
+  residual risk that 6.3's `hasAccessToDestId` call unions reach across held roles the same
+  way the route's capability declaration unions capability across held roles — same shape as
+  the existing `changerequest/index.ts` row. Verify `npx jest
+  src/lib/security/accessregistry.test.ts` still passes (ticket-format check on the new row).
+
+- [x] 6.7 Hide the onboarding grid's ACTION column entirely for a caller who lacks
+  `canManageSenders`, rather than rendering the column header over empty cells
+  (`src/components/Onboarding/index.tsx`). Verify by reading the column definition: the
+  column object itself is now conditionally spread into the array, not rendered as `null`
+  per-cell.
+
+- [x] 6.8 Also fix the nit this review raised on `src/pages/api/destinations/index.ts`: read
+  `subject.jurisdictions` (already normalized and lowercased by `subjectOf`) instead of the
+  raw `session.user.jurisdictions`. Verify `npx jest src/__tests__/api/destinations` still
+  passes.
+
+- [~] 6.9 Pagination / 100-value `IN`-filter limit, raised 🟡 non-blocking on
+  `fetchLoggedInUsersDestinations`: DynamoDB returns at most 1MB per query with no
+  `LastEvaluatedKey` loop, and the `IN` filter caps at 100 values. The reviewer's own
+  assessment: "Neither is likely today." Deliberately deferred, not implemented in this pass
+  — flag as a follow-up rather than silently dropped. No ticket filed yet; needs one before
+  this task can close.
+
+- [x] 6.10 Update `design.md`, `proposal.md`, and the two spec deltas
+  (`jurisdiction-row-scoping`, `onboarding-sender-write-authorization`) so the written scope
+  matches what group 6 actually implemented. The two stale Non-Goals Copilot flagged ("no new
+  capability flag", "no fix to the sibling read") are corrected rather than left contradicting
+  the code.
 
 - [ ] 4.3 Add the expected test delta to the release notes for testers: an IZG Support
-  account now sees every destination where it previously saw an error, and Jurisdiction
+  account now sees every destination where it previously saw an error; Jurisdiction
   Support / IZG Support accounts lose onboarding-sender write access they previously had
-  via the coarse `canViewOnboarding` gate (now view-only, per IGDD-3546). Verify that the
-  note exists, so a tester comparing against the IGDD-3472 baseline can tell each intended
-  change from a regression.
+  via the coarse `canViewOnboarding` gate (now view-only, per IGDD-3546); and a
+  Jurisdiction Operations account can no longer write another jurisdiction's senders
+  (per group 6). Verify that the note exists, so a tester comparing against the IGDD-3472
+  baseline can tell each intended change from a regression.
 
-- [ ] 4.4 Raise the sibling fail-open read on IGDD-3552 as a Jira comment, with the
-  reachability evidence from design Risks: `canViewOnboarding` gates that route,
-  `Jurisdiction Operations` and `Jurisdiction Support` both hold it, and both declare
-  `globalTenancy: false`. Verify that the comment is posted, so the finding does not stay
-  in a design document only.
+- [x] 4.4 ~~Raise the sibling fail-open read on IGDD-3552 as a Jira comment~~ — superseded by
+  group 6. The finding is fixed in this change (task 6.1) rather than raised for a separate
+  ticket to fix later.

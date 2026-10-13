@@ -2481,32 +2481,6 @@ class Dynamo implements DbClient {
     }
   }
 
-  async fetchAllowedUsers(): Promise<AllowedUser[]> {
-    logger.debug('Fetching all allowed users')
-    const params: QueryCommandInput = {
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'entityType = :entityType',
-      ExpressionAttributeValues: {
-        ':entityType': 'AllowedUser',
-      },
-    }
-    try {
-      const result = await dynamodDbDocClient.send(new QueryCommand(params))
-      logger.debug(`Fetched ${result.Items?.length || 0} allowed users`)
-      return result.Items.map((item) => this.convertResponseToAllowedUser(item))
-    } catch (error) {
-      logger.error('Error fetching all allowed users from DynamoDB', {
-        tableName: TABLE_NAME,
-        entityType: 'AllowedUser',
-        errorMessage: error.message,
-        errorType: error.name,
-        stack: error.stack,
-        operation: 'fetchAllowedUsers',
-      })
-      throw error
-    }
-  }
-
   async fetchAllowedUsersByDestination(
     isAdmin: boolean,
     destinations: Array<string>
@@ -2514,7 +2488,20 @@ class Dynamo implements DbClient {
     // NOTE: Query cannot filter on sortKey fragments using FilterExpression referencing primary key.
     // For non-admin with destination restrictions we fall back to Scan + FilterExpression on destinationId attribute.
     // Optimization: add a GSI on destinationId to allow efficient queries later.
-    if (isAdmin || destinations.length === 0) {
+    if (!isAdmin && destinations.length === 0) {
+      // Fail closed rather than fall into the admin branch below, which would
+      // run an unfiltered query. A scoped caller with no jurisdictions
+      // assigned is a reachable state (Okta userinfo failure, or a user not
+      // yet assigned one), not an invariant violation — same guard as
+      // fetchLoggedInUsersDestinations (IGDD-3542) and accesshelper.ts:29-39.
+      // Reachable both from the onboarding page's SSR load and, as of
+      // IGDD-3546, from GET /api/allowedusers directly.
+      logger.warn(
+        'Returning empty allowed-user list: scoped caller has no assigned jurisdictions'
+      )
+      return []
+    }
+    if (isAdmin) {
       const params: QueryCommandInput = {
         TableName: TABLE_NAME,
         KeyConditionExpression: 'entityType = :entityType',

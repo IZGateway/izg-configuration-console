@@ -97,6 +97,19 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
       'other routes and changing its status code can affect client retry behaviour.',
   },
   {
+    kind: 'split-decision',
+    subject: 'allowedusers/index.ts',
+    ticket: 'IGDD-3546',
+    note:
+      'POST/DELETE declare onboarding.canManageSenders with ANY_JURISDICTION; the handler ' +
+      'separately calls hasAccessToDestId on body.destinationId, which unions reach across roles. ' +
+      'Jurisdiction Operations (holds canManageSenders, scoped) plus IZG Support (global reach, ' +
+      'holds no onboarding write) can therefore write a sender outside the granting role reach. ' +
+      'Strictly narrower than before this row existed, when POST/DELETE applied no reach check at ' +
+      'all — see PR #729 review. Same shape as the changerequest/index.ts row above; closing it ' +
+      'needs destinationId resolved against one role-local decision rather than two unioned checks.',
+  },
+  {
     kind: 'ungated-page',
     subject: 'api-doc',
     ticket: 'IGDD-3472',

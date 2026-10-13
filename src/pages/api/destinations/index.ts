@@ -34,7 +34,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // this is not the PR #700 leak (capability + unrelated role's reach).
       const subject = subjectOf(session)
       const hasGlobalReach = hasGlobalTenancy(subject)
-      const jurisdictions = session.user.jurisdictions || []
+      const jurisdictions = subject.jurisdictions
 
       const dbClient = await DbClientFactory.getDbClient()
       const result = await dbClient.fetchLoggedInUsersDestinations(

@@ -33,15 +33,27 @@ IGDD-3552 owns that rename and states that IGDD-3542 lands first.
 - Leave a record of why a union across roles is correct on this read, so that a reviewer
   does not read the fix as the leak that PR #700 closed.
 
-**Non-Goals:**
+**Non-Goals** (as originally scoped — see "Scope expansion" notes below for what grew):
 
 - No change to the reach parameter name through the database interface. That is IGDD-3552.
 - No change to `session.user.isAdmin` itself, nor to the session callback that computes it.
   Other readers keep it until IGDD-3552 removes it.
-- No fix to the sibling read `fetchAllowedUsersByDestination`. See Risks.
 - No change to the `destId IN (...)` filter model, and no move to a jurisdiction prefix
   match.
-- No new capability flag. Reach is not a capability.
+- No new capability flag on the destination-reach decision itself. Reach is not a
+  capability. (`onboarding.canManageSenders`, added when IGDD-3546 was folded in below, is a
+  capability on a *different* decision — whether a role may write at all — not on this one.)
+
+**Two Non-Goals from the original scope no longer hold, because PR review on #729 moved
+them into scope:**
+
+- ~~No fix to the sibling read `fetchAllowedUsersByDestination`.~~ Its empty-jurisdiction
+  guard is now fixed, mirroring `fetchLoggedInUsersDestinations`. See "Scope expansion:
+  PR #729 review" below and Risks.
+- ~~No new capability flag.~~ `onboarding.canManageSenders` was added when IGDD-3546 was
+  folded in (2026-10-12) — see proposal.md. This Non-Goal, as written, was already stale
+  before the #729 review round; it described the destination-reach decision only and was
+  never updated after the fold-in made it read as covering the whole change.
 
 ## Decisions
 
@@ -141,6 +153,40 @@ The Jest default environment is `jsdom`, and `CLAUDE.md` records that jsdom suit
 with `ERR_REQUIRE_ESM` from an upstream packaging bug. Both new tests must declare
 `@jest-environment node`, as both templates already do.
 
+### Decision 7: PR #729 review — scope the onboarding write path by jurisdiction too (2026-10-13)
+
+Human review on #729 found that IGDD-3546's capability split answered *who* may write
+(`canManageSenders`) without ever restricting *which* jurisdiction's rows — a gap this
+design originally deferred to IGDD-3552 (see the now-struck Non-Goals above). The reviewer
+marked it Blocking, which overrides that deferral. Changes made in response:
+
+- `GET /api/allowedusers` now calls `fetchAllowedUsersByDestination(hasGlobalTenancy(...),
+  jurisdictions)` instead of the unfiltered `fetchAllowedUsers()` (now deleted — it had no
+  other caller). Before this, any role holding `canViewOnboarding` got every jurisdiction's
+  senders from a direct call to this route, even though the onboarding page's own SSR load
+  was already correctly scoped.
+- `POST`/`DELETE` each call `hasAccessToDestId(body.destinationId, session)` before writing,
+  returning 403 if the destination is outside the caller's reach. This is a per-request
+  rejection gate, not a row filter, so it uses `logAccessDenied` per
+  `accessDeniedAudit.ts`'s own rule against logging from a row-filter predicate.
+- `fetchAllowedUsersByDestination` (the "sibling read" in Risks below) gets the same
+  empty-jurisdiction fail-closed guard as `fetchLoggedInUsersDestinations`, rather than being
+  deferred to IGDD-3552. This was no longer just latent once GET started calling it directly
+  and Jurisdiction Operations gained write access through the same function.
+- `src/pages/api/allowedusers/bydestination/index.ts` and
+  `src/pages/onboarding/index.tsx`'s `getServerSideProps` switch from `isOperationsRole` to
+  `hasGlobalTenancy`, for the same reason Decision 1 gives for `/api/destinations`: the two
+  currently select the same roles, but answer different questions, and a future role that
+  needs one without the other would otherwise silently get both.
+
+**This reintroduces the Decision 2 union risk on a new pair.** `hasAccessToDestId` unions
+reach across every held role, same as the capability check the route middleware already
+runs. A caller holding Jurisdiction Operations (scoped, grants `canManageSenders`) plus IZG
+Support (global reach, grants no onboarding write) could combine the two into a write outside
+the granting role's own reach. This is the same shape as the pre-existing
+`changerequest/index.ts` entry in `authzDebt.ts`, not a new class of gap, and is recorded
+there as a `split-decision` row rather than solved with a same-role check in this pass.
+
 ## Risks / Trade-offs
 
 **The reach row's authority rests on one person's notes.** → The target RBAC matrix already
@@ -159,21 +205,19 @@ a one-line confirmation on IGDD-3542 that the row is ratified. Anusha Kanuri rep
 ticket, so the asker and the source are already in the same place. State the reach change
 in the pull request either way.
 
-**The matrix says IZG Support must not add or edit onboarding senders.** → The
-`CC | Onboarding Senders — add / edit` row gives IZG Support `—`, and its enforcement column
-reads "Not enforced". The code has one onboarding capability, `canViewOnboarding`, which
-IZG Support holds, and `src/pages/api/allowedusers/index.ts:485-486` gates `POST` and
-`DELETE` on that one flag. So IZG Support can submit senders today. The 500 on the
-destination list is the only thing that stops the form from working.
+**The matrix says IZG Support must not add or edit onboarding senders.** → This was the
+state when this risk was first written: the code had one onboarding capability,
+`canViewOnboarding`, which IZG Support held, and `allowedusers/index.ts` gated `POST` and
+`DELETE` on that one flag, so IZG Support could submit senders. Separating read from write
+was IGDD-3471/IGDD-3546.
 
-This change therefore removes an accidental barrier that happens to match a target-matrix
-row that nothing enforces. The change does not cause the condition and does not fix it.
-Separating read from write is IGDD-3471, which is already linked to this ticket, and the
-archived `admin-page-access` spec records the separation as deliberately deferred.
-
-Mitigation: this is a sequencing question for the team, not a code question. The row affects
-the release note and the test plan, not this diff. Either ship this change and accept that
-IZG Support can add senders until IGDD-3471 splits the flag, or land IGDD-3471 first.
+**Resolved by folding IGDD-3546 into this change (2026-10-12).** `onboarding.canManageSenders`
+is now a separate capability from `canViewOnboarding`, granted only to IZG Operations and
+Jurisdiction Operations — see proposal.md "Scope expansion" and
+`specs/onboarding-sender-write-authorization/spec.md`. IZG Support can no longer add, edit,
+promote, demote, or delete a sender. What remains open is matrix-owner ratification of the
+grant itself (tasks.md 5.9) and the manual browser walkthrough confirming the controls are
+actually absent in the UI (tasks.md 5.8) — both pre-merge gates, not open design questions.
 
 **A tester cannot tell the widening from a regression.** → IGDD-3472 nominates an IZG
 Support account as its release gate, and that account now sees more destinations than the
@@ -188,21 +232,23 @@ required by Decision 2, which names the precedent and the reason.
 empty list rather than an error, so a misconfigured account can go unnoticed. Mitigation:
 the warning log required by Decision 4.
 
-**The sibling read fails open, and it is reachable today.** →
-`fetchAllowedUsersByDestination` (`src/lib/db/dynamo.ts:2506`) tests
-`isAdmin || destinations.length === 0` and then runs an **unfiltered** query. A non-global
-caller with no jurisdictions receives every allowed-user row.
+**The sibling read failed open, and it was reachable today.** →
+`fetchAllowedUsersByDestination` (`src/lib/db/dynamo.ts:2510`) tested
+`isAdmin || destinations.length === 0` and then ran an **unfiltered** query. A non-global
+caller with no jurisdictions received every allowed-user row.
 
-This is not merely latent. `canViewOnboarding` gates that route, and both
+This was not merely latent. `canViewOnboarding` gates the routes that call it, and both
 `Jurisdiction Operations` (`_JurisdictionOperationsAccess.ts:76`) and
 `Jurisdiction Support` (`_JurisdictionSupportAccess.ts:60`) hold it. Both declare
-`globalTenancy: false`. So a Jurisdiction Operations user whose Okta jurisdiction claim is
-empty reads every organization's allowed-user records today. The exposure is wider than
-the defect this ticket fixes, and the trigger is the same empty claim.
+`globalTenancy: false`. So a Jurisdiction Operations user whose Okta jurisdiction claim was
+empty read every organization's allowed-user records. Once IGDD-3546 gave Jurisdiction
+Operations write access through this same function, the exposure stopped being read-only.
 
-Mitigation: it is out of scope here and belongs to IGDD-3552. Raise it on that ticket with
-the reachability evidence above, rather than leave it in a design document only. Do not copy
-that branch shape into the destination read.
+**Resolved in Decision 7 (2026-10-13), after PR #729 review marked it Blocking rather than
+accepting the IGDD-3552 deferral.** `fetchAllowedUsersByDestination` now has the same
+empty-jurisdiction fail-closed guard as `fetchLoggedInUsersDestinations`, covered by
+`dynamo.allowedUsersByDestination.test.ts`. The `isAdmin` parameter rename itself is still
+IGDD-3552's, unaffected by this fix.
 
 ## Migration Plan
 
@@ -213,10 +259,10 @@ Deploy is an ordinary application deploy. Rollback is a revert of the commit, wh
 the 500 for IZG Support and removes the widened reach together.
 
 Order matters for one reason only. Land this after IGDD-3472 ships, so its release gate
-captures a clean baseline. Land this before IGDD-3552 starts, as that ticket requires.
+captures a clean baseline. Land this before IGDD-3552 starts, as that ticket requires —
+IGDD-3552 still owns the `isAdmin` parameter rename, which this change does not touch.
 
 ## Open Questions
 
-- Whether the sibling fail-open read is fixed inside IGDD-3552 or raised as its own bug.
-  This does not change this change's specs, approach, or tasks. It needs a decision on
-  IGDD-3552 before that ticket is picked up.
+None open. The sibling fail-open read question (whether to fix it here or inside IGDD-3552)
+is resolved by Decision 7: PR #729 review fixed it here rather than deferring it.

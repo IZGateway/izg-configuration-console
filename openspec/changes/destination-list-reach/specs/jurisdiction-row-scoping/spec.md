@@ -124,3 +124,33 @@ set of destinations across the application.
 - **WHEN** the user opens either surface
 - **THEN** the selector SHALL be empty
 - **AND** no error message SHALL be shown
+
+### Requirement: The same reach decision applies to the onboarding sender read
+
+`GET /api/allowedusers` SHALL decide row reach the same way as the destination list: from
+the role matrix's global-tenancy value, failing closed on an empty jurisdiction claim rather
+than returning every sender. Added after PR #729 review found this route calling an
+unfiltered read while the onboarding page's own server-side load was already correctly
+scoped — the same capability, applied inconsistently across two code paths reading the same
+data.
+
+#### Scenario: A globally scoped role sees every sender
+
+- **GIVEN** a user whose only role declares global tenancy
+- **WHEN** the user calls `GET /api/allowedusers`
+- **THEN** the response SHALL contain senders from every jurisdiction
+
+#### Scenario: A scoped role sees only its own jurisdiction's senders
+
+- **GIVEN** a user who holds no role with global tenancy and whose jurisdiction claim is `az`
+- **WHEN** the user calls `GET /api/allowedusers`
+- **THEN** the response SHALL contain only senders whose destinationId equals `az`
+
+#### Scenario: A caller with no reach receives an empty list, not every row
+
+- **GIVEN** a user who holds no role with global tenancy and whose jurisdiction claim is
+  empty
+- **WHEN** the user calls `GET /api/allowedusers`
+- **THEN** the response status SHALL be `200`
+- **AND** the response body SHALL be an empty list
+- **AND** the empty claim SHALL NOT be treated as unrestricted reach

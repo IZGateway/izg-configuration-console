@@ -771,60 +771,66 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
         )
       },
     },
-    {
-      field: 'action',
-      headerName: 'ACTION',
-      sortable: false,
-      filterable: false,
-      flex: 0.3,
-      minWidth: 120,
-      maxWidth: 350,
-      renderCell: (params) =>
-        canManageSenders ? (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Tooltip arrow title="Edit">
-              <IconButton
-                sx={actionButtonStyle}
-                size="small"
-                color="primary"
-                onClick={() => handleEditSender(params.row.id)}
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip
-              arrow
-              title={params.row.isConnected ? 'Disconnect' : 'Connect'}
-            >
-              <IconButton
-                sx={actionButtonStyle}
-                size="small"
-                color="secondary"
-                onClick={() => handleWifiToggle(params.row.id)}
-              >
-                {params.row.isConnected ? (
-                  <WifiIcon color="secondary" fontSize="small" />
-                ) : (
-                  <WifiOffIcon
-                    sx={{ color: palette.secondaryDark }}
-                    fontSize="small"
-                  />
-                )}
-              </IconButton>
-            </Tooltip>
-            <Tooltip arrow title="Delete">
-              <IconButton
-                sx={actionButtonStyle}
-                size="small"
-                color="error"
-                onClick={() => handleDeleteSender(params.row.id)}
-              >
-                <DeleteOutlineIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        ) : null,
-    },
+    // Omitted entirely, not just empty-rendered, when the caller cannot write
+    // (PR #729 review): a visible ACTION header over empty cells reads as a
+    // broken grid rather than a view-only one.
+    ...(canManageSenders
+      ? [
+          {
+            field: 'action',
+            headerName: 'ACTION',
+            sortable: false,
+            filterable: false,
+            flex: 0.3,
+            minWidth: 120,
+            maxWidth: 350,
+            renderCell: (params) => (
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Tooltip arrow title="Edit">
+                  <IconButton
+                    sx={actionButtonStyle}
+                    size="small"
+                    color="primary"
+                    onClick={() => handleEditSender(params.row.id)}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip
+                  arrow
+                  title={params.row.isConnected ? 'Disconnect' : 'Connect'}
+                >
+                  <IconButton
+                    sx={actionButtonStyle}
+                    size="small"
+                    color="secondary"
+                    onClick={() => handleWifiToggle(params.row.id)}
+                  >
+                    {params.row.isConnected ? (
+                      <WifiIcon color="secondary" fontSize="small" />
+                    ) : (
+                      <WifiOffIcon
+                        sx={{ color: palette.secondaryDark }}
+                        fontSize="small"
+                      />
+                    )}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip arrow title="Delete">
+                  <IconButton
+                    sx={actionButtonStyle}
+                    size="small"
+                    color="error"
+                    onClick={() => handleDeleteSender(params.row.id)}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ),
+          },
+        ]
+      : []),
   ]
 
   // Mobile Card Component

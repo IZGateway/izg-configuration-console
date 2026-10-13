@@ -96,7 +96,6 @@ class EncryptedRepository implements DbClient {
     destinationId: string,
     principal: string
   ) => Promise<AllowedUser>
-  fetchAllowedUsers!: () => Promise<AllowedUser[]>
   fetchAllowedUsersByDestination!: (
     isAdmin: boolean,
     destinations: Array<string>
@@ -172,7 +171,6 @@ class EncryptedRepository implements DbClient {
       )
     this.isDatabaseConnected = repository.isDatabaseConnected.bind(repository)
     this.fetchAllowedUser = repository.fetchAllowedUser.bind(repository)
-    this.fetchAllowedUsers = repository.fetchAllowedUsers.bind(repository)
     this.fetchAllowedUsersByDestination =
       repository.fetchAllowedUsersByDestination.bind(repository)
     this.deleteAllowedUser = repository.deleteAllowedUser.bind(repository)

@@ -75,3 +75,35 @@ render-on-true convention so a permission that is still loading fails closed.
 - **GIVEN** a signed-in user who holds `canManageSenders`
 - **WHEN** the user opens the onboarding page
 - **THEN** the page SHALL behave exactly as it did before this capability existed
+
+### Requirement: Mutating a sender is also scoped by the caller's jurisdiction reach
+
+`canManageSenders` SHALL decide *whether* a role may mutate the onboarding sender list.
+It SHALL NOT be treated as deciding *which* destination's senders a role may mutate.
+`POST`/`DELETE /api/allowedusers` SHALL additionally check that the request's
+`destinationId` is within the caller's reach, and SHALL refuse the request otherwise. Added
+after PR #729 review found that the capability split alone let a jurisdiction-scoped
+write-capable role mutate any jurisdiction's senders, not only its own.
+
+#### Scenario: A write-capable scoped role may mutate its own jurisdiction's senders
+
+- **GIVEN** a user holding `canManageSenders` whose jurisdiction claim is `az`
+- **WHEN** the user calls `POST /api/allowedusers` with `destinationId: 'az'`
+- **THEN** the request SHALL succeed
+
+#### Scenario: A write-capable scoped role is refused outside its jurisdiction
+
+- **GIVEN** the same user
+- **WHEN** the user calls `POST /api/allowedusers` or `DELETE /api/allowedusers` with a
+  `destinationId` outside the `az` claim
+- **THEN** the request SHALL be refused with status `403`
+- **AND** an `AccessDenied` audit entry SHALL be written naming the destination and the
+  missing reach
+- **AND** no write SHALL reach the data store
+
+#### Scenario: A globally-scoped write-capable role is unaffected
+
+- **GIVEN** a user holding `canManageSenders` whose role declares global tenancy
+- **WHEN** the user calls `POST /api/allowedusers` or `DELETE /api/allowedusers` with any
+  `destinationId`
+- **THEN** the request SHALL behave exactly as it did before this requirement existed
