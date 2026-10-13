@@ -2,6 +2,7 @@ import { Page, BrowserContext, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import { createApiKeyWithExistingDomain } from '../helpers/createApiKey'
+import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Revoke an active key".
@@ -26,7 +27,9 @@ const revokedCount = async () =>
   )
 
 test.beforeAll(async ({ browser }) => {
-  context = await browser.newContext()
+  // A context made here does not inherit test.use(), so the viewport is set
+  // on it directly. See API_KEYS_VIEWPORT.
+  context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
 })
@@ -55,7 +58,7 @@ test('Revoking an active key sets status to Revoked and disables further actions
     }))
   const revokedBefore = await revokedCount()
 
-  await row.getByLabel('Revoke key').click()
+  await row.getByRole('button', { name: 'Revoke key' }).click()
 
   const revokeDialog = page
     .getByRole('dialog')
