@@ -19,12 +19,16 @@ interface StatusPromoteDemoteProps {
   sender: SenderData
   onStatusChange: (senderId: string, newStatus: string) => void
   size?: 'small' | 'medium'
+  // Render on true, not hide on false (IGDD-3546): a view-only role sees the
+  // status chip but not the promote/demote control that mutates it.
+  canManageSenders: boolean
 }
 
 const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
   sender,
   onStatusChange,
   size = 'medium',
+  canManageSenders,
 }) => {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<{
@@ -148,24 +152,26 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
             color={getStatusColor()}
             variant="outlined"
             avatar={
-              <Tooltip
-                title={`Promote to ${getNextStatus(sender.status, 'up')}`}
-              >
-                <IconButton
-                  style={promoteStyle}
-                  size={size}
-                  color="secondary"
-                  onClick={() => handleStatusChange('up')}
-                  sx={{ py: 1.5, pr: 1 }}
+              canManageSenders ? (
+                <Tooltip
+                  title={`Promote to ${getNextStatus(sender.status, 'up')}`}
                 >
-                  <UpgradeIcon
-                    sx={{
-                      color: palette.secondary,
-                      fontSize: size === 'small' ? '14px' : '16px',
-                    }}
-                  />
-                </IconButton>
-              </Tooltip>
+                  <IconButton
+                    style={promoteStyle}
+                    size={size}
+                    color="secondary"
+                    onClick={() => handleStatusChange('up')}
+                    sx={{ py: 1.5, pr: 1 }}
+                  >
+                    <UpgradeIcon
+                      sx={{
+                        color: palette.secondary,
+                        fontSize: size === 'small' ? '14px' : '16px',
+                      }}
+                    />
+                  </IconButton>
+                </Tooltip>
+              ) : undefined
             }
           />
         </Box>
@@ -250,22 +256,24 @@ const StatusPromoteDemote: React.FC<StatusPromoteDemoteProps> = ({
             variant="outlined"
             sx={{ py: 1.5, pr: 1 }}
             avatar={
-              <Tooltip
-                title={`Demote to ${getNextStatus(sender.status, 'down')}`}
-              >
-                <IconButton
-                  style={demoteStyle}
-                  size={size}
-                  onClick={() => handleStatusChange('down')}
+              canManageSenders ? (
+                <Tooltip
+                  title={`Demote to ${getNextStatus(sender.status, 'down')}`}
                 >
-                  <VerticalAlignBottomIcon
-                    sx={{
-                      color: palette.secondary,
-                      fontSize: size === 'small' ? '14px' : '16px',
-                    }}
-                  />
-                </IconButton>
-              </Tooltip>
+                  <IconButton
+                    style={demoteStyle}
+                    size={size}
+                    onClick={() => handleStatusChange('down')}
+                  >
+                    <VerticalAlignBottomIcon
+                      sx={{
+                        color: palette.secondary,
+                        fontSize: size === 'small' ? '14px' : '16px',
+                      }}
+                    />
+                  </IconButton>
+                </Tooltip>
+              ) : undefined
             }
           />
         </Box>

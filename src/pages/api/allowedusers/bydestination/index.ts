@@ -4,7 +4,8 @@ import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
-import isOperationsRole from '../../../../lib/security/accessutils'
+import { subjectOf } from '../../../../lib/security/authzsubject'
+import { hasGlobalTenancy } from '../../../../lib/security/policy'
 import { serializeAllowedUser } from '../../../../lib/type/AllowedUser'
 
 /**
@@ -78,8 +79,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // it is a row-scoping switch computed from the caller's roles ('see every
       // row' vs 'see only these'). The old name made it look like a real
       // isAdmin dependency to anyone auditing that axis.
-      const hasGlobalReach = isOperationsRole(session.user.roles)
-      const destinations = session.user.jurisdictions || []
+      //
+      // Reads `hasGlobalTenancy` from the role matrix, not `isOperationsRole`
+      // (PR #729 review): the two currently select the same roles, but
+      // `accessutils.ts` answers "is this IZG staff?" while this call needs
+      // "does this role bypass jurisdiction scoping?" — see
+      // `src/pages/api/destinations/index.ts` for the same reasoning.
+      const subject = subjectOf(session)
+      const hasGlobalReach = hasGlobalTenancy(subject)
+      const destinations = subject.jurisdictions
 
       logger.info('Fetching allowed users by destination', {
         hasGlobalReach,
@@ -134,10 +142,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
-// so any authenticated session could reach it. One capability across every
-// method, deliberately: splitting view from mutate needs a flag whose seed
-// value nobody has decided, and this closes the hole without inventing one.
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization, so
+// any authenticated session could reach it. This route only ever serves GET,
+// so — unlike allowedusers/index.ts (IGDD-3546) — there is no mutate method to
+// separate out; canViewOnboarding alone is the correct and complete gate.
 export default withMiddleware(
   { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
   'captureErrors'
