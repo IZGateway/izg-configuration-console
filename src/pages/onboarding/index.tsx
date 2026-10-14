@@ -12,7 +12,8 @@ import {
 import AccessDenied from '../../components/AccessDenied'
 import { withPageAccess } from '../../lib/security/pageAccessGate'
 import DbClientFactory from '../../lib/db/DbClientFactory'
-import isOperationsRole from '../../lib/security/accessutils'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { hasGlobalTenancy } from '../../lib/security/policy'
 import logger from '../../../logger'
 
 const OnboardingPage = (
@@ -56,10 +57,13 @@ export const getServerSideProps = withPageAccess<
   const session = requestContext.session
 
   try {
+    // Reads hasGlobalTenancy from the role matrix, not isOperationsRole (PR
+    // #729 review) — same reasoning as src/pages/api/destinations/index.ts.
+    const subject = subjectOf(session)
     const dbClient = await DbClientFactory.getDbClient()
     const allowedUsers = await dbClient.fetchAllowedUsersByDestination(
-      isOperationsRole(session.user.roles),
-      session.user.jurisdictions || []
+      hasGlobalTenancy(subject),
+      subject.jurisdictions
     )
 
     return {

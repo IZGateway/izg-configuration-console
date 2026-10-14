@@ -81,10 +81,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
-// so any authenticated session could reach it. One capability across every
-// method, deliberately: splitting view from mutate needs a flag whose seed
-// value nobody has decided, and this closes the hole without inventing one.
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization, so
+// any authenticated session could reach it. This route only ever serves GET,
+// so — unlike allowedusers/index.ts (IGDD-3546) — there is no mutate method to
+// separate out; canViewOnboarding alone is the correct and complete gate.
 export default withMiddleware(
   { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
   'captureErrors'

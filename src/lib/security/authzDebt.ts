@@ -43,16 +43,6 @@ export type AuthzDebt = {
      * reach. Added PR #700.
      */
     | 'split-decision'
-    /**
-     * The route declares one capability across methods that read *and* write,
-     * so a view-only flag authorizes mutation. Narrower than what it replaces
-     * — these routes carried no authorization at all — but a `byMethod` split
-     * needs a write capability that does not exist in the matrix yet, and
-     * inventing one here means choosing its seed value without the matrix
-     * owner. Counted rather than only commented, so it reads as an open gap
-     * and not as a settled design. Added PR #700.
-     */
-    | 'coarse-capability'
   /** A page key, a route path under `src/pages/api/`, or `page.capability`. */
   subject: string
   /**
@@ -106,32 +96,18 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
       'half answers 403 — 403 is correct for both, but the reach middleware is shared with five ' +
       'other routes and changing its status code can affect client retry behaviour.',
   },
-  // ---------------------------------------------------------------------
-  // Routes authorized by one capability across read and write.
-  // ---------------------------------------------------------------------
   {
-    kind: 'coarse-capability',
+    kind: 'split-decision',
     subject: 'allowedusers/index.ts',
-    ticket: 'IGDD-3472',
+    ticket: 'IGDD-3546',
     note:
-      'GET, POST and DELETE are all authorized by onboarding.canViewOnboarding, so a view flag ' +
-      'authorizes mutation. Every role holds it, so the practical narrowing here is Sender ' +
-      'Operations only — but the route had NO authorization before this change, so this is a ' +
-      'strict improvement, not a widening. Closing it means a write capability for onboarding ' +
-      'and a byMethod split; the spike review already tracks that as "Finding #5 — role-gate ' +
-      'Onboarding Senders", which is where the seed value gets decided.',
-  },
-  {
-    kind: 'coarse-capability',
-    subject: 'allowedusers/bydestination/index.ts',
-    ticket: 'IGDD-3472',
-    note: 'As allowedusers/index.ts.',
-  },
-  {
-    kind: 'coarse-capability',
-    subject: 'allowedusersaudit/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'As allowedusers/index.ts.',
+      'POST/DELETE declare onboarding.canManageSenders with ANY_JURISDICTION; the handler ' +
+      'separately calls hasAccessToDestId on body.destinationId, which unions reach across roles. ' +
+      'Jurisdiction Operations (holds canManageSenders, scoped) plus IZG Support (global reach, ' +
+      'holds no onboarding write) can therefore write a sender outside the granting role reach. ' +
+      'Strictly narrower than before this row existed, when POST/DELETE applied no reach check at ' +
+      'all — see PR #729 review. Same shape as the changerequest/index.ts row above; closing it ' +
+      'needs destinationId resolved against one role-local decision rather than two unioned checks.',
   },
   {
     kind: 'ungated-page',
