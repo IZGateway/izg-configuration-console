@@ -119,3 +119,47 @@ revokes a key someone else is using.
 **Manual only (not in the Playwright test):** an `API_KEY_REVOKED` event appears in
 Elasticsearch with the reason, actor, and timestamp, and contains no token material. The
 browser can't see Elasticsearch, so this stays a manual check.
+
+---
+
+## Renew API Key
+
+**Test:** `e2e/tests/apiKeyRenew.spec.ts`
+**Source scenario:** credential-lifecycle, "Renewal supersedes the old credential and
+starts a grace period"
+
+**Precondition:** the test creates its own fresh Active key on the already-authorized
+domain `createKey.fastTrack.playwright.org` (same fast path as Create Key above), so it
+never renews a key someone else is using. Renewal is one-way (Active → Grace Period), so
+acting on a found row would make this order-dependent and consume a shared fixture.
+
+- An **Active** credential shows the Renew (circular-arrow) action under ACTION
+- Clicking it opens the "Renew API Key" dialog, which states that a new key will be
+  issued and that the old key stays valid for **10 business days**
+- Jurisdiction, Environment, Use Types and **Domain (upn)** are carried over from the row
+  and are read-only — the server sources the domain, jurisdiction and environment(s) from
+  the stored credential and ignores the request body, so a renewal cannot be redirected
+  to a different scope. Description is the only editable field, and it is optional
+- **RENEW KEY** returns 201 and opens the "Renewal Complete" dialog — _not_ the token
+  dialog, because renewal confirms first and reveals on demand; **VIEW KEY** there opens
+  the one-time "View API Key" dialog with the JWT for the **new** credential
+- The old row's status then reads **"Grace period expires on \<date\>"** and only Revoke
+  is left — no Renew, no View
+- The new row reads **Active** on the same DNS name, organization and environment, with
+  no View action (its token was just revealed)
+- The new expiry in the DURATION cell is **1 year from the renewal date**, because the
+  key being renewed expires more than 30 days out — the test asserts that precondition
+  first, so it fails loudly rather than silently checking the wrong rule. The other
+  branch (renewing within 30 days of expiry, where the new expiry is 1 year past the
+  **old** expiry) cannot be set up through the UI, since a freshly created key is always
+  ~365 days out; it is covered by the endpoint's unit tests instead
+- Both outcomes survive a page reload, so they are persisted rather than SWR state
+
+**Test data:** constants at the top of the test file (organization, environment,
+pre-authorized domain, use type). It shares the Create Key spec's domain rather than
+using a `renewKey.` domain of its own, because that is the only playwright-owned domain
+currently authorized for this organization and environment —
+`/api/apikeys/domains?envId=&jurisdictionId=` returns exactly the set the DNS Name
+dropdown offers. The shared scope means the soft duplicate-scope warning fires on
+create, which the fixture clicks through. The test leaves two keys behind (one in Grace
+Period, one Active) and revokes neither.
