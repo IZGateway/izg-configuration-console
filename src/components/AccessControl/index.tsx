@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import useRoleAccess from '../../lib/security/useRoleAccess'
-import { Box, Typography, Tabs, Tab } from '@mui/material'
+import { Box, Tabs, Tab } from '@mui/material'
 import GroupIcon from '@mui/icons-material/Group'
 import BlockIcon from '@mui/icons-material/Block'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
@@ -23,6 +23,7 @@ import fetcher from '../../lib/fetch'
 import { type AccessGroup } from './AccessGroups'
 import { type AccessGroupRecord } from '../../lib/type/AccessGroupRecord'
 import { mutate } from 'swr'
+import PageHeader from '../PageHeader'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -531,42 +532,12 @@ const AccessControlComponent = () => {
     <div>
       <Box>
         {!editGroupMode && (
-          <Box
-            sx={{
-              position: 'relative',
-              zIndex: 10,
-              height: 'auto',
-              boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-              marginBottom: '-16px',
-              backgroundColor: palette.white,
-              borderRadius: '4px',
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                padding: 2,
-                gap: 1,
-              }}
-            >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                }}
-              >
-                <Typography
-                  id="title-table"
-                  sx={{ fontSize: '1.75rem', fontWeight: 700 }}
-                  flexGrow={1}
-                >
-                  Access Control
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
+          <PageHeader
+            id="title-table"
+            title="Access Control"
+            subtitle="Manage access groups, the deny list, and the file types allowed through IZ Gateway."
+            sx={{ marginBottom: '-16px' }}
+          />
         )}
       </Box>
 

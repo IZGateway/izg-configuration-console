@@ -41,6 +41,7 @@ import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 import { useRouter } from 'next/router'
 import Slide from '@mui/material/Slide'
+import PageHeader from '../PageHeader'
 
 // ConnectionTable column width persistence
 // Storage: localStorage key 'izg-cc-connectiontable-columns'
@@ -139,6 +140,10 @@ const dataGridCustom = {
     },
   },
   '& .MuiDataGrid-cell': {
+    alignContent: 'center',
+    // Rows are auto-height (getRowHeight), so this vertical padding sets the
+    // breathing room around each row's content.
+    py: 1.5,
     '@media (max-width: 768px)': {
       fontSize: '0.75rem',
       padding: '4px 8px',
@@ -580,7 +585,13 @@ const ConnectionsTable = (props) => {
                 </React.Fragment>
               }
             >
-              <Typography gutterBottom variant="body1" component="div">
+              {/* Rows are auto-height, so long maintenance messages wrap
+                  instead of being clipped by the cell. */}
+              <Typography
+                variant="body1"
+                component="div"
+                sx={{ whiteSpace: 'normal' }}
+              >
                 {params.row.hasFutureMaintenance &&
                   !params.row.hasActiveMaintenance && (
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -603,7 +614,11 @@ const ConnectionsTable = (props) => {
                       </Typography>
                       <ErrorOutlineIcon
                         fontSize="small"
-                        sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                        sx={{
+                          marginLeft: 0.5,
+                          flexShrink: 0,
+                          color: palette.errorDark,
+                        }}
                       />
                     </Box>
                   )}
@@ -620,20 +635,18 @@ const ConnectionsTable = (props) => {
                       </Typography>
                       <ErrorOutlineIcon
                         fontSize="small"
-                        sx={{ marginLeft: 0.5, color: palette.errorDark }}
+                        sx={{
+                          marginLeft: 0.5,
+                          flexShrink: 0,
+                          color: palette.errorDark,
+                        }}
                       />
                     </Box>
                   )}
                 {isCircuitBreakerTripped &&
                   !params.row.hasActiveMaintenance &&
                   !params.row.hasFutureMaintenance && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        mt: isMobile ? 0 : '1.5rem',
-                      }}
-                    >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography
                         variant="body2"
                         sx={{ color: palette.errorDark }}
@@ -651,13 +664,7 @@ const ConnectionsTable = (props) => {
                   !isCircuitBreakerTripped &&
                   !params.row.hasActiveMaintenance &&
                   !params.row.hasFutureMaintenance && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        mt: isMobile ? 0 : '1.5rem',
-                      }}
-                    >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography variant="body2">Not Connected</Typography>
                       <ErrorOutlineIcon
                         fontSize="small"
@@ -668,13 +675,7 @@ const ConnectionsTable = (props) => {
                 {isConnected &&
                   !params.row.hasActiveMaintenance &&
                   !params.row.hasFutureMaintenance && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        mt: isMobile ? 0 : '1.5rem',
-                      }}
-                    >
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Typography variant="body2">Connected</Typography>
                       <CheckIcon fontSize="small" sx={{ marginLeft: 0.5 }} />
                     </Box>
@@ -935,27 +936,12 @@ const ConnectionsTable = (props) => {
 
   return (
     <div>
-      <Box>
-        <Card
-          sx={{
-            position: 'relative',
-            zIndex: 10,
-            height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-            marginBottom: '-16px',
-          }}
-        >
-          <Typography
-            id="title-table"
-            sx={{ padding: 2, fontSize: '1.75rem', fontWeight: 700 }}
-            flexGrow={1}
-            display="flex"
-            align="center"
-          >
-            My Connections
-          </Typography>
-        </Card>
-      </Box>
+      <PageHeader
+        id="title-table"
+        title="My Connections"
+        subtitle="View the status of your connections, run tests, and schedule maintenance windows."
+        sx={{ marginBottom: '-16px' }}
+      />
 
       {/* Conditional Rendering Based on Mode */}
       {renderMode === 'transitioning' ? (
@@ -1122,6 +1108,7 @@ const ConnectionsTable = (props) => {
             return params.row.hasActiveMaintenance === true ? 'highlight' : ''
           }}
           density={isMobile ? 'standard' : 'comfortable'}
+          getRowHeight={() => 'auto'}
           pagination
           slots={{
             toolbar: CustomToolbar,

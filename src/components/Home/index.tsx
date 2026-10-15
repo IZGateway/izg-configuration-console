@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import pack from '../../../package.json'
 import {
   Container,
   Typography,
@@ -18,7 +17,6 @@ import AppHeaderBar from '../AppHeader'
 import palette from '../../styles/theme/palette'
 
 import Image from 'next/image'
-import CDCLogo from '../../public/United_States_Centers_for_Disease_Control_and_Prevention_logo 1.svg'
 import homePageBanner from '../../public/IZ-Gateway-BannerImagery.svg'
 import Link from 'next/link'
 import UseCases from './UseCases'
@@ -54,14 +52,14 @@ function HomeComponent() {
   return (
     <>
       <AppHeaderBar open />
+      {/* Negative margins cancel Layout's page padding so the hero runs
+          edge to edge between the navigation and the footer. */}
       <Box
         sx={{
           mt: -8,
-          ml: -4,
-          width: '-webkit-fill-available',
-          position: 'absolute',
-          backgroundColor: palette.background,
-          height: '100vh',
+          mx: -3,
+          mb: -3,
+          backgroundColor: palette.greyLight,
         }}
       >
         <Paper elevation={4} sx={{ pt: 8, pb: 4 }}>
@@ -119,7 +117,7 @@ function HomeComponent() {
                       <Link href="/apikeys">
                         <Button
                           variant="contained"
-                          color="primary"
+                          color="secondary"
                           sx={{
                             width: { xs: '100%', sm: 'auto' },
                             minWidth: '200px',
@@ -154,11 +152,11 @@ function HomeComponent() {
             </Slide>
             <Box
               sx={{
-                width: { xs: '100%', md: 300 },
+                width: { xs: '100%', md: 260 },
                 height: { xs: 120, md: 150 },
                 display: 'flex',
                 justifyContent: 'center',
-                mt: { xs: 2, md: 0 },
+                mt: { xs: 2, md: -3 },
               }}
             >
               <Slide in={true} timeout={1200} direction="down">
@@ -425,67 +423,6 @@ function HomeComponent() {
             </Box>
           </Box>
         </Container>
-        <Paper
-          sx={{
-            bgcolor: palette.greyLight,
-            width: '-webkit-fill-available',
-            bottom: { xs: 0, md: -4 },
-            ml: -4,
-            zIndex: 10,
-            boxShadow: '0px -4px 8px rgba(0, 0, 0, 0.20)',
-            position: { xs: 'relative', md: 'sticky' },
-          }}
-        >
-          <Container>
-            <Box
-              display={'flex'}
-              justifyContent={'space-between'}
-              flexDirection={{ xs: 'column', md: 'row' }}
-              alignItems={'center'}
-              gap={2}
-              pt={1}
-              pb={1}
-              px={{ xs: 4, md: 1 }}
-              textAlign={{ xs: 'center', md: 'left' }}
-            >
-              <Typography
-                variant="caption"
-                sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
-              >
-                Version {pack.version}-{process.env.NEXT_PUBLIC_BUILD_ID} |
-                Immunization (IZ) Gateway Configuration Console 2026
-              </Typography>
-              <Box
-                display={'flex'}
-                justifyContent={{ xs: 'center', md: 'space-between' }}
-                alignItems={'center'}
-                gap={1}
-                flexDirection={{ xs: 'column', sm: 'row' }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: { xs: '0.7rem', md: '0.75rem' },
-                    textAlign: { xs: 'center', md: 'left' },
-                  }}
-                >
-                  This application has been authorized by the Centers for
-                  Disease Control and Prevention{' '}
-                </Typography>
-                <Box>
-                  <Link href={'https://www.cdc.gov/'} target="_blank">
-                    <Image
-                      src={CDCLogo}
-                      width={27}
-                      height={15}
-                      alt="CDC Logo"
-                    />
-                  </Link>
-                </Box>
-              </Box>
-            </Box>
-          </Container>
-        </Paper>
       </Box>
     </>
   )
