@@ -41,6 +41,7 @@ import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
 import { useRouter } from 'next/router'
 import Slide from '@mui/material/Slide'
+import PageHeader from '../PageHeader'
 
 // ConnectionTable column width persistence
 // Storage: localStorage key 'izg-cc-connectiontable-columns'
@@ -935,27 +936,12 @@ const ConnectionsTable = (props) => {
 
   return (
     <div>
-      <Box>
-        <Card
-          sx={{
-            position: 'relative',
-            zIndex: 10,
-            height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-            marginBottom: '-16px',
-          }}
-        >
-          <Typography
-            id="title-table"
-            sx={{ padding: 2, fontSize: '1.75rem', fontWeight: 700 }}
-            flexGrow={1}
-            display="flex"
-            align="center"
-          >
-            My Connections
-          </Typography>
-        </Card>
-      </Box>
+      <PageHeader
+        id="title-table"
+        title="My Connections"
+        subtitle="View the status of your connections, run tests, and schedule maintenance windows."
+        sx={{ marginBottom: '-16px' }}
+      />
 
       {/* Conditional Rendering Based on Mode */}
       {renderMode === 'transitioning' ? (
