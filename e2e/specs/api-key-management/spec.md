@@ -119,3 +119,43 @@ revokes a key someone else is using.
 **Manual only (not in the Playwright test):** an `API_KEY_REVOKED` event appears in
 Elasticsearch with the reason, actor, and timestamp, and contains no token material. The
 browser can't see Elasticsearch, so this stays a manual check.
+
+---
+
+## RBAC scoping (Jurisdiction Ops vs. IZG Ops)
+
+**Test:** `e2e/tests/apiKeyRbacScoping.spec.ts`
+**Source scenario:** test plan §9.8, security regression (cross-reference IGDD-3184).
+Keep permanently: a missing ownership check regresses silently, because the UI hides
+other jurisdictions' keys whether or not the server enforces it.
+
+**Precondition:** IZG Operations creates a throwaway Active key in another organization
+("Jurisdiction B"), and every probe targets that key, never a real one. B is picked
+automatically: the first sender organization other than A with a domain already
+authorized in Development. If ownership is broken, the probes do mutate their target.
+The key is revoked during cleanup.
+
+- **IZG Operations:** the Create Key Organization dropdown lists every sender
+  organization returned by `/api/jurisdictions` (the unscoped list)
+- **IZG Operations:** sees every key that Jurisdiction A's user sees
+- **Jurisdiction Operations (A):** `GET /api/apikeys` returns only Jurisdiction A's
+  keys, and B's key is not in the table
+- **Jurisdiction Operations (A):** calling the routes directly on B's key — view token
+  (`POST /api/apikeys/token`), renew (`POST /api/apikeys/renew`), revoke
+  (`PATCH /api/apikeys`) and cancel (`DELETE /api/apikeys`) — each returns 403
+  "Forbidden - not authorized for this jurisdiction"
+- Afterwards B's key is still **Active**: not revoked, renewed or cancelled
+- **No API key role:** there is no API Key Management nav entry, `/apikeys` shows "You
+  do not have access to this page." with no Create Key button, and the list route and
+  every probe above return 403 "Forbidden - insufficient role"
+
+Probes run as `fetch()` inside the signed-in page, because `/api/*` requires a DPoP
+proof that only the app's fetch wrapper adds. A Playwright `request` call with copied
+cookies is redirected to sign-in before the ownership check ever runs. A failure is a
+security finding: log it per test plan §8.
+
+**Test data** (`.env.test`; the spec skips with a reason if any are unset): IZG
+Operations is `OKTA_USERNAME` / `OKTA_PASSWORD` / `OKTA_USER_FULLNAME`; Jurisdiction A is
+`E2E_RBAC_JURIS_OPS_USERNAME`, `_PASSWORD`, `_FULLNAME` and `E2E_RBAC_JURIS_OPS_ORG`; the
+no-role user is `E2E_RBAC_NO_ROLE_USERNAME`, `_PASSWORD`, `_FULLNAME`. At least one other
+sender organization needs a domain authorized in Development.
