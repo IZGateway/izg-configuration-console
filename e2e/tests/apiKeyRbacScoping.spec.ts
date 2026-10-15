@@ -9,12 +9,12 @@
  * jurisdiction's keys either way. A failure here is a security finding — log
  * it per test plan §8, cross-referenced to IGDD-3184.
  *
- * TARGET KEY: the probes aim at a throwaway Active key that IZG Operations
- * creates at the start of the run, never at a real one. If ownership
- * enforcement is broken, the probes really do reveal, renew, revoke or cancel
- * their target. Its organization ("Jurisdiction B") is picked automatically:
- * the first sender organization other than A with a domain already authorized
- * in Development. The key is revoked again in afterAll.
+ * TARGET KEY: the probes aim at a throwaway key that IZG Operations creates
+ * at the start of the run, never at a real one. If ownership enforcement is
+ * broken, the probes really do reveal, renew, revoke or cancel their target.
+ * Its organization ("Jurisdiction B") is picked automatically from the sender
+ * organizations other than A; see createTargetKey. The key is revoked or
+ * cancelled again in afterAll.
  *
  * DPoP: every /api/* call must carry a proof signed by the browser's session
  * key (src/middleware.ts), which the app's window.fetch wrapper adds. So the
@@ -182,40 +182,58 @@ const senderOrgs = async (page: Page): Promise<Jurisdiction[]> => {
 const orgLabel = (j: Jurisdiction) =>
   String(j.description || j.name || j.jurisdictionId)
 
-// As IZG Operations, creates an Active key for the first sender organization
-// other than Jurisdiction A that has a domain already authorized in
-// Development, so it is issued without a DNS challenge.
+// As IZG Operations, creates the target key in a sender organization other
+// than Jurisdiction A. Prefers an Active key, on a domain already authorized
+// in Development (no DNS challenge). If no other organization has one, falls
+// back to a pending key ("Ready for Validation") on a throwaway domain, which
+// needs no setup data. Either way a non-owner must get 403; on a pending key a
+// broken ownership check surfaces as 409/400 instead, which also fails.
 const createTargetKey = async (
   page: Page,
   description: string
 ): Promise<Credential> => {
-  for (const org of await senderOrgs(page)) {
-    if (orgLabel(org) === env('E2E_RBAC_JURIS_OPS_ORG')) continue
+  const others = (await senderOrgs(page)).filter(
+    (org) => orgLabel(org) !== env('E2E_RBAC_JURIS_OPS_ORG')
+  )
+  if (others.length === 0) {
+    throw new Error(
+      'No sender organization other than Jurisdiction A exists to create the target key in'
+    )
+  }
+
+  const create = async (
+    org: Jurisdiction,
+    upn: string,
+    dnsChoice: 'existing' | 'other'
+  ) => {
+    const created = await callApi(page, 'POST', '/api/apikeys', {
+      jurisdictionId: String(org.jurisdictionId),
+      environments: [DEV_ENV_ID],
+      upn,
+      dnsChoice,
+      useTypes: [org.useTypes?.[0]],
+      description,
+    })
+    // 201 = issued Active, 202 = pending DNS validation.
+    expect([201, 202], JSON.stringify(created.body)).toContain(created.status)
+    const { sortKey } = created.body as { sortKey: string }
+    const key = (await listCredentials(page)).find((c) => c.sortKey === sortKey)
+    expect(key, 'new key missing from IZG Operations list').toBeDefined()
+    return key as Credential
+  }
+
+  for (const org of others) {
     const domains = await callApi(
       page,
       'GET',
       `/api/apikeys/domains?envId=${DEV_ENV_ID}&jurisdictionId=${org.jurisdictionId}`
     )
     const domain = (domains.body as { domain: string }[] | undefined)?.[0]
-    if (domains.status !== 200 || !domain) continue
-
-    const created = await callApi(page, 'POST', '/api/apikeys', {
-      jurisdictionId: String(org.jurisdictionId),
-      environments: [DEV_ENV_ID],
-      upn: domain.domain,
-      dnsChoice: 'existing',
-      useTypes: [org.useTypes?.[0]],
-      description,
-    })
-    expect(created.status, JSON.stringify(created.body)).toBe(201)
-    const { sortKey } = created.body as { sortKey: string }
-    const key = (await listCredentials(page)).find((c) => c.sortKey === sortKey)
-    expect(key, 'new key missing from IZG Operations list').toBeDefined()
-    return key as Credential
+    if (domains.status === 200 && domain) {
+      return create(org, domain.domain, 'existing')
+    }
   }
-  throw new Error(
-    'No sender organization other than Jurisdiction A has a domain authorized in Development to create the target key on'
-  )
+  return create(others[0], `rbac-${Date.now()}.e2e.playwright.org`, 'other')
 }
 
 const signIn = async (
@@ -253,17 +271,24 @@ test.describe('API key RBAC scoping', () => {
       env('OKTA_PASSWORD'),
       process.env.OKTA_USER_FULLNAME
     ))
+    await openApiKeyManagement(admin)
     target = await createTargetKey(admin, targetDescription)
   })
 
   test.afterAll(async () => {
     if (!admin) return
-    // Clean up the throwaway key, whatever state the probes left it in.
+    // Clean up the throwaway key: revoke an Active one, cancel a pending one.
     if (target) {
-      await callApi(admin, 'PATCH', '/api/apikeys', {
-        sortKey: target.sortKey,
-        reason: 'RBAC scoping e2e cleanup',
-      }).catch(() => {})
+      const cleanup =
+        target.status === 'ready_for_validation'
+          ? callApi(admin, 'DELETE', '/api/apikeys', {
+              sortKey: target.sortKey,
+            })
+          : callApi(admin, 'PATCH', '/api/apikeys', {
+              sortKey: target.sortKey,
+              reason: 'RBAC scoping e2e cleanup',
+            })
+      await cleanup.catch(() => {})
     }
     await logout(admin).catch(() => {})
     await adminContext.close()
@@ -315,10 +340,10 @@ test.describe('API key RBAC scoping', () => {
       await context.close()
     }
 
-    // Not mutated: still Active, never renewed, revoked or cancelled.
+    // Not mutated: same status as created, never renewed, revoked or cancelled.
     const adminList = await listCredentials(admin)
     const after = adminList.find((c) => c.sortKey === target.sortKey)
-    expect(after?.status).toBe('active')
+    expect(after?.status).toBe(target.status)
     expect(after?.revokedAt ?? null).toBeNull()
     expect(after?.supersededBy).toBeUndefined()
 
