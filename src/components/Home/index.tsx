@@ -117,7 +117,7 @@ function HomeComponent() {
                       <Link href="/apikeys">
                         <Button
                           variant="contained"
-                          color="primary"
+                          color="secondary"
                           sx={{
                             width: { xs: '100%', sm: 'auto' },
                             minWidth: '200px',
@@ -152,11 +152,11 @@ function HomeComponent() {
             </Slide>
             <Box
               sx={{
-                width: { xs: '100%', md: 300 },
+                width: { xs: '100%', md: 260 },
                 height: { xs: 120, md: 150 },
                 display: 'flex',
                 justifyContent: 'center',
-                mt: { xs: 2, md: 0 },
+                mt: { xs: 2, md: -3 },
               }}
             >
               <Slide in={true} timeout={1200} direction="down">
