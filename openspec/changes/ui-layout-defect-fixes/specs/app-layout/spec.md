@@ -140,3 +140,22 @@ wide screens and below the title on narrow screens.
 - **WHEN** an automated test locates a page title by its existing `id` (for example
   `#title-table` or `#operations-console`) or by its title text
 - **THEN** the locator SHALL still resolve to the page title
+
+### Requirement: One loading indicator covers the whole screen
+
+The application SHALL use a single loading indicator, the IZG logo inside a spinning
+ring, both during a page change and for full-screen loading within a page. While it is
+shown, its overlay SHALL cover the entire screen, including the navigation drawer and the
+header bar.
+
+#### Scenario: Slow page change
+
+- **WHEN** a client-side page change takes longer than 250 ms
+- **THEN** the logo indicator SHALL appear over a dimmed overlay that covers the
+  navigation drawer, the header bar and the page content
+
+#### Scenario: In-page loading uses the same indicator
+
+- **WHEN** a page shows its full-screen loader, for example while Access Control loads or
+  an Admin Operations action runs
+- **THEN** it SHALL show the same logo indicator as a page change

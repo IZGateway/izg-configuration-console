@@ -68,3 +68,18 @@
 - [x] 7.3 Add subtitles where a page had none: Manage Connections and Access Control.
 - [ ] 7.4 Check each navigation page at desktop and mobile widths: same header style,
   subtitle present, and actions laid out correctly.
+
+## 8. Loading indicator
+
+- [x] 8.1 Extract the IZG logo and ring into `src/components/Loader/LogoSpinner.tsx`, and
+  use it in both `NavigationLoader` and `Loader`, so in-page loading shows the same
+  indicator as page changes.
+- [x] 8.2 Raise both overlays to `theme.zIndex.modal + 1`, so they cover the navigation
+  drawer and header bar.
+- [x] 8.3 Fix the `NavigationLoader` cleanup, which called `clearTimeout(timer.current)`
+  on a plain timeout ID.
+- [ ] 8.4 Check a slow page change and an in-page load (Access Control, Admin Operations):
+  the whole screen dims and the logo indicator shows.
+- [x] 8.5 Replace the bare "Loading..." text with `Loader/PageLoading` (the logo indicator):
+  full screen on the `greyLight` background in the `_app.tsx` auth gate, and in the
+  content area for the router-not-ready fallbacks on Console, History and Edit.
