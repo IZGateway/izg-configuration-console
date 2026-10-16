@@ -312,9 +312,16 @@ describe('GET/POST/DELETE /api/allowedusers write capability split (IGDD-3546)',
     expect(mockUpsertAllowedUser).toHaveBeenCalled()
   })
 
-  it('IZG Support (view-only) behaves the same as Jurisdiction Support on POST', async () => {
+  // IGDD-3170: IZG Support overrides the IGDD-3546 Support-tier default
+  // (view-only) and holds canManageSenders, same as the other global role,
+  // IZG Operations, above.
+  it('a global role (IZG Support) can POST to any jurisdiction', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'izgsupport@example.com', roles: ['IZG Support'] },
+      user: {
+        email: 'izgsupport@example.com',
+        roles: ['IZG Support'],
+        jurisdictions: [],
+      },
     })
 
     const { req, res } = buildReqRes('POST', {
@@ -323,10 +330,12 @@ describe('GET/POST/DELETE /api/allowedusers write capability split (IGDD-3546)',
       destinationId: 'd',
       organization: 'o',
       enabled: true,
+      createdBy: 'izgsupport@example.com',
+      updatedBy: 'izgsupport@example.com',
     })
     await handler(req, res)
 
-    expect(res.status).toHaveBeenCalledWith(403)
-    expect(mockUpsertAllowedUser).not.toHaveBeenCalled()
+    expect(res.status).not.toHaveBeenCalledWith(403)
+    expect(mockUpsertAllowedUser).toHaveBeenCalled()
   })
 })
