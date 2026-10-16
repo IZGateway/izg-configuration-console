@@ -1,9 +1,8 @@
 import React from 'react'
 import { useRouter } from 'next/router'
-import { Box, CircularProgress } from '@mui/material'
-import izgLogo from '../public/IZG_Loader_Logo_DarkBlue.svg'
-import Image from 'next/image'
+import { Box } from '@mui/material'
 import palette from '../styles/theme/palette'
+import LogoSpinner from './Loader/LogoSpinner'
 
 const LOADER_THRESHOLD = 250
 
@@ -12,7 +11,7 @@ export default function NavigationLoader() {
   const router = useRouter()
 
   React.useEffect(() => {
-    let timer
+    let timer: ReturnType<typeof setTimeout> | undefined
 
     const start = () =>
       (timer = setTimeout(() => setLoading(true), LOADER_THRESHOLD))
@@ -34,7 +33,7 @@ export default function NavigationLoader() {
       router.events.off('routeChangeError', end)
 
       if (timer) {
-        clearTimeout(timer.current)
+        clearTimeout(timer)
       }
     }
   }, [router.events])
@@ -54,28 +53,12 @@ export default function NavigationLoader() {
         justifyContent: 'center',
         background: '#0006',
         color: palette.white,
-        zIndex: 999,
+        // Above the navigation drawer, header bar and dialogs, so the whole
+        // screen is covered during a page change.
+        zIndex: (theme) => theme.zIndex.modal + 1,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-        <Box sx={{ m: 1, position: 'relative' }}>
-          <Image src={izgLogo} alt="izg logo" width={56} />
-          <CircularProgress
-            size={68}
-            sx={{
-              position: 'absolute',
-              top: -6,
-              left: -6,
-              zIndex: 1,
-              color: palette.primaryLight,
-              '.MuiCircularProgress-circle': {
-                r: '22px',
-              },
-            }}
-            thickness={3}
-          />
-        </Box>
-      </Box>
+      <LogoSpinner />
     </Box>
   )
 }

@@ -72,6 +72,7 @@ import {
   AllowedUseType,
 } from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
+import PageHeader from '../PageHeader'
 
 // ─── Use types: one canonical reading of a row, shared by every surface ───
 //
@@ -4510,46 +4511,12 @@ export default function ApiKeyManagement() {
 
   return (
     <div>
-      {/* Header card — identical to ConnectionsTable */}
-      <Card
-        sx={{
-          position: 'relative',
-          zIndex: 10,
-          height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-          marginBottom: '-16px',
-        }}
-      >
-        <Box
-          display="flex"
-          flexDirection={{ xs: 'column', md: 'row' }}
-          gap={{ xs: 2, md: 4 }}
-          alignItems={{ xs: 'flex-start', md: 'baseline' }}
-          justifyContent="space-between"
-        >
-          <Box sx={{ padding: 2 }}>
-            <Typography sx={{ fontSize: '1.75rem', fontWeight: 700 }}>
-              API key management
-            </Typography>
-            <Typography variant="body2" sx={{ color: palette.greyText }}>
-              Monitor traffic, restrict permissions, and optimize your API keys
-              from a single dashboard.
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              mt: { xs: 0, md: 3 },
-              px: { xs: 2, md: 0 },
-              pb: { xs: 2, md: 0 },
-              width: { xs: '100%', md: 'auto' },
-              boxSizing: 'border-box',
-            }}
-          >
-            <StatCards apiKeys={apiKeys} />
-          </Box>
-        </Box>
-      </Card>
+      <PageHeader
+        title="API key management"
+        subtitle="Monitor traffic, restrict permissions, and optimize your API keys from a single dashboard."
+        actions={<StatCards apiKeys={apiKeys} />}
+        sx={{ marginBottom: '-16px' }}
+      />
       {isMobile ? (
         <MobileApiKeyView
           tabValue={tabValue}

@@ -18,6 +18,7 @@ import fetch from '../lib/fetch'
 import GoogleAnalytics from '../components/GoogleAnalytics'
 import React from 'react'
 import NavigationLoader from '../components/NavigationLoader'
+import PageLoading from '../components/Loader/PageLoading'
 
 if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
   const ReactDOM = require('react-dom')
@@ -242,7 +243,7 @@ function Auth({ children }) {
   // user is unauthenticated the init effect never runs, so dpopReady stays false
   // and gating on it alone would block the sign-in redirect behind a loader.
   if (status === 'loading' || (status === 'authenticated' && !dpopReady)) {
-    return <div>Loading...</div>
+    return <PageLoading fullScreen />
   }
   return children
 }

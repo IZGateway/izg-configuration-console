@@ -30,6 +30,7 @@ import OutboundMessagesWidget from './OutboundMessagesWidget'
 import DestinationDetailWidget from './DestinationDetailWidget'
 import type { Organization } from './MessagesWidgetContent'
 import { getElasticEnvTag } from '../../lib/desttypehelper'
+import PageHeader from '../PageHeader'
 
 interface Destination {
   destId: string
@@ -312,63 +313,34 @@ const Console = () => {
       <div>
         <AppHeaderBar open />
         <Box component="main" id="main-content" tabIndex={-1}>
-          <Box
-            sx={{
-              backgroundColor: 'white',
-              borderRadius: '0px 0px 16px 16px',
-              boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-              border: '1px solid #e0e0e0',
-              p: 3,
-              mb: 4,
-            }}
-          >
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 2,
-              }}
-            >
-              <Box sx={{ flex: 1 }}>
-                <Typography
-                  variant="h1"
-                  fontWeight={700}
-                  fontSize="32px"
-                  id="operations-console"
-                  sx={{ mb: 1 }}
+          <PageHeader
+            id="operations-console"
+            title="IZ Gateway Operations Console"
+            subtitle="Instantly access the most relevant data, including recent trends, system status and usage patterns."
+            sx={{ mb: 4 }}
+            actions={
+              <Tooltip title="Refresh data" arrow>
+                <Button
+                  variant="text"
+                  color="primary"
+                  startIcon={<RefreshIcon />}
+                  onClick={() => {
+                    setRefreshKey((k) => k + 1)
+                  }}
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    '&:hover .MuiSvgIcon-root': {
+                      transform: 'rotate(180deg)',
+                      transition: 'transform 0.3s ease',
+                    },
+                  }}
                 >
-                  IZ Gateway Operations Console
-                </Typography>
-                <Typography variant="body1" color="textSecondary">
-                  Instantly access the most relevant data, including recent
-                  trends, system status and usage patterns.
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <Tooltip title="Refresh data" arrow>
-                  <Button
-                    variant="text"
-                    color="primary"
-                    startIcon={<RefreshIcon />}
-                    onClick={() => {
-                      setRefreshKey((k) => k + 1)
-                    }}
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      '&:hover .MuiSvgIcon-root': {
-                        transform: 'rotate(180deg)',
-                        transition: 'transform 0.3s ease',
-                      },
-                    }}
-                  >
-                    Refresh
-                  </Button>
-                </Tooltip>
-              </Box>
-            </Box>
-          </Box>
+                  Refresh
+                </Button>
+              </Tooltip>
+            }
+          />
 
           {/* ── Status Key bar ──────────────────────────────────────── */}
           <Box
