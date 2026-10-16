@@ -1,36 +1,52 @@
 import { Page, BrowserContext, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
+import { apiKeyRow } from '../helpers/createApiKey'
 import {
-  apiKeyRow,
-  createApiKeyWithExistingDomain,
-} from '../helpers/createApiKey'
+  automationDomain,
+  createActiveKeyOnNewDomain,
+  requiresDnsBypass,
+} from '../helpers/apiKeyCreate'
 import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Renew API Key".
 //
-// Precondition: an Active key. The test creates its own on an
-// already-authorized domain (the Create Key fast path — 201, no DNS challenge,
-// so no dependence on ALLOW_DNS_VERIFY_BYPASS), which keeps it self-contained:
-// it needs no other spec to have run first, and renewal is one-way
-// (Active → Grace Period), so renewing a key found in the table would both make
-// this order-dependent and consume a fixture other specs may need.
+// Precondition: an Active key. The test mints its own on a single-use custom
+// domain — "Other" in the DNS Name dropdown plus a typed Custom DNS Name —
+// rather than picking a hand-seeded domain out of the dropdown. That keeps it
+// self-contained (no other spec has to have run first, and renewal is one-way
+// Active → Grace Period, so renewing a found row would make this
+// order-dependent and consume a fixture other specs may need) and, because the
+// domain is fresh every run, it needs nothing provisioned in advance and
+// cannot collide with another spec's scope.
 //
-// Names must match the dropdown labels. The domain must already be authorized
-// (and unexpired) for this organization and environment on the console under
-// test — `/api/apikeys/domains?envId=&jurisdictionId=` returns exactly the set
-// the DNS Name dropdown offers. This shares `createKey.fastTrack...` with the
-// Create Key spec rather than using a `renewKey.` domain of its own, because
-// that is the only playwright-owned domain actually authorized for this scope.
-// The shared scope means the soft duplicate-scope warning fires on create;
-// createApiKeyWithExistingDomain clicks through it.
+// The cost is that minting a new domain means completing a DNS challenge, so
+// this test requires `ALLOW_DNS_VERIFY_BYPASS=true` on the console under test
+// and skips without the `DNS_VERIFY_BYPASS_AVAILABLE=true` opt-in — see
+// `requiresDnsBypass`. The deployed dev console does not set the bypass today,
+// so this spec skips on the nightly until it does.
+//
+// Organization/Environment/Use Type names must match the dropdown labels.
 const TEST_ORG_NAME = 'Audacious Inquiry LLC'
 const TEST_ENV_NAME = 'Development'
-const AUTHORIZED_TEST_DOMAIN = 'createKey.fastTrack.playwright.org'
 const TEST_USE_TYPE = 'Provider'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+// The two renewal rules this test pins, mirroring
+// src/pages/api/apikeys/renew/index.ts (THIRTY_DAYS_MS / ONE_YEAR_MS).
+//
+// Deliberately duplicated rather than imported: those are function-local consts
+// in an API route whose only export is the withMiddleware default, so importing
+// them means exporting them and pulling dbClient + the AWS SDK into the test
+// process. And RENEW_EARLY_THRESHOLD_DAYS is a precondition guard, not a
+// re-implementation — it asserts the fixture lands in the ">30 days before old
+// expiry" branch. Importing it would move the guard in lockstep with a bad
+// change to the rule, and the test would keep passing while silently checking
+// the wrong branch.
+const RENEW_EARLY_THRESHOLD_DAYS = 30
+const RENEWAL_TERM_DAYS = 365
 
 let context: BrowserContext
 let page: Page
@@ -42,9 +58,10 @@ const cell = (row: ReturnType<typeof apiKeyRow>, field: string) =>
 // "Created: <date>" over "Expires: <date>", under `field: 'created'` — there is
 // no EXPIRES column of its own. So the expiry is pulled out by its label.
 //
-// The dates are `toLocaleDateString()` in the browser's locale (en-US,
-// M/D/YYYY), matched explicitly rather than handed to `new Date()`, whose
-// treatment of bare date strings is implementation-defined.
+// The dates are `toLocaleDateString()` in the context's locale, pinned to
+// en-US in beforeAll so this M/D/YYYY match holds on every browser project.
+// Matched explicitly rather than handed to `new Date()`, whose treatment of
+// bare date strings is implementation-defined.
 const readExpiry = async (row: ReturnType<typeof apiKeyRow>): Promise<Date> => {
   const text = await cell(row, 'created').innerText()
   const match = text.match(/Expires:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/)
@@ -61,9 +78,19 @@ const daysFromNow = (date: Date) =>
   Math.round((date.getTime() - Date.now()) / DAY_MS)
 
 test.beforeAll(async ({ browser }) => {
-  // A context made here does not inherit test.use(), so the viewport is set
-  // on it directly. See API_KEYS_VIEWPORT.
-  context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
+  // A context made here does not inherit test.use(), so the viewport and
+  // locale are set on it directly — pinning `locale` in playwright.config.ts
+  // would not reach this context. See API_KEYS_VIEWPORT.
+  //
+  // The locale is pinned because readExpiry matches M/D/YYYY: the grid renders
+  // dates with a bare toLocaleDateString(), so the format follows the
+  // browser's default locale. Chromium defaults to en-US, but on Linux the
+  // Firefox and WebKit projects resolve their ICU default from LANG, and the
+  // nightly runner ships LANG=C.UTF-8.
+  context = await browser.newContext({
+    viewport: API_KEYS_VIEWPORT,
+    locale: 'en-US',
+  })
   page = await context.newPage()
   await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
 })
@@ -80,17 +107,21 @@ test.afterAll(async () => {
 })
 
 test('Renewing an active key issues a new token and moves the old key to Grace Period', async () => {
+  requiresDnsBypass()
+
+  const testDomain = automationDomain('renew')
   const sourceDescription = `E2E renew source ${Date.now()}`
   const renewalDescription = `E2E renew successor ${Date.now()}`
 
-  const sourceRow = await test.step('Precondition: create an Active key', () =>
-    createApiKeyWithExistingDomain(page, {
-      org: TEST_ORG_NAME,
-      env: TEST_ENV_NAME,
-      domain: AUTHORIZED_TEST_DOMAIN,
-      useType: TEST_USE_TYPE,
-      description: sourceDescription,
-    }))
+  const sourceRow =
+    await test.step('Precondition: create an Active key on a new custom domain', () =>
+      createActiveKeyOnNewDomain(page, {
+        org: TEST_ORG_NAME,
+        env: TEST_ENV_NAME,
+        domain: testDomain,
+        useType: TEST_USE_TYPE,
+        description: sourceDescription,
+      }))
 
   // Which half of the expiry rule step 6 must assert. A key minted moments ago
   // expires ~365 days out, so renewal is comfortably >30 days early and the new
@@ -101,7 +132,7 @@ test('Renewing an active key issues a new token and moves the old key to Grace P
   expect(
     daysFromNow(sourceExpiry),
     'fixture key should expire well over 30 days out, so the ">30 days before old expiry" renewal rule applies'
-  ).toBeGreaterThan(30)
+  ).toBeGreaterThan(RENEW_EARLY_THRESHOLD_DAYS)
 
   const sourceOrganization = (
     await cell(sourceRow, 'jurisdiction').innerText()
@@ -134,7 +165,7 @@ test('Renewing an active key issues a new token and moves the old key to Grace P
 
   await expect(jurisdictionField).toHaveValue(sourceOrganization)
   await expect(environmentField).toHaveValue(sourceEnvironment)
-  await expect(domainField).toHaveValue(AUTHORIZED_TEST_DOMAIN)
+  await expect(domainField).toHaveValue(testDomain)
   // The renewed key must keep the domain of the key it replaces — the server
   // sources upn, jurisdiction and environment(s) from the stored credential and
   // ignores the request body, so this is read-only rather than a required
@@ -205,7 +236,7 @@ test('Renewing an active key issues a new token and moves the old key to Grace P
   // credential rather than the same row relabelled.
   const newRow = apiKeyRow(page, renewalDescription)
   await expect(newRow).toContainText('Active')
-  await expect(newRow).toContainText(AUTHORIZED_TEST_DOMAIN)
+  await expect(newRow).toContainText(testDomain)
   await expect(newRow).toContainText(sourceOrganization)
   await expect(newRow).toContainText(sourceEnvironment)
   // The token was just revealed, so the eye is already gone, leaving Renew and
@@ -221,7 +252,7 @@ test('Renewing an active key issues a new token and moves the old key to Grace P
   // flat 365 days), so this asserts the interval, not that the dates differ.
   const newExpiry = await readExpiry(newRow)
   expect(
-    Math.abs(daysFromNow(newExpiry) - 365),
+    Math.abs(daysFromNow(newExpiry) - RENEWAL_TERM_DAYS),
     `new expiry ${newExpiry.toDateString()} should be ~1 year from today (the >30-days-early rule), not ~1 year past the old expiry ${sourceExpiry.toDateString()}`
   ).toBeLessThanOrEqual(1)
 

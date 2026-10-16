@@ -128,10 +128,16 @@ browser can't see Elasticsearch, so this stays a manual check.
 **Source scenario:** credential-lifecycle, "Renewal supersedes the old credential and
 starts a grace period"
 
-**Precondition:** the test creates its own fresh Active key on the already-authorized
-domain `createKey.fastTrack.playwright.org` (same fast path as Create Key above), so it
-never renews a key someone else is using. Renewal is one-way (Active → Grace Period), so
-acting on a found row would make this order-dependent and consume a shared fixture.
+**Precondition:** the test mints its own fresh Active key on a **single-use custom
+domain** — "Other" in the DNS Name dropdown plus a typed Custom DNS Name of the form
+`renew-YYYYMMDD-HHMMSS-mmm.automation.izgateway.org` — so it never renews a key someone
+else is using and needs no domain provisioned in advance. Renewal is one-way
+(Active → Grace Period), so acting on a found row would make this order-dependent and
+consume a shared fixture.
+
+Because minting a domain means completing the DNS challenge, this test requires
+`ALLOW_DNS_VERIFY_BYPASS=true` on the console under test and is opted in with
+`DNS_VERIFY_BYPASS_AVAILABLE=true`; it skips with a reason otherwise (§9.10).
 
 - An **Active** credential shows the Renew (circular-arrow) action under ACTION
 - Clicking it opens the "Renew API Key" dialog, which states that a new key will be
