@@ -119,3 +119,31 @@ revokes a key someone else is using.
 **Manual only (not in the Playwright test):** an `API_KEY_REVOKED` event appears in
 Elasticsearch with the reason, actor, and timestamp, and contains no token material. The
 browser can't see Elasticsearch, so this stays a manual check.
+
+---
+
+## Cancel a pending key
+
+**Test:** `e2e/tests/apiKeyCancel.spec.ts`
+**Source scenarios:** api-key-credential-lifecycle, "Cancel is a soft delete that retains
+the record" and "Cancelled credentials are hidden by default but filterable"
+
+**Precondition:** the test creates its own **Ready for Validation** key: Create Key on a
+throwaway "Other" domain, closed at the "Verify Domain Ownership" step. Nothing is
+validated, so no DNS bypass is needed.
+
+- The pending row offers the Cancel action (red circle-minus, "Cancel key") and not Revoke
+- Clicking it opens the "Cancel API Key Request" dialog, which names the jurisdiction and
+  key ID, says the record is retained for audit, and has **no** reason field
+- **CONFIRM CANCELLATION** sends `DELETE /api/apikeys` (not the revoke `PATCH`), which
+  returns 200
+- A success snackbar reads "{Jurisdiction} API Key request cancelled" / "The pending
+  request has been cancelled."
+- The row disappears from the default (unfiltered) Keys view
+- The **Total Keys**, **Active** and **Revoked** stat cards are unchanged: they count every
+  fetched key, cancelled ones included
+- Filtering Status = **Cancelled** brings the row back, showing "Cancelled {date}" with no
+  action buttons
+
+**Test data** (`.env.test`): same optional picker pins as Create Key: new domain. Each
+run leaves one Cancelled `e2e-cancel-*` row, hidden from the default view.
