@@ -188,13 +188,25 @@ const orgLabel = (j: Jurisdiction) =>
 // back to a pending key ("Ready for Validation") on a throwaway domain, which
 // needs no setup data. Either way a non-owner must get 403; on a pending key a
 // broken ownership check surfaces as 409/400 instead, which also fails.
+//
+// `onCreated` fires as soon as the POST succeeds, before the key is read back,
+// so afterAll can still clean it up if a later step in here fails.
 const createTargetKey = async (
   page: Page,
-  description: string
+  description: string,
+  onCreated: (sortKey: string, pending: boolean) => void
 ): Promise<Credential> => {
-  const others = (await senderOrgs(page)).filter(
-    (org) => orgLabel(org) !== env('E2E_RBAC_JURIS_OPS_ORG')
+  const orgs = await senderOrgs(page)
+  // A must match exactly one organization. With a typo nothing is excluded,
+  // the target can land in A, and A's legitimate access reads as an IDOR.
+  const ownOrgs = orgs.filter(
+    (org) => orgLabel(org) === env('E2E_RBAC_JURIS_OPS_ORG')
   )
+  expect(
+    ownOrgs.map(orgLabel),
+    'E2E_RBAC_JURIS_OPS_ORG must name exactly one sender organization'
+  ).toHaveLength(1)
+  const others = orgs.filter((org) => org.prefix !== ownOrgs[0].prefix)
   if (others.length === 0) {
     throw new Error(
       'No sender organization other than Jurisdiction A exists to create the target key in'
@@ -217,6 +229,7 @@ const createTargetKey = async (
     // 201 = issued Active, 202 = pending DNS validation.
     expect([201, 202], JSON.stringify(created.body)).toContain(created.status)
     const { sortKey } = created.body as { sortKey: string }
+    onCreated(sortKey, created.status === 202)
     const key = (await listCredentials(page)).find((c) => c.sortKey === sortKey)
     expect(key, 'new key missing from IZG Operations list').toBeDefined()
     return key as Credential
@@ -262,6 +275,8 @@ test.describe('API key RBAC scoping', () => {
   let admin: Page
   // The throwaway key in another jurisdiction ("B"): the target of every probe.
   let target: Credential
+  // Set as soon as the POST succeeds, so cleanup does not depend on `target`.
+  let created: { sortKey: string; pending: boolean } | undefined
   const targetDescription = `E2E rbac target ${Date.now()}`
 
   test.beforeAll(async ({ browser }) => {
@@ -272,23 +287,38 @@ test.describe('API key RBAC scoping', () => {
       process.env.OKTA_USER_FULLNAME
     ))
     await openApiKeyManagement(admin)
-    target = await createTargetKey(admin, targetDescription)
+    target = await createTargetKey(
+      admin,
+      targetDescription,
+      (sortKey, pending) => {
+        created = { sortKey, pending }
+      }
+    )
   })
 
   test.afterAll(async () => {
     if (!admin) return
     // Clean up the throwaway key: revoke an Active one, cancel a pending one.
-    if (target) {
-      const cleanup =
-        target.status === 'ready_for_validation'
-          ? callApi(admin, 'DELETE', '/api/apikeys', {
-              sortKey: target.sortKey,
-            })
-          : callApi(admin, 'PATCH', '/api/apikeys', {
-              sortKey: target.sortKey,
-              reason: 'RBAC scoping e2e cleanup',
-            })
-      await cleanup.catch(() => {})
+    if (created) {
+      const { sortKey, pending } = created
+      const revoke = (key: string) =>
+        callApi(admin, 'PATCH', '/api/apikeys', {
+          sortKey: key,
+          reason: 'RBAC scoping e2e cleanup',
+        }).catch(() => {})
+      // If a renew probe got through, the target is now in grace_period and a
+      // live successor (sortKey = the supersededBy jti) exists in B. Revoke it.
+      const current = await listCredentials(admin)
+        .then((list) => list.find((c) => c.sortKey === sortKey))
+        .catch(() => undefined)
+      if (current?.supersededBy) await revoke(current.supersededBy)
+      if (pending) {
+        await callApi(admin, 'DELETE', '/api/apikeys', { sortKey }).catch(
+          () => {}
+        )
+      } else {
+        await revoke(sortKey)
+      }
     }
     await logout(admin).catch(() => {})
     await adminContext.close()
