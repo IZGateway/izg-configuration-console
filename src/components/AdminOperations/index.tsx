@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Box, Typography, Card, CardContent } from '@mui/material'
+import { Box } from '@mui/material'
 import Close from '../Close'
 import CustomSnackbar from '../SnackBar'
 import CombinedContext from '../../contexts/app'
@@ -9,6 +9,7 @@ import DatabaseRefreshCard from './DatabaseRefreshCard'
 import InfoPanel from './InfoPanel'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
+import PageHeader from '../PageHeader'
 
 interface AdminOperationsProps {
   hasKeyName: boolean
@@ -55,16 +56,11 @@ const AdminOperations = ({
     <>
       <Close />
       {/* Page header */}
-      <Card elevation={2} sx={{ borderRadius: 3, mb: 4 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h3" component="h1" fontWeight={700}>
-            Admin Operations
-          </Typography>
-          <Typography variant="h6" component="p" color="text.secondary">
-            Secure credentials, restore connections, and manage configurations
-          </Typography>
-        </CardContent>
-      </Card>
+      <PageHeader
+        title="Admin Operations"
+        subtitle="Secure credentials, restore connections, and manage configurations."
+        sx={{ mb: 4 }}
+      />
 
       {/* Password Encryption. Gated on the capability alone. `hasKeyName` is a
           configuration precondition, not a permission, and is forwarded to the

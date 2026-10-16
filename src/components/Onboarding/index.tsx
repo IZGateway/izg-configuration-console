@@ -40,6 +40,7 @@ import {
   getEnvironmentName,
   getDestinationType,
 } from '../../lib/desttypehelper'
+import PageHeader from '../PageHeader'
 
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
@@ -1039,43 +1040,11 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
 
   return (
     <>
-      {/* Page Header */}
-      <Box
-        sx={{
-          position: 'relative',
-          zIndex: 10,
-          height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
-          marginBottom: '16px',
-          backgroundColor: palette.white,
-          borderRadius: '4px',
-        }}
-      >
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            padding: 2,
-          }}
-        >
-          <Typography
-            id="title-table"
-            sx={{ fontSize: '1.75rem', fontWeight: 700 }}
-            flexGrow={1}
-          >
-            Onboard Senders
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              color: palette.grey,
-            }}
-          >
-            Manage and onboard new senders to the IZ Gateway system. View sender
-            status, destinations, and access levels.
-          </Typography>
-        </Box>
-      </Box>
+      <PageHeader
+        id="title-table"
+        title="Onboard Senders"
+        subtitle="Manage and onboard new senders to the IZ Gateway system. View sender status, destinations, and access levels."
+      />
 
       {/* Error Alert */}
       {error && (

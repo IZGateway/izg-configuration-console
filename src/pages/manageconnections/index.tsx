@@ -17,6 +17,10 @@ import {
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
 import { fetchEndpointStatus } from '../../lib/services/fetchEndpointStatus'
+import {
+  isEndpointStatusMocked,
+  mockEndpointStatus,
+} from '../../lib/services/mockEndpointStatus'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -68,6 +72,10 @@ export const getServerSideProps = withPageAccess<
   { data: unknown[] }
 >('manageconnections', async (context, requestContext) => {
   const session = requestContext.session
+
+  if (isEndpointStatusMocked()) {
+    return { props: { data: mockEndpointStatus() } }
+  }
 
   const endpointStatuses = await fetchEndpointStatus(
     session.user.roles,
