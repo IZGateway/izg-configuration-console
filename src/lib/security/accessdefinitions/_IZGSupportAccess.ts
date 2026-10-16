@@ -57,9 +57,13 @@ const IZGSupportAccess: RoleAccess = {
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
   } as ApiKeyManagementPageAccessControl,
+  // [IGDD-3170] Overrides the IGDD-3542/3546 Support-tier default (view-only):
+  // PMs/eHealthSign staff onboarded under IZG Support need to add/edit senders
+  // directly, so this role is confirmed write-capable on Onboarding Senders.
   onboarding: {
     ...defaultOnboardingPageAccessControl,
     canViewOnboarding: true,
+    canManageSenders: true,
   } as OnboardingPageAccessControl,
 
   // The four admin blocks below carry no `as` assertion, deliberately: an
