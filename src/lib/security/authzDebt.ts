@@ -103,11 +103,12 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
     note:
       'POST/DELETE declare onboarding.canManageSenders with ANY_JURISDICTION; the handler ' +
       'separately calls hasAccessToDestId on body.destinationId, which unions reach across roles. ' +
-      'Jurisdiction Operations (holds canManageSenders, scoped) plus IZG Support (global reach, ' +
-      'holds no onboarding write) can therefore write a sender outside the granting role reach. ' +
-      'Strictly narrower than before this row existed, when POST/DELETE applied no reach check at ' +
-      'all — see PR #729 review. Same shape as the changerequest/index.ts row above; closing it ' +
-      'needs destinationId resolved against one role-local decision rather than two unioned checks.',
+      'Jurisdiction Operations (holds canManageSenders, scoped) plus any other role held by the ' +
+      'same user that contributes global reach (e.g. IZG Support, IGDD-3170) can therefore write a ' +
+      'sender outside the granting role reach. Strictly narrower than before this row existed, when ' +
+      'POST/DELETE applied no reach check at all — see PR #729 review. Same shape as the ' +
+      'changerequest/index.ts row above; closing it needs destinationId resolved against one ' +
+      'role-local decision rather than two unioned checks.',
   },
   {
     kind: 'ungated-page',
