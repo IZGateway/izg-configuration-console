@@ -25,11 +25,10 @@ const CHALLENGE_PATTERN = /izg-challenge=[0-9a-fA-F-]{36}/
 export const VERIFY_DOMAIN_URL = '**/api/apikeys/verify-domain*'
 
 /**
- * MUI icon `data-testid`s, which is how the row ACTION buttons are addressed:
- * ActionIconButton wraps its IconButton in a <span> so the Tooltip can still
- * fire while the button is disabled, and the Tooltip puts `aria-label` on that
- * span rather than the button — so the buttons have no accessible name of their
- * own. Clicking the icon works because it sits inside the button.
+ * MUI icon `data-testid`s for addressing row ACTION buttons via `rowAction`.
+ * ActionIconButton also sets `aria-label={title}` on the IconButton itself, so
+ * `row.getByRole('button', { name: 'Revoke key' })` works too (apiKeyRevoke and
+ * apiKeyCancel use that), which names the action rather than its icon.
  *
  * Renew/Re-issue share Autorenew, and Revoke/Cancel share RemoveCircleOutline.
  * That is unambiguous in practice because no row status offers both at once
@@ -226,6 +225,47 @@ export const rowAction = (row: Locator, icon: string) =>
   row.locator(`[data-field="actions"] button:has([data-testid="${icon}"])`)
 
 /**
+ * Opens Create Key from the grid, fills it for a brand-new domain and submits,
+ * leaving the dialog on the "Verify Domain Ownership" step. The credential is
+ * already persisted (`ready_for_validation`) once this returns.
+ */
+const startNewDomainKey = async (
+  page: Page,
+  opts: { domain: string; description: string }
+) => {
+  await page.getByRole('button', { name: 'Create Key' }).click()
+  await expect(createDialog(page)).toBeVisible()
+  await fillCreateFormForNewDomain(page, opts)
+  await submitCreateForm(page)
+}
+
+/**
+ * Creates a credential for a new domain and walks away at the challenge step,
+ * leaving it `Ready for Validation` — the precondition for §9.7 (cancel).
+ * Returns the row, already narrowed by the search box.
+ *
+ * Needs no DNS bypass: nothing is validated, and the credential is persisted
+ * by the create POST itself. Expects the caller to be on /apikeys.
+ */
+export const createPendingKey = async (
+  page: Page,
+  opts: { domain: string; description: string }
+) => {
+  await startNewDomainKey(page, opts)
+  await stepDialog(page, 'Verify Domain Ownership')
+    .getByRole('button', { name: 'CLOSE' })
+    .click()
+  // Not `expect(challengeDialog).toBeHidden()`: handleClose resets the step in
+  // the same commit as onClose, so that text-filtered locator resolves to zero
+  // elements either way and the assertion could never fail.
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  const row = await findRowByDescription(page, opts.description)
+  await expect(row).toContainText('Ready for Validation')
+  return row
+}
+
+/**
  * Creates a credential through the DNS challenge and validates it, then closes
  * the success dialog with CLOSE rather than VIEW KEY — leaving the key Active
  * with its token still unviewed (`viewedAt` unset), which is the precondition
@@ -237,12 +277,9 @@ export const rowAction = (row: Locator, icon: string) =>
  */
 export const createActiveUnviewedKey = async (
   page: Page,
-  { domain, description }: { domain: string; description: string }
+  opts: { domain: string; description: string }
 ) => {
-  await page.getByRole('button', { name: 'Create Key' }).click()
-  await expect(createDialog(page)).toBeVisible()
-  await fillCreateFormForNewDomain(page, { domain, description })
-  await submitCreateForm(page)
+  await startNewDomainKey(page, opts)
 
   await stepDialog(page, 'Verify Domain Ownership')
     .getByRole('button', { name: 'VALIDATE' })
