@@ -6,6 +6,7 @@ import {
   EditPageAccessControl,
   ChangeRequestPageAccessControl,
   HistoryPageAccessControl,
+  ConsolePageAccessControl,
 } from '../../type/PageAccessControls'
 import {
   defaultAccessControlPageAccessControl,
@@ -66,20 +67,20 @@ const IZGSupportAccess: RoleAccess = {
     canManageSenders: true,
   } as OnboardingPageAccessControl,
 
-  // The four admin blocks below carry no `as` assertion, deliberately: an
-  // assertion permits excess properties, so a typo'd flag name would
-  // type-check and then be `false` forever. The `RoleAccess` annotation on the
-  // parent already types each property and restores excess-property checking.
+  // The blocks below carry no `as` assertion, deliberately: an assertion
+  // permits excess properties, so a typo'd flag name would type-check and
+  // then be `false` forever. The `RoleAccess` annotation on the parent
+  // already types each property and restores excess-property checking.
 
-  // [PROVISIONAL — IGDD-3472] Every admin surface is denied outright. Spreading
-  // the all-false defaults and adding nothing is what makes that deny
-  // deliberate rather than incidental. These reproduce today's access exactly:
-  // all four surfaces are `isAdmin`-gated and IZG Support is not in
-  // OPERATIONS_GROUP.
-  // The target matrix grants IZG Support `canViewAdminOperations`,
-  // `canResetHubCircuitBreakers`, `canRefreshHubDatabase` (Finding #14) and
-  // `canViewConsole`. Deferred to its own ticket: applying them here would
-  // make IGDD-3472 grant access as well as remove it, costing the change the
+  // [PROVISIONAL — IGDD-3472] accesscontrol and adminoperations are denied
+  // outright. Spreading the all-false defaults and adding nothing is what
+  // makes that deny deliberate rather than incidental. These reproduce
+  // today's access exactly: both surfaces are `isAdmin`-gated and IZG Support
+  // is not in OPERATIONS_GROUP.
+  // The target matrix also grants IZG Support `canViewAdminOperations`,
+  // `canResetHubCircuitBreakers`, `canRefreshHubDatabase` (Finding #14,
+  // still unconfirmed). Left deferred: applying them here would make
+  // IGDD-3472 grant access as well as remove it, costing the change the
   // property that makes it reviewable as a pure security fix.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
@@ -87,9 +88,16 @@ const IZGSupportAccess: RoleAccess = {
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
   },
+  // [IGDD-3170] Confirmed in ticket QA (2026-10-19): the "console" in
+  // "onboarding senders/console" refers to the /console admin log search
+  // page itself, not an informal name for Onboard Senders. Target matrix
+  // checks IZG Support for "Admin Log Search (current /console route)" —
+  // the Console status-report widget is a separate, already-ungated surface
+  // (see src/pages/console/index.tsx), so only canViewConsole moves here.
   console: {
     ...defaultConsolePageAccessControl,
-  },
+    canViewConsole: true,
+  } as ConsolePageAccessControl,
   'api-doc': {
     ...defaultApiDocPageAccessControl,
   },
