@@ -224,13 +224,31 @@ describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly
     }
   )
 
+  // [IGDD-3170] IZG Support is the one exception: it now holds
+  // console.canViewConsole (Admin Log Search), confirmed in ticket QA as the
+  // single admin-tier grant this ticket ships. The other three Finding #14
+  // flags remain unconfirmed, so IZG Support is still checked against the
+  // rest of the table.
+  const ADMIN_CAPABILITIES_EXCEPT_CONSOLE = ADMIN_CAPABILITIES.filter(
+    (ref) => !(ref.page === 'console' && ref.capability === 'canViewConsole')
+  )
+
   it.each(NON_OPERATIONS_ROLES)('%s holds no new admin capability', (role) => {
     const s = subject([role], ['az'])
-    for (const ref of ADMIN_CAPABILITIES) {
+    const capabilities =
+      role === 'IZG Support' ? ADMIN_CAPABILITIES_EXCEPT_CONSOLE : ADMIN_CAPABILITIES
+    for (const ref of capabilities) {
       expect(
         can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed
       ).toBe(false)
     }
+  })
+
+  it('IZG Support holds console.canViewConsole (IGDD-3170)', () => {
+    const s = subject(['IZG Support'], ['az'])
+    expect(
+      can(s, 'console', 'canViewConsole', ANY_JURISDICTION).allowed
+    ).toBe(true)
   })
 })
 
@@ -300,14 +318,19 @@ describe('IGDD-3472 tenancy invariant on unfiltered data paths', () => {
   // throughout and caught nothing. So the tenancy predicate is injected here
   // to model the arrangement the ratified matrix is expected to create.
   describe('the guard is role-local, not subject-wide', () => {
+    // Not console.canViewConsole: IGDD-3170 granted that to IZG Support, so it
+    // no longer demonstrates two roles each supplying one half.
+    // accesscontrol.canViewAccessControl still splits the same way (IZG
+    // Operations holds it, IZG Support does not) and is still guarded.
     const GUARDED: CapabilityRef = {
-      page: 'console',
-      capability: 'canViewConsole',
+      page: 'accesscontrol',
+      capability: 'canViewAccessControl',
     }
 
     it('denies when the capability and the global reach come from different roles', () => {
-      // IZG Operations holds canViewConsole; IZG Support does not. Treat only
-      // IZG Support as global, so no single role supplies both halves.
+      // IZG Operations holds canViewAccessControl; IZG Support does not.
+      // Treat only IZG Support as global, so no single role supplies both
+      // halves.
       const held = decideCapability(
         subject(['IZG Operations', 'IZG Support']),
         GUARDED,
