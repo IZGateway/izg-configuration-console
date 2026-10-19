@@ -119,3 +119,81 @@ revokes a key someone else is using.
 **Manual only (not in the Playwright test):** an `API_KEY_REVOKED` event appears in
 Elasticsearch with the reason, actor, and timestamp, and contains no token material. The
 browser can't see Elasticsearch, so this stays a manual check.
+
+---
+
+## Renew API Key
+
+**Test:** `e2e/tests/apiKeyRenew.spec.ts`
+**Source scenario:** credential-lifecycle, "Renewal supersedes the old credential and
+starts a grace period"
+
+**Precondition:** the test mints its own fresh Active key on a **single-use custom
+domain** — "Other" in the DNS Name dropdown plus a typed Custom DNS Name of the form
+`renew-YYYYMMDD-HHMMSS-mmm.automation.izgateway.org` — so it never renews a key someone
+else is using and needs no domain provisioned in advance. Renewal is one-way
+(Active → Grace Period), so acting on a found row would make this order-dependent and
+consume a shared fixture.
+
+Because minting a domain means completing the DNS challenge, this test requires
+`ALLOW_DNS_VERIFY_BYPASS=true` on the console under test and is opted in with
+`DNS_VERIFY_BYPASS_AVAILABLE=true`; it skips with a reason otherwise (§9.10).
+
+- An **Active** credential shows the Renew (circular-arrow) action under ACTION
+- Clicking it opens the "Renew API Key" dialog, which states that a new key will be
+  issued and that the old key stays valid for **10 business days**
+- Jurisdiction, Environment, Use Types and **Domain (upn)** are carried over from the row
+  and are read-only — the server sources the domain, jurisdiction and environment(s) from
+  the stored credential and ignores the request body, so a renewal cannot be redirected
+  to a different scope. Description is the only editable field, and it is optional
+- **RENEW KEY** returns 201 and opens the "Renewal Complete" dialog — _not_ the token
+  dialog, because renewal confirms first and reveals on demand; **VIEW KEY** there opens
+  the one-time "View API Key" dialog with the JWT for the **new** credential
+- The old row's status then reads **"Grace period expires on \<date\>"** and only Revoke
+  is left — no Renew, no View
+- The new row reads **Active** on the same DNS name, organization and environment, with
+  no View action (its token was just revealed)
+- The new expiry in the DURATION cell is **1 year from the renewal date**, because the
+  key being renewed expires more than 30 days out — the test asserts that precondition
+  first, so it fails loudly rather than silently checking the wrong rule. The other
+  branch (renewing within 30 days of expiry, where the new expiry is 1 year past the
+  **old** expiry) cannot be set up through the UI, since a freshly created key is always
+  ~365 days out; it is covered by the endpoint's unit tests instead
+- Both outcomes survive a page reload, so they are persisted rather than SWR state
+
+**Test data:** constants at the top of the test file (organization, environment,
+pre-authorized domain, use type). It shares the Create Key spec's domain rather than
+using a `renewKey.` domain of its own, because that is the only playwright-owned domain
+currently authorized for this organization and environment —
+`/api/apikeys/domains?envId=&jurisdictionId=` returns exactly the set the DNS Name
+dropdown offers. The shared scope means the soft duplicate-scope warning fires on
+create, which the fixture clicks through. The test leaves two keys behind (one in Grace
+Period, one Active) and revokes neither.
+
+---
+
+## Cancel a pending key
+
+**Test:** `e2e/tests/apiKeyCancel.spec.ts`
+**Source scenarios:** api-key-credential-lifecycle, "Cancel is a soft delete that retains
+the record" and "Cancelled credentials are hidden by default but filterable"
+
+**Precondition:** the test creates its own **Ready for Validation** key: Create Key on a
+throwaway "Other" domain, closed at the "Verify Domain Ownership" step. Nothing is
+validated, so no DNS bypass is needed.
+
+- The pending row offers the Cancel action (red circle-minus, "Cancel key") and not Revoke
+- Clicking it opens the "Cancel API Key Request" dialog, which names the jurisdiction and
+  key ID, says the record is retained for audit, and has **no** reason field
+- **CONFIRM CANCELLATION** sends `DELETE /api/apikeys` (not the revoke `PATCH`), which
+  returns 200
+- A success snackbar reads "{Jurisdiction} API Key request cancelled" / "The pending
+  request has been cancelled."
+- The row disappears from the default (unfiltered) Keys view
+- The **Total Keys**, **Active** and **Revoked** stat cards are unchanged: they count every
+  fetched key, cancelled ones included
+- Filtering Status = **Cancelled** brings the row back, showing "Cancelled {date}" with no
+  action buttons
+
+**Test data** (`.env.test`): same optional picker pins as Create Key: new domain. Each
+run leaves one Cancelled `e2e-cancel-*` row, hidden from the default view.
