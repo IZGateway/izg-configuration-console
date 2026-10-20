@@ -23,6 +23,7 @@ jobs:
       OKTA_NONADMIN_EXPECTED_DEST_IDS: ${{ secrets.OKTA_NONADMIN_EXPECTED_DEST_IDS }}
       JIRA_API_URL: ${{ secrets.JIRA_API_URL }}
       JIRA_API_AUTH_BASE64: ${{ secrets.JIRA_API_AUTH_BASE64 }}
+      DNS_VERIFY_BYPASS_AVAILABLE: ${{ vars.DNS_VERIFY_BYPASS_AVAILABLE }}
 
     steps:
       - name: Checkout code
