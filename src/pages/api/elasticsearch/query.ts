@@ -5,6 +5,7 @@ import withMiddleware from '../../../lib/api/api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
+import { can, ANY_JURISDICTION } from '../../../lib/security/policy'
 import logger from '../../../../logger'
 
 /**
@@ -12,26 +13,10 @@ import logger from '../../../../logger'
  * Uses ElasticRepositoryClient for proper authentication and error handling
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  // Only allow authenticated admin users
   const session = await getServerSession(req, res, authOptions)
 
-  if (!session?.user?.isAdmin) {
-    // Only log a genuine RBAC rejection (authenticated but non-admin) — an
-    // unauthenticated caller is a separate authentication concern, not a
-    // role-based denial.
-    if (session?.user) {
-      logAccessDenied({
-        reason: 'admin-only Elasticsearch query',
-        url: req.url,
-        method: req.method,
-        user: session.user.email,
-        roles: subjectOf(session).roles,
-      })
-    }
-    return res.status(403).json({
-      error: 'Unauthorized',
-      message: 'Only admin users can access Elasticsearch queries',
-    })
+  if (!session?.user) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   if (req.method !== 'POST') {
@@ -69,6 +54,30 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       Boolean(aggregations?.memory) &&
       Boolean(aggregations?.disk) &&
       Boolean(aggregations?.connections)
+
+    // [IGDD-3170] This endpoint serves two callers that share no capability:
+    // Home/SystemResourcesWidget (the "Console — status report" row, open to
+    // every signed-in role per the target matrix) and the /console admin log
+    // search page (gated by console.canViewConsole). They are told apart by
+    // query shape, not by route — the system-resources aggs are how the
+    // widget's fixed query is recognized. Anything else is a log search and
+    // requires canViewConsole.
+    if (!hasSystemResourcesAggs) {
+      const subject = subjectOf(session)
+      if (!can(subject, 'console', 'canViewConsole', ANY_JURISDICTION).allowed) {
+        logAccessDenied({
+          reason: 'console-only Elasticsearch log search',
+          url: req.url,
+          method: req.method,
+          user: session.user.email,
+          roles: subject.roles,
+        })
+        return res.status(403).json({
+          error: 'Unauthorized',
+          message: 'Only users with Console access can run this query',
+        })
+      }
+    }
 
     if (hasSystemResourcesAggs) {
       aggregations.connections = {
@@ -155,5 +164,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
 export default withMiddleware({
   inHandler:
-    'IGDD-3472: inline isAdmin check. canViewConsole would be wrong here - this route is also called from Home/SystemResourcesWidget, which the target matrix treats as a separate capability from the admin log search.',
+    'IGDD-3170/3472: capability check is conditional on query shape (one call site is the unrestricted status-report widget, the other is the canViewConsole-gated log search), which a single declarative `capability` option cannot express.',
 })(handler)
