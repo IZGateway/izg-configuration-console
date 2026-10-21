@@ -84,12 +84,16 @@ const Harness = () => (
   </AppProvider>
 )
 
-const renderAtScheduleStep = async () => {
+// `onIdentify` runs while the IDENTIFY step is on screen, which is the only
+// place the form fields exist. A test that needs an unsaved edit must make it
+// there, because seeding the draft record cannot prove that form state survived.
+const renderAtScheduleStep = async (onIdentify?: () => void) => {
   render(<Harness />)
   // SERVICE AGREEMENT auto-advances because the agreement is already accepted.
   for (let step = 1; step <= 3; step++) {
     const next = await screen.findByRole('button', { name: 'NEXT' })
     await waitFor(() => expect(next).not.toBeDisabled())
+    if (step === 2 && onIdentify) onIdentify()
     fireEvent.click(next)
   }
   fireEvent.click(await screen.findByLabelText('As Soon As Possible'))
@@ -510,12 +514,16 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
     })
 
     it('keeps the entered values available for a retry', async () => {
-      draft = {
-        ...draftData,
-        requested: { ...draftData.requested, username: 'edited-user' },
-      }
+      // The value is typed into the form and never written to the draft record.
+      // Seeding the record instead would prove nothing: the form initialises from
+      // the record, so a regression that refilled the form from the record after
+      // a failure would still find the value and the test would still pass.
       submitResponder = () => Promise.resolve(jsonResponse(504))
-      const schedule = await renderAtScheduleStep()
+      const schedule = await renderAtScheduleStep(() => {
+        fireEvent.change(screen.getByLabelText('Username'), {
+          target: { value: 'typed-by-user' },
+        })
+      })
 
       fireEvent.click(schedule)
       await runConfirmWindow()
@@ -524,11 +532,13 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       const again = await screen.findByRole('button', { name: 'SCHEDULE' })
       await waitFor(() => expect(again).not.toBeDisabled())
 
-      // Step back to VERIFY and read a value that differs from the stored one, so
-      // this proves the user's edit survived rather than that the record rendered.
+      // Step back to VERIFY, which lists what is about to be submitted.
       fireEvent.click(screen.getByRole('button', { name: 'PREVIOUS' }))
-      expect(await screen.findByText('edited-user')).toBeInTheDocument()
-      expect(draft.requested.username).not.toBe(destData.username)
+      expect(await screen.findByText('typed-by-user')).toBeInTheDocument()
+      // The record never held this value, so the value on screen can only have
+      // come from the form state that the submission failure left alone.
+      expect(draft.requested.username).not.toBe('typed-by-user')
+      expect(destData.username).not.toBe('typed-by-user')
     })
 
     it('returns to the connection list after success', async () => {
@@ -562,6 +572,69 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       await waitFor(() => expect(again).not.toBeDisabled())
       fireEvent.click(again)
       await waitFor(() => expect(changeRequestCalls()).toHaveLength(2))
+    })
+  })
+
+  describe('the bounded wait cannot be held open or undone', () => {
+    it('bounds every record lookup so a stalled read cannot hold the wait open', async () => {
+      // The loop tests its deadline between iterations only. A lookup with no
+      // limit of its own can stall for ever while reading headers or the body,
+      // and then the deadline is never tested again: the uncertain-outcome
+      // message never appears and SCHEDULE stays disabled until a page reload.
+      submitResponder = () => Promise.resolve(jsonResponse(504))
+      const schedule = await renderAtScheduleStep()
+
+      fireEvent.click(schedule)
+      await runConfirmWindow()
+
+      expect(lookupCalls().length).toBeGreaterThan(0)
+      lookupCalls().forEach(([, options]) => {
+        expect(options?.signal).toBeInstanceOf(AbortSignal)
+      })
+    })
+
+    it('refuses a draft save while the outcome is still unsettled', async () => {
+      // A draft write sends jiraId: null for this destination, and the record is
+      // keyed by destination, so it overwrites whatever the submission wrote. If
+      // the server stores its ticket first, that write unlinks a live ticket and
+      // leaves it untracked. resetDraftValues carries the same guard, and it
+      // deletes the record outright.
+      submitResponder = () => Promise.resolve(jsonResponse(504))
+      // The form must be edited, or the save control is disabled and the click
+      // does nothing. A test that passed on a disabled button would prove only
+      // that nothing happened, which is what it claims to be testing.
+      const schedule = await renderAtScheduleStep(() => {
+        fireEvent.change(screen.getByLabelText('Username'), {
+          target: { value: 'typed-by-user' },
+        })
+      })
+
+      fireEvent.click(schedule)
+      // Part way into the wait, not past it. The outcome is still unsettled.
+      await runConfirmWindow(6000)
+
+      // Back to IDENTIFY, the only step that shows the save control.
+      fireEvent.click(screen.getByRole('button', { name: 'PREVIOUS' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'PREVIOUS' }))
+      const save = await screen.findByRole('button', { name: 'save' })
+      expect(save).toBeEnabled()
+      fireEvent.click(save)
+
+      // Asserted without waitFor. The guard runs before saveDraft's first await,
+      // so the alert is already rendered. waitFor would advance the fake clock
+      // past the snackbar's 6 second auto-hide, and handleCloseSnackBar would
+      // clear the very alert being asserted.
+      expect(latestAlert().level).toBe('warning')
+      expect(latestAlert().message).toMatch(/still being submitted/i)
+
+      const draftWrites = changeRequestCalls().filter(([, options]) => {
+        try {
+          return JSON.parse(options?.body)?.isDraft === true
+        } catch {
+          return false
+        }
+      })
+      expect(draftWrites).toHaveLength(0)
     })
   })
 })

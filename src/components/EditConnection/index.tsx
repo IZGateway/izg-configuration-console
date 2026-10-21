@@ -477,9 +477,17 @@ const EditConnection = (props: editConnectionProps) => {
       await new Promise((resolve) =>
         setTimeout(resolve, CONFIRM_POLL_INTERVAL_MS)
       )
+      // The bound has to hold on elapsed time, not on iterations started. A
+      // lookup carries no limit of its own, so one that stalls while reading
+      // headers or the body never settles. The loop would then never test the
+      // deadline again, the uncertain-outcome message would never appear, and
+      // SCHEDULE would stay disabled until the user reloaded the page.
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) break
       try {
         const lookup = await fetch(
-          `/api/changerequest/${props.destTypeId}/${props.destId}`
+          `/api/changerequest/${props.destTypeId}/${props.destId}`,
+          { signal: AbortSignal.timeout(remaining) }
         )
         if (lookup.ok) {
           const record = await lookup.json()
@@ -638,7 +646,24 @@ const EditConnection = (props: editConnectionProps) => {
     setActiveStep((prevActiveStep) => prevActiveStep + advanceBy)
   }
 
+  // IGDD-3566: a submission is in flight, or its outcome is not settled yet. The
+  // server may be writing the ticket for that submission right now. This write
+  // sets jiraId to null, and resetDraftValues deletes the same record, so either
+  // one can erase the link to a live ticket and leave it untracked. That is the
+  // orphaned ticket this change exists to prevent.
+  const PENDING_SUBMISSION_MESSAGE =
+    'Your change request is still being submitted. Please wait for the result ' +
+    'before you change this draft.'
+
   const saveDraft = async () => {
+    if (isSubmittingRef.current) {
+      setAlert({
+        level: 'warning',
+        message: PENDING_SUBMISSION_MESSAGE,
+      })
+      return
+    }
+
     const response = await fetch(`/api/changerequest`, {
       method: 'POST',
       body: JSON.stringify({
@@ -676,6 +701,16 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const resetDraftValues = async () => {
+    // Guarded before the form state is touched. A reset that wiped the entered
+    // values and then declined to delete the record would be worse than either.
+    if (isSubmittingRef.current) {
+      setAlert({
+        level: 'warning',
+        message: PENDING_SUBMISSION_MESSAGE,
+      })
+      return
+    }
+
     setDefaultFormValues({
       destUri: destData?.destUri,
       username: destData?.username,
