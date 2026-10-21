@@ -56,6 +56,8 @@ const Manage = (
   )
 }
 
+Manage.showFooter = true
+
 export default Manage
 
 // Migrated from a hand-rolled gate to the shared one (IGDD-3472). It already

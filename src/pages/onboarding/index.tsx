@@ -87,4 +87,6 @@ export const getServerSideProps = withPageAccess<
   }
 })
 
+OnboardingPage.showFooter = true
+
 export default OnboardingPage

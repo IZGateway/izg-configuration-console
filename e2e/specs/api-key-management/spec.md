@@ -169,3 +169,84 @@ currently authorized for this organization and environment —
 dropdown offers. The shared scope means the soft duplicate-scope warning fires on
 create, which the fixture clicks through. The test leaves two keys behind (one in Grace
 Period, one Active) and revokes neither.
+
+---
+
+## Cancel a pending key
+
+**Test:** `e2e/tests/apiKeyCancel.spec.ts`
+**Source scenarios:** api-key-credential-lifecycle, "Cancel is a soft delete that retains
+the record" and "Cancelled credentials are hidden by default but filterable"
+
+**Precondition:** the test creates its own **Ready for Validation** key: Create Key on a
+throwaway "Other" domain, closed at the "Verify Domain Ownership" step. Nothing is
+validated, so no DNS bypass is needed.
+
+- The pending row offers the Cancel action (red circle-minus, "Cancel key") and not Revoke
+- Clicking it opens the "Cancel API Key Request" dialog, which names the jurisdiction and
+  key ID, says the record is retained for audit, and has **no** reason field
+- **CONFIRM CANCELLATION** sends `DELETE /api/apikeys` (not the revoke `PATCH`), which
+  returns 200
+- A success snackbar reads "{Jurisdiction} API Key request cancelled" / "The pending
+  request has been cancelled."
+- The row disappears from the default (unfiltered) Keys view
+- The **Total Keys**, **Active** and **Revoked** stat cards are unchanged: they count every
+  fetched key, cancelled ones included
+- Filtering Status = **Cancelled** brings the row back, showing "Cancelled {date}" with no
+  action buttons
+
+**Test data** (`.env.test`): same optional picker pins as Create Key: new domain. Each
+run leaves one Cancelled `e2e-cancel-*` row, hidden from the default view.
+
+---
+
+## RBAC scoping (Jurisdiction Ops vs. IZG Ops)
+
+**Test:** `e2e/tests/apiKeyRbacScoping.spec.ts`
+**Source scenario:** test plan §9.8, security regression (cross-reference IGDD-3184).
+Keep permanently: a missing ownership check regresses silently, because the UI hides
+other jurisdictions' keys whether or not the server enforces it.
+
+**Precondition:** IZG Operations creates a throwaway key in Jurisdiction B, "Utah
+Department of Health (sender + jurisdiction)" (`TEST_ORG_NAME` at the top of the test file), and every probe
+targets that key, never a real one. It is Active if B has a domain already authorized in Development, otherwise
+Ready for Validation on a throwaway domain. If ownership is broken, the probes do
+mutate their target. The key is revoked (or cancelled, if pending) during cleanup, so
+each run leaves at most a few revoked/cancelled rows, all in B.
+
+Jurisdiction A is Audacious Inquiry LLC (`JURIS_OPS_ORG_NAME`). The run fails before
+creating anything if B's prefix is among the jurisdiction prefixes in A's own session
+(what the server checks), if A's session has no jurisdictions, or if A is IZG
+Operations.
+
+- **IZG Operations:** the Create Key Organization dropdown lists every sender
+  organization returned by `/api/jurisdictions` (the unscoped list)
+- **IZG Operations:** sees every key that Jurisdiction A's user sees
+- **Jurisdiction Operations (A):** `GET /api/apikeys` returns at least one key, every
+  key returned is in Audacious Inquiry LLC, and B's key is in neither
+  the response nor the table
+- **Jurisdiction Operations (A):** calling the routes directly on B's key — view token
+  (`POST /api/apikeys/token`), renew (`POST /api/apikeys/renew`), revoke
+  (`PATCH /api/apikeys`) and cancel (`DELETE /api/apikeys`) — each returns 403
+  "Forbidden - not authorized for this jurisdiction"
+- Afterwards B's key has the status it was created with: not revoked, renewed or
+  cancelled
+- **No API key role:** there is no API Key Management nav entry, `/apikeys` shows "You
+  do not have access to this page." with no Create Key button, and the list route and
+  every probe above return 403 "Forbidden - insufficient role"
+
+Probes run as `fetch()` inside the signed-in page, because `/api/*` requires a DPoP
+proof that only the app's fetch wrapper adds. A Playwright `request` call with copied
+cookies is redirected to sign-in before the ownership check ever runs. Failed
+assertions compare only status and error message, never the response body, so a
+regressed view-token probe cannot print a live JWT into the CI log. A failure is a
+security finding: log it per test plan §8.
+
+**Test data** (`.env.test`; locally the spec skips with a reason if any are unset, in CI
+it fails): IZG Operations is `OKTA_USERNAME` / `OKTA_PASSWORD` / `OKTA_USER_FULLNAME`;
+Jurisdiction A is `E2E_RBAC_JURIS_OPS_USERNAME`, `_PASSWORD`, `_FULLNAME` and must own
+at least one key; the no-role user is `E2E_RBAC_NO_ROLE_USERNAME`, `_PASSWORD`,
+`_FULLNAME`. The nightly workflow passes all six `E2E_RBAC_*` values from repository
+secrets. Both organizations are constants in the test file, not env vars:
+`JURIS_OPS_ORG_NAME` (A) and `TEST_ORG_NAME` (B), by their Organization dropdown
+names.

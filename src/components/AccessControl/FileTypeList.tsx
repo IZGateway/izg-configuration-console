@@ -140,7 +140,10 @@ const dataGridCustom = {
       alignItems: 'stretch',
     },
   },
+  // Remove MUI's default footer top border, which drew a stray line above the
+  // pagination control.
   '& .MuiDataGrid-footerContainer': {
+    borderTop: 'none',
     justifyContent: 'flex-end',
   },
   '& .MuiTablePagination-actions': {

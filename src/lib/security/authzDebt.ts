@@ -241,8 +241,8 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   {
     kind: 'in-handler',
     subject: 'elasticsearch/query.ts',
-    ticket: 'IGDD-3472',
-    note: 'Inline isAdmin check. canViewConsole would be wrong: this route is also called from Home/SystemResourcesWidget, a surface the target matrix treats as a separate capability from the admin log search.',
+    ticket: 'IGDD-3170',
+    note: 'console.canViewConsole check is conditional on query shape, not the whole route: the status-report widget query (Home/SystemResourcesWidget) bypasses it, every other query (the /console log search) requires it.',
   },
 
   // ---------------------------------------------------------------------
