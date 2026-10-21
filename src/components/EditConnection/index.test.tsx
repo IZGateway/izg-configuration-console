@@ -701,5 +701,58 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       fireEvent.click(again)
       await waitFor(() => expect(submitCalls()).toHaveLength(1))
     })
+
+    it('keeps the gate shut when only the first of two draft writes settles', async () => {
+      // The Save control is disabled only while the form is unchanged, so two
+      // writes can overlap. A flag would be cleared by whichever finished first,
+      // opening the gate while the second was still travelling. Only a count
+      // survives that, so the gate is driven by one.
+      const releases: Array<() => void> = []
+      const baseFetch = global.fetch as jest.Mock
+      global.fetch = jest.fn((url: string, options) => {
+        let isDraft: unknown = null
+        try {
+          isDraft = JSON.parse(options?.body)?.isDraft
+        } catch {
+          // not a JSON body
+        }
+        if (url === SUBMIT_URL && isDraft === true) {
+          return new Promise((resolve) => {
+            releases.push(() => resolve(jsonResponse(200, 'ok')))
+          })
+        }
+        return baseFetch(url, options)
+      }) as jest.Mock
+
+      const schedule = await renderAtScheduleStep(async () => {
+        fireEvent.change(screen.getByLabelText('Username'), {
+          target: { value: 'UsernameNEW' },
+        })
+        const save = await screen.findByRole('button', { name: 'save' })
+        await waitFor(() => expect(save).toBeEnabled())
+        // Two clicks, so two writes are open at once.
+        fireEvent.click(save)
+        fireEvent.click(save)
+      })
+
+      await waitFor(() => expect(releases).toHaveLength(2))
+
+      // Settle only the first. One write is still in flight.
+      releases[0]()
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(0)
+      })
+
+      fireEvent.click(schedule)
+      expect(latestAlert().level).toBe('warning')
+      expect(latestAlert().message).toMatch(/still being saved/i)
+      expect(submitCalls()).toHaveLength(0)
+
+      // Settle the second, and the gate opens.
+      releases[1]()
+      const again = await screen.findByRole('button', { name: 'SCHEDULE' })
+      fireEvent.click(again)
+      await waitFor(() => expect(submitCalls()).toHaveLength(1))
+    })
   })
 })

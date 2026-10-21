@@ -107,10 +107,17 @@ const EditConnection = (props: editConnectionProps) => {
   // drives the pending UI. React batches state updates, so two fast activations
   // would both read a stale `false`. A ref updates synchronously.
   const isSubmittingRef = useRef(false)
-  // Set while a draft write is in flight. Synchronous, for the same reason the
+  // How many draft writes are in flight. Synchronous, for the same reason the
   // submission gate is: state updates are batched, so a check against state can
   // read stale between a click and the next render.
-  const isDraftWriteRef = useRef(false)
+  //
+  // A count rather than a flag. The Save control is disabled only while the form
+  // is unchanged, so two writes can overlap. With a flag, the first to finish
+  // clears it while the second is still travelling, the scheduling gate opens
+  // early, and the late write erases the ticket link anyway. Save followed by
+  // Reset is the reachable version, because the confirmation dialog puts a
+  // human-scale gap between the two.
+  const draftWritesInFlightRef = useRef(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
 
@@ -315,7 +322,7 @@ const EditConnection = (props: editConnectionProps) => {
     // record, and it writes the same row this submission is about to fill in. If
     // it lands after the server stores the ticket, the link is erased. Refuse and
     // say so, rather than racing it.
-    if (isDraftWriteRef.current) {
+    if (draftWritesInFlightRef.current > 0) {
       setAlert({
         level: 'warning',
         jurisdiction: destData?.jurisdiction?.description,
@@ -687,7 +694,7 @@ const EditConnection = (props: editConnectionProps) => {
       return
     }
 
-    isDraftWriteRef.current = true
+    draftWritesInFlightRef.current += 1
     try {
       const response = await fetch(`/api/changerequest`, {
         method: 'POST',
@@ -724,7 +731,7 @@ const EditConnection = (props: editConnectionProps) => {
         console.error(`Error saving the draft`)
       }
     } finally {
-      isDraftWriteRef.current = false
+      draftWritesInFlightRef.current -= 1
     }
   }
 
@@ -767,7 +774,7 @@ const EditConnection = (props: editConnectionProps) => {
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
-    isDraftWriteRef.current = true
+    draftWritesInFlightRef.current += 1
     try {
       const response = await fetch(`/api/changerequest/${draftData.id}`, {
         method: 'DELETE',
@@ -786,7 +793,7 @@ const EditConnection = (props: editConnectionProps) => {
       }
       await mutate()
     } finally {
-      isDraftWriteRef.current = false
+      draftWritesInFlightRef.current -= 1
     }
   }
 
