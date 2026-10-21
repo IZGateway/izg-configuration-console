@@ -513,9 +513,7 @@ const AccessControlComponent = () => {
   }
 
   if (isAddingDeny) {
-    return (
-      <AddDenyList onSave={handleSaveDeny} onCancel={handleCancelDeny} />
-    )
+    return <AddDenyList onSave={handleSaveDeny} onCancel={handleCancelDeny} />
   }
 
   if (isAddingFileType) {
@@ -636,6 +634,7 @@ const AccessControlComponent = () => {
         severity={alert.level}
         message={alert.message}
         onClose={handleCloseSnackbar}
+        autoHideDuration={alert.persistent ? null : undefined}
       />
     </div>
   )

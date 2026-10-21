@@ -5,7 +5,7 @@ import Identify from './identify'
 import Verify from './verify'
 import Jurisdiction from './jurisdiction'
 import { useRouter } from 'next/router'
-import { useState, useEffect, useContext, useCallback } from 'react'
+import { useState, useEffect, useContext, useCallback, useRef } from 'react'
 import StepperComponent from '../Stepper'
 import CombinedContext from '../../contexts/app'
 import Close from '../Close'
@@ -28,6 +28,48 @@ interface editConnectionProps {
 }
 
 const authorizationAgreementKey = `authorization-agreement-accepted`
+
+// IGDD-3566: after a slow response the console looks up the change request record
+// itself rather than asking the user to go and check. The record is the same one
+// that lights the Change Request icon on the connection list.
+const CONFIRM_POLL_INTERVAL_MS = 3000
+const CONFIRM_POLL_LIMIT_MS = 90000
+
+// IGDD-3566: two failure messages, grouped by what the user must do. A user cannot
+// act on the difference between Jira being unreachable, Jira refusing the request,
+// and the request never being sent: all three mean nothing was created. Nor on the
+// difference between the wait expiring and Jira creating a ticket we could not
+// record: both mean the outcome is uncertain.
+//
+// Neither message claims anything about the server. The earlier wording opened
+// "The server did not respond", which was false whenever the server answered with
+// a 5xx of its own.
+const NOTHING_CREATED_MESSAGE =
+  'There was a problem creating your change request, and nothing was created. ' +
+  'Please try again later.'
+
+// Must never invite a retry. On one of its paths a ticket already exists, and a
+// retry would raise a second one.
+const UNCERTAIN_OUTCOME_MESSAGE =
+  'There may have been an issue creating your change request. ' +
+  'Please verify in Manage Connections or contact support.'
+
+const CONFIRMED_MESSAGE =
+  'The server was slow to respond, but your change request was created.'
+
+// IGDD-3566: there is one change request record per destination, so a draft write
+// and a submission race for the same row. A draft write sets jiraId to null and a
+// reset deletes the row, so whichever lands last wins. Either order can erase the
+// link to a live ticket and leave it untracked, which is the orphaned ticket this
+// change exists to prevent. Both directions are therefore refused, with a message:
+// a silent refusal is what started this incident.
+const PENDING_SUBMISSION_MESSAGE =
+  'Your change request is still being submitted. Please wait for the result ' +
+  'before you change this draft.'
+
+const PENDING_DRAFT_WRITE_MESSAGE =
+  'Your draft is still being saved. Please wait for it to finish before you ' +
+  'schedule this change request.'
 
 const steps = [
   'SERVICE AGREEMENT',
@@ -61,10 +103,17 @@ const EditConnection = (props: editConnectionProps) => {
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [isValidatingDestUri, setIsValidatingDestUri] = useState(false)
 
-  const [
-    hasCreateChangeRequestTicketError,
-    setHasCreateChangeRequestTicketError,
-  ] = useState(false)
+  // IGDD-3566: the ref is the gate that blocks a second submission and the state
+  // drives the pending UI. React batches state updates, so two fast activations
+  // would both read a stale `false`. A ref updates synchronously.
+  const isSubmittingRef = useRef(false)
+  // Set while a draft write is in flight. Synchronous, for the same reason the
+  // submission gate is: state updates are batched, so a check against state can
+  // read stale between a click and the next render.
+  const isDraftWriteRef = useRef(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isConfirming, setIsConfirming] = useState(false)
+
   const {
     data: destData,
     error: destError,
@@ -103,17 +152,6 @@ const EditConnection = (props: editConnectionProps) => {
       setScheduledDateTime(getDefaultDate())
     }
   }, [scheduledDateTime, getDefaultDate])
-  useEffect(() => {
-    if (hasCreateChangeRequestTicketError && destData) {
-      setAlert({
-        level: 'error',
-        jurisdiction: destData.jurisdiction.description,
-        dest_type: destData.destinationType.type,
-        message: `Error creating change request ticket for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}. Please try again later!`,
-      })
-    }
-  }, [hasCreateChangeRequestTicketError, destData, setAlert])
-
   useEffect(() => {
     if (draftData) {
       setFormValues({
@@ -176,6 +214,10 @@ const EditConnection = (props: editConnectionProps) => {
     }
   }, [destData, draftData])
 
+  // IGDD-3566: this gate opens the snackbar on IDENTIFY only, so an alert raised
+  // on any other step stays hidden until that step calls setShowSnackbar itself.
+  // Removing the gate needs alert lifecycle work first, because `alert` lives in
+  // application context and would re-open on every later step. Tracked separately.
   useEffect(() => {
     if (activeStep === 2) {
       if (!_.isEmpty(alert.level)) {
@@ -266,38 +308,87 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const handleSchedule = async () => {
+    if (isSubmittingRef.current) {
+      return
+    }
+    // A draft write is still in flight. It carries jiraId null, or it deletes the
+    // record, and it writes the same row this submission is about to fill in. If
+    // it lands after the server stores the ticket, the link is erased. Refuse and
+    // say so, rather than racing it.
+    if (isDraftWriteRef.current) {
+      setAlert({
+        level: 'warning',
+        jurisdiction: destData?.jurisdiction?.description,
+        dest_type: destData?.destinationType?.type,
+        message: PENDING_DRAFT_WRITE_MESSAGE,
+      })
+      setShowSnackbar(true)
+      return
+    }
+    isSubmittingRef.current = true
+    setIsSubmitting(true)
+    try {
+      await submitChangeRequest()
+    } catch (error) {
+      // A throw that escapes submitChangeRequest happened before or around the
+      // request rather than in response to it, so report a failure to send. The
+      // request body is built outside that function's try for the same reason.
+      console.error(`Unhandled failure while scheduling: ${error}`)
+      setAlert({
+        level: 'error',
+        jurisdiction: destData?.jurisdiction?.description,
+        dest_type: destData?.destinationType?.type,
+        message: NOTHING_CREATED_MESSAGE,
+      })
+      setShowSnackbar(true)
+    } finally {
+      isSubmittingRef.current = false
+      setIsSubmitting(false)
+      setIsConfirming(false)
+    }
+  }
+
+  const submitChangeRequest = async () => {
     let response
+    // Held before the submit so that the confirmation poll can tell a new ticket
+    // from one that already existed. A draft record carries a null jiraId.
+    const previousJiraId = draftData?.jiraId ?? null
     const scheduleAt = asapSelected
       ? new Date().toISOString()
       : scheduledDateTime
+    // Built before the try. A throw while reading session or destination values is
+    // not a transport failure, and reporting it as one would tell the user their
+    // request may still have been created when it was never sent. Outside the try
+    // it reaches the backstop in handleSchedule instead.
+    const requestBody = JSON.stringify({
+      id: draftData?.id || null,
+      requested: {
+        ...formValues,
+        password: formValues.newPassword,
+        ..._.omit(formValues, ['newPassword', 'confirmPassword']),
+      },
+      current: {
+        ...defaultFormValues,
+      },
+      destId: destData.destId,
+      destType: {
+        typeId: destData.destinationType.typeId,
+        type: destData.destinationType.type,
+      },
+      isAsap: asapSelected,
+      scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
+      requestedBy: session.user.email,
+      isDraft: false,
+    })
+
     try {
       response = await fetch(`/api/changerequest`, {
         method: 'POST',
-        body: JSON.stringify({
-          id: draftData?.id || null,
-          requested: {
-            ...formValues,
-            password: formValues.newPassword,
-            ..._.omit(formValues, ['newPassword', 'confirmPassword']),
-          },
-          current: {
-            ...defaultFormValues,
-          },
-          destId: destData.destId,
-          destType: {
-            typeId: destData.destinationType.typeId,
-            type: destData.destinationType.type,
-          },
-          isAsap: asapSelected,
-          scheduledAt: moment.utc(scheduleAt).tz('America/New_York'),
-          requestedBy: session.user.email,
-          isDraft: false,
-        }),
+        body: requestBody,
       })
     } catch (error) {
-      console.error(`Error communicating with Jira: ${error}`)
-      clearValue()
-      setHasCreateChangeRequestTicketError(true)
+      console.error(`Error submitting the change request: ${error}`)
+      await confirmOutcome(previousJiraId)
     }
     clearValue()
     if (!response) {
@@ -311,6 +402,9 @@ const EditConnection = (props: editConnectionProps) => {
         dest_type: destData.destinationType.type,
         message: `Change request is created successfully for ${destData.jurisdiction.description} on environment ${destData.destinationType.type}!`,
       })
+      // The snackbar auto-opens only on the IDENTIFY step, so open it here. The
+      // confirmed-success path does the same, which keeps the two paths alike.
+      setShowSnackbar(true)
       router.push('/manageconnections')
     } else if (response.status === 400) {
       // The server rejected a submitted value - today, a destUri outside the
@@ -337,13 +431,144 @@ const EditConnection = (props: editConnectionProps) => {
       // The snackbar auto-opens only on the IDENTIFY step, so open it here.
       setShowSnackbar(true)
       console.error(`Change request rejected: ${message}`)
-    } else {
-      setHasCreateChangeRequestTicketError(true)
-      router.push('/manageconnections')
+    } else if (response.status >= 500) {
       console.error(
         `Error creating change request: status is ${response.status}, message: ${response.statusText}`
       )
+      // Only the route knows whether the Jira ticket exists, and when it answers
+      // there is nothing to confirm. Report at once in both directions. Only a
+      // silent response falls to the record lookup: an unparsable body, or a 504
+      // from the gateway, which carries no JSON at all.
+      const ticketCreated = await ticketCreatedFlag(response)
+      if (ticketCreated === false) {
+        setAlert({
+          level: 'error',
+          jurisdiction: destData?.jurisdiction?.description,
+          dest_type: destData?.destinationType?.type,
+          message: NOTHING_CREATED_MESSAGE,
+        })
+        setShowSnackbar(true)
+        return
+      }
+      if (ticketCreated === true) {
+        // The ticket exists, so polling for its jiraId is futile: the only steps
+        // after creation are the password read and the write that stores that
+        // jiraId, so a throw here means the record was never updated.
+        setAlert({
+          level: 'warning',
+          jurisdiction: destData?.jurisdiction?.description,
+          dest_type: destData?.destinationType?.type,
+          message: UNCERTAIN_OUTCOME_MESSAGE,
+          persistent: true,
+        })
+        setShowSnackbar(true)
+        return
+      }
+      // Stay on this step while the record lookup runs. Navigating away would
+      // discard the completed form and replace a specific report with nothing the
+      // user can act on.
+      await confirmOutcome(previousJiraId)
+    } else {
+      setAlert({
+        level: 'error',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destinationType.type,
+        message: NOTHING_CREATED_MESSAGE,
+      })
+      setShowSnackbar(true)
+      console.error(
+        `Change request refused: status is ${response.status}, message: ${response.statusText}`
+      )
     }
+  }
+
+  /**
+   * Reads `ticketCreated` from a failure body. Returns null when the body is absent,
+   * unparsable, or silent on the question, which keeps the caller on the safe path.
+   */
+  const ticketCreatedFlag = async (response: Response) => {
+    try {
+      const body = await response.json()
+      return typeof body?.ticketCreated === 'boolean'
+        ? body.ticketCreated
+        : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Reads the change request record until its jiraId differs from the value held
+   * before the submit. Returns the new jiraId, or null when the bounded wait ends
+   * first. The comparison uses the earlier value rather than null, because a draft
+   * record exists with a null jiraId and a change request may already exist.
+   */
+  const pollForChangeRequest = async (previousJiraId: string | null) => {
+    const deadline = Date.now() + CONFIRM_POLL_LIMIT_MS
+    while (Date.now() < deadline) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, CONFIRM_POLL_INTERVAL_MS)
+      )
+      // The bound has to hold on elapsed time, not on iterations started. A
+      // lookup carries no limit of its own, so one that stalls while reading
+      // headers or the body never settles. The loop would then never test the
+      // deadline again, the uncertain-outcome message would never appear, and
+      // SCHEDULE would stay disabled until the user reloaded the page.
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) break
+      try {
+        const lookup = await fetch(
+          `/api/changerequest/${props.destTypeId}/${props.destId}`,
+          { signal: AbortSignal.timeout(remaining) }
+        )
+        if (lookup.ok) {
+          const record = await lookup.json()
+          if (record?.jiraId && record.jiraId !== previousJiraId) {
+            return record.jiraId
+          }
+        }
+      } catch (error) {
+        // A failed lookup is not an answer. Keep waiting until the deadline.
+        console.error(`Change request lookup failed: ${error}`)
+      }
+    }
+    return null
+  }
+
+  const confirmOutcome = async (previousJiraId: string | null) => {
+    setIsConfirming(true)
+    const jiraId = await pollForChangeRequest(previousJiraId)
+    if (jiraId) {
+      console.info(
+        `Change request confirmed after a slow response: ${jiraId} for destination ${props.destId}`
+      )
+      setAlert({
+        level: 'success',
+        jurisdiction: destData.jurisdiction.description,
+        dest_type: destData.destinationType.type,
+        message: CONFIRMED_MESSAGE,
+      })
+      setShowSnackbar(true)
+      router.push('/manageconnections')
+      return
+    }
+    reportUnknownOutcome()
+  }
+
+  const reportUnknownOutcome = () => {
+    // Optional reads: this also runs from the backstop catch in handleSchedule. A
+    // throw caused by missing destData must not make the backstop throw as well,
+    // because then the submission would end with no message at all. The message
+    // itself does not depend on either field.
+    setAlert({
+      level: 'warning',
+      jurisdiction: destData?.jurisdiction?.description,
+      dest_type: destData?.destinationType?.type,
+      message: UNCERTAIN_OUTCOME_MESSAGE,
+      persistent: true,
+    })
+    // The snackbar auto-opens only on the IDENTIFY step, so open it here.
+    setShowSnackbar(true)
   }
 
   const handleAccept = () => {
@@ -454,43 +679,66 @@ const EditConnection = (props: editConnectionProps) => {
   }
 
   const saveDraft = async () => {
-    const response = await fetch(`/api/changerequest`, {
-      method: 'POST',
-      body: JSON.stringify({
-        id: draftData?.id || null,
-        requested: {
-          ...formValues,
-        },
-        current: {
-          ...defaultFormValues,
-        },
-        destId: destData.destId,
-        destType: {
-          typeId: destData.destinationType.typeId,
-          type: destData.destinationType.type,
-        },
-        jiraId: null,
-        requestedBy: session.user.email,
-        isDraft: true,
-        scheduledAt: new Date().toISOString(),
-      }),
-    })
-    if (response.ok) {
-      await mutate()
+    if (isSubmittingRef.current) {
       setAlert({
-        level: 'success',
-        message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
+        level: 'warning',
+        message: PENDING_SUBMISSION_MESSAGE,
       })
-    } else {
-      setAlert({
-        level: 'error',
-        message: `Error saving the draft`,
+      return
+    }
+
+    isDraftWriteRef.current = true
+    try {
+      const response = await fetch(`/api/changerequest`, {
+        method: 'POST',
+        body: JSON.stringify({
+          id: draftData?.id || null,
+          requested: {
+            ...formValues,
+          },
+          current: {
+            ...defaultFormValues,
+          },
+          destId: destData.destId,
+          destType: {
+            typeId: destData.destinationType.typeId,
+            type: destData.destinationType.type,
+          },
+          jiraId: null,
+          requestedBy: session.user.email,
+          isDraft: true,
+          scheduledAt: new Date().toISOString(),
+        }),
       })
-      console.error(`Error saving the draft`)
+      if (response.ok) {
+        await mutate()
+        setAlert({
+          level: 'success',
+          message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Error saving the draft`,
+        })
+        console.error(`Error saving the draft`)
+      }
+    } finally {
+      isDraftWriteRef.current = false
     }
   }
 
   const resetDraftValues = async () => {
+    // Guarded before the form state is touched. A reset that wiped the entered
+    // values and then declined to delete the record would be worse than either.
+    if (isSubmittingRef.current) {
+      setAlert({
+        level: 'warning',
+        message: PENDING_SUBMISSION_MESSAGE,
+      })
+      return
+    }
+
     setDefaultFormValues({
       destUri: destData?.destUri,
       username: destData?.username,
@@ -519,22 +767,27 @@ const EditConnection = (props: editConnectionProps) => {
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
-    const response = await fetch(`/api/changerequest/${draftData.id}`, {
-      method: 'DELETE',
-    })
-    if (response.ok) {
-      setAlert({
-        level: 'success',
-        message: `Your draft was reset!`,
+    isDraftWriteRef.current = true
+    try {
+      const response = await fetch(`/api/changerequest/${draftData.id}`, {
+        method: 'DELETE',
       })
-    } else {
-      setAlert({
-        level: 'error',
-        message: `Error resetting draft`,
-      })
-      console.error(`Error resetting draft`)
+      if (response.ok) {
+        setAlert({
+          level: 'success',
+          message: `Your draft was reset!`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Error resetting draft`,
+        })
+        console.error(`Error resetting draft`)
+      }
+      await mutate()
+    } finally {
+      isDraftWriteRef.current = false
     }
-    await mutate()
   }
 
   return (
@@ -765,6 +1018,8 @@ const EditConnection = (props: editConnectionProps) => {
               handlePrevious={handlePrevious}
               steps={steps}
               isScheduleButtonDisabled={isScheduleButtonDisabled}
+              isSubmitting={isSubmitting}
+              isConfirming={isConfirming}
               handleSchedule={handleSchedule}
               handleNext={handleNext}
               isNextButtonDisabled={isNextButtonDisabled}
@@ -776,6 +1031,9 @@ const EditConnection = (props: editConnectionProps) => {
           severity={alert.level}
           message={alert.message}
           onClose={handleCloseSnackBar}
+          // IGDD-3566: an alert marked persistent waits for a dismissal. Every
+          // other message keeps the 6 second default.
+          autoHideDuration={alert.persistent ? null : undefined}
         />
       </Container>
       {activeStep === 2 && !open ? (
