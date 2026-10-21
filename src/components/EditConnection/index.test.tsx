@@ -62,6 +62,16 @@ let lookupRecord: unknown
 const changeRequestCalls = () =>
   (global.fetch as jest.Mock).mock.calls.filter(([url]) => url === SUBMIT_URL)
 
+// Only the real submissions, not the draft writes that share this URL.
+const submitCalls = () =>
+  changeRequestCalls().filter(([, options]) => {
+    try {
+      return JSON.parse(options?.body)?.isDraft === false
+    } catch {
+      return false
+    }
+  })
+
 const lookupCalls = () =>
   (global.fetch as jest.Mock).mock.calls.filter(([url]) => url === LOOKUP_URL)
 
@@ -87,14 +97,19 @@ const Harness = () => (
 // `onIdentify` runs while the IDENTIFY step is on screen, which is the only
 // place the form fields exist. A test that needs an unsaved edit must make it
 // there, because seeding the draft record cannot prove that form state survived.
-const renderAtScheduleStep = async (onIdentify?: () => void) => {
+const renderAtScheduleStep = async (
+  onIdentify?: () => void | Promise<void>
+) => {
   render(<Harness />)
   // SERVICE AGREEMENT auto-advances because the agreement is already accepted.
   for (let step = 1; step <= 3; step++) {
     const next = await screen.findByRole('button', { name: 'NEXT' })
     await waitFor(() => expect(next).not.toBeDisabled())
-    if (step === 2 && onIdentify) onIdentify()
-    fireEvent.click(next)
+    // Awaited, so the hook can wait for a render. The save control is enabled
+    // only once a form change has rendered, so a hook that edits and clicks in
+    // one tick would click a disabled button and prove nothing.
+    if (step === 2 && onIdentify) await onIdentify()
+    fireEvent.click(await screen.findByRole('button', { name: 'NEXT' }))
   }
   fireEvent.click(await screen.findByLabelText('As Soon As Possible'))
   return screen.findByRole('button', { name: 'SCHEDULE' })
@@ -635,6 +650,56 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
         }
       })
       expect(draftWrites).toHaveLength(0)
+    })
+
+    it('refuses to schedule while a draft write is still in flight', async () => {
+      // The mirror of the test above. Both write the one record this destination
+      // has, so whichever lands last wins. A draft write that lands after the
+      // server stores the ticket erases the link just as surely. Guarding one
+      // order only leaves the orphaned ticket reachable from the other.
+      let releaseDraftWrite: () => void = () => undefined
+      const draftWriteLanded = new Promise<void>((resolve) => {
+        releaseDraftWrite = resolve
+      })
+      const baseFetch = global.fetch as jest.Mock
+      global.fetch = jest.fn((url: string, options) => {
+        let isDraft: unknown = null
+        try {
+          isDraft = JSON.parse(options?.body)?.isDraft
+        } catch {
+          // not a JSON body
+        }
+        if (url === SUBMIT_URL && isDraft === true) {
+          // Held open. This is the window the user walks to SCHEDULE in.
+          return draftWriteLanded.then(() => jsonResponse(200, 'ok'))
+        }
+        return baseFetch(url, options)
+      }) as jest.Mock
+
+      // Start the draft write on IDENTIFY, then let the walk carry on to
+      // SCHEDULE while that write is still open.
+      const schedule = await renderAtScheduleStep(async () => {
+        fireEvent.change(screen.getByLabelText('Username'), {
+          target: { value: 'UsernameNEW' },
+        })
+        const save = await screen.findByRole('button', { name: 'save' })
+        await waitFor(() => expect(save).toBeEnabled())
+        fireEvent.click(save)
+      })
+
+      fireEvent.click(schedule)
+
+      // Asserted before the draft write is released. waitFor would advance the
+      // fake clock past the snackbar auto-hide and clear the alert being read.
+      expect(latestAlert().level).toBe('warning')
+      expect(latestAlert().message).toMatch(/still being saved/i)
+      expect(submitCalls()).toHaveLength(0)
+
+      // Once the write lands the gate lifts, so the user is not stuck.
+      releaseDraftWrite()
+      const again = await screen.findByRole('button', { name: 'SCHEDULE' })
+      fireEvent.click(again)
+      await waitFor(() => expect(submitCalls()).toHaveLength(1))
     })
   })
 })

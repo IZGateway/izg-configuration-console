@@ -57,6 +57,20 @@ const UNCERTAIN_OUTCOME_MESSAGE =
 const CONFIRMED_MESSAGE =
   'The server was slow to respond, but your change request was created.'
 
+// IGDD-3566: there is one change request record per destination, so a draft write
+// and a submission race for the same row. A draft write sets jiraId to null and a
+// reset deletes the row, so whichever lands last wins. Either order can erase the
+// link to a live ticket and leave it untracked, which is the orphaned ticket this
+// change exists to prevent. Both directions are therefore refused, with a message:
+// a silent refusal is what started this incident.
+const PENDING_SUBMISSION_MESSAGE =
+  'Your change request is still being submitted. Please wait for the result ' +
+  'before you change this draft.'
+
+const PENDING_DRAFT_WRITE_MESSAGE =
+  'Your draft is still being saved. Please wait for it to finish before you ' +
+  'schedule this change request.'
+
 const steps = [
   'SERVICE AGREEMENT',
   'ORGANIZATION',
@@ -93,6 +107,10 @@ const EditConnection = (props: editConnectionProps) => {
   // drives the pending UI. React batches state updates, so two fast activations
   // would both read a stale `false`. A ref updates synchronously.
   const isSubmittingRef = useRef(false)
+  // Set while a draft write is in flight. Synchronous, for the same reason the
+  // submission gate is: state updates are batched, so a check against state can
+  // read stale between a click and the next render.
+  const isDraftWriteRef = useRef(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isConfirming, setIsConfirming] = useState(false)
 
@@ -291,6 +309,20 @@ const EditConnection = (props: editConnectionProps) => {
 
   const handleSchedule = async () => {
     if (isSubmittingRef.current) {
+      return
+    }
+    // A draft write is still in flight. It carries jiraId null, or it deletes the
+    // record, and it writes the same row this submission is about to fill in. If
+    // it lands after the server stores the ticket, the link is erased. Refuse and
+    // say so, rather than racing it.
+    if (isDraftWriteRef.current) {
+      setAlert({
+        level: 'warning',
+        jurisdiction: destData?.jurisdiction?.description,
+        dest_type: destData?.destinationType?.type,
+        message: PENDING_DRAFT_WRITE_MESSAGE,
+      })
+      setShowSnackbar(true)
       return
     }
     isSubmittingRef.current = true
@@ -646,15 +678,6 @@ const EditConnection = (props: editConnectionProps) => {
     setActiveStep((prevActiveStep) => prevActiveStep + advanceBy)
   }
 
-  // IGDD-3566: a submission is in flight, or its outcome is not settled yet. The
-  // server may be writing the ticket for that submission right now. This write
-  // sets jiraId to null, and resetDraftValues deletes the same record, so either
-  // one can erase the link to a live ticket and leave it untracked. That is the
-  // orphaned ticket this change exists to prevent.
-  const PENDING_SUBMISSION_MESSAGE =
-    'Your change request is still being submitted. Please wait for the result ' +
-    'before you change this draft.'
-
   const saveDraft = async () => {
     if (isSubmittingRef.current) {
       setAlert({
@@ -664,39 +687,44 @@ const EditConnection = (props: editConnectionProps) => {
       return
     }
 
-    const response = await fetch(`/api/changerequest`, {
-      method: 'POST',
-      body: JSON.stringify({
-        id: draftData?.id || null,
-        requested: {
-          ...formValues,
-        },
-        current: {
-          ...defaultFormValues,
-        },
-        destId: destData.destId,
-        destType: {
-          typeId: destData.destinationType.typeId,
-          type: destData.destinationType.type,
-        },
-        jiraId: null,
-        requestedBy: session.user.email,
-        isDraft: true,
-        scheduledAt: new Date().toISOString(),
-      }),
-    })
-    if (response.ok) {
-      await mutate()
-      setAlert({
-        level: 'success',
-        message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
+    isDraftWriteRef.current = true
+    try {
+      const response = await fetch(`/api/changerequest`, {
+        method: 'POST',
+        body: JSON.stringify({
+          id: draftData?.id || null,
+          requested: {
+            ...formValues,
+          },
+          current: {
+            ...defaultFormValues,
+          },
+          destId: destData.destId,
+          destType: {
+            typeId: destData.destinationType.typeId,
+            type: destData.destinationType.type,
+          },
+          jiraId: null,
+          requestedBy: session.user.email,
+          isDraft: true,
+          scheduledAt: new Date().toISOString(),
+        }),
       })
-    } else {
-      setAlert({
-        level: 'error',
-        message: `Error saving the draft`,
-      })
-      console.error(`Error saving the draft`)
+      if (response.ok) {
+        await mutate()
+        setAlert({
+          level: 'success',
+          message: `Your draft was saved. Note: Passwords are not saved as part of a draft`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Error saving the draft`,
+        })
+        console.error(`Error saving the draft`)
+      }
+    } finally {
+      isDraftWriteRef.current = false
     }
   }
 
@@ -739,22 +767,27 @@ const EditConnection = (props: editConnectionProps) => {
       MSH22: destData?.MSH22,
       RXA11: destData?.RXA11,
     })
-    const response = await fetch(`/api/changerequest/${draftData.id}`, {
-      method: 'DELETE',
-    })
-    if (response.ok) {
-      setAlert({
-        level: 'success',
-        message: `Your draft was reset!`,
+    isDraftWriteRef.current = true
+    try {
+      const response = await fetch(`/api/changerequest/${draftData.id}`, {
+        method: 'DELETE',
       })
-    } else {
-      setAlert({
-        level: 'error',
-        message: `Error resetting draft`,
-      })
-      console.error(`Error resetting draft`)
+      if (response.ok) {
+        setAlert({
+          level: 'success',
+          message: `Your draft was reset!`,
+        })
+      } else {
+        setAlert({
+          level: 'error',
+          message: `Error resetting draft`,
+        })
+        console.error(`Error resetting draft`)
+      }
+      await mutate()
+    } finally {
+      isDraftWriteRef.current = false
     }
-    await mutate()
   }
 
   return (
