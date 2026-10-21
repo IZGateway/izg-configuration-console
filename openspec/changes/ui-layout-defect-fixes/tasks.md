@@ -21,7 +21,7 @@
 
 ## 3. Home banner image
 
-- [ ] 3.1 In `Home/index.tsx:155-162`, replace the fixed `height: { xs: 120, md: 150 }`
+- [x] 3.1 In `Home/index.tsx:155-162`, replace the fixed `height: { xs: 120, md: 150 }`
   with an auto height. Verify at desktop and mobile widths that the image no longer
   overlaps the cards below.
 
@@ -38,7 +38,7 @@
 
 ## 5. Pagination stray line
 
-- [ ] 5.1 Add `borderTop: 'none'` to the `.MuiDataGrid-footerContainer` rule in
+- [x] 5.1 Add `borderTop: 'none'` to the `.MuiDataGrid-footerContainer` rule in
   `ConnectionTable/index.tsx`, `TestReport/index.tsx`, `AccessControl/DenyList.tsx` and
   `AccessControl/FileTypeList.tsx`.
 - [ ] 5.2 Check each grid's pagination visually, including Onboarding and API Keys. If a

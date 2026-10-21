@@ -154,7 +154,8 @@ function HomeComponent() {
             <Box
               sx={{
                 width: { xs: '100%', md: 260 },
-                height: { xs: 120, md: 150 },
+                // No fixed height: the image defines its own box, so it cannot
+                // overflow into the content below the hero.
                 display: 'flex',
                 justifyContent: 'center',
                 mt: { xs: 2, md: -3 },
