@@ -5,7 +5,7 @@ import { buildDpopProof } from '../lib/dpop'
 import { storeKeyPair, loadKeyPair, clearSessionKeys } from '../lib/sessionKeys'
 import { CacheProvider } from '@emotion/react'
 import { ThemeProvider, CssBaseline, createTheme } from '@mui/material'
-import Layout from '../components/Layout'
+import Layout, { type PageWithFooter } from '../components/Layout'
 import '@fontsource/ubuntu/300.css'
 import '@fontsource/ubuntu/400.css'
 import '@fontsource/ubuntu/500.css'
@@ -36,13 +36,20 @@ const MyApp = (props) => {
     pageProps: { session, ...pageProps },
   } = props
 
+  // A page opts in to the footer with a static `showFooter`. Its access-denied
+  // render does not get one, because that is not the page itself.
+  const showFooter =
+    Boolean((Component as PageWithFooter).showFooter) && !pageProps.accessDenied
+
+  // Auth sits inside the emotion cache and theme so its full-screen loader is
+  // styled through the same cache that _document extracts, with blueTheme.
   return (
     <SessionProvider session={session}>
-      <Auth>
-        <CacheProvider value={emotionCache}>
-          <ThemeProvider theme={blueTheme}>
-            <CssBaseline />
-            <Layout>
+      <CacheProvider value={emotionCache}>
+        <ThemeProvider theme={blueTheme}>
+          <CssBaseline />
+          <Auth>
+            <Layout showFooter={showFooter}>
               <AppProvider>
                 <SWRConfig value={{ fetcher: fetch }}>
                   <GoogleAnalytics />
@@ -51,9 +58,9 @@ const MyApp = (props) => {
                 </SWRConfig>
               </AppProvider>
             </Layout>
-          </ThemeProvider>
-        </CacheProvider>
-      </Auth>
+          </Auth>
+        </ThemeProvider>
+      </CacheProvider>
     </SessionProvider>
   )
 }

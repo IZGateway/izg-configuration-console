@@ -6,9 +6,10 @@ The application SHALL render one shared footer on the main pages: Home and every
 listed in the navigation menu. The footer SHALL state the application version and build,
 and the CDC authorisation notice with its link. A page SHALL NOT render its own copy of the
 footer. Sub-pages that are reached from a main page, such as edit, history, test, change
-request and test report, and the error pages SHALL NOT show the footer. The set of
-navigation pages SHALL come from the navigation menu definition, so a page added to the
-menu gets the footer without a separate change.
+request and test report, and the error pages SHALL NOT show the footer. Each page SHALL
+opt in to the footer itself (a static `showFooter` on the page component), so the shared
+layout does not depend on the navigation configuration. A page's access-denied render
+SHALL NOT show the footer.
 
 #### Scenario: The footer is present on a navigation page
 
@@ -22,6 +23,12 @@ menu gets the footer without a separate change.
 
 - **WHEN** the user opens a page that is not Home and not in the navigation menu, such as
   Edit Connection, Connection History or the 404 page
+- **THEN** no application footer SHALL be displayed
+
+#### Scenario: The footer is absent on an access-denied render
+
+- **GIVEN** a user without access to a navigation page
+- **WHEN** the user opens that page and sees the access-denied message
 - **THEN** no application footer SHALL be displayed
 
 #### Scenario: The footer is not covered by the navigation

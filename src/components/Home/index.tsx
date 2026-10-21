@@ -52,11 +52,12 @@ function HomeComponent() {
   return (
     <>
       <AppHeaderBar open />
-      {/* Negative margins cancel Layout's page padding so the hero runs
-          edge to edge between the navigation and the footer. */}
+      {/* mx and mb cancel Layout's page padding (padding: 3) so the hero runs
+          edge to edge between the navigation and the footer. mt cancels the
+          header bar's 3em bottom margin so the hero sits flush under it. */}
       <Box
         sx={{
-          mt: -8,
+          mt: '-3em',
           mx: -3,
           mb: -3,
           backgroundColor: palette.greyLight,

@@ -35,7 +35,8 @@ const AppFooter = () => {
             sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
           >
             Version {pack.version}-{process.env.NEXT_PUBLIC_BUILD_ID} |
-            Immunization (IZ) Gateway Configuration Console 2026
+            Immunization (IZ) Gateway Configuration Console{' '}
+            {new Date().getFullYear()}
           </Typography>
           <Box
             display={'flex'}
@@ -55,7 +56,11 @@ const AppFooter = () => {
               Control and Prevention{' '}
             </Typography>
             <Box>
-              <Link href={'https://www.cdc.gov/'} target="_blank">
+              <Link
+                href={'https://www.cdc.gov/'}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Image src={CDCLogo} width={27} height={15} alt="CDC Logo" />
               </Link>
             </Box>

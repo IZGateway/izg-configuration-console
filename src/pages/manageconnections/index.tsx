@@ -17,10 +17,6 @@ import {
   hasFutureMaintenance,
 } from '../../lib/utils/endpointmaintainance'
 import { fetchEndpointStatus } from '../../lib/services/fetchEndpointStatus'
-import {
-  isEndpointStatusMocked,
-  mockEndpointStatus,
-} from '../../lib/services/mockEndpointStatus'
 const Manage = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
@@ -59,6 +55,8 @@ const Manage = (
   )
 }
 
+Manage.showFooter = true
+
 export default Manage
 
 // Migrated from a hand-rolled gate to the shared one (IGDD-3472). It already
@@ -72,10 +70,6 @@ export const getServerSideProps = withPageAccess<
   { data: unknown[] }
 >('manageconnections', async (context, requestContext) => {
   const session = requestContext.session
-
-  if (isEndpointStatusMocked()) {
-    return { props: { data: mockEndpointStatus() } }
-  }
 
   const endpointStatuses = await fetchEndpointStatus(
     session.user.roles,

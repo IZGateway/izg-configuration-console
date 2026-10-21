@@ -1,13 +1,13 @@
 import React from 'react'
 import Box from '@mui/material/Box'
-import { useRouter } from 'next/router'
+import type { NextPage } from 'next'
 import Navigation from './Navigation'
-import { menuItems } from './Navigation/menuItems'
 import AppFooter from './AppFooter'
 
-// The footer belongs to the main pages only: Home and every page listed in
-// the navigation. Sub-pages (edit, history, test, error pages) render without it.
-const FOOTER_PATHS = new Set(['/', ...menuItems.map((item) => item.path)])
+// A page opts in to the app footer by setting `Page.showFooter = true`. The
+// main pages (Home and the navigation pages) do; sub-pages such as edit,
+// history and test, and the error pages, do not.
+export type PageWithFooter = NextPage & { showFooter?: boolean }
 
 const container = {
   display: 'flex',
@@ -39,10 +39,10 @@ const pageContainer = {
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  showFooter?: boolean;
 }
 
-const Layout = ({ children }: DashboardLayoutProps) => {
-  const { pathname } = useRouter()
+const Layout = ({ children, showFooter = false }: DashboardLayoutProps) => {
   return (
     <Box sx={container}>
       <Box sx={content}>
@@ -51,7 +51,7 @@ const Layout = ({ children }: DashboardLayoutProps) => {
           <Box role="main" sx={pageContainer}>
             {children}
           </Box>
-          {FOOTER_PATHS.has(pathname) && <AppFooter />}
+          {showFooter && <AppFooter />}
         </Box>
       </Box>
     </Box>

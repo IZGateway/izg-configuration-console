@@ -33,4 +33,6 @@ const ConsolePage = ({
 // separate surface and is not affected.
 export const getServerSideProps = withPageAccess('console')
 
+ConsolePage.showFooter = true
+
 export default ConsolePage
