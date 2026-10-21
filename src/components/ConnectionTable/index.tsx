@@ -175,6 +175,9 @@ const dataGridCustom = {
     },
   '& .MuiDataGrid-footerContainer.MuiDataGrid-footerContainer': {
     width: 'auto',
+    // MUI draws a 1px top border on the footer; on this rounded pill it showed
+    // as a stray line across the pagination control.
+    borderTop: 'none',
     borderRadius: '60px',
     float: 'right',
     margin: '2em 0',
