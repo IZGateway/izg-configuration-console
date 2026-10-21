@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as React from 'react'
 import Container from '../../components/Container'
+import PageLoading from '../../components/Loader/PageLoading'
 import ConnectionHistory from '../../components/ConnectionHistory/index'
 import { useRouter } from 'next/router'
 import ErrorBoundary from '../../components/ErrorBoundary'
@@ -15,7 +16,7 @@ const HistoryPage = (props) => {
   }, [isReady, query])
 
   return !isReady ? (
-    <>Loading....</>
+    <PageLoading />
   ) : (
     <Container title="Connection History">
       <ErrorBoundary>
