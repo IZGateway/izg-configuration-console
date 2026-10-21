@@ -9,7 +9,16 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />
 })
 
-const CustomSnackbar = ({ open, severity, message, onClose }) => {
+// IGDD-3566: autoHideDuration is optional so that one caller can make a message
+// wait for a dismissal. Pass null to keep it on screen. Every other caller keeps
+// the 6 second default.
+const CustomSnackbar = ({
+  open,
+  severity,
+  message,
+  onClose,
+  autoHideDuration = 6000,
+}) => {
   const vertical = 'bottom'
   const horizontal = 'center'
 
@@ -29,7 +38,7 @@ const CustomSnackbar = ({ open, severity, message, onClose }) => {
       <Snackbar
         anchorOrigin={{ vertical, horizontal }}
         open={open}
-        autoHideDuration={6000}
+        autoHideDuration={autoHideDuration}
         onClose={handleClose}
         key={vertical + horizontal}
       >
