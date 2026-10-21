@@ -1,5 +1,6 @@
 import { InferGetServerSidePropsType } from 'next'
 import Container from '../../components/Container'
+import PageLoading from '../../components/Loader/PageLoading'
 import Console from '../../components/Console/index'
 import { useRouter } from 'next/router'
 import ErrorBoundary from '../../components/ErrorBoundary'
@@ -17,7 +18,7 @@ const ConsolePage = ({
   if (accessDenied) return <AccessDenied title="Console" />
 
   return !isReady ? (
-    <>Loading....</>
+    <PageLoading />
   ) : (
     <Container title="Console">
       <ErrorBoundary>
@@ -31,5 +32,7 @@ const ConsolePage = ({
 // admin log search only — the landing page's status-report widget is a
 // separate surface and is not affected.
 export const getServerSideProps = withPageAccess('console')
+
+ConsolePage.showFooter = true
 
 export default ConsolePage

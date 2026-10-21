@@ -52,4 +52,6 @@ export const getServerSideProps = withPageAccess<
   return { props: { hasKeyName, hubEnvironments } }
 })
 
+AdminOperationsPage.showFooter = true
+
 export default AdminOperationsPage

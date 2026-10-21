@@ -42,4 +42,6 @@ const ApiKeys = ({
   )
 }
 
+ApiKeys.showFooter = true
+
 export default ApiKeys
