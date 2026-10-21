@@ -68,6 +68,10 @@ test.afterAll(async () => {
 })
 
 test.beforeEach(async () => {
+  // The stepper walk in this hook spends most of the default 60 second budget
+  // before the test body starts, and two tests then wait on a held response.
+  test.setTimeout(120000)
+
   // The render loop that froze the page logged this warning 499 times. Collect it
   // for every test: any failure path may reintroduce it.
   renderLoopWarnings = []
@@ -102,14 +106,19 @@ test.describe('Create Change Request: a slow or failed submit (IGDD-3566)', () =
 
     // Hold the response open. This is the window in which the production user
     // pressed the button seven more times.
+    //
+    // The answer is a proven failure rather than a 504 on purpose. This test is
+    // about the number of submissions, so it must end quickly. A 504 carries no
+    // verdict, so the console would correctly start its 90 second record lookup,
+    // and the message would arrive long after any sane test timeout.
     await page.route(SUBMIT_URL, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback()
       submits += 1
       await new Promise((resolve) => setTimeout(resolve, 6000))
       await route.fulfill({
-        status: 504,
-        contentType: 'text/html',
-        body: GATEWAY_TIMEOUT_BODY,
+        status: 502,
+        contentType: 'application/json',
+        body: JSON.stringify({ ticketCreated: false }),
       })
     })
 
@@ -168,11 +177,6 @@ test.describe('Create Change Request: a slow or failed submit (IGDD-3566)', () =
   })
 
   test('reports a proven failure at once and keeps the entered values', async () => {
-    let lookups = 0
-    page.on('request', (request) => {
-      if (/\/api\/changerequest\/\d+\//.test(request.url())) lookups += 1
-    })
-
     await page.route(SUBMIT_URL, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback()
       await route.fulfill({
@@ -189,7 +193,11 @@ test.describe('Create Change Request: a slow or failed submit (IGDD-3566)', () =
     )
 
     // The server proved that nothing was created, so there is nothing to confirm.
-    expect(lookups).toBe(0)
+    // A console that looked up the record anyway would still be reading it now,
+    // and the button would say so. Counting lookup requests cannot prove this:
+    // the page loads the draft from that same endpoint through SWR.
+    await expect(page.locator('#schedule')).not.toHaveText(/CHECKING/)
+    await expect(page.locator('#schedule')).toBeEnabled()
 
     // The user stays on the form, and a retry needs the values to still be there.
     await expect(page).not.toHaveURL(/manageconnections/)
