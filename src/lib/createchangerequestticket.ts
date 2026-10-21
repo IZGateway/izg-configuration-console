@@ -29,6 +29,31 @@ export class ChangeRequestTicketError extends Error {
   }
 }
 
+/**
+ * IGDD-3566: a transport failure proves that no ticket exists only when the
+ * request never left this process. A connection that dies after Jira received
+ * the request can still leave a ticket behind, so that case must stay unknown.
+ * A wrong "nothing was created" invites a retry, and a retry on that path raises
+ * the second ticket this change exists to prevent.
+ *
+ * These codes all mean that no bytes reached Jira. `fetch` wraps the real cause,
+ * so read the code from `cause` as well as from the error itself.
+ */
+const PRE_SEND_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'ERR_INVALID_URL',
+])
+
+const ticketMayExistAfterTransportError = (error: unknown) => {
+  const code =
+    (error as { code?: string })?.code ??
+    (error as { cause?: { code?: string } })?.cause?.code
+  return code && PRE_SEND_ERROR_CODES.has(code) ? false : undefined
+}
+
 const getRequestedValue = (
   requestedFields: DestinationConnectionSettings,
   fieldToGetValueFrom: string
@@ -151,8 +176,12 @@ const createChangeRequestTicket = async (
       }),
     })
   } catch (error) {
-    // The connection never carried the request, so no ticket can exist.
-    throw new ChangeRequestTicketError(`Could not reach Jira: ${error}`, false)
+    // Only a pre-send failure proves that no ticket exists. Anything else stays
+    // unknown, because the request may have reached Jira before the socket died.
+    throw new ChangeRequestTicketError(
+      `Could not reach Jira: ${error}`,
+      ticketMayExistAfterTransportError(error)
+    )
   }
 
   if (!jiraResponse.ok) {

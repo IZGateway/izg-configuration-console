@@ -37,13 +37,47 @@ describe('createChangeRequestTicket failure classification', () => {
     jest.restoreAllMocks()
   })
 
-  it('reports no ticket when the connection never carried the request', async () => {
-    global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'))
+  // fetch reports the real reason on `cause`, so these build the error the way
+  // undici does. A code in the message alone would not reach the classifier.
+  const transportError = (code: string) =>
+    Object.assign(new TypeError('fetch failed'), {
+      cause: Object.assign(new Error(code), { code }),
+    })
+
+  it.each([
+    ['the port refuses the connection', 'ECONNREFUSED'],
+    ['DNS has no record', 'ENOTFOUND'],
+    ['the connection never opens', 'UND_ERR_CONNECT_TIMEOUT'],
+  ])('reports no ticket when %s', async (_name, code) => {
+    global.fetch = jest.fn().mockRejectedValue(transportError(code))
 
     const error = await call()
 
     expect(error).toBeInstanceOf(ChangeRequestTicketError)
     expect(error.ticketMayExist).toBe(false)
+  })
+
+  it.each([
+    ['the socket closes after Jira received the request', 'UND_ERR_SOCKET'],
+    ['the connection resets mid-request', 'ECONNRESET'],
+    ['the reply never arrives', 'UND_ERR_HEADERS_TIMEOUT'],
+  ])('carries no verdict when %s', async (_name, code) => {
+    // Jira may already hold the ticket on each of these. Reporting a proven
+    // failure here is what lets a retry raise a second one.
+    global.fetch = jest.fn().mockRejectedValue(transportError(code))
+
+    const error = await call()
+
+    expect(error).toBeInstanceOf(ChangeRequestTicketError)
+    expect(error.ticketMayExist).toBeUndefined()
+  })
+
+  it('carries no verdict for a transport failure with no code', async () => {
+    global.fetch = jest.fn().mockRejectedValue(new TypeError('fetch failed'))
+
+    const error = await call()
+
+    expect(error.ticketMayExist).toBeUndefined()
   })
 
   it('reports no ticket when Jira refuses the request', async () => {

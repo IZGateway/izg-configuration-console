@@ -185,3 +185,17 @@ Note on verification: earlier runs used `npm run code-quality-check | grep ... &
 "tsc: clean"`, which chained on grep rather than on tsc, so it could print "clean" when
 tsc had failed. From group 12 on, `npx tsc --noEmit` is run on its own and its exit code
 is reported.
+
+## Group 13 verification
+
+Run on 2026-10-21, after the transport failure classifier.
+
+| Check | Result |
+|---|---|
+| `npx eslint` on the two changed files | 0 errors, 4 warnings, all pre-existing |
+| `npx tsc --noEmit` | exit 0 |
+| Full `npx jest` | 34 failed suites, 65 passed, 99 total |
+| Full `npx jest` | 48 failed tests, 988 passed, 1036 total |
+
+The failure counts match the 1.1 baseline exactly, so no failure is new. The passing
+count rose from 982 to 988, which is the six tests added in group 13.

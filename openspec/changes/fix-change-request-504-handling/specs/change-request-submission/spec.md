@@ -77,6 +77,12 @@ When a change request submission fails, the server SHALL report that no change r
 - **WHEN** the connection to the ticket system fails before the request is sent
 - **THEN** the server reports that no change request was created
 
+#### Scenario: The connection failed after the request was sent
+
+- **WHEN** the connection to the ticket system fails after the request is sent
+- **THEN** the server reports that it cannot say what happened
+- **AND** the server does not report that no change request was created
+
 #### Scenario: The ticket system rejected the request
 
 - **WHEN** the ticket system rejects the request

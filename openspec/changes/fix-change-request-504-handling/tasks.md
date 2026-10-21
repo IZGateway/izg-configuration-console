@@ -133,3 +133,12 @@
 - [x] 12.6 Update every test that asserts retired wording. Verify that no test matches a deleted string.
 - [x] 12.7 Run `npm run code-quality-check` and `npm run test`. Verify that no failure is new against the 1.1 baseline.
 
+
+## 13. Separate a pre-send failure from a lost connection
+
+- [x] 13.1 Classify the transport failure by its error code rather than treating every rejected `fetch` as proof of non-creation. Verify that the code reads `cause` as well as the error.
+- [x] 13.2 Keep the proven answer for a refused connection, a failed name lookup and a connection that never opens. Verify that the stopped-stub case still reports no creation.
+- [x] 13.3 Report any other transport failure as unknown, including a failure with no code. Verify that a lost reply carries no verdict.
+- [x] 13.4 Replace the weak connection test, which carried the code in the message and passed without the classifier. Verify that it now builds the error the way `fetch` does.
+- [x] 13.5 Add tests for a closed socket, a reset connection and a missing reply. Verify that each one carries no verdict.
+- [x] 13.6 Run `npm run code-quality-check` and `npm run test`. Verify that no failure is new against the 1.1 baseline.
