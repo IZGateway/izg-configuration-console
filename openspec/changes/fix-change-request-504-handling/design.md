@@ -143,6 +143,22 @@ The console branches on the body, not the status. A body with `ticketCreated` se
 
 *Alternatives considered.* Branch on the status alone. Rejected: the middleware already returns a bare 500 for unrelated faults at `api-middleware-helper.ts:106`, so the console could not tell them apart.
 
+**`!_.isNull(changeRequestTicketResponse)` is not the same question.** It asks whether the call returned a value, not whether a ticket exists. `createChangeRequestTicket` throws at three points: the `fetch` rejects, Jira answers non-2xx at line 133, or `jiraResponse.json()` fails at line 137 on a body Jira already accepted. Reporting all three as a proven failure invites the duplicate this change exists to prevent.
+
+`createChangeRequestTicket` therefore classifies its own failures and throws an error carrying a `ticketMayExist` flag:
+
+| Failure | Ticket exists | Reported as |
+|---|---|---|
+| Connection to Jira fails before the request is sent | No, provably | `ticketCreated: false` |
+| Jira answers 4xx | No, provably | `ticketCreated: false` |
+| Jira answers 2xx and the body cannot be read | Yes, almost certainly | `ticketCreated: true` |
+| Jira answers 5xx | Unknown | no flag, so the console confirms |
+| Anything the classifier does not recognize | Unknown | no flag, so the console confirms |
+
+The route defaults to the unknown answer when the flag is absent, so a throw path added later is safe by default rather than reported as a proven failure.
+
+Only the Jira 5xx row loses its immediate report. That is the one row where no answer is provable, and an immediate "nothing was created" there is exactly what produces a second ticket.
+
 ### Decision 10: Remove the dead `finally` block in the route
 
 Delete the `finally` block at `src/pages/api/changerequest/index.ts:163-167`.
@@ -173,7 +189,19 @@ Carrying the intent on the alert makes the guarantee travel with the message and
 
 A throw while reading `session.user.email` or a destination value is not a transport failure. Inside the `try` it was caught and reported as "your change request may still have been created", which is false for a request that was never sent, and it sent the user hunting for a record that cannot exist.
 
-Built before the `try`, such a throw reaches the backstop in `handleSchedule` instead, which reports an unknown outcome without claiming the request reached the server.
+Built before the `try`, such a throw reaches the backstop in `handleSchedule` instead. The backstop must not report the unknown outcome, because that message opens "The server did not respond", which claims a request was sent. It reports a failure to send instead: a definite non-creation, so the user can retry without risk.
+
+### Decision 14: Two failure messages, grouped by what the user must do
+
+A user cannot act on the difference between "Jira was unreachable", "Jira refused it" and "the request was never sent". All three mean nothing was created and a retry is safe. Likewise a user cannot act on the difference between "the wait expired" and "Jira created it but we could not record it". Both mean the outcome is uncertain.
+
+So there are two failure messages rather than five. One reports a provable non-creation. One reports an uncertain outcome.
+
+The uncertain message points at Manage Connections first and support second. On the expired-wait path Manage Connections holds the answer. On the created-but-not-recorded path the record was never written, so that screen shows nothing and the user reaches support, which is the right destination by a slower route.
+
+*What this gives up.* The created-but-not-recorded path no longer carries an explicit "do not try again". The message does not invite a retry, which is the property that prevents the duplicate, but the warning itself is gone. Accepted deliberately: reaching that path needs Jira to answer 2xx with an unreadable body, and the message still routes the user to support.
+
+The earlier unknown-outcome message opened "The server did not respond". That was false whenever the server answered with a 5xx of its own. The shared message claims nothing about the server.
 
 ## Risks / Trade-offs
 

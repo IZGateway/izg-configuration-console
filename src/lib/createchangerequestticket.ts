@@ -12,6 +12,23 @@ const CURRENT_EMPTY_VALUE = ' '
 const CHANGE_REQUEST_UNCHANGED_VALUE = 'UNCHANGED'
 const CHANGE_REQUEST_URL = process.env.NEXTAUTH_URL || undefined
 
+/**
+ * IGDD-3566: a failed Jira call is not the same question as "no ticket exists".
+ * Jira can accept the request and still leave us without a usable reply, so the
+ * caller needs to know which failure this was before it tells a user that nothing
+ * happened. `ticketMayExist` is undefined when the failure cannot be classified,
+ * which the caller must treat as unknown rather than as a proven failure.
+ */
+export class ChangeRequestTicketError extends Error {
+  ticketMayExist?: boolean
+
+  constructor(message: string, ticketMayExist?: boolean) {
+    super(message)
+    this.name = 'ChangeRequestTicketError'
+    this.ticketMayExist = ticketMayExist
+  }
+}
+
 const getRequestedValue = (
   requestedFields: DestinationConnectionSettings,
   fieldToGetValueFrom: string
@@ -108,34 +125,56 @@ const createChangeRequestTicket = async (
 
     return changed.length > 0 ? changed.join(', ') : 'No changes'
   }
-  const jiraResponse = await fetch(JIRA_API_URL + '/issue', {
-    method: 'POST',
-    headers: new Headers({
-      Authorization: jiraBasicAuthHeader,
-      'Content-Type': 'application/json',
-    }),
-    body: JSON.stringify({
-      fields: {
-        project: {
-          id: JIRA_API_PROJECT_ID,
+  let jiraResponse: Response
+  try {
+    jiraResponse = await fetch(JIRA_API_URL + '/issue', {
+      method: 'POST',
+      headers: new Headers({
+        Authorization: jiraBasicAuthHeader,
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        fields: {
+          project: {
+            id: JIRA_API_PROJECT_ID,
+          },
+          summary: changeRequestSummaryTemplate,
+          description: changeRequestDetailsTemplate,
+          issuetype: {
+            id: JIRA_API_ISSUE_TYPE,
+          },
+          customfield_10516: scheduledDateTime,
+          customfield_10485: `Destination ${destId} on environment ${destType.type}`,
+          customfield_10484: requestedBy,
+          customfield_10487: getChangedValues(current, requested),
         },
-        summary: changeRequestSummaryTemplate,
-        description: changeRequestDetailsTemplate,
-        issuetype: {
-          id: JIRA_API_ISSUE_TYPE,
-        },
-        customfield_10516: scheduledDateTime,
-        customfield_10485: `Destination ${destId} on environment ${destType.type}`,
-        customfield_10484: requestedBy,
-        customfield_10487: getChangedValues(current, requested),
-      },
-    }),
-  })
-  if (!jiraResponse.ok) {
-    throw new Error(`Bad Jira response: ${jiraResponse.status}`)
+      }),
+    })
+  } catch (error) {
+    // The connection never carried the request, so no ticket can exist.
+    throw new ChangeRequestTicketError(`Could not reach Jira: ${error}`, false)
   }
-  const changerequest = await jiraResponse.json()
-  return changerequest
+
+  if (!jiraResponse.ok) {
+    // A 4xx is Jira refusing the request, so nothing was raised. A 5xx is Jira
+    // failing after it may already have raised it, which nobody here can tell.
+    const refused = jiraResponse.status >= 400 && jiraResponse.status < 500
+    throw new ChangeRequestTicketError(
+      `Bad Jira response: ${jiraResponse.status}`,
+      refused ? false : undefined
+    )
+  }
+
+  try {
+    return await jiraResponse.json()
+  } catch (error) {
+    // Jira answered 2xx, so it accepted the request and the ticket exists. Only
+    // its key is lost.
+    throw new ChangeRequestTicketError(
+      `Jira accepted the request but its reply could not be read: ${error}`,
+      true
+    )
+  }
 }
 
 export default createChangeRequestTicket

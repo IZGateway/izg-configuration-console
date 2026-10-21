@@ -158,3 +158,30 @@ Still 34 failing suites and 48 failing tests, none of them new. The EditConnecti
 holds 24 tests. One test was replaced rather than added: the earlier version served a
 500 with ticketCreated true and then produced a record carrying a new jiraId, which the
 route cannot do.
+
+## After proving only what the server can prove (group 11)
+
+```
+Test Suites: 34 failed, 65 passed, 99 total
+Tests:       48 failed, 982 passed, 1030 total
+```
+
+Still 34 failing suites and 48 failing tests, none of them new. Two suites were added:
+`src/lib/createchangerequestticket.test.ts` for the failure classification, and
+`src/components/SnackBar/persistentAlert.test.tsx` for persistence on the screens
+besides EditConnection. Lint warnings are back to the baseline 66.
+
+## After collapsing to two failure messages (group 12)
+
+```
+Test Suites: 34 failed, 65 passed, 99 total
+Tests:       48 failed, 982 passed, 1030 total
+```
+
+Still 34 failing suites and 48 failing tests, none of them new. Counts are unchanged
+from group 11 because this round reworded tests rather than adding them.
+
+Note on verification: earlier runs used `npm run code-quality-check | grep ... && echo
+"tsc: clean"`, which chained on grep rather than on tsc, so it could print "clean" when
+tsc had failed. From group 12 on, `npx tsc --noEmit` is run on its own and its exit code
+is reported.

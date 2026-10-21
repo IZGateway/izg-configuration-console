@@ -29,6 +29,8 @@ A larger `NGINX_READ_TIMEOUT` is a separate operational task, and it does not fi
 - Wrap the SCHEDULE button in a `span` inside its MUI `Tooltip`. MUI cannot attach listeners to a disabled child, and the console already reports this warning.
 - Report whether the Jira ticket was created when the change request route fails, so that the console can tell a clean failure from an unknown one.
 - Report a clean failure at once, with no confirmation wait. Report a ticket the route says it created at once as well, and tell the user not to retry.
+- Report a proven failure only when no ticket can exist. Treat an unreadable reply from Jira as a ticket that exists, and treat a Jira failure as unknown, because the ticket may already be there.
+- Report two failure messages rather than five, grouped by what the user must do. One says that nothing was created and a retry is safe. One says that the outcome is uncertain and points the user at Manage Connections or support.
 - Remove the dead `finally` block in the change request route. It masked every Jira error with a null dereference.
 - After a slow or failed response, look up the change request record before reporting anything. Report a confirmed success with the ticket when the record shows one.
 - Report an unknown outcome only when that lookup cannot confirm the result within a bounded wait.

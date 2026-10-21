@@ -109,3 +109,27 @@
 - [x] 10.7 Record the unmount, timeout and response-validation findings as out of scope. Verify that the proposal names each one.
 - [x] 10.8 Run `npm run code-quality-check` and `npm run test`. Verify that no failure is new against the 1.1 baseline.
 
+## 11. Report only a failure the server can prove
+
+- [x] 11.1 Classify the failures in `src/lib/createchangerequestticket.ts` and throw an error carrying whether a ticket may exist. Verify that `npm run code-quality-check` passes.
+- [x] 11.2 Read that flag in the change request route and default to the unknown answer when it is absent. Verify that an unrecognized throw does not report a proven failure.
+- [x] 11.3 Report a 2xx with an unreadable body as a ticket that exists. Verify that the route answers with the created flag.
+- [x] 11.4 Report a Jira failure as unknown so the console confirms. Verify that the route sends no flag.
+- [x] 11.5 Add route tests for all five failure classes. Verify that each one reports the right answer.
+- [x] 11.6 Add a message for a submission that was never sent. Verify that it does not mention the server.
+- [x] 11.7 Use that message in the backstop instead of the unknown outcome. Verify that a pre-send failure reports it.
+- [x] 11.8 Add a client test that a pre-send failure sends no request and says nothing about the server. Verify that `fetch` receives no call.
+- [x] 11.9 Strengthen the surviving-values test to read back a value the user changed, not one that matches the stored value. Verify that the test edits a field first.
+- [x] 11.10 Add tests that a persistent alert waits for a dismissal on `manageconnections` and on `AccessControl`. Verify that both assert the rendered message stays.
+- [x] 11.11 Run `npm run code-quality-check` and `npm run test`. Verify that no failure is new against the 1.1 baseline.
+
+## 12. Two failure messages
+
+- [x] 12.1 Define one message for a provable non-creation and one for an uncertain outcome. Verify that neither names an email address.
+- [x] 12.2 Point the provable-non-creation path, the refusal path and the pre-send path at the first message. Verify that all three use one constant.
+- [x] 12.3 Point the expired-wait path and the created-but-not-recorded path at the second message. Verify that both use one constant.
+- [x] 12.4 Delete the three retired message constants. Verify that a search for each name returns no result.
+- [x] 12.5 Keep the uncertain message persistent on every surface. Verify that the wiring check still passes.
+- [x] 12.6 Update every test that asserts retired wording. Verify that no test matches a deleted string.
+- [x] 12.7 Run `npm run code-quality-check` and `npm run test`. Verify that no failure is new against the 1.1 baseline.
+

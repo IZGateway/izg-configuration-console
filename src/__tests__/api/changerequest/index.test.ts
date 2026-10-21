@@ -10,8 +10,11 @@ jest.mock('../../../lib/accesshelper', () => ({
 }))
 
 const mockCreateChangeRequestTicket = jest.fn()
+// Keep the real named exports: the route and these tests both need the same
+// ChangeRequestTicketError class for its instanceof check to hold.
 jest.mock('../../../lib/createchangerequestticket', () => ({
   __esModule: true,
+  ...jest.requireActual('../../../lib/createchangerequestticket'),
   default: (...args: unknown[]) => mockCreateChangeRequestTicket(...args),
 }))
 
@@ -43,6 +46,7 @@ import { getServerSession } from 'next-auth'
 import { getToken } from 'next-auth/jwt'
 import hasAccessToDestId from '../../../lib/accesshelper'
 import handler from '../../../pages/api/changerequest/index'
+import { ChangeRequestTicketError } from '../../../lib/createchangerequestticket'
 
 const buildReqRes = (body: Record<string, unknown>) => {
   const req: any = {
@@ -117,9 +121,12 @@ describe('POST /api/changerequest failure reporting (IGDD-3566)', () => {
     current: {},
   }
 
-  it('reports 502 and ticketCreated false when the Jira call never succeeded', async () => {
+  it('reports 502 and ticketCreated false when no ticket can exist', async () => {
     mockCreateChangeRequestTicket.mockRejectedValue(
-      new Error('connect ECONNREFUSED 127.0.0.1:4500')
+      new ChangeRequestTicketError(
+        'Could not reach Jira: connect ECONNREFUSED',
+        false
+      )
     )
     const { req, res } = buildReqRes(submitBody)
 
@@ -128,6 +135,45 @@ describe('POST /api/changerequest failure reporting (IGDD-3566)', () => {
     expect(res.status).toHaveBeenCalledWith(502)
     expect(res.json).toHaveBeenCalledWith({ ticketCreated: false })
     expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+  })
+
+  it('reports ticketCreated true when Jira accepted the request', async () => {
+    mockCreateChangeRequestTicket.mockRejectedValue(
+      new ChangeRequestTicketError(
+        'Jira accepted the request but its reply could not be read',
+        true
+      )
+    )
+    const { req, res } = buildReqRes(submitBody)
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({ ticketCreated: true })
+  })
+
+  it('says nothing about the ticket when the failure carries no verdict', async () => {
+    mockCreateChangeRequestTicket.mockRejectedValue(
+      new ChangeRequestTicketError('Bad Jira response: 503', undefined)
+    )
+    const { req, res } = buildReqRes(submitBody)
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({})
+  })
+
+  it('says nothing about the ticket for a failure it cannot classify', async () => {
+    // Any throw path added later must land here rather than claim a proven
+    // failure, because claiming one invites a retry that raises a second ticket.
+    mockCreateChangeRequestTicket.mockRejectedValue(new Error('something new'))
+    const { req, res } = buildReqRes(submitBody)
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(res.json).toHaveBeenCalledWith({})
   })
 
   it('reports 500 and ticketCreated true when a step after the ticket throws', async () => {
@@ -145,7 +191,7 @@ describe('POST /api/changerequest failure reporting (IGDD-3566)', () => {
 
   it('logs the real failure instead of masking it with a null dereference', async () => {
     mockCreateChangeRequestTicket.mockRejectedValue(
-      new Error('Bad Jira response: 404')
+      new ChangeRequestTicketError('Bad Jira response: 404', false)
     )
     const { req, res } = buildReqRes(submitBody)
 

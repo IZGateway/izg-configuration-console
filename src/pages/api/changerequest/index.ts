@@ -5,7 +5,9 @@ import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
 import _ from 'lodash'
-import createChangeRequestTicket from '../../../lib/createchangerequestticket'
+import createChangeRequestTicket, {
+  ChangeRequestTicketError,
+} from '../../../lib/createchangerequestticket'
 import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
@@ -60,6 +62,21 @@ const isJiraConfigured = () => {
   )
     return true
   return false
+}
+
+/**
+ * Reads what a failed ticket call knows about the ticket. Returns undefined when
+ * the failure carries no verdict, which the caller reports as unknown.
+ */
+const classifyTicketFailure = (error: unknown): boolean | undefined => {
+  if (error instanceof ChangeRequestTicketError) {
+    return error.ticketMayExist
+  }
+  const cause = (error as { cause?: unknown })?.cause
+  if (cause instanceof ChangeRequestTicketError) {
+    return cause.ticketMayExist
+  }
+  return undefined
 }
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -158,12 +175,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
-          // IGDD-3566: report which failure this is, because the two are very
-          // different for the caller. A Jira call that never succeeded leaves no
-          // ticket, so the console can report a clean failure at once. A Jira
-          // call that did succeed leaves a ticket behind even though a later step
-          // threw, so the console must not claim that nothing happened.
-          const ticketCreated = !_.isNull(changeRequestTicketResponse)
+          // IGDD-3566: report which failure this is, because the three are very
+          // different for the caller. A ticket that provably does not exist lets
+          // the console report a clean failure at once. A ticket that does exist
+          // must never be reported as "nothing happened". Anything we cannot
+          // classify is reported as unknown, so the console confirms rather than
+          // inviting a retry that could raise a second ticket.
+          const ticketCreated = _.isNull(changeRequestTicketResponse)
+            ? classifyTicketFailure(error)
+            : true
           logger.error(
             `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`,
             {
@@ -175,7 +195,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               operation: 'create_change_request_ticket',
             }
           )
-          res.status(ticketCreated ? 500 : 502).json({ ticketCreated })
+          if (_.isUndefined(ticketCreated)) {
+            // No usable answer. Say nothing about the ticket so that the console
+            // looks up the record instead of guessing.
+            res.status(500).json({})
+          } else {
+            res.status(ticketCreated ? 500 : 502).json({ ticketCreated })
+          }
         }
       }
     } else if (req.method === 'PUT') {

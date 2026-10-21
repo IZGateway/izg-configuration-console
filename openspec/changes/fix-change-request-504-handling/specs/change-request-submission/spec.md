@@ -54,12 +54,49 @@ The console SHALL present a visible message for every submission outcome. This a
 - **WHEN** the submission fails before the server responds
 - **THEN** the console shows an error message
 
+#### Scenario: The console cannot send the request
+
+- **WHEN** the console fails before it sends the submission
+- **THEN** the console reports that no change request was created
+- **AND** the console does not state that the server failed to respond
+- **AND** the console invites the user to try again
+
 #### Scenario: The server refuses the request
 
 - **WHEN** the server refuses the submission because the session or the role does not allow it
 - **THEN** the console shows an error message
 - **AND** the console invites the user to try again
 - **AND** the console does not report the outcome as unknown
+
+### Requirement: The server reports only a failure it can prove
+
+When a change request submission fails, the server SHALL report that no change request was created only when no ticket can exist. For any failure where a ticket may exist, the server SHALL report either that the ticket was created or that it cannot say what happened.
+
+#### Scenario: The request never reached the ticket system
+
+- **WHEN** the connection to the ticket system fails before the request is sent
+- **THEN** the server reports that no change request was created
+
+#### Scenario: The ticket system rejected the request
+
+- **WHEN** the ticket system rejects the request
+- **THEN** the server reports that no change request was created
+
+#### Scenario: The ticket system accepted the request and its reply was unusable
+
+- **WHEN** the ticket system accepts the request and its reply cannot be read
+- **THEN** the server reports that the change request was created
+- **AND** the server does not report that no change request was created
+
+#### Scenario: The ticket system failed
+
+- **WHEN** the ticket system answers with a failure of its own
+- **THEN** the server reports that it cannot say what happened
+
+#### Scenario: A failure the server cannot classify
+
+- **WHEN** a submission fails in a way the server does not recognize
+- **THEN** the server reports that it cannot say what happened
 
 ### Requirement: A confirmed failure is reported at once
 
@@ -75,8 +112,9 @@ When the server reports that no change request was created, the console SHALL re
 #### Scenario: The server reports that the change request was created
 
 - **WHEN** a submission fails and the server reports that the change request was created
-- **THEN** the console reports at once that it was created
-- **AND** the console warns the user not to try again
+- **THEN** the console reports at once that the outcome is uncertain
+- **AND** the console tells the user where to verify it
+- **AND** the console does not invite the user to try again
 - **AND** the console does not look up the change request record
 
 #### Scenario: The server cannot say what happened
@@ -109,7 +147,7 @@ When the console cannot confirm the outcome within a bounded wait, the console S
 
 - **WHEN** the console finishes its bounded wait
 - **AND** the change request record shows no new ticket
-- **THEN** the console states that the change request may still have been created
+- **THEN** the console states that the outcome is uncertain
 - **AND** the console tells the user where to verify this before a retry
 - **AND** the console does not state that the request failed
 

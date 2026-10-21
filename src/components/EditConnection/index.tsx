@@ -29,41 +29,33 @@ interface editConnectionProps {
 
 const authorizationAgreementKey = `authorization-agreement-accepted`
 
-// IGDD-3566: a timeout or a server fault does not prove that the ticket was not
-// raised. nginx can abandon the request while the route goes on to create it, so
-// the only safe report is an unknown outcome plus a check before any retry.
-const UNKNOWN_OUTCOME_MESSAGE =
-  'The server did not respond, however your change request may still have been created. ' +
-  'Please verify in Manage Connections before trying again.'
-
 // IGDD-3566: after a slow response the console looks up the change request record
 // itself rather than asking the user to go and check. The record is the same one
 // that lights the Change Request icon on the connection list.
 const CONFIRM_POLL_INTERVAL_MS = 3000
 const CONFIRM_POLL_LIMIT_MS = 90000
 
-// The route reports that nothing was created, so this is a definite failure and the
-// user can retry without any risk of a duplicate.
-const CLEAN_FAILURE_MESSAGE =
+// IGDD-3566: two failure messages, grouped by what the user must do. A user cannot
+// act on the difference between Jira being unreachable, Jira refusing the request,
+// and the request never being sent: all three mean nothing was created. Nor on the
+// difference between the wait expiring and Jira creating a ticket we could not
+// record: both mean the outcome is uncertain.
+//
+// Neither message claims anything about the server. The earlier wording opened
+// "The server did not respond", which was false whenever the server answered with
+// a 5xx of its own.
+const NOTHING_CREATED_MESSAGE =
   'There was a problem creating your change request, and nothing was created. ' +
   'Please try again later.'
 
-// The Jira key is internal, so it stays out of the message and goes to the log.
+// Must never invite a retry. On one of its paths a ticket already exists, and a
+// retry would raise a second one.
+const UNCERTAIN_OUTCOME_MESSAGE =
+  'There may have been an issue creating your change request. ' +
+  'Please verify in Manage Connections or contact support.'
+
 const CONFIRMED_MESSAGE =
   'The server was slow to respond, but your change request was created.'
-
-// The route raised the ticket but could not record it, so the console cannot show
-// the change request. The outcome is certain, and a retry would raise a second
-// ticket, so this message must stop the user rather than invite them back.
-const CREATED_NOT_RECORDED_MESSAGE =
-  'Your change request was created, but the console could not record it. ' +
-  'Do not try again. Please contact izgateway@cdc.gov.'
-
-// A 4xx other than 400 is a definite refusal: the route rejected the request before
-// it raised a ticket. Saying the outcome is unknown would be false, and it would send
-// the user to Manage Connections for a record that is not there.
-const REFUSED_MESSAGE =
-  'There was a problem creating your change request. Please try again later.'
 
 const steps = [
   'SERVICE AGREEMENT',
@@ -306,11 +298,17 @@ const EditConnection = (props: editConnectionProps) => {
     try {
       await submitChangeRequest()
     } catch (error) {
-      // Every throwing path inside submitChangeRequest is guarded today, so this
-      // is a backstop. It keeps "never end a submission without a message" true by
-      // construction rather than by inspection of the paths below.
+      // A throw that escapes submitChangeRequest happened before or around the
+      // request rather than in response to it, so report a failure to send. The
+      // request body is built outside that function's try for the same reason.
       console.error(`Unhandled failure while scheduling: ${error}`)
-      reportUnknownOutcome()
+      setAlert({
+        level: 'error',
+        jurisdiction: destData?.jurisdiction?.description,
+        dest_type: destData?.destinationType?.type,
+        message: NOTHING_CREATED_MESSAGE,
+      })
+      setShowSnackbar(true)
     } finally {
       isSubmittingRef.current = false
       setIsSubmitting(false)
@@ -415,7 +413,7 @@ const EditConnection = (props: editConnectionProps) => {
           level: 'error',
           jurisdiction: destData?.jurisdiction?.description,
           dest_type: destData?.destinationType?.type,
-          message: CLEAN_FAILURE_MESSAGE,
+          message: NOTHING_CREATED_MESSAGE,
         })
         setShowSnackbar(true)
         return
@@ -428,7 +426,7 @@ const EditConnection = (props: editConnectionProps) => {
           level: 'warning',
           jurisdiction: destData?.jurisdiction?.description,
           dest_type: destData?.destinationType?.type,
-          message: CREATED_NOT_RECORDED_MESSAGE,
+          message: UNCERTAIN_OUTCOME_MESSAGE,
           persistent: true,
         })
         setShowSnackbar(true)
@@ -443,7 +441,7 @@ const EditConnection = (props: editConnectionProps) => {
         level: 'error',
         jurisdiction: destData.jurisdiction.description,
         dest_type: destData.destinationType.type,
-        message: REFUSED_MESSAGE,
+        message: NOTHING_CREATED_MESSAGE,
       })
       setShowSnackbar(true)
       console.error(
@@ -526,7 +524,7 @@ const EditConnection = (props: editConnectionProps) => {
       level: 'warning',
       jurisdiction: destData?.jurisdiction?.description,
       dest_type: destData?.destinationType?.type,
-      message: UNKNOWN_OUTCOME_MESSAGE,
+      message: UNCERTAIN_OUTCOME_MESSAGE,
       persistent: true,
     })
     // The snackbar auto-opens only on the IDENTIFY step, so open it here.

@@ -282,7 +282,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       await runConfirmWindow()
 
       expect(latestAlert().level).toBe('warning')
-      expect(latestAlert().message).toMatch(/may still have been created/i)
+      expect(latestAlert().message).toMatch(/may have been an issue/i)
     })
 
     it('reports a visible message when the browser cannot reach the server', async () => {
@@ -293,7 +293,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       await runConfirmWindow()
 
       expect(latestAlert().level).toBe('warning')
-      expect(latestAlert().message).toMatch(/may still have been created/i)
+      expect(latestAlert().message).toMatch(/may have been an issue/i)
     })
   })
 
@@ -308,7 +308,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       const message = latestAlert().message
       expect(message).toMatch(/try again/i)
       // A refusal is certain, so it must not read as an unknown outcome.
-      expect(message).not.toMatch(/may still have been created/i)
+      expect(message).not.toMatch(/may have been an issue/i)
       expect(message).not.toMatch(/Manage Connections/i)
       expect(lookupCalls()).toHaveLength(0)
     })
@@ -321,7 +321,28 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
 
       await waitFor(() => expect(latestAlert().level).toBe('error'))
       expect(latestAlert().message).toMatch(/try again/i)
-      expect(latestAlert().message).not.toMatch(/may still have been created/i)
+      expect(latestAlert().message).not.toMatch(/may have been an issue/i)
+    })
+  })
+
+  describe('a failure before the request is sent', () => {
+    it('reports that nothing was created and says nothing about the server', async () => {
+      // No session means session.user.email throws while the body is built, which
+      // happens outside submitChangeRequest's try, so the backstop handles it.
+      mockedSession.mockReturnValue({ data: null })
+      const schedule = await renderAtScheduleStep()
+
+      fireEvent.click(schedule)
+
+      await waitFor(() => expect(latestAlert().level).toBe('error'))
+      const message = latestAlert().message
+      expect(message).toMatch(/nothing was created/i)
+      expect(message).toMatch(/try again/i)
+      expect(message).not.toMatch(/server/i)
+      expect(message).not.toMatch(/may have been an issue/i)
+      // Nothing was sent, and nothing was looked up.
+      expect(changeRequestCalls()).toHaveLength(0)
+      expect(lookupCalls()).toHaveLength(0)
     })
   })
 
@@ -345,7 +366,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
     it('reports at once when the route says the ticket exists but was not recorded', async () => {
       // The route answers ticketCreated true only when the throw came after the
       // ticket was raised, so the record never got the new jiraId. Polling for it
-      // would be futile, and "may still have been created" would be too vague.
+      // would be futile, and "may have been an issue" would be too vague.
       submitResponder = () =>
         Promise.resolve(jsonResponse(500, { ticketCreated: true }))
       const schedule = await renderAtScheduleStep()
@@ -353,8 +374,12 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       fireEvent.click(schedule)
 
       await waitFor(() => expect(latestAlert().level).toBe('warning'))
-      expect(latestAlert().message).toMatch(/was created/i)
-      expect(latestAlert().message).toMatch(/do not try again/i)
+      const message = latestAlert().message
+      expect(message).toMatch(/may have been an issue/i)
+      expect(message).toMatch(/Manage Connections/i)
+      // A ticket already exists on this path, so the message must never invite a
+      // retry. That is the floor the spec keeps after the explicit warning went.
+      expect(message).not.toMatch(/try again/i)
       expect(latestAlert().persistent).toBe(true)
       // No lookup and no confirming state: the answer was already definite.
       expect(lookupCalls()).toHaveLength(0)
@@ -412,11 +437,11 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       await runConfirmWindow()
 
       expect(latestAlert().level).toBe('warning')
-      expect(latestAlert().message).toMatch(/may still have been created/i)
+      expect(latestAlert().message).toMatch(/may have been an issue/i)
       expect(push).not.toHaveBeenCalled()
     })
 
-    it('reports the unknown outcome when the record never gains a ticket', async () => {
+    it('reports an uncertain outcome when the record never gains a ticket', async () => {
       submitResponder = () => Promise.resolve(jsonResponse(504))
       const schedule = await renderAtScheduleStep()
 
@@ -425,14 +450,14 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
 
       expect(lookupCalls().length).toBeGreaterThan(1)
       expect(latestAlert().level).toBe('warning')
-      expect(latestAlert().message).toMatch(/may still have been created/i)
+      expect(latestAlert().message).toMatch(/may have been an issue/i)
       expect(latestAlert().message).not.toMatch(/\bfailed\b/i)
       // Carried on the alert, so the guarantee holds on whichever screen shows it.
       expect(latestAlert().persistent).toBe(true)
     })
   })
 
-  describe('the unknown-outcome message waits for a dismissal', () => {
+  describe('the uncertain-outcome message waits for a dismissal', () => {
     it('stays past the auto-hide window and clears when dismissed', async () => {
       submitResponder = () => Promise.resolve(jsonResponse(504))
       const schedule = await renderAtScheduleStep()
@@ -440,7 +465,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       fireEvent.click(schedule)
       await runConfirmWindow()
 
-      const message = await screen.findByText(/may still have been created/i)
+      const message = await screen.findByText(/may have been an issue/i)
       await act(async () => {
         await jest.advanceTimersByTimeAsync(30000)
       })
@@ -448,7 +473,7 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /close/i }))
       await waitFor(() =>
-        expect(screen.queryByText(/may still have been created/i)).toBeNull()
+        expect(screen.queryByText(/may have been an issue/i)).toBeNull()
       )
     })
 
@@ -485,6 +510,10 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
     })
 
     it('keeps the entered values available for a retry', async () => {
+      draft = {
+        ...draftData,
+        requested: { ...draftData.requested, username: 'edited-user' },
+      }
       submitResponder = () => Promise.resolve(jsonResponse(504))
       const schedule = await renderAtScheduleStep()
 
@@ -495,11 +524,11 @@ describe('EditConnection change request submission (IGDD-3566)', () => {
       const again = await screen.findByRole('button', { name: 'SCHEDULE' })
       await waitFor(() => expect(again).not.toBeDisabled())
 
-      // Step back to VERIFY and read a value the user entered earlier. VERIFY
-      // shows it twice, as the current value and the requested value.
+      // Step back to VERIFY and read a value that differs from the stored one, so
+      // this proves the user's edit survived rather than that the record rendered.
       fireEvent.click(screen.getByRole('button', { name: 'PREVIOUS' }))
-      const shown = await screen.findAllByText('akuser')
-      expect(shown.length).toBeGreaterThan(0)
+      expect(await screen.findByText('edited-user')).toBeInTheDocument()
+      expect(draft.requested.username).not.toBe(destData.username)
     })
 
     it('returns to the connection list after success', async () => {
