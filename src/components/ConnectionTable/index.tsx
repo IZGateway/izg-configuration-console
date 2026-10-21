@@ -101,6 +101,11 @@ const loadColumnWidths = (): ColumnWidthState | null => {
   }
 }
 
+// Module-level so its identity is stable. DataGrid re-measures every row
+// whenever the getRowHeight function changes, which an inline arrow would do
+// on every render.
+const getAutoRowHeight = () => 'auto' as const
+
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -1108,7 +1113,7 @@ const ConnectionsTable = (props) => {
             return params.row.hasActiveMaintenance === true ? 'highlight' : ''
           }}
           density={isMobile ? 'standard' : 'comfortable'}
-          getRowHeight={() => 'auto'}
+          getRowHeight={getAutoRowHeight}
           pagination
           slots={{
             toolbar: CustomToolbar,
