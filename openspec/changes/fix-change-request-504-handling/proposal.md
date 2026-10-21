@@ -25,8 +25,14 @@ A larger `NGINX_READ_TIMEOUT` is a separate operational task, and it does not fi
 - Remove the `hasCreateChangeRequestTicketError` state and its effect from `EditConnection`. Call `setAlert` directly in the error branch, the way the existing 400 branch does.
 - Open the alert snackbar on every stepper step, not only on IDENTIFY.
 - Keep the user on the Schedule step after a 5xx response. The current code calls `router.push('/manageconnections')`, which discards the completed form before any message can register.
-- Report a timeout as an unknown outcome, not as a failure. A 504 does not prove that the ticket failed. The message must tell the user to verify Connection History before a retry.
+- Report a timeout as an unknown outcome, not as a failure. A 504 does not prove that the ticket failed. The message must tell the user to verify Manage Connections before a retry.
 - Wrap the SCHEDULE button in a `span` inside its MUI `Tooltip`. MUI cannot attach listeners to a disabled child, and the console already reports this warning.
+- Report whether the Jira ticket was created when the change request route fails, so that the console can tell a clean failure from an unknown one.
+- Report a clean failure at once, with no confirmation wait. Report a ticket the route says it created at once as well, and tell the user not to retry.
+- Remove the dead `finally` block in the change request route. It masked every Jira error with a null dereference.
+- After a slow or failed response, look up the change request record before reporting anything. Report a confirmed success with the ticket when the record shows one.
+- Report an unknown outcome only when that lookup cannot confirm the result within a bounded wait.
+- Keep the unknown-outcome message on screen until the user dismisses it. Every other message keeps its current 6 second auto-hide.
 
 No breaking changes.
 
@@ -47,7 +53,9 @@ None. No existing requirement changes.
 - `src/components/EditConnection/index.tsx` — in-flight state, error branch, snackbar gate, navigation on 5xx.
 - `src/components/EditConnection/actionButtons.tsx` — disabled state and the Tooltip child wrapper.
 - `src/contexts/app.tsx` — stable setter and memoized context value.
-- Jest tests for all three files.
+- `src/components/SnackBar/index.tsx` — optional auto-hide duration.
+- `src/pages/api/changerequest/index.ts` — report whether the ticket was created, and remove the dead `finally` block.
+- Jest tests for all five files.
 
 ### Risk
 
@@ -62,7 +70,10 @@ This change does not affect auth, jurisdiction scoping, or encrypted fields. `ha
 The following items are real, and this change does not address them:
 
 - `NGINX_READ_TIMEOUT` in the APHL production environment. `run_and_monitor.sh:62` defaults to 60 seconds, and `iz-gateway-terraform/hub/console/ecs_task.tf:175` sets 180 seconds for the AWS environment. Production shows exactly 60 seconds, so the variable is probably unset there. This is an operational task with APHL, tracked on IGDD-3566.
-- A server-side guard against a second open change request for one destination. The product answer is settled: a second open change request for one destination is not valid. The data model already assumes this, because `src/lib/db/dynamo.ts:825` derives the key from a hash of `destType` and `destId`, and its comment states the rule. `POST /api/changerequest` does not enforce it. The lookup needed for a guard already exists as `fetchDestinationChangeRequestByDestIdAndDestType`. The decision on when to build the guard waits until the client fix is verified in a deployed environment. Items in this change protect the client only. A second browser tab still defeats them.
-- `src/pages/api/changerequest/index.ts:159-165`. When the Jira call throws, both result variables are still null. The guard `_.isNull(changeRequestTicketResponse)` passes, then `changeRequestDBResponse.id` throws a TypeError. A `finally` throw replaces the `catch` throw, so the real Jira error is lost.
+- A server-side guard against a second open change request for one destination. The product answer is settled: a second open change request for one destination is not valid. The data model already assumes this, because `src/lib/db/dynamo.ts:825` derives the key from a hash of `destType` and `destId`, and its comment states the rule. `POST /api/changerequest` does not enforce it. The lookup needed for a guard already exists as `fetchDestinationChangeRequestByDestIdAndDestType`. The decision on when to build the guard waits until the client fix is verified in a deployed environment. Items in this change protect the client only. A second browser tab still defeats them. The record lookup added here informs the user, and the guard prevents the duplicate, so the guard is still needed.
 - `src/lib/createchangerequestticket.ts:111`. The Jira fetch carries no `AbortSignal`, so the call can hang without limit. A server timeout shorter than the nginx timeout would turn a 504 into a clean error with a real message.
 - `POST /api/destinationuri/validate` on the VERIFY step. It has the same timeout exposure, and it returned 504 during the first local reproduction.
+- The record lookup does not survive an unmount. An SWR revalidation failure during the wait throws at `src/components/EditConnection/index.tsx:237`, the `ErrorBoundary` at `src/pages/edit/[...slug].tsx:22` replaces the screen, and the lookup then reports to a component that is gone. Leaving the page during the wait has the same effect. A fix means reporting from somewhere above the page, which is a design change rather than a patch.
+- No request in the submit path carries an `AbortController` or a timeout. A stalled connection never settles, so the button stays disabled until the user reloads. The 90 second bound also limits iterations started rather than elapsed time, so a slow lookup can extend the wait past 150 seconds.
+- The success branch trusts `response.ok` alone. The middleware answers a failed DPoP proof with a redirect that ends in a 200 HTML page, which reads as success. `src/lib/fetch.ts:19-23` already guards this for SWR callers. This submit uses a hand-rolled `fetch` and does not.
+- `router.push` is not awaited on either success path, so the button re-enables for about 250 milliseconds before `NavigationLoader` draws its blocking overlay.

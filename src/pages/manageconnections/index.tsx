@@ -49,6 +49,7 @@ const Manage = (
           severity={alert.level}
           message={alert.message}
           onClose={handleClose}
+          autoHideDuration={alert.persistent ? null : undefined}
         />
       </ErrorBoundary>
     </Container>

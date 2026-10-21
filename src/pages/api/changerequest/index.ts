@@ -124,7 +124,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }
       } else {
         let changeRequestTicketResponse = null
-        let changeRequestDBResponse = null
         try {
           changeRequestTicketResponse = await createChangeRequestTicket({
             ...requestBody,
@@ -145,7 +144,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               requestBody.requested.password = requestBody.requested.newPassword
             }
             _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
-            changeRequestDBResponse = await upsertChangeRequest({
+            await upsertChangeRequest({
               ...requestBody,
               jiraId: changeRequestTicketResponse.key,
             })
@@ -159,15 +158,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
-          throw new Error(
-            `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`
+          // IGDD-3566: report which failure this is, because the two are very
+          // different for the caller. A Jira call that never succeeded leaves no
+          // ticket, so the console can report a clean failure at once. A Jira
+          // call that did succeed leaves a ticket behind even though a later step
+          // threw, so the console must not claim that nothing happened.
+          const ticketCreated = !_.isNull(changeRequestTicketResponse)
+          logger.error(
+            `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`,
+            {
+              destId: requestBody.destId,
+              destType: requestBody.destType?.type,
+              jiraTicketId: changeRequestTicketResponse?.key,
+              ticketCreated,
+              userId: session?.user?.email,
+              operation: 'create_change_request_ticket',
+            }
           )
-        } finally {
-          if (_.isNull(changeRequestTicketResponse)) {
-            await dbClient.deleteDestinationChangeRequest(
-              changeRequestDBResponse.id
-            ) 
-          }
+          res.status(ticketCreated ? 500 : 502).json({ ticketCreated })
         }
       }
     } else if (req.method === 'PUT') {
@@ -191,10 +199,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             scheduledAt: requestBody.scheduledAt,
             isDraft: false,
             isPasswordDifferent: requestBody.isPasswordDifferent,
-            createdBy: requestBody.createdBy, 
-            createdOn: requestBody.createdOn, 
-            updatedBy: requestBody.updatedBy, 
-            updatedOn: requestBody.updatedOn, 
+            createdBy: requestBody.createdBy,
+            createdOn: requestBody.createdOn,
+            updatedBy: requestBody.updatedBy,
+            updatedOn: requestBody.updatedOn,
             requested: {
               destUri: requestBody.requested.destUri,
               username: requestBody.requested.username,
@@ -230,7 +238,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     } else if (req.method === 'DELETE') {
       try {
-        await dbClient.deleteDestinationChangeRequest(requestBody.id)  // Log deleter info
+        await dbClient.deleteDestinationChangeRequest(requestBody.id) // Log deleter info
         logger.info('Change request deleted successfully', {
           changeRequestId: requestBody.id,
           userId: session?.user?.email,
@@ -272,10 +280,10 @@ const upsertChangeRequest = async (
     requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
-    createdBy: changeRequestDetails.createdBy, 
-    createdOn: changeRequestDetails.createdOn, 
-    updatedBy: changeRequestDetails.updatedBy, 
-    updatedOn: changeRequestDetails.updatedOn, 
+    createdBy: changeRequestDetails.createdBy,
+    createdOn: changeRequestDetails.createdOn,
+    updatedBy: changeRequestDetails.updatedBy,
+    updatedOn: changeRequestDetails.updatedOn,
     isPasswordDifferent: changeRequestDetails.isPasswordDifferent || false,
     requested: {
       destUri: changeRequestDetails.requested.destUri,

@@ -16,13 +16,13 @@ Three facts about the current code shape the approach.
 
 **Goals:**
 
-- Hold the submit path to the six requirements in the spec delta.
+- Hold the submit path to the eight requirements in the spec delta.
 - Remove the render loop in a way that survives future edits to the context.
-- Keep the change inside three component files and their tests.
+- Keep the change inside four component files, one API route, and their tests.
 
 **Non-Goals:**
 
-- No change to the request body, the API route, or the data layer. This design is client-side only.
+- No change to the request body or the data layer. The API route changes only to report whether the Jira ticket was created. See Decision 9.
 - No rework of the alert lifecycle across the whole stepper. See Decision 4.
 - No server-side duplicate guard. See `proposal.md` - Out of scope.
 
@@ -58,9 +58,13 @@ The `else` branch must report an unknown outcome for any 5xx status, not for 504
 
 The console cannot tell "the ticket was not created" from "the ticket was created and the response was lost". A 504 proves the second case happened at least once. A 500 from the API route carries the same doubt, because the route throws after `createChangeRequestTicket` returns in some paths.
 
-One safe message covers all of them: the request may still have been submitted, so verify Connection History before a retry. A message that claims failure is the dangerous one, because it invites the retry that creates the duplicate.
+One safe message covers all of them: the request may still have been created, so verify Manage Connections before a retry. A message that claims failure is the dangerous one, because it invites the retry that creates the duplicate.
 
 The 400 branch keeps its current behavior. A rejection is a definite non-creation, and the server supplies a specific reason.
+
+A 5xx no longer reports straight away. It enters the confirmation step in Decision 8 first, and it reaches the unknown-outcome message only when that bounded wait expires.
+
+A 4xx other than 400 is also a definite non-creation, so it must not use the unknown-outcome message. `withMiddleware` returns 401 at `api-middleware-helper.ts:163`, 403 at line 214, and 405 at line 318. The route refuses those before it raises a ticket. They report a definite failure instead, and they do not send the user to Manage Connections for a record that is not there.
 
 *Alternatives considered.* Branch on 504 alone and treat other 5xx as failures. Rejected: it reports a false certainty for the 500 case.
 
@@ -75,6 +79,12 @@ That work does not belong in a fix for a production incident. The explicit call 
 The gate stays a trap for the next person. Record it as a follow-up and mark it with a code comment.
 
 *Alternatives considered.* Remove the gate and clear the alert on every step change. Rejected for scope: it changes alert behavior on four steps that this incident does not touch.
+
+### Decision 4a: Both success paths open the snackbar
+
+The plain success path set the alert and navigated away without opening the snackbar. The message still reached the user, because `manageconnections/index.tsx:27` opens the snackbar for any alert level. The confirmed-success path opens it directly.
+
+Two paths that differ for no reason are a trap. Both now call `setShowSnackbar(true)`, so the message is visible before the navigation and testable in one place.
 
 ### Decision 5: Separate the two disable reasons on the button
 
@@ -91,6 +101,79 @@ Test every scenario in the spec delta with Jest and `@testing-library/react`, wi
 The Playwright suite in `e2e/tests/` runs against deployed environments. A 504 from the real gateway cannot be induced there on demand, and a real submit creates a real Jira ticket.
 
 The double-activation scenario needs a `fetch` mock that never settles, plus two activations in the same tick. That is the test that proves Decision 1.
+
+### Decision 7: Make only the unknown-outcome message persistent
+
+Add an optional `autoHideDuration` prop to `CustomSnackbar`, keep the default at 6000, and pass `null` from the unknown-outcome path alone.
+
+`src/components/SnackBar/index.tsx:32` hardcodes `autoHideDuration={6000}`. After a 60 second wait the user may look away, so a message that clears itself in 6 seconds does not reliably reach them. This message is the last thing between the user and a duplicate submit, so it must wait for them.
+
+The component is already most of the way there. It ignores the `clickaway` reason at line 20, and it renders a close button through the Alert `onClose` at line 37. A dismiss-only message therefore needs one prop and one call site.
+
+*Alternatives considered.* Change the default for every consumer. Rejected: `CustomSnackbar` has 8 consumers, and several raise low-stakes messages such as "Your draft was saved", where a message that needs a click is an annoyance. Make persistence depend on severity inside the component. Rejected for the same reason: it changes behavior on seven screens that this change does not test.
+
+### Decision 8: Confirm a slow outcome by polling the change request record
+
+After a 5xx or a `fetch` rejection, poll `GET /api/changerequest/{destTypeId}/{destId}` every 3 seconds for up to 90 seconds. Report a confirmed success as soon as the record carries a new ticket.
+
+That endpoint returns the same record the connection list uses. `src/pages/api/changerequest/[...slug].ts:58-62` calls `fetchDestinationChangeRequestByDestIdAndDestType`, and `src/pages/manageconnections/index.tsx:85-88` calls the same function to set `hasChangeRequest`. So the console polls exactly what lights the Change Request icon.
+
+Compare against the `jiraId` held before the submit, not against null. `EditConnection` already holds the record as `draftData`, and a draft row exists with `jiraId: null`. The prior value also prevents a change request that already exists from reading as a success, which matters because a user can reach `/edit/{typeId}/{destId}` by typing the URL.
+
+A 90 second bound covers a Jira call that runs 30 seconds past the 60 second nginx timeout. The cost is one small record read every 3 seconds.
+
+The console can confirm "created". It cannot confirm "not created". A route that threw before the write leaves no record, and that looks the same as a record that has not appeared yet. So the bounded wait ends in the unknown-outcome message rather than a claim of failure.
+
+*Alternatives considered.* Reuse the existing SWR hook with `mutate`. Rejected: SWR deduplication and cache behavior make a fixed-interval poll harder to reason about than a plain loop. Poll with no bound. Rejected: the button must not stay disabled forever.
+
+### Decision 9: The route reports whether the Jira ticket was created
+
+At `src/pages/api/changerequest/index.ts:159` the catch already holds `changeRequestTicketResponse`, so the route knows which of two very different failures happened. It currently discards that fact and lets the middleware return a generic 500.
+
+Two failures hide behind one status. The Jira call can fail outright, which leaves no ticket. The Jira call can also succeed and a later step can throw, which leaves a ticket with no record. `fetchDestinationPassword` at line 138 and `upsertChangeRequest` at line 147 both run after the ticket exists.
+
+The route therefore answers with the fact it holds:
+
+- No ticket created: respond `502` with `{ ticketCreated: false }`.
+- Ticket created, a later step failed: respond `500` with `{ ticketCreated: true }`.
+
+The catch no longer rethrows to the middleware, so it must log the real error itself.
+
+The console branches on the body, not the status. A body with `ticketCreated` set to false means a confirmed failure, reported at once. Anything else goes to the confirmation poll in Decision 8. That covers `true`, a missing body, and a body that does not parse. A 504 from nginx carries no JSON body, so it falls to the safe path by default.
+
+*Alternatives considered.* Branch on the status alone. Rejected: the middleware already returns a bare 500 for unrelated faults at `api-middleware-helper.ts:106`, so the console could not tell them apart.
+
+### Decision 10: Remove the dead `finally` block in the route
+
+Delete the `finally` block at `src/pages/api/changerequest/index.ts:163-167`.
+
+`changeRequestDBResponse` is assigned only inside `if (changeRequestTicketResponse)`. So whenever the guard `_.isNull(changeRequestTicketResponse)` passes, that variable is guaranteed to be null, and `changeRequestDBResponse.id` throws. The block never deletes a record. It only ever replaces the real error with a null dereference, because a `finally` throw discards the `catch` throw.
+
+A draft record that existed before the submit stays a draft. That is the correct outcome when the ticket was never raised.
+
+*Alternatives considered.* Keep the block and add a null check on `changeRequestDBResponse`. Rejected: the guarded call becomes unreachable, so the result is dead code with a longer condition.
+
+### Decision 11: Report the route's definite answer in both directions
+
+A 5xx body that reports the ticket as created is as definite as one that reports it as not created, so neither starts a record lookup.
+
+The route answers `ticketCreated: true` only when the throw came after `createChangeRequestTicket` returned. The only steps after that point are the password read at `index.ts:138` and the `upsertChangeRequest` at `:147` that stores the new `jiraId`. So the record almost certainly never received it, and a poll for that `jiraId` cannot succeed. The earlier behavior spent 90 seconds proving that, then reported an unknown outcome for the one case the server already knew.
+
+The message states that the change request exists, states that the console could not record it, and tells the user not to retry. A retry would raise a second ticket, which is the harm this change exists to prevent. The user needs IZG Operations to reconcile the ticket by hand.
+
+### Decision 12: The alert carries its own persistence
+
+Add an optional `persistent` field to the alert and have every screen that renders the shared alert read it.
+
+The earlier approach compared the message against `UNKNOWN_OUTCOME_MESSAGE` inside `EditConnection`. The alert lives in `AppProvider`, above the page, so it can surface on a screen that never raised it. Three components render it: `EditConnection`, `manageconnections/index.tsx:47`, and `AccessControl/index.tsx:663`. Only the first honored the comparison, so the one message built to survive an unattended wait faded after 6 seconds on the other two.
+
+Carrying the intent on the alert makes the guarantee travel with the message and removes the string comparison.
+
+### Decision 13: Build the request body before the try
+
+A throw while reading `session.user.email` or a destination value is not a transport failure. Inside the `try` it was caught and reported as "your change request may still have been created", which is false for a request that was never sent, and it sent the user hunting for a record that cannot exist.
+
+Built before the `try`, such a throw reaches the backstop in `handleSchedule` instead, which reports an unknown outcome without claiming the request reached the server.
 
 ## Risks / Trade-offs
 
@@ -112,4 +195,4 @@ Verify after deploy with the local reproduction method recorded in `proposal.md`
 
 ## Open Questions
 
-- The exact wording of the unknown-outcome message. The reporter and IZG Operations must approve the final text. The approach, the specs, and the task breakdown do not depend on it.
+None. The wording of all four messages is settled, so the one earlier question is closed. The shipped text lives in `src/components/EditConnection/index.tsx`: the confirmed success, the unknown outcome, the clean failure, and the refusal.
