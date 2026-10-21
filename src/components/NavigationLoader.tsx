@@ -13,8 +13,15 @@ export default function NavigationLoader() {
   React.useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
 
-    const start = () =>
-      (timer = setTimeout(() => setLoading(true), LOADER_THRESHOLD))
+    const start = () => {
+      // Two starts can arrive before an end (a navigation interrupted by
+      // another). Clear the pending timer first, or end() can no longer cancel
+      // it and the overlay would show after the navigation has finished.
+      if (timer) {
+        clearTimeout(timer)
+      }
+      timer = setTimeout(() => setLoading(true), LOADER_THRESHOLD)
+    }
 
     const end = () => {
       if (timer) {
