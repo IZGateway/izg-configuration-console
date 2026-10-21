@@ -44,6 +44,18 @@ export default class DbClientFactory {
     if (!KEY_NAME) {
       logger.warn(`No encryption key configured for database ${type}`)
     }
+    // Local development only: resolve the mock Manage Connections destinations
+    // (see services/mockEndpointStatus). NODE_ENV is inlined at build time, so
+    // production builds drop this branch and the mock module with it.
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      process.env.MOCK_ENDPOINT_STATUS === 'true'
+    ) {
+      const { withMockDestinations } = await import(
+        '../services/mockEndpointStatus'
+      )
+      db = withMockDestinations(db)
+    }
     if (!dbType) {
       DbClientFactory.defaultClient = db
     }

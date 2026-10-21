@@ -27,4 +27,6 @@ const AccessControl = ({
 // for non-admins, but typing the URL rendered the page.
 export const getServerSideProps = withPageAccess('accesscontrol')
 
+AccessControl.showFooter = true
+
 export default AccessControl
