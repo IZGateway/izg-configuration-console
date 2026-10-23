@@ -6,6 +6,7 @@ import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
 import { getDestinationType } from '../desttypehelper'
 import { toEcsUrl } from './ecsUrl'
+import type { HubRegionStatuses } from './hubregionstatus'
 
 /**
  * Hub circuit-breaker reset REST path, relative to the hub's `/rest/` base.
@@ -42,6 +43,7 @@ const resetCircuitBreakersForBaseUrls = async (
   metadata?: { destinationTypeId?: number; destinationType?: string }
 ): Promise<CircuitBreakerResetResult> => {
   const httpsAgent = new https.Agent(getHttpsAgentOptions())
+  const singleHub = baseUrls.length === 1
 
   const outcomes = await Promise.allSettled(
     baseUrls.map((baseUrl) => {
@@ -51,7 +53,19 @@ const resetCircuitBreakersForBaseUrls = async (
         operation: 'reset_circuit_breakers',
         ...metadata,
       })
-      return axios.post(url, null, { httpsAgent, timeout: 5000 })
+      // IGDD-3599: the hub fans the reset out to every instance over SQS and
+      // waits up to 15s for the replies. That wait is hardcoded hub-side, so
+      // this value must stay above it.
+      //
+      // 30s, not 20s. A reset against dev with one instance stopped measured
+      // 16.86s end to end — the hub's 15s wait plus handshake, processing and
+      // reply. 20s would have left 3.1s of margin, and production adds Global
+      // Accelerator and an ALB. Firing early here reports a total failure for
+      // a reset that did clear the other region, which is the defect this
+      // change exists to fix, so the margin is worth more than the wait. This
+      // matches the 30s the per-destination route already uses. nginx allows
+      // it (NGINX_READ_TIMEOUT, 60s).
+      return axios.post(url, null, { httpsAgent, timeout: 30000 })
     })
   )
 
@@ -69,17 +83,52 @@ const resetCircuitBreakersForBaseUrls = async (
     }
   })
 
-  return {
+  // IGDD-3599: copy `regions` and nothing else out of the hub body. The hub
+  // also returns `hosts` (keyed by private AWS DNS name) and, on the fleet-wide
+  // envelope, `destinations` — whose entries each carry a `statusBy` holding an
+  // instance host name. Neither may reach the browser, so neither is read here;
+  // this route builds its own body rather than forwarding the hub's.
+  //
+  // Only a single-hub call forwards the block. `resetAllCircuitBreakers` can
+  // call dev, onboard and prod at once, and a hub instance knows its region but
+  // not its environment, so all three answer with a `us-east-1` key. Merging
+  // them lets one environment's status overwrite another's — prod reading
+  // `partial` would disappear behind dev reading `complete`. Do not merge.
+  const regions =
+    singleHub && outcomes[0]?.status === 'fulfilled'
+      ? outcomes[0].value?.data?.regions
+      : undefined
+
+  const result: CircuitBreakerResetResult = {
     attempted: outcomes.length,
     succeeded: outcomes.length - failed.length,
     failed: failed.length,
+    ...(regions ? { regions } : {}),
   }
+
+  // Fires on every path, including the one where every hub rejected, so it
+  // carries the failure count rather than implying success.
+  logger.info('Hub circuit breaker reset finished', {
+    operation: 'reset_circuit_breakers',
+    ...metadata,
+    attempted: result.attempted,
+    succeeded: result.succeeded,
+    failed: result.failed,
+    regions,
+  })
+
+  return result
 }
 
 export interface CircuitBreakerResetResult {
   attempted: number
   succeeded: number
   failed: number
+  /**
+   * The hub's per-region status, forwarded unchanged. Absent when the hub did
+   * not send one (a pre-IGDD-3599 hub) or when several hubs were called.
+   */
+  regions?: HubRegionStatuses
 }
 
 /**
