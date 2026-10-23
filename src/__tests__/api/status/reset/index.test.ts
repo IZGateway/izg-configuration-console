@@ -234,6 +234,52 @@ describe('POST /api/status/reset', () => {
       expect(res.body).toMatchObject({ success: false, result: { level: 'warning' } })
     })
 
+    // A rejected request is a hub we never reached, not an older hub that
+    // answered without regions. Raised by review on PR #753.
+    it('does not report success when one hub completed and another was unreachable', async () => {
+      mockPost
+        .mockResolvedValueOnce(
+          hubBody({ 'us-east-1': 'complete', 'us-west-1': 'complete' })
+        )
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({
+        success: false,
+        result: { level: 'warning', failed: 1, succeeded: 1 },
+      })
+      expect((res.body as { message: string }).message).toContain(
+        'could not be reached'
+      )
+    })
+
+    it('keeps an error verdict an error when a hub is also unreachable', async () => {
+      mockPost
+        .mockResolvedValueOnce(hubBody({ 'us-east-1': 'failed' }))
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(502)
+      expect(res.body).toMatchObject({ success: false })
+    })
+
+    it('leaves the no-regions fallback alone when a hub is unreachable', async () => {
+      // Neither hub reports regions, so there is no verdict to downgrade and
+      // the route keeps reading the endpoint counts. Design D7.
+      mockPost
+        .mockResolvedValueOnce(hubBody())
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({ success: true })
+      expect((res.body as { result: object }).result).not.toHaveProperty('level')
+    })
+
     it('reports success when every hub completed every region', async () => {
       mockPost.mockResolvedValue(
         hubBody({ 'us-east-1': 'complete', 'us-west-1': 'complete' })

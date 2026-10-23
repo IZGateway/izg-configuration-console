@@ -88,11 +88,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const affected = unfinished.length
       ? ` Affected regions: ${unfinished.join(', ')}.`
       : ''
+    // A hub endpoint that could not be reached is a different fact from a
+    // region that did not reset, and the caller needs both.
+    const unreachable = result.failed
+      ? ` ${result.failed} of ${result.attempted} hub endpoints could not be reached.`
+      : ''
 
     if (level === 'error') {
       return res.status(502).json({
         success: false,
-        error: `No hub instance reset its circuit breakers.${affected}`,
+        error: `No hub instance reset its circuit breakers.${affected}${unreachable}`,
         result,
       })
     }
@@ -103,7 +108,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (level === 'warning') {
       return res.status(200).json({
         success: false,
-        message: `Circuit breakers were not reset in every region.${affected}`,
+        message: `Circuit breakers were not reset everywhere.${affected}${unreachable}`,
         result,
       })
     }

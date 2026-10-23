@@ -141,6 +141,17 @@ status code. A Hub response of HTTP 200 SHALL NOT, by itself, produce a success 
 - **AND** the Console reaches that conclusion without combining the per-region
   statuses of different environments
 
+#### Scenario: One Hub environment cannot be reached
+
+- **GIVEN** a request that names no environment, so every configured Hub is
+  called
+- **AND** one Hub reports that every region completed
+- **AND** another Hub cannot be reached at all
+- **WHEN** the Console reports the outcome
+- **THEN** the Console does not report a success
+- **AND** the message states that a Hub could not be reached
+- **AND** a Hub that was never reached is not treated as a Hub that answered
+
 #### Scenario: A status value the Console does not recognise
 
 - **GIVEN** the Hub reports a status value that the Console does not recognise

@@ -183,6 +183,16 @@ where every region of every environment failed therefore reported
 `hub-administrative-operations` requirement that a 200 shall not by itself produce a
 success message. Raised by review on PR #753.
 
+**An unreachable Hub is not an older Hub.** A rejected request lands in the
+same place as a fulfilled response with no `regions` member: absent. They mean
+different things. One Hub was never reached, the other is simply a release that
+predates IGDD-3599. Treating the first as the second let a call where one Hub
+completed and another refused the connection report
+`level: 'success'` beside `failed: 1`. A verdict of success is therefore
+downgraded to a warning whenever any request rejected. Only an existing verdict
+is downgraded, so a fleet where no Hub reports regions keeps the behaviour D7
+guarantees. Raised by review on PR #753.
+
 So each response is judged on its own and the levels are combined:
 `aggregateHubOperationLevel` returns success only when every block succeeded, error only
 when every block failed, and warning otherwise. A Hub that sent no block contributes

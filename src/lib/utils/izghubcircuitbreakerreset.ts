@@ -108,7 +108,20 @@ const resetCircuitBreakersForBaseUrls = async (
     o.status === 'fulfilled' ? o.value?.data?.regions : undefined
   )
   const regions = singleHub ? regionBlocks[0] : undefined
-  const level = aggregateHubOperationLevel(regionBlocks)
+  const reportedLevel = aggregateHubOperationLevel(regionBlocks)
+
+  // A rejected request also lands in `regionBlocks` as undefined, where it is
+  // indistinguishable from a hub that answered but reported no regions. Those
+  // are different facts: one hub was never reached, the other is simply an
+  // older release. So a hub we failed to reach downgrades an otherwise clean
+  // verdict — we cannot call an operation successful when part of it never
+  // happened. Raised by review on PR #753.
+  //
+  // Only an existing verdict is downgraded. When no hub reported regions at
+  // all there is no verdict to give, and the route keeps the pre-IGDD-3599
+  // behaviour of reading the endpoint counts alone. See design D7.
+  const level =
+    reportedLevel === 'success' && failed.length > 0 ? 'warning' : reportedLevel
 
   const result: CircuitBreakerResetResult = {
     attempted: outcomes.length,
