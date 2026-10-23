@@ -15,6 +15,10 @@ import { TransitionProps } from '@mui/material/transitions'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
+import {
+  hubOperationLevel,
+  regionsNotComplete,
+} from '../../lib/utils/hubregionstatus'
 
 interface resetCircuitBreakerDialogProps {
   open: boolean
@@ -54,15 +58,36 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
         }
       )
       if (response.ok) {
-        const updatedStatus = await response.json()
+        // IGDD-3599: the hub resets the breaker on every instance it runs and
+        // reports a status per region. `regions` is taken out before the
+        // merge, because the row is a data-grid row and the column
+        // definitions do not expect it. The `status` in the rest of the body
+        // describes the instance that answered, so it is still the right
+        // value for the row — but it does not say the whole fleet recovered.
+        const { regions, ...updatedStatus } = await response.json()
         props.updateRow({ ...props.row, ...updatedStatus })
         props.handleClose()
-        setAlert({
-          level: 'success',
-          message: `Circuit breaker for ${props.jurisdictionName} ${' '} ${
-            props.destType
-          } has been reset successfully!`,
-        })
+
+        // The hub answers 200 even when a region did not fully reset, so the
+        // status code cannot decide this. An older hub sends no block, and the
+        // level is then undefined: keep the pre-IGDD-3599 message.
+        const level = hubOperationLevel(regions)
+        const destination = `${props.jurisdictionName} ${' '} ${props.destType}`
+
+        if (level === 'warning' || level === 'error') {
+          setAlert({
+            level: level,
+            message: `Circuit breaker for ${destination} was not reset on every Hub instance. Still not complete: ${regionsNotComplete(
+              regions
+            ).join(', ')}.`,
+            persistent: true,
+          })
+        } else {
+          setAlert({
+            level: 'success',
+            message: `Circuit breaker for ${destination} has been reset successfully!`,
+          })
+        }
       } else {
         setAlert({
           level: 'error',
