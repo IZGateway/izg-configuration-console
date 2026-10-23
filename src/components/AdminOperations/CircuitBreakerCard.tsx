@@ -81,7 +81,9 @@ const CircuitBreakerCard = ({
       // level is then undefined: fall back to the pre-IGDD-3599 behaviour.
       const level = hubOperationLevel(regions)
 
-      if (level) {
+      // `level` is defined only when the hub sent a usable block, so `regions`
+      // is an object here. The guard is what narrows it, not the type.
+      if (level && regions) {
         setOutcome({ label: environment.label, regions })
       }
 

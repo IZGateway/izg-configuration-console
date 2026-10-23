@@ -92,6 +92,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    // 200, because the hub was reached and some regions did reset. The browser
+    // picks its own wording from `result.regions`; this `message` is for a
+    // direct API caller, and the @swagger block above documents it.
     if (level === 'warning') {
       return res.status(200).json({
         success: false,

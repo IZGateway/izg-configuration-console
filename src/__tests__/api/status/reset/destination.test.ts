@@ -109,7 +109,7 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
     ])
   })
 
-  it('forwards the regions block unchanged, beside the existing fields', async () => {
+  it('reports resetComplete false, and no region names, when a region is partial', async () => {
     mockPost.mockResolvedValue(
       hubBody({ 'us-east-1': 'complete', 'us-west-1': 'partial' })
     )
@@ -120,8 +120,20 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
     expect(res.body).toMatchObject({
       destId: 'md',
       status: 'Connected',
-      regions: { 'us-east-1': 'complete', 'us-west-1': 'partial' },
+      resetComplete: false,
     })
+    expect(res.body).not.toHaveProperty('regions')
+  })
+
+  it('reports resetComplete true when every region completed', async () => {
+    mockPost.mockResolvedValue(
+      hubBody({ 'us-east-1': 'complete', 'us-west-1': 'complete' })
+    )
+
+    const res = await reset()
+
+    expect(res.body).toMatchObject({ resetComplete: true })
+    expect(res.body).not.toHaveProperty('regions')
   })
 
   it('keeps the hub status code rather than mapping a partial result to 502', async () => {
@@ -134,10 +146,10 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
     // The row needs the destination status in this body, so the route does not
     // turn an all-failed result into an error status. Design D6.
     expect(res.statusCode).toBe(200)
-    expect(res.body).toMatchObject({ destId: 'md' })
+    expect(res.body).toMatchObject({ destId: 'md', resetComplete: false })
   })
 
-  it('returns no regions block against a hub that sends none', async () => {
+  it('omits resetComplete entirely against a hub that sends no regions', async () => {
     mockPost.mockResolvedValue(hubBody())
 
     const res = await reset()
@@ -145,6 +157,7 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
     expect(res.statusCode).toBe(200)
     expect(res.body).toMatchObject({ destId: 'md', status: 'Connected' })
     expect(res.body).not.toHaveProperty('regions')
+    expect(res.body).not.toHaveProperty('resetComplete')
   })
 
   it('passes a hub error status through unchanged', async () => {
@@ -188,6 +201,54 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
       expect(serialised).not.toContain('.internal')
       expect(serialised).not.toContain('statusBy')
       expect(serialised).not.toContain('hosts')
+      // Region names are Hub topology. This route is reachable by a
+      // jurisdiction-scoped role, so they do not leave the server here, even
+      // though the Admin Operations route does return them.
+      expect(serialised).not.toContain('us-east-1')
+      expect(serialised).not.toContain('us-west-1')
+      expect(serialised).not.toContain('regions')
+    })
+
+    // The rule is unconditional: no Hub host name reaches the browser,
+    // whichever member holds it and whatever the status code. An error body is
+    // still a Hub body, and this route forwards it verbatim.
+    it('redacts the hub error body too, not only the success body', async () => {
+      mockIsAxiosError.mockReturnValue(true)
+      mockPost.mockRejectedValue({
+        response: {
+          status: 500,
+          data: {
+            error: 'reset failed',
+            statusBy: STATUS_BY,
+            hosts: { 'us-west-1:ip-10-161-101-98': 'Send Failure' },
+            regions: { 'us-west-1': 'failed' },
+          },
+        },
+      })
+
+      const res = await reset()
+      const serialised = JSON.stringify(res.body)
+
+      expect(res.statusCode).toBe(500)
+      expect(serialised).toContain('reset failed')
+      expect(serialised).not.toContain('ip-')
+      expect(serialised).not.toContain('.internal')
+      expect(serialised).not.toContain('statusBy')
+      expect(serialised).not.toContain('hosts')
+      expect(serialised).not.toContain('regions')
+      expect(serialised).not.toContain('us-west-1')
+    })
+
+    it('passes a hub error body through when it carries nothing private', async () => {
+      mockIsAxiosError.mockReturnValue(true)
+      mockPost.mockRejectedValue({
+        response: { status: 404, data: { error: 'destination not found' } },
+      })
+
+      const res = await reset()
+
+      expect(res.statusCode).toBe(404)
+      expect(res.body).toEqual({ error: 'destination not found' })
     })
   })
 })

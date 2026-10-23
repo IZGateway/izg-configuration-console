@@ -261,13 +261,16 @@ counts it, groups it, or logs it.
 - [x] 7.9 Open the browser developer tools during a dev reset. Verify that no response
   body holds a Hub host name and no response body states an instance count.
 
-- [ ] 7.10 Write the PR title so that the generated release note is accurate. Do not
+- [x] 7.10 Write the PR title so that the generated release note is accurate. Do not
   edit `RELEASE_NOTES.md` by hand. The release workflow writes that file from the PR
   titles in the release (`.github/workflows/_release_common.yml:145`), and the
   `release-automation` spec requires it, so a hand-written entry collides with the
   generated section. The title must carry both user-visible effects: a circuit breaker
   reset now reports the status of each region, and the database refresh no longer times
   out before the hub answers.
+
+  Done on 2026-10-23, PR #753: "IGDD-3599 Report circuit breaker reset per Hub region,
+  and fix the early database refresh timeout".
 
 - [x] 7.11 Confirm that the Hub change and this change state one contract. Verified on
   2026-10-23 against `izgw-hub` branch `IGDD-3599`: the Decisions rows name

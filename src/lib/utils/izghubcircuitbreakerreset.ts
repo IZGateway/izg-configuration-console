@@ -106,11 +106,14 @@ const resetCircuitBreakersForBaseUrls = async (
     ...(regions ? { regions } : {}),
   }
 
-  logger.info('Hub circuit breaker reset completed', {
+  // Fires on every path, including the one where every hub rejected, so it
+  // carries the failure count rather than implying success.
+  logger.info('Hub circuit breaker reset finished', {
     operation: 'reset_circuit_breakers',
     ...metadata,
     attempted: result.attempted,
     succeeded: result.succeeded,
+    failed: result.failed,
     regions,
   })
 

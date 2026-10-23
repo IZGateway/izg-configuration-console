@@ -321,7 +321,61 @@ props.updateRow({ ...props.row, ...updatedStatus })
 The row is a data-grid row. An unknown member on it is dead weight at best, and the grid
 column definitions do not expect it.
 
+### D11 - Two audiences, two levels of detail
+
+The two screens that reset a circuit breaker are not reachable by the same
+people, so they do not report the same amount.
+
+| Screen | Gated on | Who holds it | What it reports |
+|---|---|---|---|
+| Admin Operations | `adminoperations.canResetHubCircuitBreakers` | `IZG Operations` only | One line per AWS region, with its status |
+| Manage Connections | `manageconnections.canResetCircuitBreaker` | `IZG Operations` and `Jurisdiction Operations` | Success, or the failure message the dialog has always used |
+
+`Jurisdiction Operations` is jurisdiction-scoped. A Maryland operator resets
+the Maryland breaker and needs one fact: did it work. "us-west-2 is degraded
+but us-east-1 is fine" is infrastructure they do not own, cannot act on, and
+did not ask about. It invites a support ticket about the Hub fleet, and it
+describes the deployment to an audience outside the operations team.
+
+So the per-destination route collapses the per-region block into one boolean,
+`resetComplete`, and the dialog reports anything other than a full success with
+its existing failure text:
+
+> Request to reset the circuit breaker for Maryland Production was not
+> successful. Please try again later.
+
+The defect this change exists to remove is still removed. The operator is no
+longer told a partial reset succeeded. They are told it did not work, which is
+the fact they can act on: retry, or raise it.
+
+**The block is removed server-side, not merely left unrendered.** Keeping
+`regions` in the body and declining to display it would still expose it in
+developer tools or a proxy log. That is the exact state this codebase rejects
+for `statusBy`, and this change rejects for `hosts`. The same reasoning applies
+one level down, so `redactHubTopology` deletes all three.
+
+**The row is not updated on that path either.** The `status` in the body
+describes the instance that answered, and it can read `Connected` while another
+instance still blocks traffic. Showing `Connected` beside "was not successful"
+would contradict itself, so the row keeps its tripped indicator until the next
+status refresh.
+
+**Alternative rejected:** a vaguer sentence that still hints at scope, such as
+"was not reset everywhere". It raises the same question in the operator's mind
+without giving them anything to do with the answer.
+
+**Alternative rejected:** gate the detail on the role inside the dialog. It puts
+an authorization decision in a component, where `policy.ts` already warns the UI
+layer is not a security boundary. Removing the data on the server needs no such
+decision.
+
 ## Risks / Trade-offs
+
+**An IZG Operations user resetting one destination from Manage Connections
+loses the per-region detail too.** → Accepted. The route cannot tell the two
+audiences apart without putting an authorization decision in the response
+shape. The detail is one page away on Admin Operations, and the server log
+holds the full per-host result. See D11.
 
 **The browser can no longer tell a timeout from a missing queue.** → Accepted. Both
 collapse into `partial`. The Hub excluded that detail from `regions` on purpose, because

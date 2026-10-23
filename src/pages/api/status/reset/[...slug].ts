@@ -11,6 +11,7 @@ import { asyncRequestContext } from '../../../../lib/Context'
 import { logAccessDenied } from '../../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../../lib/security/authzsubject'
 import { can } from '../../../../lib/security/policy'
+import { hubOperationLevel } from '../../../../lib/utils/hubregionstatus'
 
 /**
  * @swagger
@@ -33,18 +34,53 @@ import { can } from '../../../../lib/security/policy'
  *     responses:
  *       200:
  *         description: >
- *           The destination status returned by the Hub, with `statusBy` and
- *           `hosts` removed because both carry private Hub host names. The
- *           Hub's per-region block is forwarded unchanged as top-level
- *           `regions`, whose values are `complete`, `partial` or `failed`.
- *           The Hub answers 200 even when a region did not fully reset, so a
- *           caller must read `regions` rather than the status code. The block
- *           is absent against a Hub release older than IGDD-3599.
+ *           The destination status returned by the Hub, with `statusBy`,
+ *           `hosts` and `regions` removed. The first two carry private Hub
+ *           host names; `regions` names AWS regions, which a
+ *           jurisdiction-scoped caller of this route has no use for. In their
+ *           place, `resetComplete` is true only when the Hub cleared the
+ *           breaker on every instance. The Hub answers 200 even when it did
+ *           not, so a caller must read `resetComplete` rather than the status
+ *           code. The field is absent against a Hub release older than
+ *           IGDD-3599.
  *       404:
  *         description: Destination not found.
  *       502:
  *         description: The Hub could not be reached.
  */
+/**
+ * Strips every description of Hub infrastructure from a body before it reaches
+ * the browser, matching the redaction `fetchEndpointStatus.ts` applies on
+ * initial load.
+ *
+ * - `statusBy` names the instance that recorded the status.
+ * - `hosts` (IGDD-3599) is keyed by private AWS DNS name, for example
+ *   `"us-west-1:ip-10-161-101-98"`.
+ * - `regions` (IGDD-3599) names the AWS regions the Hub runs in.
+ *
+ * `regions` is browser-safe in general — it holds no host name and no instance
+ * count — and the Admin Operations page does render it. This route is
+ * different. Manage Connections is reachable by `Jurisdiction Operations`, a
+ * jurisdiction-scoped role, and a Maryland operator has no use for
+ * "us-west-2 is degraded but us-east-1 is fine". It is infrastructure they do
+ * not own and cannot act on. Leaving the block in the body and merely not
+ * rendering it would still expose it in developer tools, which is the state
+ * this codebase already rejects for `statusBy`. So it is removed here and
+ * collapsed into `resetComplete`.
+ *
+ * Applied to the error body as well as the success body. The rule is
+ * unconditional, and an error body is still a Hub body.
+ */
+const redactHubTopology = (body: Record<string, unknown>) => {
+  if (!body || typeof body !== 'object') {
+    return body
+  }
+  delete body.statusBy
+  delete body.hosts
+  delete body.regions
+  return body
+}
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const context = asyncRequestContext.getStore()
   const { slug } = req.query
@@ -121,15 +157,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         // it is logged as-is. `hosts` is not, and is never read.
         regions: response.data?.regions,
       })
-      // Remove statusBy and hosts to prevent private IP/DNS being delivered to
-      // the client, matching fetchEndpointStatus.ts's redaction on initial
-      // load. `statusBy` names the instance that recorded the status; `hosts`
-      // (IGDD-3599) is keyed by private AWS DNS name, e.g.
-      // "us-west-1:ip-10-161-101-98". The sibling `regions` block carries no
-      // host name and no instance count, so it is forwarded unchanged.
-      delete response.data?.statusBy
-      delete response.data?.hosts
-      res.status(response.status).json(response.data)
+      // IGDD-3599: one boolean in place of the per-region detail. Absent when
+      // the Hub sent no `regions` block, which is a pre-IGDD-3599 Hub; the
+      // dialog then behaves as it did before this change.
+      const level = hubOperationLevel(response.data?.regions)
+      const body = redactHubTopology(response.data)
+      if (body && typeof body === 'object' && level) {
+        body.resetComplete = level === 'success'
+      }
+      res.status(response.status).json(body)
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         logger.error('Hub rejected circuit breaker reset request', {
@@ -139,7 +175,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           responseData: error.response.data,
           operation: 'resetCircuitBreaker',
         })
-        res.status(error.response.status).json(error.response.data)
+        res.status(error.response.status).json(
+          redactHubTopology(error.response.data)
+        )
       } else {
         logger.error('Failed to reach the Hub to reset circuit breaker', {
           destinationId: destId,

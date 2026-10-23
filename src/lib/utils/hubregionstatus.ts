@@ -68,9 +68,11 @@ export const hubOperationLevel = (
  * The regions that did not complete, so a message can name them. Returns an
  * empty array when the hub sent no block.
  */
-export const regionsNotComplete = (regions?: HubRegionStatuses): string[] =>
-  statusesOf(regions)
-    ? Object.keys(regions).filter(
-        (region) => String(regions[region]) !== HUB_REGION_COMPLETE
-      )
-    : []
+export const regionsNotComplete = (regions?: HubRegionStatuses): string[] => {
+  if (!statusesOf(regions)) {
+    return []
+  }
+  return Object.keys(regions).filter(
+    (region) => String(regions[region]) !== HUB_REGION_COMPLETE
+  )
+}

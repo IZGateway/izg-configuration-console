@@ -15,10 +15,6 @@ import { TransitionProps } from '@mui/material/transitions'
 import { useContext } from 'react'
 import CombinedContext from '../../contexts/app'
 import palette from '../../styles/theme/palette'
-import {
-  hubOperationLevel,
-  regionsNotComplete,
-} from '../../lib/utils/hubregionstatus'
 
 interface resetCircuitBreakerDialogProps {
   open: boolean
@@ -58,36 +54,38 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
         }
       )
       if (response.ok) {
-        // IGDD-3599: the hub resets the breaker on every instance it runs and
-        // reports a status per region. `regions` is taken out before the
-        // merge, because the row is a data-grid row and the column
-        // definitions do not expect it. The `status` in the rest of the body
-        // describes the instance that answered, so it is still the right
-        // value for the row — but it does not say the whole fleet recovered.
-        const { regions, ...updatedStatus } = await response.json()
+        // IGDD-3599: the hub clears the breaker on every instance it runs, and
+        // answers 200 even when it did not reach them all. `resetComplete` is
+        // the API's one-field verdict; it is absent against a hub older than
+        // IGDD-3599, and the dialog then behaves as it did before.
+        const { resetComplete, ...updatedStatus } = await response.json()
+
+        // A reset that did not reach every instance is reported as a plain
+        // failure, with the message this dialog has always used. Deliberate:
+        // Manage Connections is reachable by `Jurisdiction Operations`, a
+        // jurisdiction-scoped role, and the detail behind a partial reset is
+        // Hub topology that a jurisdiction operator does not own and cannot
+        // act on. The per-region view belongs to Admin Operations, which only
+        // `IZG Operations` can reach. See the change's design D11.
+        if (resetComplete === false) {
+          setAlert({
+            level: 'error',
+            message: `Request to reset the circuit breaker for ${props.jurisdictionName} ${props.destType} was not successful. Please try again later.`,
+          })
+          return
+        }
+
+        // The row is left untouched above on the failure path, so it keeps
+        // showing the tripped indicator rather than a status that contradicts
+        // the message.
         props.updateRow({ ...props.row, ...updatedStatus })
         props.handleClose()
-
-        // The hub answers 200 even when a region did not fully reset, so the
-        // status code cannot decide this. An older hub sends no block, and the
-        // level is then undefined: keep the pre-IGDD-3599 message.
-        const level = hubOperationLevel(regions)
-        const destination = `${props.jurisdictionName} ${' '} ${props.destType}`
-
-        if (level === 'warning' || level === 'error') {
-          setAlert({
-            level: level,
-            message: `Circuit breaker for ${destination} was not reset on every Hub instance. Still not complete: ${regionsNotComplete(
-              regions
-            ).join(', ')}.`,
-            persistent: true,
-          })
-        } else {
-          setAlert({
-            level: 'success',
-            message: `Circuit breaker for ${destination} has been reset successfully!`,
-          })
-        }
+        setAlert({
+          level: 'success',
+          message: `Circuit breaker for ${props.jurisdictionName} ${' '} ${
+            props.destType
+          } has been reset successfully!`,
+        })
       } else {
         setAlert({
           level: 'error',

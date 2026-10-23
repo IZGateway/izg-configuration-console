@@ -49,8 +49,13 @@ timed out. The operator believes that traffic recovered everywhere. It did not.
   its message on screen until the operator dismisses it.
 - **Stop the per-destination dialog from claiming full success.** `status: Connected` in
   the `/rest/reset/{id}` body describes the answering instance only. The dialog reports
-  success only when every region reads `complete`. It also removes `regions` from the
-  object before it merges the body into the table row.
+  success only when the Hub cleared the breaker on every instance, and reports anything
+  else with the failure message it already uses.
+- **Tell Manage Connections less than Admin Operations.** That screen is reachable by
+  `Jurisdiction Operations`, a jurisdiction-scoped role. The per-destination route
+  removes `regions` along with `hosts` and `statusBy`, and returns one boolean,
+  `resetComplete`. AWS region names reach only the Admin Operations page, which
+  `IZG Operations` alone can open. See `design.md` D11.
 - **Tolerate a Hub that sends neither map.** This change merges before the Hub change,
   so the Console runs against the old Hub for one release window. A response with no
   `regions` member produces no per-region display, and every message keeps its present
@@ -108,8 +113,8 @@ still gates the per-destination route.
 - `POST /api/status/reset` response body gains `result.regions`. The route already nests
   the Hub outcome under `result`. No field is removed or renamed.
 - `POST /api/status/reset/{destTypeId}/{destId}` response body gains a top-level
-  `regions`. The Hub's `hosts` member is removed. Every field the route returns today is
-  unchanged.
+  `resetComplete` boolean. The Hub's `hosts`, `statusBy` and `regions` members are all
+  removed. Every field the route returns today is unchanged.
 
 ### Dependencies
 
@@ -129,6 +134,9 @@ still gates the per-destination route.
 - `regions` carries no host name and no instance count. The count was excluded on
   purpose, because a count still discloses topology. The Console must not reintroduce
   one by counting the keys of either map.
+- Region names are topology as well, one level coarser. They are shown only on Admin
+  Operations, which `IZG Operations` alone can reach, and are removed server-side from
+  the per-destination route that jurisdiction-scoped roles can call.
 - No new authorization decision and no new audit event.
 
 ### Out of scope

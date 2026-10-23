@@ -178,11 +178,17 @@ describe('ResetCircuitBreakerDialog component', () => {
   })
 
   /**
-   * IGDD-3599. The hub resets the breaker on every instance it runs and
-   * reports a status per region. It answers 200 even when one region did not
-   * complete, so the dialog must read `regions` rather than the status code.
+   * IGDD-3599. The hub clears the breaker on every instance it runs and
+   * answers 200 even when it did not reach them all, so the dialog reads
+   * `resetComplete` rather than the status code.
+   *
+   * A reset that did not reach every instance is reported with the plain
+   * failure message this dialog has always used. Manage Connections is
+   * reachable by `Jurisdiction Operations`, and the detail behind a partial
+   * reset is Hub topology a jurisdiction operator does not own. The per-region
+   * view belongs to Admin Operations, which only `IZG Operations` can reach.
    */
-  describe('per-region outcome', () => {
+  describe('a reset that did not reach every Hub instance', () => {
     const renderDialog = (handleClose: jest.Mock, updateRow: jest.Mock) =>
       render(
         <CombinedContext.Provider value={combinedContextValueMock}>
@@ -199,82 +205,63 @@ describe('ResetCircuitBreakerDialog component', () => {
         </CombinedContext.Provider>
       )
 
-    it('reports a partial reset, names the region, and keeps the message on screen', async () => {
+    const respondWith = (body: Record<string, unknown>) =>
+      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(body) })
+
+    it('shows the ordinary failure message, with no mention of regions', async () => {
       const handleClose = jest.fn()
       const updateRow = jest.fn()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            destId: 'test',
-            status: 'Connected',
-            regions: { 'us-east-1': 'complete', 'us-west-1': 'partial' },
-          }),
-      })
+      respondWith({ destId: 'test', status: 'Connected', resetComplete: false })
 
       const { getByRole } = renderDialog(handleClose, updateRow)
       fireEvent.click(getByRole('button', { name: 'Confirm' }))
 
       await waitFor(() => expect(setAlert).toHaveBeenCalled())
       const alert = setAlert.mock.calls[0][0]
-      expect(alert.level).toBe('warning')
-      expect(alert.message).toContain('us-west-1')
-      expect(alert.message).not.toContain('successfully')
-      expect(alert.persistent).toBe(true)
-    })
-
-    it('does not write the regions block into the table row', async () => {
-      const handleClose = jest.fn()
-      const updateRow = jest.fn()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            destId: 'test',
-            status: 'Connected',
-            regions: { 'us-east-1': 'complete', 'us-west-1': 'partial' },
-          }),
-      })
-
-      const { getByRole } = renderDialog(handleClose, updateRow)
-      fireEvent.click(getByRole('button', { name: 'Confirm' }))
-
-      await waitFor(() => expect(updateRow).toHaveBeenCalled())
-      // The status still updates: it describes the instance that answered.
-      expect(updateRow).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'Connected' })
+      expect(alert.level).toBe('error')
+      expect(alert.message).toBe(
+        'Request to reset the circuit breaker for Maryland Production was not successful. Please try again later.'
       )
-      expect(updateRow.mock.calls[0][0]).not.toHaveProperty('regions')
+      expect(alert.message).not.toMatch(/region|us-east|us-west|instance/i)
+      expect(alert.persistent).toBeUndefined()
     })
 
-    it('reports an error when every region failed', async () => {
+    it('leaves the row and the dialog alone, exactly as a failure does', async () => {
       const handleClose = jest.fn()
       const updateRow = jest.fn()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            destId: 'test',
-            status: 'Circuit Breaker Thrown',
-            regions: { 'us-east-1': 'failed', 'us-west-1': 'failed' },
-          }),
-      })
+      respondWith({ destId: 'test', status: 'Connected', resetComplete: false })
 
       const { getByRole } = renderDialog(handleClose, updateRow)
       fireEvent.click(getByRole('button', { name: 'Confirm' }))
 
       await waitFor(() => expect(setAlert).toHaveBeenCalled())
-      expect(setAlert.mock.calls[0][0].level).toBe('error')
-      expect(setAlert.mock.calls[0][0].persistent).toBe(true)
+      // The row keeps the tripped indicator rather than a status that would
+      // contradict the message.
+      expect(updateRow).not.toHaveBeenCalled()
+      expect(handleClose).not.toHaveBeenCalled()
     })
 
-    it('keeps the pre-IGDD-3599 success message against a hub that sends no regions', async () => {
+    it('reports success and updates the row when every instance completed', async () => {
       const handleClose = jest.fn()
       const updateRow = jest.fn()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ destId: 'test', status: 'Connected' }),
-      })
+      respondWith({ destId: 'test', status: 'Connected', resetComplete: true })
+
+      const { getByRole } = renderDialog(handleClose, updateRow)
+      fireEvent.click(getByRole('button', { name: 'Confirm' }))
+
+      await waitFor(() => expect(updateRow).toHaveBeenCalled())
+      expect(setAlert.mock.calls[0][0].level).toBe('success')
+      expect(updateRow).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'Connected' })
+      )
+      expect(updateRow.mock.calls[0][0]).not.toHaveProperty('resetComplete')
+      expect(handleClose).toHaveBeenCalled()
+    })
+
+    it('keeps the pre-IGDD-3599 success path against a hub that sends no verdict', async () => {
+      const handleClose = jest.fn()
+      const updateRow = jest.fn()
+      respondWith({ destId: 'test', status: 'Connected' })
 
       const { getByRole } = renderDialog(handleClose, updateRow)
       fireEvent.click(getByRole('button', { name: 'Confirm' }))
@@ -283,7 +270,7 @@ describe('ResetCircuitBreakerDialog component', () => {
       const alert = setAlert.mock.calls[0][0]
       expect(alert.level).toBe('success')
       expect(alert.message).toContain('has been reset successfully!')
-      expect(alert.persistent).toBeUndefined()
+      expect(updateRow).toHaveBeenCalled()
     })
   })
 })
