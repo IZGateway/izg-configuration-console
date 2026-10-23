@@ -32,17 +32,29 @@
 import { Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 
-const REQUIRED_ENV = [
-  'OKTA_USERNAME',
-  'OKTA_PASSWORD',
+/**
+ * Gated per test, not per file. The IZG Operations tests need two variables;
+ * only the negative case needs a Jurisdiction Operations account. Requiring
+ * all five up front skipped the privacy check on any machine that lacked the
+ * second account, which is most of them.
+ */
+const IZG_OPS_ENV = ['OKTA_USERNAME', 'OKTA_PASSWORD']
+const JURIS_OPS_ENV = [
   'E2E_RBAC_JURIS_OPS_USERNAME',
   'E2E_RBAC_JURIS_OPS_PASSWORD',
   'E2E_RBAC_JURIS_OPS_FULLNAME',
 ]
-const missingEnv = REQUIRED_ENV.filter((name) => !process.env[name])
-if (process.env.CI && missingEnv.length > 0) {
+
+const missing = (names: string[]) => names.filter((name) => !process.env[name])
+const missingIzgOps = missing(IZG_OPS_ENV)
+const missingJurisOps = missing(JURIS_OPS_ENV)
+
+// In CI a skipped privacy check reports green every night without ever
+// running, so an absent account is a failure rather than a skip.
+const missingInCi = [...missingIzgOps, ...missingJurisOps]
+if (process.env.CI && missingInCi.length > 0) {
   throw new Error(
-    `Circuit breaker reset spec cannot run in CI: set ${missingEnv.join(
+    `Circuit breaker reset spec cannot run in CI: set ${missingInCi.join(
       ', '
     )} in the workflow env`
   )
@@ -63,12 +75,12 @@ const REGION_OUTCOME = '[data-testid="circuit-breaker-region-outcome"]'
 const FORBIDDEN_IN_BODY = ['ip-', '.internal', 'statusBy', 'hosts']
 
 test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
-  test.skip(
-    missingEnv.length > 0,
-    `missing credentials: ${missingEnv.join(', ')}`
-  )
-
   test.describe('as IZG Operations', () => {
+    test.skip(
+      missingIzgOps.length > 0,
+      `set ${missingIzgOps.join(', ')} in .env.test`
+    )
+
     let page: Page
 
     test.beforeAll(async ({ browser }) => {
@@ -112,9 +124,9 @@ test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
       const firstEnvironment = page.locator(RESET_BUTTONS).first()
 
       const responsePromise = page.waitForResponse(
-          (response) =>
-            new URL(response.url()).pathname === '/api/status/reset' &&
-            response.request().method() === 'POST',
+        (response) =>
+          new URL(response.url()).pathname === '/api/status/reset' &&
+          response.request().method() === 'POST',
         // Above the console's own 30 s timeout to the Hub, so a slow Hub
         // fails on the assertion rather than on the wait.
         { timeout: 45000 }
@@ -134,15 +146,36 @@ test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
         ).not.toContain(forbidden)
       }
 
-      // Against the IGDD-3599 Hub the card lists one line per region. An
-      // older Hub sends no block and renders none, which is the documented
-      // fallback, so the panel is checked only when the body carries it.
-      if (/"regions"\s*:/.test(body)) {
+      // The panel is driven by the data, not by a fixed region count. Dev has
+      // run one region and two at different times, and production runs two.
+      // Whatever the Hub reports, every name it reports must appear, and the
+      // assertion holds for one region or five.
+      //
+      // Two cases are deliberately not failures here:
+      //   - no `regions` member: an older Hub, the documented fallback, and
+      //     the card renders no panel.
+      //   - an empty `regions` object: the Hub knew of no host, so there is
+      //     no verdict and the card again renders no panel.
+      let payload: { result?: { regions?: Record<string, string> } }
+      try {
+        payload = JSON.parse(body)
+      } catch {
+        throw new Error(
+          `POST /api/status/reset did not return JSON. Body: ${body.slice(
+            0,
+            300
+          )}`
+        )
+      }
+
+      const reportedRegions = Object.keys(payload.result?.regions ?? {})
+      if (reportedRegions.length > 0) {
         const outcome = page.locator(REGION_OUTCOME)
         await expect(outcome).toBeVisible({ timeout: 15000 })
         await expect(outcome).toContainText(/result by region/i)
-        // A region name, for example us-east-1 or us-west-2.
-        await expect(outcome).toContainText(/[a-z]{2}-[a-z]+-\d/)
+        for (const region of reportedRegions) {
+          await expect(outcome).toContainText(region)
+        }
       }
 
       // Whatever the outcome, the operator is told something.
@@ -161,6 +194,10 @@ test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
   test('a Jurisdiction Operations user cannot reach the page', async ({
     browser,
   }) => {
+    test.skip(
+      missingJurisOps.length > 0,
+      `set ${missingJurisOps.join(', ')} in .env.test`
+    )
     const page = await browser.newPage()
     try {
       await loginToOkta(
@@ -194,6 +231,10 @@ test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
   test('Manage Connections ships no Hub host name to the browser', async ({
     browser,
   }) => {
+    test.skip(
+      missingIzgOps.length > 0,
+      `set ${missingIzgOps.join(', ')} in .env.test`
+    )
     const page = await browser.newPage()
     try {
       await loginToOkta(page, env('OKTA_USERNAME'), env('OKTA_PASSWORD'))
