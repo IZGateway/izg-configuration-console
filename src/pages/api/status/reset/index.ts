@@ -5,10 +5,7 @@ import {
   resetAllCircuitBreakers,
   resetCircuitBreakersForEnvironment,
 } from '../../../../lib/utils/izghubcircuitbreakerreset'
-import {
-  hubOperationLevel,
-  regionsNotComplete,
-} from '../../../../lib/utils/hubregionstatus'
+import { regionsNotComplete } from '../../../../lib/utils/hubregionstatus'
 
 /**
  * @swagger
@@ -23,7 +20,10 @@ import {
  *       are `complete`, `partial` or `failed`. That block is absent against a
  *       hub release older than IGDD-3599, and absent when no
  *       `destinationTypeId` is given, because several hubs are then called and
- *       their region keys collide. Hub host names are never returned.
+ *       their region keys collide. `result.level` carries one verdict over
+ *       every hub called and is present on both paths, so a caller never has
+ *       to read success from the status code. Hub host names are never
+ *       returned.
  *     responses:
  *       200:
  *         description: >
@@ -77,30 +77,33 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     // IGDD-3599: the hub answers 200 even when a region did not fully reset, so
-    // the HTTP status cannot decide this. `level` is undefined against a hub
-    // that sends no `regions` block, which keeps the pre-IGDD-3599 wording.
-    const level = hubOperationLevel(result.regions)
+    // the HTTP status cannot decide this. The verdict comes from the utility
+    // rather than from `result.regions`, because a multi-hub call carries no
+    // merged block but still has a verdict. It is undefined against a hub that
+    // sends no block at all, which keeps the pre-IGDD-3599 wording.
+    const level = result.level
+    // Named only when one hub was called. A multi-hub call has no merged block,
+    // so the message carries the verdict without a region list.
     const unfinished = regionsNotComplete(result.regions)
+    const affected = unfinished.length
+      ? ` Affected regions: ${unfinished.join(', ')}.`
+      : ''
 
     if (level === 'error') {
       return res.status(502).json({
         success: false,
-        error: `No hub instance reset its circuit breakers. Affected regions: ${unfinished.join(
-          ', '
-        )}.`,
+        error: `No hub instance reset its circuit breakers.${affected}`,
         result,
       })
     }
 
-    // 200, because the hub was reached and some regions did reset. The browser
+    // 200, because the hub was reached and some of it did reset. The browser
     // picks its own wording from `result.regions`; this `message` is for a
     // direct API caller, and the @swagger block above documents it.
     if (level === 'warning') {
       return res.status(200).json({
         success: false,
-        message: `Circuit breakers were not reset in every region. Affected regions: ${unfinished.join(
-          ', '
-        )}.`,
+        message: `Circuit breakers were not reset in every region.${affected}`,
         result,
       })
     }

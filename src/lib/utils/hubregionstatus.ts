@@ -65,6 +65,36 @@ export const hubOperationLevel = (
 }
 
 /**
+ * One verdict across several hubs, without merging their region maps.
+ *
+ * `resetAllCircuitBreakers` can call dev, onboard and prod at once. Their maps
+ * cannot be merged — every environment answers with a `us-east-1` key — but a
+ * caller still needs to know whether the whole operation succeeded. Each block
+ * is judged on its own and the levels are then combined by the same rule:
+ * success only if every one succeeded, error only if every one failed.
+ *
+ * A hub that sent no block contributes nothing, which keeps the pre-IGDD-3599
+ * behaviour for an older hub. `undefined` means no hub reported one.
+ */
+export const aggregateHubOperationLevel = (
+  blocks: Array<HubRegionStatuses | undefined>
+): HubOperationLevel | undefined => {
+  const levels = blocks
+    .map((block) => hubOperationLevel(block))
+    .filter((level): level is HubOperationLevel => level !== undefined)
+  if (levels.length === 0) {
+    return undefined
+  }
+  if (levels.every((level) => level === 'success')) {
+    return 'success'
+  }
+  if (levels.every((level) => level === 'error')) {
+    return 'error'
+  }
+  return 'warning'
+}
+
+/**
  * The regions that did not complete, so a message can name them. Returns an
  * empty array when the hub sent no block.
  */

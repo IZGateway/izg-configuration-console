@@ -130,6 +130,17 @@ status code. A Hub response of HTTP 200 SHALL NOT, by itself, produce a success 
 - **THEN** the Console reports an error
 - **AND** the Console does not report a success
 
+#### Scenario: Several Hub environments are reset at once
+
+- **GIVEN** a request that names no environment, so every configured Hub is
+  called
+- **AND** each Hub answers with a success status code
+- **AND** at least one of them reports that a region did not complete
+- **WHEN** the Console reports the outcome
+- **THEN** the Console does not report a success
+- **AND** the Console reaches that conclusion without combining the per-region
+  statuses of different environments
+
 #### Scenario: A status value the Console does not recognise
 
 - **GIVEN** the Hub reports a status value that the Console does not recognise

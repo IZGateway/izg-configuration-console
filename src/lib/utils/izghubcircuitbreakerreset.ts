@@ -6,7 +6,11 @@ import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
 import { getDestinationType } from '../desttypehelper'
 import { toEcsUrl } from './ecsUrl'
-import type { HubRegionStatuses } from './hubregionstatus'
+import {
+  aggregateHubOperationLevel,
+  type HubOperationLevel,
+  type HubRegionStatuses,
+} from './hubregionstatus'
 
 /**
  * Hub circuit-breaker reset REST path, relative to the hub's `/rest/` base.
@@ -89,21 +93,29 @@ const resetCircuitBreakersForBaseUrls = async (
   // instance host name. Neither may reach the browser, so neither is read here;
   // this route builds its own body rather than forwarding the hub's.
   //
-  // Only a single-hub call forwards the block. `resetAllCircuitBreakers` can
-  // call dev, onboard and prod at once, and a hub instance knows its region but
-  // not its environment, so all three answer with a `us-east-1` key. Merging
-  // them lets one environment's status overwrite another's — prod reading
-  // `partial` would disappear behind dev reading `complete`. Do not merge.
-  const regions =
-    singleHub && outcomes[0]?.status === 'fulfilled'
-      ? outcomes[0].value?.data?.regions
-      : undefined
+  // Only a single-hub call forwards the block itself. `resetAllCircuitBreakers`
+  // can call dev, onboard and prod at once, and a hub instance knows its region
+  // but not its environment, so all three answer with a `us-east-1` key.
+  // Merging them lets one environment's status overwrite another's — prod
+  // reading `partial` would disappear behind dev reading `complete`. Do not
+  // merge.
+  //
+  // The verdict is a separate matter and is computed on every path. Dropping it
+  // with the maps made a multi-hub call where every region failed report
+  // success, because the hubs all answered 200 and nothing else looked at the
+  // bodies. Raised by review on PR #753.
+  const regionBlocks = outcomes.map((o) =>
+    o.status === 'fulfilled' ? o.value?.data?.regions : undefined
+  )
+  const regions = singleHub ? regionBlocks[0] : undefined
+  const level = aggregateHubOperationLevel(regionBlocks)
 
   const result: CircuitBreakerResetResult = {
     attempted: outcomes.length,
     succeeded: outcomes.length - failed.length,
     failed: failed.length,
     ...(regions ? { regions } : {}),
+    ...(level ? { level } : {}),
   }
 
   // Fires on every path, including the one where every hub rejected, so it
@@ -114,6 +126,7 @@ const resetCircuitBreakersForBaseUrls = async (
     attempted: result.attempted,
     succeeded: result.succeeded,
     failed: result.failed,
+    level,
     regions,
   })
 
@@ -126,9 +139,16 @@ export interface CircuitBreakerResetResult {
   failed: number
   /**
    * The hub's per-region status, forwarded unchanged. Absent when the hub did
-   * not send one (a pre-IGDD-3599 hub) or when several hubs were called.
+   * not send one (a pre-IGDD-3599 hub) or when several hubs were called, whose
+   * region keys collide and must not be merged.
    */
   regions?: HubRegionStatuses
+  /**
+   * One verdict over every hub called, present whenever at least one of them
+   * reported a per-region status. Unlike `regions`, this survives a multi-hub
+   * call, so the route never has to read success from the HTTP status alone.
+   */
+  level?: HubOperationLevel
 }
 
 /**

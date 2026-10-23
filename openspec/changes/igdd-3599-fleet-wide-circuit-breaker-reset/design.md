@@ -172,8 +172,23 @@ from that one response. `resetAllCircuitBreakers` can call several, so it forwar
 nothing.
 
 The Admin Operations card always sends a `destinationTypeId`, so the multi-endpoint path
-is unreachable from the user interface. The cost of leaving it out is one absent field
-on a path nothing calls.
+is unreachable from the user interface. It is still reachable through the API.
+
+**The verdict is not the block, and must not be dropped with it.** The first version of
+this decision dropped both, and called the cost "one absent field on a path nothing
+calls". That was wrong. With no block, the route fell through to reading success from
+the HTTP status, and every Hub answers 200 even when nothing reset. A multi-hub call
+where every region of every environment failed therefore reported
+`success: true, "All circuit breakers reset."` That contradicts the
+`hub-administrative-operations` requirement that a 200 shall not by itself produce a
+success message. Raised by review on PR #753.
+
+So each response is judged on its own and the levels are combined:
+`aggregateHubOperationLevel` returns success only when every block succeeded, error only
+when every block failed, and warning otherwise. A Hub that sent no block contributes
+nothing, which preserves D7. The maps are still never merged; only the verdicts are.
+`CircuitBreakerResetResult.level` carries it, and it is present on both the single-hub
+and the multi-hub path.
 
 **Why a merge is unsafe.** `getIZGHubURLs()` returns one URL for each configured
 environment, which is dev, onboard and prod. A Hub instance does not know which

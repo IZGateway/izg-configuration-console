@@ -166,21 +166,111 @@ describe('POST /api/status/reset', () => {
     expect(res.body).toMatchObject({ success: false })
   })
 
-  // Design D4: a hub instance knows its region but not its environment, so dev
-  // and prod both answer with a `us-east-1` key. Merging them would let one
-  // environment's status overwrite another's.
-  it('forwards no regions block when several hubs were called', async () => {
-    process.env.IZG_STATUS_ENDPOINT_URL = JSON.stringify([
-      { typeId: 1, desc: 'prod', url: PROD_URL },
-      { typeId: 2, desc: 'dev', url: DEV_URL },
-    ])
-    mockPost.mockResolvedValue(hubBody({ 'us-east-1': 'complete' }))
+  /**
+   * The all-environment form, reachable through the API but not the card.
+   *
+   * Design D4: a hub instance knows its region but not its environment, so dev
+   * and prod both answer with a `us-east-1` key. Merging them would let one
+   * environment's status overwrite another's. The verdict is aggregated
+   * separately so the route never reads success from the status code alone.
+   * Raised by review on PR #753.
+   */
+  describe('with several hubs configured and no destinationTypeId', () => {
+    beforeEach(() => {
+      process.env.IZG_STATUS_ENDPOINT_URL = JSON.stringify([
+        { typeId: 1, desc: 'prod', url: PROD_URL },
+        { typeId: 2, desc: 'dev', url: DEV_URL },
+      ])
+    })
 
-    const res = await post({})
+    it('forwards no merged regions block', async () => {
+      mockPost.mockResolvedValue(hubBody({ 'us-east-1': 'complete' }))
 
-    expect(res.statusCode).toBe(200)
-    expect(mockPost).toHaveBeenCalledTimes(2)
-    expect((res.body as { result: object }).result).not.toHaveProperty('regions')
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(mockPost).toHaveBeenCalledTimes(2)
+      expect((res.body as { result: object }).result).not.toHaveProperty(
+        'regions'
+      )
+    })
+
+    it('does not report success when every region of every hub failed', async () => {
+      mockPost.mockResolvedValue(
+        hubBody({ 'us-east-1': 'failed', 'us-west-1': 'failed' })
+      )
+
+      const res = await post({})
+
+      // Both hubs answered 200, so the endpoint counts both as succeeded. Only
+      // the aggregated verdict catches this.
+      expect(res.statusCode).toBe(502)
+      expect(res.body).toMatchObject({ success: false })
+      // No merged block, so no region list in the message.
+      expect((res.body as { error: string }).error).not.toContain('us-')
+    })
+
+    it('does not report success when one hub is partial', async () => {
+      mockPost
+        .mockResolvedValueOnce(hubBody({ 'us-east-1': 'complete' }))
+        .mockResolvedValueOnce(
+          hubBody({ 'us-east-1': 'complete', 'us-west-1': 'partial' })
+        )
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({ success: false })
+    })
+
+    it('does not report success when one hub failed outright', async () => {
+      mockPost
+        .mockResolvedValueOnce(hubBody({ 'us-east-1': 'complete' }))
+        .mockResolvedValueOnce(hubBody({ 'us-east-1': 'failed' }))
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({ success: false, result: { level: 'warning' } })
+    })
+
+    it('reports success when every hub completed every region', async () => {
+      mockPost.mockResolvedValue(
+        hubBody({ 'us-east-1': 'complete', 'us-west-1': 'complete' })
+      )
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({
+        success: true,
+        message: 'All circuit breakers reset.',
+      })
+    })
+
+    it('keeps the pre-IGDD-3599 behaviour when no hub reports regions', async () => {
+      mockPost.mockResolvedValue(hubBody())
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(200)
+      expect(res.body).toMatchObject({
+        success: true,
+        message: 'All circuit breakers reset.',
+      })
+      expect((res.body as { result: object }).result).not.toHaveProperty('level')
+    })
+
+    it('judges a hub that reports regions even when another does not', async () => {
+      mockPost
+        .mockResolvedValueOnce(hubBody())
+        .mockResolvedValueOnce(hubBody({ 'us-east-1': 'failed' }))
+
+      const res = await post({})
+
+      expect(res.statusCode).toBe(502)
+      expect(res.body).toMatchObject({ success: false })
+    })
   })
 
   describe('redaction', () => {
@@ -206,7 +296,7 @@ describe('POST /api/status/reset', () => {
 
       expect(
         Object.keys((res.body as { result: object }).result).sort()
-      ).toEqual(['attempted', 'failed', 'regions', 'succeeded'])
+      ).toEqual(['attempted', 'failed', 'level', 'regions', 'succeeded'])
     })
   })
 })
