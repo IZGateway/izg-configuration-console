@@ -32,7 +32,14 @@ import { can } from '../../../../lib/security/policy'
  *         description: The ID of the destination.
  *     responses:
  *       200:
- *         description: OK.
+ *         description: >
+ *           The destination status returned by the Hub, with `statusBy` and
+ *           `hosts` removed because both carry private Hub host names. The
+ *           Hub's per-region block is forwarded unchanged as top-level
+ *           `regions`, whose values are `complete`, `partial` or `failed`.
+ *           The Hub answers 200 even when a region did not fully reset, so a
+ *           caller must read `regions` rather than the status code. The block
+ *           is absent against a Hub release older than IGDD-3599.
  *       404:
  *         description: Destination not found.
  *       502:
@@ -109,10 +116,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         destinationId: destId,
         destinationType: destTypeId,
         grantedBy: decision.grantedBy,
+        operation: 'resetCircuitBreaker',
+        // IGDD-3599: the per-region block is browser-safe by construction, so
+        // it is logged as-is. `hosts` is not, and is never read.
+        regions: response.data?.regions,
       })
-      // Remove statusBy field to prevent private IP/DNS being delivered to
-      // client, matching fetchEndpointStatus.ts's redaction on initial load.
+      // Remove statusBy and hosts to prevent private IP/DNS being delivered to
+      // the client, matching fetchEndpointStatus.ts's redaction on initial
+      // load. `statusBy` names the instance that recorded the status; `hosts`
+      // (IGDD-3599) is keyed by private AWS DNS name, e.g.
+      // "us-west-1:ip-10-161-101-98". The sibling `regions` block carries no
+      // host name and no instance count, so it is forwarded unchanged.
       delete response.data?.statusBy
+      delete response.data?.hosts
       res.status(response.status).json(response.data)
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
