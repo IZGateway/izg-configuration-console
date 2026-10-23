@@ -39,9 +39,14 @@ const AdminOperations = ({
     canRefreshHubDatabase,
   } = useRoleAccess('adminoperations')
 
+  // IGDD-3599: `warning` is the level for a reset that reached some Hub
+  // regions and not others. `persistent` rides along on the alert and is
+  // honoured below; `Alert.level` in contexts/app.tsx is already `string`, so
+  // only this inline union needed widening.
   const handleResult = (result: {
-    level: 'success' | 'error'
+    level: 'success' | 'warning' | 'error'
     message: string
+    persistent?: boolean
   }) => {
     setAlert(result)
     setShowSnackbar(true)
@@ -116,11 +121,15 @@ const AdminOperations = ({
         </Box>
       )}
 
+      {/* IGDD-3566: an alert marked persistent waits for a dismissal. A
+          partial circuit breaker reset uses it, so the region that did not
+          complete does not scroll past on a 6 second timer. */}
       <CustomSnackbar
         open={showSnackbar}
         severity={alert.level}
         message={alert.message}
         onClose={handleCloseSnackbar}
+        autoHideDuration={alert.persistent ? null : undefined}
       />
     </>
   )
