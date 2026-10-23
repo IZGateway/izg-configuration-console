@@ -57,7 +57,13 @@ const refreshHubsForBaseUrls = async (
         operation: 'refresh_database',
         ...metadata,
       })
-      return axios.get(url, { httpsAgent, timeout: 5000 })
+      // IGDD-3599: `refresh?all=true` fans out to every hub instance over SQS
+      // and waits up to 15s for the replies. The old 5000 here predated that
+      // and reported failure whenever one host was slow. 30s matches the reset
+      // utility and the per-destination route; see the reasoning there, which
+      // is a measured 16.86s round trip when one instance is down. nginx
+      // allows it (NGINX_READ_TIMEOUT, 60s).
+      return axios.get(url, { httpsAgent, timeout: 30000 })
     })
   )
 

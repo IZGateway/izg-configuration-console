@@ -3,14 +3,48 @@ import { Box, Typography, Button, Card, CardContent, Divider } from '@mui/materi
 import ResetCircuitBreakerDialog from './ResetCircuitBreakerDialog'
 import Loader from '../Loader'
 import type { HubEnvironment } from '../../lib/utils/izghubenvironments'
+import {
+  hubOperationLevel,
+  regionsNotComplete,
+  HUB_REGION_COMPLETE,
+  HUB_REGION_FAILED,
+  type HubRegionStatuses,
+} from '../../lib/utils/hubregionstatus'
 
 interface CircuitBreakerCardProps {
   environments: HubEnvironment[]
-  onResult: (result: { level: 'success' | 'error'; message: string }) => void
+  // IGDD-3599: `warning` covers a reset that reached some regions and not
+  // others. `persistent` keeps such a message on screen until the operator
+  // dismisses it, through the Alert member IGDD-3566 added.
+  onResult: (result: {
+    level: 'success' | 'warning' | 'error'
+    message: string
+    persistent?: boolean
+  }) => void
 }
 
 const getButtonId = (environment: HubEnvironment) =>
   `reset-${environment.destinationType.toLowerCase()}-circuit-breakers`
+
+const regionStatusColor = (status: string) => {
+  if (status === HUB_REGION_COMPLETE) {
+    // `success.dark`, not `success.main`: this theme sets `success.main` to
+    // #025eaa, the same blue as `primary.main`, so a complete region rendered
+    // in it reads as a link rather than as a good outcome — and sits beside
+    // the blue RESET buttons. `success.dark` (#1E4D3B) is the green.
+    return 'success.dark'
+  }
+  if (status === HUB_REGION_FAILED) {
+    return 'error.main'
+  }
+  // `partial`, and any word a later hub release adds. Both are "not complete".
+  return 'warning.main'
+}
+
+interface RegionOutcome {
+  label: string
+  regions: HubRegionStatuses
+}
 
 const CircuitBreakerCard = ({
   environments,
@@ -20,6 +54,7 @@ const CircuitBreakerCard = ({
   const [selectedEnvironment, setSelectedEnvironment] =
     React.useState<HubEnvironment | null>(null)
   const [loading, setLoading] = React.useState(false)
+  const [outcome, setOutcome] = React.useState<RegionOutcome | null>(null)
 
   const handleReset = async () => {
     const environment = selectedEnvironment
@@ -29,6 +64,8 @@ const CircuitBreakerCard = ({
     }
 
     setLoading(true)
+    // Never show one environment's regions beside another's result.
+    setOutcome(null)
     try {
       const res = await fetch('/api/status/reset', {
         method: 'POST',
@@ -38,10 +75,38 @@ const CircuitBreakerCard = ({
         }),
       })
       const data = await res.json()
-      if (res.ok) {
+      const regions: HubRegionStatuses | undefined = data?.result?.regions
+      // The hub answers 200 even when a region did not fully reset, so the
+      // status code cannot decide this. An older hub sends no block, and the
+      // level is then undefined: fall back to the pre-IGDD-3599 behaviour.
+      const level = hubOperationLevel(regions)
+
+      // `level` is defined only when the hub sent a usable block, so `regions`
+      // is an object here. The guard is what narrows it, not the type.
+      if (level && regions) {
+        setOutcome({ label: environment.label, regions })
+      }
+
+      if (level === 'success' || (!level && res.ok)) {
         onResult({
           level: 'success',
           message: `${environment.label} circuit breakers were reset.`,
+        })
+      } else if (level === 'warning') {
+        onResult({
+          level: 'warning',
+          message: `${
+            environment.label
+          } circuit breakers were not reset in every region. Still not complete: ${regionsNotComplete(
+            regions
+          ).join(', ')}.`,
+          persistent: true,
+        })
+      } else if (level === 'error') {
+        onResult({
+          level: 'error',
+          message: `${environment.label} circuit breakers were not reset in any region.`,
+          persistent: true,
         })
       } else {
         onResult({
@@ -87,7 +152,9 @@ const CircuitBreakerCard = ({
           Reset circuit breakers to recover from connection failures. When a
           circuit breaker is thrown, the affected destination becomes
           unreachable until manually reset. Use the controls below to reset the
-          circuit breakers for a connected Hub environment.
+          circuit breakers for a connected Hub environment. The Hub clears the
+          breakers on every instance it runs, in every region, and reports the
+          result for each region below.
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2 }}>
           {environments.map((environment) => (
@@ -110,6 +177,27 @@ const CircuitBreakerCard = ({
             </Typography>
           )}
         </Box>
+        {outcome && (
+          <Box sx={{ mt: 3 }} data-testid="circuit-breaker-region-outcome">
+            <Typography variant="subtitle2" color="text.secondary">
+              {outcome.label} — result by region
+            </Typography>
+            {Object.keys(outcome.regions).map((region) => (
+              <Typography key={region} variant="body2" sx={{ mt: 0.5 }}>
+                {region} —{' '}
+                <Box
+                  component="span"
+                  sx={{
+                    color: regionStatusColor(outcome.regions[region]),
+                    fontWeight: 600,
+                  }}
+                >
+                  {outcome.regions[region]}
+                </Box>
+              </Typography>
+            ))}
+          </Box>
+        )}
         <Loader open={loading} />
       </CardContent>
 
