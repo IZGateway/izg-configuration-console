@@ -220,7 +220,7 @@ developer who adds the obvious merge without knowing the keys collide.
 | Route | Position | Reason |
 |---|---|---|
 | `POST /api/status/reset` | `result.regions` | The route already nests the Hub outcome under `result`, beside `attempted`, `succeeded` and `failed`. |
-| `POST /api/status/reset/{destTypeId}/{destId}` | top-level `regions` | The route returns the Hub body itself. The block keeps the place the Hub gave it. |
+| `POST /api/status/reset/{destTypeId}/{destId}` | top-level `resetComplete` | The block itself is removed on this route, because it is reachable by a jurisdiction-scoped role. One boolean takes its place. See D11. |
 
 `CircuitBreakerResetResult` keeps `attempted`, `succeeded` and `failed` with their
 present meaning: they count Hub endpoints. `regions` arrives as a separate optional
@@ -333,18 +333,22 @@ needs no change.
 below the fold on a narrow window, and a 6 second success-coloured snackbar above it
 would contradict it.
 
-### D10 - The dialog destructures the block out before the row merge
+### D10 - The dialog reads one boolean, and treats anything else as a failure
 
-`resetCircuitBreakerDialog.tsx` reads the body, takes `regions` for the message, and
-spreads the rest into the row:
+`resetCircuitBreakerDialog.tsx` reads the body and takes `resetComplete` out of it:
 
 ```ts
-const { regions, ...updatedStatus } = await response.json()
-props.updateRow({ ...props.row, ...updatedStatus })
+const { resetComplete, ...updatedStatus } = await response.json()
 ```
 
-The row is a data-grid row. An unknown member on it is dead weight at best, and the grid
-column definitions do not expect it.
+The row is a data-grid row, and the grid column definitions do not expect that member,
+so it never reaches `updateRow`.
+
+`resetComplete === false` is reported exactly as a failed request: the existing error
+message, no row update, and the dialog stays open. The row therefore keeps its tripped
+indicator rather than showing a status that contradicts the message. Absent, the dialog
+behaves as it did before this change. The reasoning for giving this screen a boolean
+rather than the per-region block is D11.
 
 ### D11 - Two audiences, two levels of detail
 

@@ -116,18 +116,19 @@ counts it, groups it, or logs it.
   `delete response.data?.statusBy`. Verify that the two redactions sit together and
   carry one comment that names both.
 
-- [x] 4.2 Keep `regions` in the body the route returns, at the top level and unchanged.
-  Keep every existing field, including `destId` and `status`. Keep the Hub status code,
-  per design D6.
+- [x] 4.2 Return a top-level `resetComplete` boolean in place of the Hub's `regions`
+  block, which is removed with `hosts` and `statusBy` because this route is reachable
+  by a jurisdiction-scoped role. Keep every existing field, including `destId` and
+  `status`. Keep the Hub status code, per design D6 and D11.
 
 - [x] 4.3 Log one info entry that names the operation, the destination, and the
   `regions` block. Keep the existing "Circuit breaker reset" entry and its `grantedBy`
   field.
 
 - [x] 4.4 Create `src/__tests__/api/status/reset/destination.test.ts`, with the same
-  docblock and for the same reason as task 3.6. Cover the deleted `hosts`, the forwarded
-  `regions`, a Hub body with no `regions`, and the unchanged 404 and 502 paths. Verify
-  that the tests pass.
+  docblock and for the same reason as task 3.6. Cover the deleted `hosts` and `regions`,
+  both values of `resetComplete`, a Hub body with no `regions`, and the unchanged 404
+  and 502 paths. Verify that the tests pass.
 
 - [x] 4.5 Add a test that feeds the route a Hub body carrying `hosts` and `statusBy`.
   Assert that the serialised response holds no `ip-` substring, no `.ec2.internal`
@@ -187,26 +188,27 @@ counts it, groups it, or logs it.
 
 ## 6. Correct the per-destination dialog message
 
-- [x] 6.1 Destructure `regions` out of the response body in
+- [x] 6.1 Destructure `resetComplete` out of the response body in
   `src/components/ConnectionTable/resetCircuitBreakerDialog.tsx`, per design D10. Verify
-  that `updateRow` receives no `regions` member.
+  that `updateRow` receives no `resetComplete` member.
 
-- [x] 6.2 Pick the message with `hubOperationLevel`. Report success only when the level
-  is `success`. Verify that a partial result states that the reset did not reach every
-  instance and names the region.
+- [x] 6.2 Report `resetComplete === false` exactly as a failed request: the existing
+  error message, no row update, and the dialog stays open. Verify that the message names
+  no region and no instance, per design D11.
 
-- [x] 6.3 Keep today's message when the body carries no `regions`. Verify that the
-  Console behaves as it does now against a Hub that reports no regions.
+- [x] 6.3 Keep today's success path when the body carries no `resetComplete`. Verify
+  that the Console behaves as it does now against a Hub that reports no regions.
 
 - [x] 6.4 Extend `src/components/ConnectionTable/resetCircuitBreakerDialog.test.tsx`
-  with the three cases above. Assert that the row update holds no `regions`. Compare the
-  run against the group 5.1 baseline.
+  with the cases above. Assert that the row update holds no `resetComplete`, and that
+  the failure message names no region. Compare the run against the group 5.1 baseline.
 
 ## 7. Integration and release
 
-- [x] 7.1 Update the `@swagger` block on both reset routes. Describe `result.regions` on
-  `/api/status/reset`, the new 502 for every region failed, and the top-level `regions`
-  on the per-destination route. Verify that `/api-doc` renders the new fields.
+- [x] 7.1 Update the `@swagger` block on both reset routes. Describe `result.regions`
+  and `result.level` on `/api/status/reset`, the new 502 for every region failed, and
+  the top-level `resetComplete` on the per-destination route. Verify that `/api-doc`
+  renders the new fields.
 
 - [x] 7.2 Check the constraint over the changed source files only. Run
   `git diff --name-only develop -- src | grep -v -e __tests__ -e '\.test\.' | xargs grep -n hosts`.
