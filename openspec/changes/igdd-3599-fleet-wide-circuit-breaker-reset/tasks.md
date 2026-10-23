@@ -263,6 +263,14 @@ counts it, groups it, or logs it.
 - [x] 7.9 Open the browser developer tools during a dev reset. Verify that no response
   body holds a Hub host name and no response body states an instance count.
 
+- [x] 7.13 Add a Playwright spec to the nightly suite,
+  `e2e/tests/circuitBreakerReset.spec.ts`. Cover the redaction on the wire, the
+  per-region panel, the page gate for a jurisdiction-scoped role, and the
+  `statusBy` redaction on the Manage Connections server render. The reset is
+  audit-logged, so the resetting test runs on one browser project rather than
+  four. `partial` and the timeout cannot be covered: the nightly starts dev with
+  `ECS_DESIRED_COUNT` defaulting to 1, and no healthy Hub stalls.
+
 - [x] 7.10 Write the PR title so that the generated release note is accurate. Do not
   edit `RELEASE_NOTES.md` by hand. The release workflow writes that file from the PR
   titles in the release (`.github/workflows/_release_common.yml:145`), and the
