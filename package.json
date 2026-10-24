@@ -25,7 +25,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1156.0",
     "@aws-sdk/lib-dynamodb": "^3.1156.0",
     "@axe-core/react": "^4.14.0",
-    "@babel/types": "^7.29.8",
+    "@babel/types": "^7.29.11",
     "@elastic/ecs-winston-format": "^1.5.3",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
