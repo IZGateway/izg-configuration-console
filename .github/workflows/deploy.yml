@@ -2,6 +2,14 @@
 name: Test, Build and Publish to AWS DEV environment
 
 on:
+  push:
+    branches:
+      - develop
+    paths:
+      - '**'
+      - '!.github/workflows/*'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/scan-ecr-image.yml'
   pull_request:
     branches:
       - develop
