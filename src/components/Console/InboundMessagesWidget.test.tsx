@@ -201,12 +201,18 @@ describe('InboundMessagesWidget', () => {
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/elasticsearch/query',
+          '/api/console/metrics',
           expect.objectContaining({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
         )
+      })
+      // IGDD-3474: the selection only — the server builds the query and the
+      // principal filter, so none is sent from the browser.
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
+        view: 'inbound',
+        destId: 'TX',
       })
     })
 
@@ -726,6 +732,51 @@ describe('InboundMessagesWidget', () => {
           /Organization A/
         )
       })
+    })
+  })
+
+  describe('Organization resolution is server-side', () => {
+    it("shows the server's reason instead of an unfiltered result", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            unavailable:
+              'Cannot display inbound data: the selected organization (Texas) has no principal names configured.',
+          }),
+      })
+
+      await act(async () => {
+        render(
+          <InboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      expect(
+        await screen.findByText(/the selected organization \(Texas\) has no principal names configured/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe('Failed requests', () => {
+    it('shows an error rather than an empty-looking result', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      await act(async () => {
+        render(
+          <InboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      expect(
+        await screen.findByText('Unable to load inbound message data.')
+      ).toBeInTheDocument()
     })
   })
 })

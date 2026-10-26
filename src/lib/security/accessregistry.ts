@@ -41,9 +41,7 @@ export type CapabilityRef = {
  * and carry no jurisdiction in their URL, so they are authorized with
  * `ANY_JURISDICTION` — safe only while every holder is globally scoped. Without
  * this guard, granting one to a jurisdiction-scoped role would leak every other
- * tenant's data as the result of a one-line data edit. That is not
- * hypothetical: the spike review's Finding #13 queues exactly that grant for
- * `console.canViewConsole` to `Jurisdiction Support`.
+ * tenant's data as the result of a one-line data edit.
  *
  * Central, and deliberately **not** a field on `CapabilityRef`: the same
  * capability is declared at more than one route, so a per-declaration flag
@@ -53,8 +51,6 @@ export type CapabilityRef = {
  *
  * Membership follows from whether the data path filters by jurisdiction, not
  * from which page the capability sits on:
- *  - `console.canViewConsole` — the Elastic message-traffic query applies no
- *    jurisdiction filter.
  *  - all four `accesscontrol` capabilities — `fetchDenyListData()` and
  *    `fetchAccessGroups()` take no jurisdiction argument at all. The whole
  *    block, not just the entry flag: a role that should not *see* every
@@ -63,9 +59,14 @@ export type CapabilityRef = {
  * `adminoperations.*` is deliberately absent — those are hub-wide operations,
  * not tenant data, so the argument for guarding them is blast radius, which is
  * a different question. `'api-doc'.canViewApiDoc` is a static spec.
+ *
+ * `console.canViewConsole` was a member until IGDD-3474, when the browser built
+ * the Elastic message-traffic query and the server forwarded it unfiltered.
+ * The log search now goes through /api/console/metrics, which builds the query
+ * on the server and authorizes the selected destination per role with `can()`,
+ * so its data path is filtered and scoped roles may hold it.
  */
 export const REQUIRES_GLOBAL_TENANCY: ReadonlyArray<CapabilityRef> = [
-  { page: 'console', capability: 'canViewConsole' },
   { page: 'accesscontrol', capability: 'canViewAccessControl' },
   { page: 'accesscontrol', capability: 'canManageAccessGroups' },
   { page: 'accesscontrol', capability: 'canManageDenyList' },

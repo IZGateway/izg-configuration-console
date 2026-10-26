@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react'
+import React from 'react'
 import {
   Box,
   Card,
@@ -7,7 +7,7 @@ import {
   LinearProgress,
   Typography,
 } from '@mui/material'
-import useElasticTemplateQuery from '../../lib/services/useElasticTemplateQuery'
+import useSWR from 'swr'
 import palette from '../../styles/theme/palette'
 import { useSession } from 'next-auth/react'
 
@@ -62,61 +62,36 @@ const toPercent = (value?: number | null) => {
   return Math.min(100, Math.max(0, normalized))
 }
 
-const SystemResourcesWidget = () => {
-  const { data: session } = useSession()
-  const isAdmin = Boolean(session?.user?.isAdmin)
+export const SYSTEM_RESOURCES_ENDPOINT = '/api/elasticsearch/query'
+const REFRESH_INTERVAL_MS = 60000
 
-  if (!isAdmin) {
-    return null
+// The server builds and runs the fixed status-report query; the widget only
+// asks for it.
+const requestSystemResources = async (url: string) => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({}))
+    throw new Error(
+      details?.message ||
+        details?.error ||
+        `System resources request failed with status ${response.status}`
+    )
   }
+  return response.json()
+}
 
-  const [refreshToken, setRefreshToken] = useState(0)
+const SystemResourcesWidget = () => {
+  // [IGDD-3474] Shown to every signed-in user, not just isAdmin: the status
+  // report is open to all roles and /api/elasticsearch/query serves only the
+  // fixed host-metrics query. A null SWR key holds the request until the
+  // session is authenticated.
+  const { status } = useSession()
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setRefreshToken((token) => token + 1)
-    }, 60000)
-
-    return () => clearInterval(intervalId)
-  }, [])
-
-  const { template, params } = useMemo(() => {
-    const now = new Date()
-    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
-    const end = now.toISOString()
-
-    return {
-      template: {
-        size: 0,
-        query: {
-          range: {
-            '@timestamp': {
-              gte: '${start}',
-              lte: '${end}',
-            },
-          },
-        },
-        aggs: {
-          cpu: { avg: { field: 'system.cpu.total.pct' } },
-          memory: { avg: { field: 'system.memory.actual.used.pct' } },
-          disk: { avg: { field: 'system.filesystem.used.pct' } },
-          connections: {
-            max: {
-              field: 'system.socket.summary.tcp.all.established',
-              missing: 0,
-            },
-          },
-        },
-      },
-      params: { start, end },
-    }
-  }, [refreshToken])
-
-  const { data, error, isLoading } = useElasticTemplateQuery({
-    template,
-    params,
-    enabled: isAdmin,
-  })
+  const { data, error, isLoading } = useSWR(
+    status === 'authenticated' ? SYSTEM_RESOURCES_ENDPOINT : null,
+    requestSystemResources,
+    { refreshInterval: REFRESH_INTERVAL_MS }
+  )
 
   const cpu = toPercent(data?.aggregations?.cpu?.value)
   const memory = toPercent(data?.aggregations?.memory?.value)

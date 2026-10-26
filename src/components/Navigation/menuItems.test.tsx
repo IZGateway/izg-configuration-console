@@ -79,14 +79,25 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
     expect(item(label).isVisible?.(['IZG Operations'])).toBe(true)
   })
 
+  // Console (Admin Log Search) is granted beyond IZG Operations: IZG Support
+  // (IGDD-3170) and, own jurisdiction only, the two jurisdiction roles
+  // (IGDD-3474). The other two admin items stay IZG Operations only.
   it.each([
     'IZG Support',
     'Jurisdiction Operations',
     'Jurisdiction Support',
-    'Sender Operations',
-  ])('%s sees none of the admin items', (role) => {
+  ])('%s sees Console and no other admin item', (role) => {
     for (const label of ADMIN_ITEMS) {
       expect({ label, visible: item(label).isVisible?.([role]) }).toEqual({
+        label,
+        visible: label === 'Console',
+      })
+    }
+  })
+
+  it('Sender Operations sees none of the admin items', () => {
+    for (const label of ADMIN_ITEMS) {
+      expect({ label, visible: item(label).isVisible?.(['Sender Operations']) }).toEqual({
         label,
         visible: false,
       })
