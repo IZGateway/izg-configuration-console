@@ -6,9 +6,9 @@ import {
   DEFAULT_MESSAGE_METRICS,
 } from './types/messageMetrics'
 import {
-  ELASTICSEARCH_API_ENDPOINT,
-  buildInboundCombinedQuery,
-} from './queries/inboundMessagesQuery'
+  ALL_ORGANIZATIONS,
+  fetchConsoleMetrics,
+} from '../../lib/console/consoleMetricsClient'
 import { computeStatuses, INBOUND_METRICS } from './config/statusThresholds'
 
 interface InboundMessagesWidgetProps {
@@ -32,24 +32,12 @@ const InboundMessagesWidget = ({
   const [failures, setFailures] = useState<FailureDetail[]>([])
   const [loading, setLoading] = useState(false)
   const [showAllFailures, setShowAllFailures] = useState(false)
-  const [selectedOrganization, setSelectedOrganization] = useState('IZGateway')
-
-  // Compute principal names for the selected organization
-  const principalNames = useMemo(() => {
-    if (selectedOrganization === 'IZGateway') {
-      return undefined
-    }
-    const selectedOrg = organizations.find(
-      (org) => org.organizationName === selectedOrganization
-    )
-    return selectedOrg?.principalNames
-  }, [selectedOrganization, organizations])
-
-  // Create a stable key for principalNames to avoid refetch on reference change
-  // Spread to a copy before sorting to avoid mutating the memoized array
-  const principalNamesKey = principalNames
-    ? JSON.stringify([...principalNames].sort())
-    : 'undefined'
+  const [selectedOrganization, setSelectedOrganization] =
+    useState(ALL_ORGANIZATIONS)
+  // Shown in place of the metrics: why the server found nothing to show (e.g.
+  // the selected organization has no principals configured, rather than a
+  // wider, unfiltered result), or that the request failed.
+  const [errorMessage, setErrorMessage] = useState<string>()
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
@@ -57,34 +45,41 @@ const InboundMessagesWidget = ({
 
     const controller = new AbortController()
 
+    // Back to the empty state, so nothing from the previous selection is
+    // shown under the new one.
+    const clearResults = () => {
+      setMetrics(DEFAULT_MESSAGE_METRICS)
+      setFailures([])
+    }
+
     const fetchMessageData = async () => {
       setLoading(true)
+      setErrorMessage(undefined)
       try {
-        // Fetch combined metrics and errors data in a single call
-        const combinedQuery = buildInboundCombinedQuery(
-          selectedConnection,
-          principalNames,
-          envTag
-        )
-
-        const requestBody = {
-          query: combinedQuery,
-        }
-
-        const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        // Fetch combined metrics and errors data in a single call. The server
+        // builds the query and resolves the organization's principals itself.
+        const response = await fetchConsoleMetrics(
+          {
+            view: 'inbound',
+            destId: selectedConnection,
+            envTag,
+            organization: selectedOrganization,
           },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        })
+          controller.signal
+        )
 
         if (!response.ok) {
           throw new Error('Failed to fetch message data')
         }
 
         const data = await response.json()
+        if (controller.signal.aborted) return
+
+        if (data?.unavailable) {
+          setErrorMessage(data.unavailable)
+          clearResults()
+          return
+        }
 
         // Track the calculated total messages for percentage calculations
         let calculatedTotalMessages = 0
@@ -194,6 +189,8 @@ const InboundMessagesWidget = ({
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching message data:', err)
+        setErrorMessage('Unable to load inbound message data.')
+        clearResults()
       } finally {
         setLoading(false)
       }
@@ -201,9 +198,7 @@ const InboundMessagesWidget = ({
 
     fetchMessageData()
     return () => controller.abort()
-  }, [selectedConnection, principalNamesKey, envTag])
-  // Note: Using principalNamesKey instead of principalNames to avoid refetch when array reference changes but content is same
-  // principalNames is used inside the effect but we depend on principalNamesKey for stability
+  }, [selectedConnection, selectedOrganization, envTag])
 
   const metricStatuses = useMemo(
     () => computeStatuses(INBOUND_METRICS, metrics),
@@ -226,6 +221,7 @@ const InboundMessagesWidget = ({
       organizations={organizations}
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
+      error={errorMessage}
       metricStatuses={metricStatuses}
     />
   )

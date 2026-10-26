@@ -269,5 +269,3 @@ export const buildDestinationMetricsQuery = (
     size: 0,
   }
 }
-
-export const ELASTICSEARCH_API_ENDPOINT = '/api/elasticsearch/query'

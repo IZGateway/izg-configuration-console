@@ -238,12 +238,6 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
     ticket: 'IGDD-3472',
     note: 'The per-destination reset. Maps to manageconnections.canResetCircuitBreaker plus a reach check; deliberately NOT the new hub-wide canResetHubCircuitBreakers.',
   },
-  {
-    kind: 'in-handler',
-    subject: 'elasticsearch/query.ts',
-    ticket: 'IGDD-3170',
-    note: 'console.canViewConsole check is conditional on query shape, not the whole route: the status-report widget query (Home/SystemResourcesWidget) bypasses it, every other query (the /console log search) requires it.',
-  },
 
   // ---------------------------------------------------------------------
   // Declared capabilities that no code reads.
