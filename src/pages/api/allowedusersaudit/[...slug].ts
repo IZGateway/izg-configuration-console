@@ -4,6 +4,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { subjectOf } from '../../../lib/security/authzsubject'
+import { can } from '../../../lib/security/policy'
 
 /**
  * @swagger
@@ -34,6 +37,8 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *         description: OK. Returns audit history for the allowed user.
  *       400:
  *         description: Bad request - missing required parameters
+ *       403:
+ *         description: Destination outside the caller's jurisdiction
  *       500:
  *         description: Internal server error
  */
@@ -66,6 +71,30 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       })
     }
 
+    // [IGDD-3474] Reach on the destination in the URL, not just the
+    // capability: the middleware checks canViewOnboarding with
+    // ANY_JURISDICTION, so without this a jurisdiction-scoped role could read
+    // any other jurisdiction's sender history by editing the path. `can()`
+    // makes it one role-local decision (capability AND reach from the same
+    // role), so it does not reintroduce the split-decision shape.
+    const subject = subjectOf(session)
+    if (!can(subject, 'onboarding', 'canViewOnboarding', destinationId).allowed) {
+      logAccessDenied({
+        reason: 'Destination outside caller reach',
+        url: req.url,
+        method: req.method,
+        user: session.user.email,
+        roles: subject.roles,
+        destId: destinationId,
+        deniedAt: 'api',
+        page: 'onboarding',
+        permission: 'onboarding.canViewOnboarding',
+      })
+      return res.status(403).json({
+        error: 'Forbidden - destination outside your jurisdiction',
+      })
+    }
+
     const dbClient = await DbClientFactory.getDbClient()
     const result = await dbClient.fetchAllowedUserAuditHistory(
       principal,
@@ -84,7 +113,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // Before IGDD-3472 this route carried 'captureErrors' and NO authorization, so
 // any authenticated session could reach it. This route only ever serves GET,
 // so — unlike allowedusers/index.ts (IGDD-3546) — there is no mutate method to
-// separate out; canViewOnboarding alone is the correct and complete gate.
+// separate out. The declaration is the coarse gate; the handler adds the
+// per-destination reach check (IGDD-3474).
 export default withMiddleware(
   { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
   'captureErrors'

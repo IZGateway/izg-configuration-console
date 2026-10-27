@@ -201,12 +201,18 @@ describe('InboundMessagesWidget', () => {
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/elasticsearch/query',
+          '/api/console/metrics',
           expect.objectContaining({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
         )
+      })
+      // IGDD-3474: the selection only — the server builds the query and the
+      // principal filter, so none is sent from the browser.
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
+        view: 'inbound',
+        destId: 'TX',
       })
     })
 
@@ -726,6 +732,106 @@ describe('InboundMessagesWidget', () => {
           /Organization A/
         )
       })
+    })
+  })
+
+  describe('Organization resolution is server-side', () => {
+    it("shows the server's reason instead of an unfiltered result", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            unavailable:
+              'Cannot display inbound data: the selected organization (Texas) has no principal names configured.',
+          }),
+      })
+
+      await act(async () => {
+        render(
+          <InboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      expect(
+        await screen.findByText(/the selected organization \(Texas\) has no principal names configured/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe('Failed requests', () => {
+    it('shows an error rather than an empty-looking result', async () => {
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      await act(async () => {
+        render(
+          <InboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      expect(
+        await screen.findByText('Unable to load inbound message data.')
+      ).toBeInTheDocument()
+    })
+  })
+
+  // PR #756 review: a superseded request must not change state when it
+  // finishes, whether it fails (wiping the newer result) or just ends (hiding
+  // the spinner while the newer request is still in flight).
+  describe('Superseded requests', () => {
+    it('ignores a failure and the end of an older request', async () => {
+      let rejectOld: (err: Error) => void = () => undefined
+      let resolveNew: (value: unknown) => void = () => undefined
+      mockFetch
+        .mockReturnValueOnce(new Promise((_r, reject) => (rejectOld = reject)))
+        .mockReturnValueOnce(new Promise((resolve) => (resolveNew = resolve)))
+
+      await act(async () => {
+        render(
+          <InboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      // A newer request replaces the first before it settles.
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByRole('combobox'))
+      })
+      const orgOption = await screen.findByText('Organization A')
+      await act(async () => {
+        fireEvent.click(orgOption)
+      })
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2))
+
+      // The old one now fails. Nothing may change: no error, spinner stays.
+      await act(async () => {
+        rejectOld(new Error('late failure'))
+      })
+      expect(
+        screen.queryByText('Unable to load inbound message data.')
+      ).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Loading messages data')).toBeInTheDocument()
+
+      // The newer request's result is what shows.
+      await act(async () => {
+        resolveNew({
+          ok: true,
+          json: () => Promise.resolve(createMockElasticsearchResponse()),
+        })
+      })
+      await waitFor(() =>
+        expect(screen.queryByLabelText('Loading messages data')).not.toBeInTheDocument()
+      )
+      expect(
+        screen.queryByText('Unable to load inbound message data.')
+      ).not.toBeInTheDocument()
     })
   })
 })

@@ -348,6 +348,154 @@ describe('enforceRouteAuthz: the tenancy guard on unfiltered data paths', () => 
   })
 })
 
+// ---------------------------------------------------------------------------
+// PR #756 — REQUIRES_DESTINATION_SCOPE: a capability scoped roles hold, whose
+// data path is filtered to one destination per request
+// ---------------------------------------------------------------------------
+
+describe('enforceRouteAuthz: destination-scoped capabilities', () => {
+  let warnSpy: jest.SpyInstance
+  beforeEach(() => {
+    warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined as never)
+  })
+  afterEach(() => jest.restoreAllMocks())
+
+  const CONSOLE = { page: 'console', capability: 'canViewConsole' } as const
+  const SCOPED: RouteAuthz = {
+    capability: CONSOLE,
+    scope: (req) => req.body?.destId,
+  }
+  const post = (body: unknown) => ({ ...request('POST', '/api/console/metrics'), body })
+
+  it('canViewConsole is destination-scoped, and not also globally guarded', () => {
+    const { REQUIRES_DESTINATION_SCOPE, REQUIRES_GLOBAL_TENANCY } =
+      require('../security/accessregistry')
+    const key = (r: { page: string; capability: string }) => `${r.page}.${r.capability}`
+    expect(REQUIRES_DESTINATION_SCOPE.map(key)).toEqual(['console.canViewConsole'])
+    const guarded = new Set(REQUIRES_GLOBAL_TENANCY.map(key))
+    expect(REQUIRES_DESTINATION_SCOPE.map(key).filter((k: string) => guarded.has(k))).toEqual([])
+  })
+
+  it.each(['Jurisdiction Operations', 'Jurisdiction Support'])(
+    '%s passes for its own destination',
+    async (role) => {
+      signIn([role], ['az'])
+      const handler = await run(SCOPED, post({ destId: 'az' }), response())
+      expect(handler).toHaveBeenCalled()
+    }
+  )
+
+  it('matches the destination case-insensitively, as can() does', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    const handler = await run(SCOPED, post({ destId: 'AZ' }), response())
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('403s another jurisdiction and audits it as a reach denial naming the destination', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    const res = response()
+    const handler = await run(SCOPED, post({ destId: 'ma' }), res)
+
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
+    const events = deniedEvent(warnSpy)
+    expect(events).toHaveLength(1)
+    expect(events[0][1]).toMatchObject({
+      reason: 'Destination outside caller reach',
+      deniedAt: 'api',
+      permission: 'console.canViewConsole',
+      destId: 'ma',
+    })
+  })
+
+  it.each(['IZG Operations', 'IZG Support'])('%s passes for any destination', async (role) => {
+    signIn([role])
+    const handler = await run(SCOPED, post({ destId: 'ma' }), response())
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('a role without the capability is a role denial, not a reach denial', async () => {
+    signIn(['Sender Operations'], ['azova'])
+    await run(SCOPED, post({ destId: 'azova' }), response())
+    expect(deniedEvent(warnSpy)[0][1].reason).toBe('insufficient role for route access')
+  })
+
+  // The review concern: a future route that declares the capability and
+  // forgets the scope must lock scoped roles out, not hand them every
+  // jurisdiction.
+  describe('fails closed without a destination', () => {
+    it.each([
+      ['no scope declared', { capability: CONSOLE } as RouteAuthz, { destId: 'az' }],
+      ['a scope that names nothing', SCOPED, {}],
+      [
+        'a scope that throws',
+        {
+          capability: CONSOLE,
+          scope: () => {
+            throw new Error('bad body')
+          },
+        } as RouteAuthz,
+        { destId: 'az' },
+      ],
+      ['a byMethod declaration', { byMethod: { POST: CONSOLE } } as RouteAuthz, { destId: 'az' }],
+    ])('%s: Jurisdiction Operations is refused', async (_label, authz, body) => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const res = response()
+      const handler = await run(authz, post(body), res)
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(deniedEvent(warnSpy)[0][1]).toMatchObject({
+        permission: 'console.canViewConsole',
+      })
+    })
+
+    it('no scope declared: a global-reach role still passes', async () => {
+      signIn(['IZG Operations'])
+      const handler = await run({ capability: CONSOLE }, post({}), response())
+      expect(handler).toHaveBeenCalled()
+    })
+
+    it('no scope declared: the denial says the destination is missing', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      await run({ capability: CONSOLE }, post({ destId: 'az' }), response())
+      expect(deniedEvent(warnSpy)[0][1].reason).toBe(
+        'destination-scoped capability used without a destination'
+      )
+    })
+  })
+
+  // Role-local: the capability and the reach must come from ONE role. Modelled
+  // by temporarily removing IZG Support's console grant, so it supplies global
+  // reach but not the capability.
+  it('does not let a scoped role borrow reach from an unrelated global role', async () => {
+    const accessLevel = require('../security/accesslevel').default
+    const original = accessLevel['IZG Support'].console.canViewConsole
+    accessLevel['IZG Support'].console.canViewConsole = false
+    try {
+      signIn(['Jurisdiction Operations', 'IZG Support'], ['az'])
+      const res = response()
+      const handler = await run(SCOPED, post({ destId: 'ma' }), res)
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(403)
+    } finally {
+      accessLevel['IZG Support'].console.canViewConsole = original
+    }
+  })
+
+  it('ignores scope for a capability that is not destination-scoped', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    const handler = await run(
+      {
+        capability: { page: 'onboarding', capability: 'canViewOnboarding' },
+        scope: () => 'ma',
+      },
+      post({}),
+      response()
+    )
+    expect(handler).toHaveBeenCalled()
+  })
+})
+
 describe('enforceRouteAuthz: byMethod', () => {
   const DENYLIST: RouteAuthz = {
     byMethod: {
