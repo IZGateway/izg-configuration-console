@@ -1,31 +1,28 @@
 /**
- * Builds the Elasticsearch query for inbound message metrics
- * @param selectedConnection - The destination FIPS code to filter by
- * @param principalNames - Optional array of principal names to filter by
+ * Builds the Elasticsearch query for Outbound message metrics
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction)
+ * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object
  */
-export const buildInboundMetricsQuery = (
-  selectedConnection: string,
+export const buildOutboundMetricsQuery = (
   principalNames?: string[],
+  destinationFromOrganization?: string,
   envTag?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
-      bool: {
-        should: [
-          {
-            term: {
-              'transactionData.destination.fips.keyword': {
-                value: selectedConnection.toUpperCase(),
-              },
-            },
-          },
-        ],
-        minimum_should_match: 1,
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -38,14 +35,23 @@ export const buildInboundMetricsQuery = (
           lte: now,
         },
       },
-    },
-  ]
+    }
+  )
 
-  // Add principal names filter if specified
-  if (principalNames && principalNames.length > 0) {
+  // Add destination filter if specified (from organization reverse lookup)
+  if (destinationFromOrganization) {
     filters.push({
-      terms: {
-        'transactionData.source.commonName.keyword': principalNames,
+      bool: {
+        should: [
+          {
+            term: {
+              'transactionData.destination.fips.keyword': {
+                value: destinationFromOrganization.toUpperCase(),
+              },
+            },
+          },
+        ],
+        minimum_should_match: 1,
       },
     })
   }
@@ -216,33 +222,30 @@ export const buildInboundMetricsQuery = (
 }
 
 /**
- * Builds the Elasticsearch query for inbound message errors/failures
- * @param selectedConnection - The destination FIPS code to filter by
- * @param principalNames - Optional array of principal names to filter by
+ * Builds the Elasticsearch query for Outbound message errors/failures
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction); if omitted, errors for all principals are included
+ * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object
  */
-export const buildInboundErrorsQuery = (
-  selectedConnection: string,
+export const buildOutboundErrorsQuery = (
   principalNames?: string[],
+  destinationFromOrganization?: string,
   envTag?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
-      bool: {
-        should: [
-          {
-            term: {
-              'transactionData.destination.fips.keyword': {
-                value: selectedConnection.toUpperCase(),
-              },
-            },
-          },
-        ],
-        minimum_should_match: 1,
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -268,13 +271,22 @@ export const buildInboundErrorsQuery = (
         },
       },
     },
-  ]
+  )
 
-  // Add principal names filter if specified
-  if (principalNames && principalNames.length > 0) {
+  // Add destination filter if specified (from organization reverse lookup)
+  if (destinationFromOrganization) {
     filters.push({
-      terms: {
-        'transactionData.source.commonName.keyword': principalNames,
+      bool: {
+        should: [
+          {
+            term: {
+              'transactionData.destination.fips.keyword': {
+                value: destinationFromOrganization.toUpperCase(),
+              },
+            },
+          },
+        ],
+        minimum_should_match: 1,
       },
     })
   }
@@ -783,7 +795,7 @@ export const buildInboundErrorsQuery = (
                           should: [
                             {
                               match_phrase: {
-                                'transactionData.processError':
+                                processError:
                                   'Unable to invoke IIS destination web service',
                               },
                             },
@@ -1039,33 +1051,30 @@ export const buildInboundErrorsQuery = (
 }
 
 /**
- * Builds the combined Elasticsearch query for inbound message metrics and errors
- * @param selectedConnection - The destination FIPS code to filter by
- * @param principalNames - Optional array of principal names to filter by
+ * Builds the combined Elasticsearch query for Outbound message metrics and errors
+ * @param principalNames - Optional array of principal names to filter by (from destination's jurisdiction)
+ * @param destinationFromOrganization - Optional destination ID from selected organization (reverse lookup)
  * @returns The Elasticsearch query object with both metrics and error aggregations
  */
-export const buildInboundCombinedQuery = (
-  selectedConnection: string,
+export const buildOutboundCombinedQuery = (
   principalNames?: string[],
+  destinationFromOrganization?: string,
   envTag?: string
-) => {
+): Record<string, unknown> => {
   const now = new Date()
 
-  const filters: Record<string, unknown>[] = [
-    {
-      bool: {
-        should: [
-          {
-            term: {
-              'transactionData.destination.fips.keyword': {
-                value: selectedConnection.toUpperCase(),
-              },
-            },
-          },
-        ],
-        minimum_should_match: 1,
+  const filters: Record<string, unknown>[] = []
+
+  // Add principal names filter only if provided
+  if (principalNames && principalNames.length > 0) {
+    filters.push({
+      terms: {
+        'transactionData.source.commonName.keyword': principalNames,
       },
-    },
+    })
+  }
+
+  filters.push(
     {
       match_phrase: {
         'tags.keyword': envTag ?? 'dev',
@@ -1086,13 +1095,22 @@ export const buildInboundCombinedQuery = (
         },
       },
     },
-  ]
+  )
 
-  // Add principal names filter if specified
-  if (principalNames && principalNames.length > 0) {
+  // Add destination filter if specified (from organization reverse lookup)
+  if (destinationFromOrganization) {
     filters.push({
-      terms: {
-        'transactionData.source.commonName.keyword': principalNames,
+      bool: {
+        should: [
+          {
+            term: {
+              'transactionData.destination.fips.keyword': {
+                value: destinationFromOrganization.toUpperCase(),
+              },
+            },
+          },
+        ],
+        minimum_should_match: 1,
       },
     })
   }
@@ -1108,9 +1126,9 @@ export const buildInboundCombinedQuery = (
     },
     aggs: {
       // Metrics aggregations (time-based) - extract the '0' aggregation
-      metrics: buildInboundMetricsQuery(
-        selectedConnection,
+      metrics: buildOutboundMetricsQuery(
         principalNames,
+        destinationFromOrganization,
         envTag
       ).aggs['0'],
       // Error aggregations (organization-based) - wrapped in filter for hasProcessError
@@ -1121,9 +1139,9 @@ export const buildInboundCombinedQuery = (
           },
         },
         aggs: {
-          organizations: buildInboundErrorsQuery(
-            selectedConnection,
+          organizations: buildOutboundErrorsQuery(
             principalNames,
+            destinationFromOrganization,
             envTag
           ).aggs['0'],
         },
@@ -1132,5 +1150,3 @@ export const buildInboundCombinedQuery = (
     size: 0,
   }
 }
-
-export const ELASTICSEARCH_API_ENDPOINT = '/api/elasticsearch/query'

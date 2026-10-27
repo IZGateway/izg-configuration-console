@@ -8,6 +8,7 @@ import { AdsFileTypeItem } from '../type/AdsFileType'
 import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
+import type { OrganizationRecord } from '../type/OrganizationRecord'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
 import type { ApiKeyCredentialAudit } from '../type/ApiKeyCredentialAudit'
 import type { Jurisdiction } from '../type/Jurisdiction'
@@ -42,7 +43,7 @@ export default interface ConfigConsoleFetchRepository {
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
   fetchFileTypeList: () => Promise<AdsFileTypeItem[]>
   checkAdsFileTypeRecordExists: (sortKey: string) => Promise<boolean>
-  fetchOrganizations: () => Promise<unknown>
+  fetchOrganizations: () => Promise<OrganizationRecord[]>
   fetchAllowedUser(
     environment: number,
     destinationId: string,

@@ -73,28 +73,39 @@ const deniedEvents = () =>
 // them loosely; the shape assertions are made per-case below.
 type AnyGssp = (ctx: Parameters<Gssp>[0]) => Promise<any>
 
-describe.each<[string, AnyGssp, string, string]>([
+// The last column is a role that lacks the page's entry capability. Console
+// uses Sender Operations: since IGDD-3474 both jurisdiction roles hold
+// canViewConsole (own jurisdiction only), so neither can stand in for "denied".
+describe.each<[string, AnyGssp, string, string, string]>([
   [
     'accesscontrol',
     accessControlGSSP as AnyGssp,
     '/accesscontrol',
     'accesscontrol.canViewAccessControl',
+    'Jurisdiction Support',
   ],
-  ['console', consoleGSSP as AnyGssp, '/console', 'console.canViewConsole'],
+  [
+    'console',
+    consoleGSSP as AnyGssp,
+    '/console',
+    'console.canViewConsole',
+    'Sender Operations',
+  ],
   [
     'adminoperations',
     adminOperationsGSSP as AnyGssp,
     '/adminoperations',
     'adminoperations.canViewAdminOperations',
+    'Jurisdiction Support',
   ],
-])('%s page gate', (_name, gssp, url, permission) => {
+])('%s page gate', (_name, gssp, url, permission, deniedRole) => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetHubEnvironments.mockReturnValue([])
   })
 
   it('denies a role without the entry capability, in place', async () => {
-    signIn(['Jurisdiction Support'], ['az'])
+    signIn([deniedRole], ['az'])
     const result: any = await gssp(context(url))
 
     expect(result.props.accessDenied).toBe(true)
@@ -104,7 +115,7 @@ describe.each<[string, AnyGssp, string, string]>([
   })
 
   it('writes exactly one AccessDenied event with a dotted permission', async () => {
-    signIn(['Jurisdiction Support'], ['az'])
+    signIn([deniedRole], ['az'])
     await gssp(context(url))
 
     const events = deniedEvents()
@@ -118,7 +129,7 @@ describe.each<[string, AnyGssp, string, string]>([
       // object, never a string, or Elastic rejects the event (IGDD-3541).
       url: { path: url },
       method: 'GET',
-      roles: ['Jurisdiction Support'],
+      roles: [deniedRole],
     })
   })
 
@@ -142,6 +153,24 @@ describe.each<[string, AnyGssp, string, string]>([
     })
     expect(deniedEvents()).toHaveLength(0)
   })
+})
+
+describe('console page gate: jurisdiction-scoped roles (IGDD-3474)', () => {
+  beforeEach(() => jest.clearAllMocks())
+
+  // canViewConsole left REQUIRES_GLOBAL_TENANCY when the log search moved to
+  // the server-filtered /api/console/metrics, so a scoped holder now passes the
+  // page gate. Per-destination reach is enforced by that route, not here.
+  it.each(['Jurisdiction Operations', 'Jurisdiction Support'])(
+    'admits %s and writes no event',
+    async (role) => {
+      signIn([role], ['az'])
+      const result: any = await consoleGSSP(context('/console'))
+
+      expect(result.props.accessDenied).toBeFalsy()
+      expect(deniedEvents()).toHaveLength(0)
+    }
+  )
 })
 
 describe('adminoperations: the gate runs before the page loads any data', () => {

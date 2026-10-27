@@ -25,7 +25,7 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | changerequest | canRunHealthCheck | YES | YES | YES | YES | — |
 | changerequest | canViewDetails | YES | YES | YES | YES | — |
 | changerequest | canViewJiraTicket | YES | — | — | — | — |
-| console | canViewConsole | YES | YES | — | — | — |
+| console | canViewConsole | YES | YES | YES | YES | — |
 | edit | canApproveChangeRequest | YES | — | YES | — | — |
 | edit | canChangeCredentials | YES | — | YES | — | — |
 | edit | canCreateChangeRequest | YES | — | YES | — | — |
