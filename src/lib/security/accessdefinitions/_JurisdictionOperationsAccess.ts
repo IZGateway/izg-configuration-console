@@ -82,19 +82,23 @@ const JurisdictionOperationsAccess: RoleAccess = {
   // type-check and then be `false` forever. The `RoleAccess` annotation on the
   // parent already types each property and restores excess-property checking.
 
-  // [PROVISIONAL — IGDD-3472] Every admin surface is denied outright. Spreading
-  // the all-false defaults and adding nothing is what makes that deny
-  // deliberate rather than incidental. These reproduce today's access exactly:
-  // all four surfaces are `isAdmin`-gated and Jurisdiction Operations is not in
-  // OPERATIONS_GROUP.
+  // [PROVISIONAL — IGDD-3472] accesscontrol, adminoperations and api-doc are
+  // denied outright. Spreading the all-false defaults and adding nothing is
+  // what makes that deny deliberate rather than incidental. These reproduce
+  // today's access exactly: those surfaces are `isAdmin`-gated and
+  // Jurisdiction Operations is not in OPERATIONS_GROUP.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
   },
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
   },
+  // [IGDD-3474] Admin Log Search (/console), own jurisdiction only — target
+  // matrix v11. Safe for a scoped role because /api/console/metrics builds the
+  // query server-side and checks reach on the selected destination per role.
   console: {
     ...defaultConsolePageAccessControl,
+    canViewConsole: true,
   },
   'api-doc': {
     ...defaultApiDocPageAccessControl,

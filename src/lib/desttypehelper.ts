@@ -125,16 +125,22 @@ function destTypeFormattedToSyncWithApi(dest: string) {
  * @param destType - The destination type string (e.g. 'PRODUCTION', 'ONBOARD')
  * @returns The Elasticsearch tag string
  */
-export function getElasticEnvTag(destType: string): string {
-  const tagMap: Record<string, string> = {
-    PRODUCTION: 'prod',
-    ONBOARD: 'onboard',
-    STAGE: 'staging',
-    DEV: 'dev',
-    TEST: 'test',
-  }
-  return tagMap[destType?.toUpperCase()] ?? 'dev'
+const ELASTIC_ENV_TAG_BY_DEST_TYPE: Record<string, string> = {
+  PRODUCTION: 'prod',
+  ONBOARD: 'onboard',
+  STAGE: 'staging',
+  DEV: 'dev',
+  TEST: 'test',
 }
+
+export function getElasticEnvTag(destType: string): string {
+  return ELASTIC_ENV_TAG_BY_DEST_TYPE[destType?.toUpperCase()] ?? 'dev'
+}
+
+/** Every tag `getElasticEnvTag` can return — the allowlist a server route validates against. */
+export const ELASTIC_ENV_TAGS: ReadonlyArray<string> = Object.values(
+  ELASTIC_ENV_TAG_BY_DEST_TYPE
+)
 
 const desttypehelper = {
   destTypeFormattedToSyncWithApi,

@@ -10,6 +10,8 @@ import { toEcsUrl } from '../../lib/utils/ecsUrl'
 import {
   CapabilityRef,
   decideCapability,
+  decideRouteCapability,
+  requiresDestinationScope,
 } from '../../lib/security/accessregistry'
 
 /**
@@ -65,8 +67,18 @@ export type RouteAuthz =
   /**
    * Authorized by capability. An array means **any-of** — the caller needs one
    * of them, which is right for a lookup route shared by several surfaces.
+   *
+   * `scope` names the destination the request acts on. It is read only for
+   * capabilities in `REQUIRES_DESTINATION_SCOPE`, which are then decided for
+   * that destination, per role. Without it (or when it returns nothing, or
+   * throws) those capabilities pass only for roles reaching every
+   * jurisdiction. Run before the handler, so it must not trust or mutate the
+   * request beyond reading the identifier.
    */
-  | { capability: CapabilityRef | CapabilityRef[] }
+  | {
+      capability: CapabilityRef | CapabilityRef[]
+      scope?: (req: NextApiRequest) => string | undefined
+    }
   /**
    * Per-method capability. Required, not a nicety: several route files handle
    * a read and a write in one handler, and one capability per file would
@@ -232,9 +244,29 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 
     const forbid = () => res.status(403).send('forbidden')
 
+    // The destination the request acts on, for REQUIRES_DESTINATION_SCOPE
+    // capabilities. A throwing extractor is treated as naming no destination,
+    // which fails closed to global-reach roles only.
+    let scope: string | undefined
+    if ('capability' in authz && authz.scope) {
+      try {
+        scope = authz.scope(req) || undefined
+      } catch {
+        scope = undefined
+      }
+    }
+
     const deny = (ref: CapabilityRef) => {
+      // A caller who holds the capability somewhere but not for this
+      // destination is a reach denial; say so, and name the destination.
+      const reachDenial =
+        requiresDestinationScope(ref) && decideCapability(subject, ref)
       logAccessDenied({
-        reason: 'insufficient role for route access',
+        reason: reachDenial
+          ? scope
+            ? 'Destination outside caller reach'
+            : 'destination-scoped capability used without a destination'
+          : 'insufficient role for route access',
         deniedAt: 'api',
         page: ref.page,
         permission: `${ref.page}.${String(ref.capability)}`,
@@ -242,6 +274,7 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
         method: req.method,
         user,
         roles: subject.roles,
+        ...(scope ? { destId: scope } : {}),
       })
       forbid()
     }
@@ -276,8 +309,12 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // The tenancy predicate is the function's own default rather than a lambda
     // passed from here, so this enforcer, the page gate and the nav predicate
     // cannot be edited into three different decisions.
+    //
+    // `decideRouteCapability` adds the REQUIRES_DESTINATION_SCOPE rule on top
+    // (PR #756): a destination-scoped capability is decided for `scope`, per
+    // role, and without one only global-reach roles pass.
     const satisfies = (ref: CapabilityRef): boolean =>
-      decideCapability(subject, ref)
+      decideRouteCapability(subject, ref, scope)
 
     if ('public' in authz) return next()
 
