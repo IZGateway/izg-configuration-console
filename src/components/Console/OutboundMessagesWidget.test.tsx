@@ -906,4 +906,59 @@ describe('OutboundMessagesWidget', () => {
       expect(screen.queryAllByText(total)).toHaveLength(0)
     })
   })
+
+  // PR #756 review: a superseded request must not change state when it
+  // finishes, whether it fails (wiping the newer result) or just ends (hiding
+  // the spinner while the newer request is still in flight).
+  describe('Superseded requests', () => {
+    it('ignores a failure and the end of an older request', async () => {
+      let rejectOld: (err: Error) => void = () => undefined
+      let resolveNew: (value: unknown) => void = () => undefined
+      mockFetch
+        .mockReturnValueOnce(new Promise((_r, reject) => (rejectOld = reject)))
+        .mockReturnValueOnce(new Promise((resolve) => (resolveNew = resolve)))
+
+      await act(async () => {
+        render(
+          <OutboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      // A newer request replaces the first before it settles.
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByRole('combobox'))
+      })
+      const orgOption = await screen.findByText('California')
+      await act(async () => {
+        fireEvent.click(orgOption)
+      })
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2))
+
+      // The old one now fails. Nothing may change: no error, spinner stays.
+      await act(async () => {
+        rejectOld(new Error('late failure'))
+      })
+      expect(
+        screen.queryByText('Unable to load outbound message data.')
+      ).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Loading messages data')).toBeInTheDocument()
+
+      // The newer request's result is what shows.
+      await act(async () => {
+        resolveNew({
+          ok: true,
+          json: () => Promise.resolve(createMockElasticsearchResponse()),
+        })
+      })
+      await waitFor(() =>
+        expect(screen.queryByLabelText('Loading messages data')).not.toBeInTheDocument()
+      )
+      expect(
+        screen.queryByText('Unable to load outbound message data.')
+      ).not.toBeInTheDocument()
+    })
+  })
 })

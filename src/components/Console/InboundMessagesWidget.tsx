@@ -187,12 +187,17 @@ const InboundMessagesWidget = ({
           setFailures(failureTypes)
         }
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return
+        // A superseded request (aborted by the cleanup below) must not touch
+        // state: its failure would wipe the newer request's result. Checked on
+        // the signal, not the error name, since any error can arrive late.
+        if (controller.signal.aborted) return
         console.error('Error fetching message data:', err)
         setErrorMessage('Unable to load inbound message data.')
         clearResults()
       } finally {
-        setLoading(false)
+        // Likewise, only the current request may end the loading state; a
+        // superseded one finishing would hide the spinner mid-fetch.
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
 

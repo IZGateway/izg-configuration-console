@@ -7,9 +7,6 @@ import {
   elasticClient,
   getConsoleElasticIndex,
 } from '../../../lib/repositories/ElasticRepository'
-import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
-import { subjectOf } from '../../../lib/security/authzsubject'
-import { can } from '../../../lib/security/policy'
 import {
   ConsoleScopeData,
   parseConsoleMetricsRequest,
@@ -102,27 +99,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
   const request = parsed.value
 
-  // The middleware has already run the ANY_JURISDICTION prefilter. This is the
-  // real decision: ONE held role must grant canViewConsole AND reach destId.
-  // A subject-wide union of the two (capability from a scoped role, reach from
-  // an unrelated global one) is the split-decision shape and must not pass.
-  const subject = subjectOf(session)
-  if (!can(subject, 'console', 'canViewConsole', request.destId).allowed) {
-    logAccessDenied({
-      reason: 'Destination outside caller reach',
-      url: req.url,
-      method: req.method,
-      user: session.user.email,
-      roles: subject.roles,
-      destId: request.destId,
-      deniedAt: 'api',
-      page: 'console',
-      permission: 'console.canViewConsole',
-    })
-    return res.status(403).json({
-      error: 'Forbidden - destination outside your jurisdiction',
-    })
-  }
+  // request.destId has already been authorized for this caller, per role, by
+  // the middleware: see the `scope` in the declaration below.
 
   if (!elasticClient.isConfigured()) {
     return res.status(500).json({
@@ -176,10 +154,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// The declaration is the coarse gate (does any held role hold the capability at
-// all); the per-destination, same-role decision is made in the handler above
-// with `can()`, the pattern `requireApiKeyAccess` uses in apiKeyAuthz.ts.
+// canViewConsole is in REQUIRES_DESTINATION_SCOPE, so the middleware decides it
+// for the destination `scope` names: ONE held role must grant canViewConsole
+// AND reach that destId, and a denial is audited with the destId. A body that
+// names no valid destId gives no scope, which passes only for roles reaching
+// every jurisdiction; the handler then answers those with 400.
 export default withMiddleware(
-  { capability: { page: 'console', capability: 'canViewConsole' } },
+  {
+    capability: { page: 'console', capability: 'canViewConsole' },
+    scope: (req) => parseConsoleMetricsRequest(req.body).value?.destId,
+  },
   'captureErrors'
 )(handler)
