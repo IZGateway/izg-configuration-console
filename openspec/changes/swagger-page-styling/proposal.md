@@ -69,8 +69,10 @@ change.
   `src/next-swagger-doc.json`.
 - New: `src/lib/apiDocDefinition.ts`, the shared spec `info`, and
   `src/components/ApiDoc/swaggerStyles.ts`, the scoped style overrides.
-- **No API, data, auth or jurisdiction change.** The 22 route annotations that make up the
-  spec are not edited.
+- Two route annotations are corrected (`api/changerequest/[...slug].ts`,
+  `api/maintenance/update/[...slug].ts`). They had YAML errors, so their routes were
+  missing from the documentation. Only the comments change.
+- **No API, data, auth or jurisdiction change.**
 - **Security note:** "Try it out" sends real requests to the current environment.
   Swagger UI's HTTP client is expected to go through the global `fetch`, which the
   `_app.tsx` interceptor signs with a DPoP proof. That is not yet verified; task 1.2

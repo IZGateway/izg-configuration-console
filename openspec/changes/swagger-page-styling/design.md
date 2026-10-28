@@ -22,7 +22,7 @@ three are scoped to `/api-doc`.
 **Non-Goals:**
 - No change to access control, and no fix for the embedded-spec authorization debt, which
   is documented in `api-doc.tsx` and tracked as an `AUTHZ_DEBT` row.
-- No edits to the 22 route `@swagger` annotations.
+- No changes to the routes themselves. Two broken `@swagger` annotations are corrected (Decision 6); the rest are untouched.
 - No Swagger UI upgrade, and no swap to another renderer (Redoc etc.).
 - No footer. `/api-doc` is not a navigation menu page. IGDD-3354 limits the footer to Home
   and the menu pages.
@@ -47,8 +47,9 @@ three are scoped to `/api-doc`.
 3. **What gets restyled.** Selectors refer to swagger-ui 5's DOM.
    - **Font:** `.swagger-ui`, `.swagger-ui .info .title`, `.opblock-tag` and
      `.opblock-summary` → the theme's Ubuntu stack.
-   - **Info block:** hide `.information-container .info .title`. `PageHeader` already
-     shows the title, and repeating it is noise. Keep the description and version.
+   - **Info block:** keep the spec title, but restyle it smaller (1.25rem, bold,
+     `primaryDark`) under the `PageHeader`, because the spec requires the real title and
+     version to be visible. The version badges use `primary` and `secondary`.
    - **Method colours.** Border, summary background tint and method badge per method:
 
      | Method | Colour |
@@ -56,7 +57,7 @@ three are scoped to `/api-doc`.
      | GET | `primary` |
      | POST | `secondary` |
      | PUT | `warningAccessible` |
-     | PATCH | `secondaryLight` |
+     | PATCH | `primaryDark` (not `secondaryLight`, which fails AA with white text at 2.3:1) |
      | DELETE | `error` |
 
      The badge text is white on each colour, and each pair is checked for WCAG AA.
@@ -81,9 +82,51 @@ three are scoped to `/api-doc`.
    > carries a DPoP proof that is bound to this browser session.
    >
    > **"Try it out" sends real requests** to the environment this console is connected
-   > to. Changes made here take effect immediately.
+   > to. Only GET requests can be run from this page; the other methods are documented
+   > for reference.
 
    Page subtitle: *"Reference for the Configuration Console's internal API endpoints."*
+
+6. **Fix the two broken route annotations.** While the spec was being built, swagger-jsdoc
+   reported YAML errors in `api/changerequest/[...slug].ts` and
+   `api/maintenance/update/[...slug].ts`. Both were missing the `parameters:` key, so both
+   routes were silently left out of the documentation. The maintenance route was also
+   documented as `delete`, while its handler only accepts `POST`. Fixing them adds the
+   two missing routes (19 → 21 paths). This is a documentation-only edit; the handlers
+   are unchanged.
+
+7. **Normalize the generated spec instead of editing every route.** Two problems apply
+   across many annotations, so the page fixes the spec after generation
+   (`apiDocDefinition.ts`) and leaves the 22 route files alone:
+   - No route declares `tags`, so Swagger UI grouped everything under "default".
+     `tagUntaggedOperations` uses "IZ Gateway" instead. A route that adds real tags
+     keeps them.
+   - Four routes leave `application/json:` empty, which YAML reads as `null`, and
+     Swagger UI crashes rendering it. `fillEmptyMediaTypes` replaces each one with `{}`.
+
+8. **"Try it out" runs GET only.** It sends real requests to the connected environment,
+   so `supportedSubmitMethods={['get']}` removes Execute from every other method.
+   An info banner above Swagger names the host and `NEXT_PUBLIC_APP_ENV`. Reading the
+   code, swagger-client calls the global `fetch` per request, so its requests go
+   through the DPoP interceptor in `_app.tsx`. Task 1.2 still needs to confirm that in a
+   browser.
+
+9. **Header counts and Swagger settings.** The PageHeader shows GET, POST and DELETE
+   counts, using API Key Management's stat card. It moved to a shared
+   `src/components/StatCard`, now centred and counting up with the Console's
+   `AnimatedNumber`. The final count is also exposed as `data-value` for tests. The
+   other Swagger settings:
+   - `deepLinking`
+   - `displayRequestDuration`
+   - `docExpansion="none"`
+   - Schemas hidden
+   - a loading skeleton
+
+10. **Nav footer (added during implementation).** Swagger API and Log Out were
+    underlined text at the bottom of the drawer. They are now a bottom row of small
+    white icons under a divider, with a vertical divider between them. When the drawer
+    is open, each icon shows its label. When it is collapsed, the icons have tooltips.
+    `#logout`, the `/api-doc` link and the accessible names are unchanged.
 
 ## Risks / Trade-offs
 
