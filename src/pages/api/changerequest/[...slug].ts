@@ -13,18 +13,19 @@ import { asyncRequestContext } from '../../../lib/Context'
  * /api/changerequest/{destTypeId}/{destId}:
  *   get:
  *     summary: Get destination change request for destination type and destination id.
- *       - name: id
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the destination.
+ *     parameters:
  *       - name: destTypeId
  *         in: path
  *         required: true
  *         schema:
  *           type: number
  *         description: The ID of destination type
+ *       - name: destId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
  *     responses:
  *       200:
  *         description: OK.
