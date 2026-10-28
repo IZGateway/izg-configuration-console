@@ -1,16 +1,11 @@
 import { withSwagger } from 'next-swagger-doc'
 import withMiddleware from '../../lib/api/api-middleware-helper'
+import { apiDocDefinition, apiDocSources } from '../../lib/apiDocDefinition'
 
 const swaggerHandler = withSwagger({
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'NextJS Swagger',
-      version: '0.1.0',
-    },
-  },
+  definition: apiDocDefinition,
   apiFolder: 'pages/api',
-  apis: ['src/pages/api/*/*.ts', 'src/pages/api/*/*/*.ts'],
+  apis: apiDocSources,
 })
 // Bypassed withMiddleware entirely before IGDD-3472 — the compiler could not
 // flag it, since a file that never calls the wrapper has nothing to type-check.
