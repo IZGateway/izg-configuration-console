@@ -73,6 +73,7 @@ import {
 } from '../../lib/type/AllowedUseType'
 import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 import PageHeader from '../PageHeader'
+import { StatCard, StatCardRow } from '../StatCard'
 
 // ─── Use types: one canonical reading of a row, shared by every surface ───
 //
@@ -627,52 +628,16 @@ const DEFAULT_KEYS_COLUMN_VISIBILITY_MODEL: Partial<Record<string, boolean>> =
 
 // ─── Static sub-components (defined OUTSIDE main component to prevent infinite loops) ──
 
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Box
-      data-testid={`stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      sx={{
-        borderRadius: '12px',
-        backgroundColor: palette.white,
-        p: { xs: 1.5, md: 2 },
-        border: `1px solid ${palette.border}`,
-        // On small screens the three cards share the row instead of
-        // overflowing it at their fixed desktop width.
-        flex: { xs: 1, md: 'initial' },
-        minWidth: { xs: 0, md: 140 },
-        mr: { xs: 0, md: 4 },
-      }}
-    >
-      <Typography
-        data-testid="stat-card-value"
-        sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}
-      >
-        {value}
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          color: palette.greyText,
-          fontWeight: 600,
-          letterSpacing: '0.03em',
-        }}
-      >
-        {label.toUpperCase()}
-      </Typography>
-    </Box>
-  )
-}
-
 function StatCards({ apiKeys }: { apiKeys: ApiKey[] }) {
   const total = apiKeys.length
   const active = apiKeys.filter((k) => k.status === 'Active').length
   const revoked = apiKeys.filter((k) => k.status === 'Revoked').length
   return (
-    <Box sx={{ display: 'flex', gap: { xs: 1, md: 2 }, mb: { xs: 0, md: 3 } }}>
+    <StatCardRow>
       <StatCard label="Total Keys" value={total} />
       <StatCard label="Active" value={active} />
       <StatCard label="Revoked" value={revoked} />
-    </Box>
+    </StatCardRow>
   )
 }
 
