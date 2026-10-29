@@ -1,6 +1,7 @@
 import { alpha, type Theme } from '@mui/material/styles'
 import type { SystemStyleObject } from '@mui/system'
 import palette from '../../styles/theme/palette'
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 
 /**
  * IZG styling for Swagger UI on /api-doc, applied through `sx` on the box that
@@ -12,9 +13,6 @@ import palette from '../../styles/theme/palette'
  * public API: after an upgrade, check this page, because a renamed class makes
  * its override stop applying without any error.
  */
-
-// The card shadow used by PageHeader and the other header cards.
-const CARD_SHADOW = '0px 3px 5px rgba(0, 0, 0, 0.40)'
 
 // One palette colour per HTTP method. Each carries white text at WCAG AA or
 // better: primary 6.6:1, secondary 4.9:1, warningAccessible 5.0:1,
@@ -105,7 +103,7 @@ const swaggerStyles = (theme: Theme): SystemStyleObject<Theme> => ({
   // page content.
   backgroundColor: palette.white,
   borderRadius: 1,
-  boxShadow: CARD_SHADOW,
+  boxShadow: DROP_SHADOW,
   px: { xs: 1, md: 3 },
   py: 1,
 

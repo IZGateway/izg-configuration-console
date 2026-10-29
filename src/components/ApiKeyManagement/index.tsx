@@ -75,6 +75,7 @@ import { getEnvironmentName, DEST_TYPES } from '../../lib/desttypehelper'
 import PageHeader from '../PageHeader'
 import { StatCard, StatCardRow } from '../StatCard'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 // ─── Use types: one canonical reading of a row, shared by every surface ───
 //
 // Storage is a DynamoDB String Set, which is unordered, so the order the SDK
@@ -893,7 +894,7 @@ function ActionIconButton({
 const ROW_ACTION_BUTTON_SX = {
   borderRadius: 90,
   background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 35,
   height: 35,
 }
