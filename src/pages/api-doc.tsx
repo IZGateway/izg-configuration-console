@@ -143,7 +143,9 @@ function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
           deepLinking
           defaultModelsExpandDepth={-1}
           displayRequestDuration
-          docExpansion="none"
+          // Opens the tag groups (only IZ Gateway today) but leaves each
+          // endpoint collapsed.
+          docExpansion="list"
           supportedSubmitMethods={TRY_IT_OUT_METHODS}
         />
       </Box>
