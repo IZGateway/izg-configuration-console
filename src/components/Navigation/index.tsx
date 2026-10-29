@@ -296,12 +296,13 @@ const MiniDrawer = () => {
         </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
+        {/* In normal flow, pushed to the bottom of the drawer paper (a flex
+            column) by mt: auto. Absolutely positioned, it reserved no space,
+            so on a short viewport it covered the last menu items. */}
         <Box
           sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
+            mt: 'auto',
+            flexShrink: 0,
             display: 'flex',
             borderTop: `1px solid ${palette.primaryLight}`,
           }}
