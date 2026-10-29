@@ -6,20 +6,21 @@ import DbClientFactory from '../../../../lib/db/DbClientFactory'
 /**
  * @swagger
  * /api/maintenance/update/{destTypeId}/{destId}:
- *   delete:
+ *   post:
  *     summary: Update maintenance start date, end date, reason for connection maintenance
- *       - name: destId
- *         in: path
- *         required: true
- *         schema:
- *           type: string
- *         description: The ID of the destination.
+ *     parameters:
  *       - name: destTypeId
  *         in: path
  *         required: true
  *         schema:
  *           type: number
  *         description: The ID of destination type
+ *       - name: destId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the destination.
  *     responses:
  *       200:
  *         description: OK.
