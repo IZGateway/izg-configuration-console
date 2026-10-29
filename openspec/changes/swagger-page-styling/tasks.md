@@ -15,7 +15,9 @@
   `package.json`, and the Markdown description from design Decision 5.
 - [x] 2.2 Use it in `src/pages/api-doc.tsx` and `src/pages/api/swaggerjson.ts` in place of
   their inline `definition`.
-- [x] 2.3 Update `src/next-swagger-doc.json` to the same title and version.
+- [x] 2.3 ~~Update `src/next-swagger-doc.json` to the same title and version.~~
+  Replaced: `swagger:generate-doc` now runs `scripts/generate-swagger-doc.ts`, which
+  uses `buildApiDocSpec()`, and the static config is removed.
 
 ## 3. Page frame
 

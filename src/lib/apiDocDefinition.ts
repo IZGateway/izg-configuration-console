@@ -1,3 +1,4 @@
+import { createSwaggerSpec } from 'next-swagger-doc'
 import pack from '../../package.json'
 
 /**
@@ -6,8 +7,13 @@ import pack from '../../package.json'
  * under src/pages/api supply the paths; this supplies the title, version and
  * description shown at the top of the documentation.
  *
- * src/next-swagger-doc.json (the swagger:generate-doc CLI config) is static
- * JSON and cannot import this, so keep its title in step by hand.
+ * `npm run swagger:generate-doc` (scripts/generate-swagger-doc.ts) uses it
+ * too, so every copy of the spec reads its version from package.json.
+ *
+ * Server-only: import it from getStaticProps or an API route, never from
+ * component code, or it (and package.json) ends up in the client bundle.
+ * For the same reason, page-specific rules such as which methods "Try it out"
+ * may run belong on the page, not in this shared description.
  */
 export const apiDocDefinition = {
   openapi: '3.0.0',
@@ -21,10 +27,6 @@ export const apiDocDefinition = {
       '',
       '**Authentication:** requests use your signed-in console session. Every',
       'request carries a DPoP proof that is bound to this browser session.',
-      '',
-      '**"Try it out" sends real requests** to the environment this console is',
-      'connected to. Only GET requests can be run from this page; the other',
-      'methods are documented for reference.',
     ].join('\n'),
   },
 }
@@ -98,4 +100,17 @@ export function countOperations(
   return Object.values(spec.paths ?? {}).filter(
     (pathItem) => (pathItem as Record<string, any>)[method]
   ).length
+}
+
+/**
+ * Builds the API spec from the route annotations, with the fixes Swagger UI
+ * needs (the IZ Gateway tag, no null media types). The one way to build it,
+ * so the /api-doc page and /api/swaggerjson serve the same spec.
+ */
+export function buildApiDocSpec(): Record<string, any> {
+  return fillEmptyMediaTypes(
+    tagUntaggedOperations(
+      createSwaggerSpec({ definition: apiDocDefinition, apis: apiDocSources })
+    )
+  )
 }

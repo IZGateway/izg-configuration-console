@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GetStaticProps, InferGetStaticPropsType } from 'next'
-import { createSwaggerSpec } from 'next-swagger-doc'
 import dynamic from 'next/dynamic'
 import { useSession } from 'next-auth/react'
 import 'swagger-ui-react/swagger-ui.css'
@@ -15,13 +14,9 @@ import swaggerStyles, {
   METHOD_COLOURS,
 } from '../components/ApiDoc/swaggerStyles'
 import useRoleAccess from '../lib/security/useRoleAccess'
-import {
-  apiDocDefinition,
-  apiDocSources,
-  countOperations,
-  fillEmptyMediaTypes,
-  tagUntaggedOperations,
-} from '../lib/apiDocDefinition'
+// Used only in getStaticProps, so Next keeps it (and package.json) out of the
+// client bundle.
+import { buildApiDocSpec, countOperations } from '../lib/apiDocDefinition'
 
 // swagger-ui-react ships no types, so the props used here are declared by hand.
 const SwaggerUI = dynamic<{
@@ -84,7 +79,10 @@ const appEnvironment =
  * Tracked as an `AUTHZ_DEBT` row. Do **not** count this page among the pages
  * IGDD-3472 secures; the honest count is seven.
  */
-function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
+function ApiDoc({
+  spec,
+  counts,
+}: InferGetStaticPropsType<typeof getStaticProps>) {
   const { status } = useSession()
   const { canViewApiDoc } = useRoleAccess('api-doc')
 
@@ -100,7 +98,8 @@ function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
   // and inconsistent with the four SSR-gated pages.
   if (!canViewApiDoc) return <AccessDenied title="API Documentation" />
 
-  // The same frame as Admin Operations: header bar, Close, then the title card.
+  // Header bar and title card, as on Admin Operations, plus Close (back to
+  // Manage Connections), which Admin Operations doesn't have.
   return (
     <Container title="API Documentation">
       <AppHeaderBar open />
@@ -112,17 +111,17 @@ function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
           <StatCardRow>
             <StatCard
               label="GET"
-              value={countOperations(spec, 'get')}
+              value={counts.get}
               colour={METHOD_COLOURS.get}
             />
             <StatCard
               label="POST"
-              value={countOperations(spec, 'post')}
+              value={counts.post}
               colour={METHOD_COLOURS.post}
             />
             <StatCard
               label="DELETE"
-              value={countOperations(spec, 'delete')}
+              value={counts.delete}
               colour={METHOD_COLOURS.delete}
             />
           </StatCardRow>
@@ -153,21 +152,22 @@ function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
   )
 }
 
-export const getStaticProps: GetStaticProps = async () => {
-  const spec: Record<string, any> = fillEmptyMediaTypes(
-    tagUntaggedOperations(
-      createSwaggerSpec({
-        definition: apiDocDefinition,
-        apis: apiDocSources,
-      })
-    )
-  )
+export const getStaticProps = (async () => {
+  const spec = buildApiDocSpec()
+  // Fixed at build time, like the spec, so counted once here rather than on
+  // every render.
+  const counts = {
+    get: countOperations(spec, 'get'),
+    post: countOperations(spec, 'post'),
+    delete: countOperations(spec, 'delete'),
+  }
 
   return {
     props: {
       spec,
+      counts,
     },
   }
-}
+}) satisfies GetStaticProps
 
 export default ApiDoc

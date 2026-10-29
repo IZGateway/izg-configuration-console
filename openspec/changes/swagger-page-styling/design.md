@@ -70,9 +70,11 @@ three are scoped to `/api-doc`.
 
 4. **One `info` definition.** `src/lib/apiDocDefinition.ts` exports the OpenAPI
    `definition`: `openapi`, plus `info` with the title, `version: pack.version` and a
-   Markdown `description`. Both `api-doc.tsx` and `api/swaggerjson.ts` spread it into
-   `createSwaggerSpec`. `next-swagger-doc.json` is static JSON for the CLI and can't
-   import, so its title and version are updated by hand to match.
+   Markdown `description`. `buildApiDocSpec()` in the same file builds the spec from it
+   and applies the spec fixes; `api-doc.tsx`, `api/swaggerjson.ts` and
+   `npm run swagger:generate-doc` (`scripts/generate-swagger-doc.ts`) all call it. The
+   static `next-swagger-doc.json` CLI config, which could not import the definition
+   and so would drift, was removed (review on the PR).
 
 5. **Description text (draft, for review):**
    > Internal API behind the IZ Gateway Configuration Console. It manages destinations
