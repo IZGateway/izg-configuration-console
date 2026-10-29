@@ -11,7 +11,9 @@ import Close from '../components/Close'
 import Container from '../components/Container'
 import PageHeader from '../components/PageHeader'
 import { StatCard, StatCardRow } from '../components/StatCard'
-import swaggerStyles from '../components/ApiDoc/swaggerStyles'
+import swaggerStyles, {
+  METHOD_COLOURS,
+} from '../components/ApiDoc/swaggerStyles'
 import useRoleAccess from '../lib/security/useRoleAccess'
 import {
   apiDocDefinition,
@@ -108,9 +110,21 @@ function ApiDoc({ spec }: InferGetStaticPropsType<typeof getStaticProps>) {
         subtitle="Reference for the Configuration Console's internal API endpoints."
         actions={
           <StatCardRow>
-            <StatCard label="GET" value={countOperations(spec, 'get')} />
-            <StatCard label="POST" value={countOperations(spec, 'post')} />
-            <StatCard label="DELETE" value={countOperations(spec, 'delete')} />
+            <StatCard
+              label="GET"
+              value={countOperations(spec, 'get')}
+              colour={METHOD_COLOURS.get}
+            />
+            <StatCard
+              label="POST"
+              value={countOperations(spec, 'post')}
+              colour={METHOD_COLOURS.post}
+            />
+            <StatCard
+              label="DELETE"
+              value={countOperations(spec, 'delete')}
+              colour={METHOD_COLOURS.delete}
+            />
           </StatCardRow>
         }
         sx={{ mb: 4 }}

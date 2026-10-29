@@ -19,7 +19,7 @@ const CARD_SHADOW = '0px 3px 5px rgba(0, 0, 0, 0.40)'
 // One palette colour per HTTP method. Each carries white text at WCAG AA or
 // better: primary 6.6:1, secondary 4.9:1, warningAccessible 5.0:1,
 // primaryDark 13.5:1, error 6.9:1. (secondaryLight, 2.3:1, would fail.)
-const METHOD_COLOURS: Record<string, string> = {
+export const METHOD_COLOURS: Record<string, string> = {
   get: palette.primary,
   post: palette.secondary,
   put: palette.warningAccessible,
