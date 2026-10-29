@@ -29,6 +29,23 @@ import { asyncRequestContext } from '../../../lib/Context'
  *     responses:
  *       200:
  *         description: OK.
+ * /api/changerequest/{id}:
+ *   delete:
+ *     summary: Delete a change request by its id. If it is not a draft, also comments on its Jira ticket.
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: The ID of the change request.
+ *     responses:
+ *       200:
+ *         description: Change request deleted.
+ *       401:
+ *         description: Unauthorized, or no access to the change request's destination.
+ *       500:
+ *         description: Unable to delete the change request.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { slug } = req.query
