@@ -55,10 +55,26 @@ const footerIconSx = { fontSize: '1.125rem' }
 const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
 
+// A subtle curve, as if the panel turned away from the light toward its right
+// edge: the original navy on the left, easing into shade on the right. The
+// shade builds slowly and then faster (an ease-in), so it reads as a rounded
+// surface rather than a flat fade. Only darkens, so white text contrast only
+// goes up.
+const navBackground = `linear-gradient(
+  90deg,
+  rgb(0 0 0 / 0%) 0%,
+  rgb(0 0 0 / 0%) 25%,
+  rgb(0 0 0 / 2%) 45%,
+  rgb(0 0 0 / 5%) 62%,
+  rgb(0 0 0 / 9%) 76%,
+  rgb(0 0 0 / 14%) 88%,
+  rgb(0 0 0 / 20%) 100%
+), ${palette.primaryDark}`
+
 const closedMixin = () => ({
   width: drawerWidthClosed,
   overflowX: 'hidden',
-  background: palette.primaryDark,
+  background: navBackground,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
   transition: 'width 0.8s ease',
@@ -67,7 +83,7 @@ const closedMixin = () => ({
 const openMixin = () => ({
   width: drawerWidthOpen,
   overflowX: 'hidden',
-  background: palette.primaryDark,
+  background: navBackground,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
   transition: 'width 0.2s ease',
@@ -166,7 +182,8 @@ const MiniDrawer = () => {
       <List
         sx={{
           padding: '0 0',
-          backgroundColor: palette.primaryDark,
+          // Transparent so the drawer's shading shows through.
+          backgroundColor: 'transparent',
           ' && .Mui-selected:focus': {
             backgroundColor: palette.primaryLight,
 
