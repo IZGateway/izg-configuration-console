@@ -15,22 +15,22 @@ import { promises as dnsPromises } from 'dns'
  *  2. no query string (no '?' anywhere in the raw URI)
  *  3. hostname must be an FQDN under an approved TLD
  *  4. no embedded credentials
- *  5. port must be on the allowlist (blocks internal port scanning)
- *  6. every resolved address must be publicly routable (blocks pivoting into
+ *  5. every resolved address must be publicly routable (blocks pivoting into
  *     the VPC and the 169.254.169.254 instance metadata service)
  *
- * Rules 1-3 come from the agreed destination URL specification. Rules 4-6 are
+ * Any port is accepted: because rule 5 refuses every non-public address,
+ * internal services cannot be reached whatever port is requested.
+ *
+ * Rules 1-3 come from the agreed destination URL specification. Rules 4-5 are
  * retained on top of it: a syntactically perfect URL such as
  * `https://evil.com/` satisfies rules 1-3 while still resolving to 10.0.0.5,
- * so rule 6 in particular is what actually closes the SSRF finding.
+ * so rule 5 in particular is what actually closes the SSRF finding.
  */
 
 const REQUIRED_SCHEME = 'https:'
 
 /** The raw URI must literally start with this - see assertSafeRawDestinationUri. */
 const REQUIRED_PREFIX = 'https://'
-
-const DEFAULT_ALLOWED_PORTS = [80, 443]
 
 /**
  * Approved destination hostname pattern: one or more DNS labels followed by an
@@ -55,18 +55,6 @@ export class UnsafeDestinationUriError extends Error {
     super(message)
     this.name = 'UnsafeDestinationUriError'
   }
-}
-
-const getAllowedPorts = (): number[] => {
-  const configured = process.env.CONNECTION_TEST_ALLOWED_PORTS
-  if (!configured) {
-    return DEFAULT_ALLOWED_PORTS
-  }
-  const ports = configured
-    .split(',')
-    .map((p) => parseInt(p.trim(), 10))
-    .filter((p) => Number.isInteger(p) && p > 0 && p <= 65535)
-  return ports.length ? ports : DEFAULT_ALLOWED_PORTS
 }
 
 const ipv4ToLong = (ip: string): number =>
@@ -227,14 +215,6 @@ export const assertSafeDestinationUrl = async (url: URL): Promise<void> => {
   if (!APPROVED_HOSTNAME_PATTERN.test(bareHost)) {
     throw new UnsafeDestinationUriError(
       `Destination host "${bareHost}" is not an approved destination hostname. It must be a fully qualified domain name ending in an approved top-level domain.`
-    )
-  }
-
-  const allowedPorts = getAllowedPorts()
-  const port = url.port ? Number(url.port) : 443
-  if (!allowedPorts.includes(port)) {
-    throw new UnsafeDestinationUriError(
-      `Port ${port} is not permitted. Allowed ports: ${allowedPorts.join(', ')}.`
     )
   }
 
