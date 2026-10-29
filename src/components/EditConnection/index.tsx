@@ -600,9 +600,9 @@ const EditConnection = (props: editConnectionProps) => {
 
   /**
    * Runs the real destination URL guard server-side before leaving the step
-   * where the URI is edited. Only the guard knows the approved TLDs, the
-   * allowed ports and whether the host resolves to a routable address, so the
-   * check is made there rather than duplicated in the browser.
+   * where the URI is edited. Only the guard knows the approved TLDs and
+   * whether the host resolves to a routable address, so the check is made
+   * there rather than duplicated in the browser.
    *
    * Returns false when the URI was rejected, having raised the snackbar.
    */
