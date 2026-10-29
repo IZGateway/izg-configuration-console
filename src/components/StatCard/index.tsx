@@ -34,15 +34,16 @@ export function StatCard({
         textAlign: 'center',
       }}
     >
-      {/* data-value holds the final count: the visible text counts up from 0
-          (and repeats in a screen-reader live region), so it's not readable
-          as the number mid-animation. */}
+      {/* data-value holds the final count: the visible text counts up from 0,
+          so it's not readable as the number mid-animation. live={false}: a
+          row of header counts would otherwise each announce a bare number on
+          load (and on every refresh that changes one). */}
       <Typography
         data-testid="stat-card-value"
         data-value={value}
         sx={{ fontSize: '1.75rem', fontWeight: 700, lineHeight: 1.2 }}
       >
-        <AnimatedNumber value={value} />
+        <AnimatedNumber value={value} live={false} />
       </Typography>
       <Typography
         variant="caption"
