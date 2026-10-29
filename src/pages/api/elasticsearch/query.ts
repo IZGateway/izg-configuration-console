@@ -3,14 +3,24 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import withMiddleware from '../../../lib/api/api-middleware-helper'
 import { elasticClient } from '../../../lib/repositories/ElasticRepository'
-import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
-import { subjectOf } from '../../../lib/security/authzsubject'
-import { can, ANY_JURISDICTION } from '../../../lib/security/policy'
+import { fetchSystemResources } from '../../../lib/console/systemResources'
 import logger from '../../../../logger'
 
 /**
- * API endpoint for querying Elasticsearch
- * Uses ElasticRepositoryClient for proper authentication and error handling
+ * The Home "System Resources" (Console — status report) widget's data.
+ *
+ * [IGDD-3474] This route used to forward any caller-supplied Elasticsearch
+ * body. IGDD-3170 opened it to every signed-in role for bodies carrying the
+ * four system-resources aggregation names, and required canViewConsole for
+ * anything else — but recognizing the widget by its aggregation NAMES let any
+ * signed-in caller add those names to an arbitrary query (`match_all`,
+ * `size: 10000`) and read every jurisdiction's log documents.
+ *
+ * It is now a body-less GET that runs only the fixed, server-built
+ * status-report query: `size: 0`, host-metric aggregations, no log documents.
+ * There is no caller input to validate or forward. The /console log search
+ * has its own route, /api/console/metrics, which builds its queries on the
+ * server and applies the caller's jurisdiction restriction.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const session = await getServerSession(req, res, authOptions)
@@ -19,136 +29,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  if (req.method !== 'POST') {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET'])
     return res.status(405).json({
       error: 'Method Not Allowed',
-      message: 'Only POST requests are supported',
+      message:
+        'Only GET is supported. Console log search uses /api/console/metrics.',
+    })
+  }
+
+  if (!elasticClient.isConfigured()) {
+    return res.status(500).json({
+      error: 'Server Error',
+      message: 'Elasticsearch is not properly configured',
     })
   }
 
   try {
-    const index =
-      process.env.OPERATIONS_CONSOLE_ELASTIC_INDEX || 'izgw-dev-logstash'
-    const { query } = req.body
-
-    if (!query) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Query is required',
-      })
-    }
-
-    if (typeof query !== 'object' || query === null || Array.isArray(query)) {
-      return res.status(400).json({
-        error: 'Bad Request',
-        message: 'Query must be a JSON object',
-      })
-    }
-
-    const queryObject = query as Record<string, unknown>
-    const aggregations = queryObject?.aggs as
-      | Record<string, unknown>
-      | undefined
-    const hasSystemResourcesAggs =
-      Boolean(aggregations?.cpu) &&
-      Boolean(aggregations?.memory) &&
-      Boolean(aggregations?.disk) &&
-      Boolean(aggregations?.connections)
-
-    // [IGDD-3170] This endpoint serves two callers that share no capability:
-    // Home/SystemResourcesWidget (the "Console — status report" row, open to
-    // every signed-in role per the target matrix) and the /console admin log
-    // search page (gated by console.canViewConsole). They are told apart by
-    // query shape, not by route — the system-resources aggs are how the
-    // widget's fixed query is recognized. Anything else is a log search and
-    // requires canViewConsole.
-    if (!hasSystemResourcesAggs) {
-      const subject = subjectOf(session)
-      if (!can(subject, 'console', 'canViewConsole', ANY_JURISDICTION).allowed) {
-        logAccessDenied({
-          reason: 'console-only Elasticsearch log search',
-          url: req.url,
-          method: req.method,
-          user: session.user.email,
-          roles: subject.roles,
-        })
-        return res.status(403).json({
-          error: 'Unauthorized',
-          message: 'Only users with Console access can run this query',
-        })
-      }
-    }
-
-    if (hasSystemResourcesAggs) {
-      aggregations.connections = {
-        max: {
-          field: 'system.socket.summary.tcp.all.established',
-          missing: 0,
-        },
-      }
-    }
-
-    const queryMetadata = {
-      type: typeof query,
-      isArray: Array.isArray(query),
-      fieldCount:
-        query && typeof query === 'object' && !Array.isArray(query)
-          ? Object.keys(query).length
-          : undefined,
-      hasConnectionsAgg: Boolean(aggregations?.connections),
-      hasSystemResourcesAggs,
-      connectionsField:
-        (
-          aggregations?.connections as {
-            max?: { field?: string; script?: unknown }
-          }
-        )?.max?.field ||
-        ((
-          aggregations?.connections as {
-            max?: { field?: string; script?: unknown }
-          }
-        )?.max?.script
-          ? 'script'
-          : undefined),
-    }
-
-    logger.info('Elasticsearch query requested', {
-      operation: 'elasticsearch_query',
-      user: session.user.email,
-      index,
-      queryMetadata,
-    })
-
-    // Check if Elasticsearch is properly configured
-    if (!elasticClient.isConfigured()) {
-      return res.status(500).json({
-        error: 'Server Error',
-        message: 'Elasticsearch is not properly configured',
-      })
-    }
-
-    // Execute the query using ElasticRepositoryClient
-    const data = await elasticClient.query(
-      index,
-      queryObject,
-      session.user.email || undefined
-    )
-
-    // Log successful query
-    logger.info('Elasticsearch query successful', {
-      operation: 'elasticsearch_query',
-      user: session.user.email,
-      index,
-      hitsCount: data.hits?.hits?.length || 0,
-      totalHits: data.hits?.total?.value || 0,
-      connectionsValue: (
-        data.aggregations as Record<string, { value?: number }>
-      )?.connections?.value,
-    })
-
+    const data = await fetchSystemResources(session.user.email || undefined)
     res.status(200).json(data)
   } catch (error) {
-    logger.error('Elasticsearch query error', {
+    logger.error('Elasticsearch system resources query error', {
       operation: 'elasticsearch_query',
       error: error instanceof Error ? error.message : String(error),
       user: session?.user?.email,
@@ -157,12 +58,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     res.status(500).json({
       error: 'Server Error',
       message: 'An error occurred while querying Elasticsearch',
-      details: error instanceof Error ? error.message : 'Unknown error',
     })
   }
 }
 
-export default withMiddleware({
-  inHandler:
-    'IGDD-3170/3472: capability check is conditional on query shape (one call site is the unrestricted status-report widget, the other is the canViewConsole-gated log search), which a single declarative `capability` option cannot express.',
-})(handler)
+// Every signed-in role may read the status report (target matrix: "Console —
+// status report" is granted to all roles). It returns hub-wide host metrics
+// only, no tenant data, so there is no capability or reach to decide.
+export default withMiddleware({ session: true })(handler)

@@ -89,6 +89,19 @@ function pickDefaultEnv(envTypes: string[]): string {
   )[0]
 }
 
+// Keep the environment the user already chose when the newly selected
+// destination offers it; fall back to the priority default only when it
+// does not. Without this, picking a destination always reset the chip (e.g.
+// Test -> Development, since DEV outranks TEST).
+export function pickEnvForDestination(
+  envTypes: string[],
+  currentEnv: string
+): string {
+  return currentEnv && envTypes.includes(currentEnv)
+    ? currentEnv
+    : pickDefaultEnv(envTypes)
+}
+
 // Skip-navigation link style (visually hidden, revealed on focus)
 const skipNavStyle: React.CSSProperties = {
   position: 'absolute',
@@ -165,6 +178,21 @@ const Console = () => {
   }, [uniqueDestinations, committedConnection])
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [organizationsLoading, setOrganizationsLoading] = useState(false)
+
+  const selectDestination = (destId: string) => {
+    const env = pickEnvForDestination(
+      destinations
+        .filter((d) => d.destId === destId && d.destinationType?.type)
+        .map((d) => d.destinationType?.type as string),
+      selectedEnvironment
+    )
+    setSelectedConnection(destId)
+    setSelectedEnvironment(env)
+    setCommittedConnection(destId)
+    setCommittedEnvironment(env)
+    setDestPopoverAnchor(null)
+    setSearchQuery('')
+  }
 
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -696,40 +724,10 @@ const Console = () => {
                           role="option"
                           tabIndex={0}
                           aria-selected={isSelected}
-                          onClick={() => {
-                            const firstEnv = pickDefaultEnv(
-                              destinations
-                                .filter(
-                                  (d) =>
-                                    d.destId === dest.destId &&
-                                    d.destinationType?.type
-                                )
-                                .map((d) => d.destinationType?.type as string)
-                            )
-                            setSelectedConnection(dest.destId)
-                            setSelectedEnvironment(firstEnv)
-                            setCommittedConnection(dest.destId)
-                            setCommittedEnvironment(firstEnv)
-                            setDestPopoverAnchor(null)
-                            setSearchQuery('')
-                          }}
+                          onClick={() => selectDestination(dest.destId)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
-                              const firstEnv = pickDefaultEnv(
-                                destinations
-                                  .filter(
-                                    (d) =>
-                                      d.destId === dest.destId &&
-                                      d.destinationType?.type
-                                  )
-                                  .map((d) => d.destinationType?.type as string)
-                              )
-                              setSelectedConnection(dest.destId)
-                              setSelectedEnvironment(firstEnv)
-                              setCommittedConnection(dest.destId)
-                              setCommittedEnvironment(firstEnv)
-                              setDestPopoverAnchor(null)
-                              setSearchQuery('')
+                              selectDestination(dest.destId)
                             }
                           }}
                           sx={{
@@ -804,7 +802,6 @@ const Console = () => {
                 selectedConnectionDescription={committedDestinationDescription}
                 organizations={organizations}
                 organizationsLoading={organizationsLoading}
-                destinations={destinations}
                 envTag={committedEnvTag}
               />
               <InboundMessagesWidget

@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('next-auth/jwt', () => ({ getToken: jest.fn() }))
 jest.mock('../../../pages/api/auth/[...nextauth]', () => ({ authOptions: {} }))
 
 const mockIsConfigured = jest.fn()
@@ -11,14 +12,20 @@ jest.mock('../../../lib/repositories/ElasticRepository', () => ({
     isConfigured: (...args: unknown[]) => mockIsConfigured(...args),
     query: (...args: unknown[]) => mockQuery(...args),
   },
+  getConsoleElasticIndex: () => 'test-index',
 }))
 
 import { getServerSession } from 'next-auth'
 import handler from '../../../pages/api/elasticsearch/query'
+import {
+  fetchSystemResources,
+  resetSystemResourcesCache,
+  SYSTEM_RESOURCES_CACHE_TTL_MS,
+} from '../../../lib/console/systemResources'
 
-const buildReqRes = (body: Record<string, unknown>) => {
+const buildReqRes = (method = 'GET', body?: Record<string, unknown>) => {
   const req: any = {
-    method: 'POST',
+    method,
     url: '/api/elasticsearch/query',
     headers: {},
     body,
@@ -32,73 +39,122 @@ const buildReqRes = (body: Record<string, unknown>) => {
   return { req, res }
 }
 
-const SYSTEM_RESOURCES_QUERY = {
-  query: {
-    aggs: {
-      cpu: {},
-      memory: {},
-      disk: {},
-      connections: {},
-    },
-  },
+const signIn = (roles: string[]) =>
+  (getServerSession as jest.Mock).mockResolvedValue({
+    user: { email: 'user@example.com', roles, jurisdictions: ['az'] },
+  })
+
+const call = async (method = 'GET', body?: Record<string, unknown>) => {
+  const { req, res } = buildReqRes(method, body)
+  await handler(req, res)
+  return res
 }
 
-const LOG_SEARCH_QUERY = {
-  query: {
-    query: { match_all: {} },
-  },
-}
-
-describe('POST /api/elasticsearch/query capability split (IGDD-3170)', () => {
+describe('GET /api/elasticsearch/query: status report only (IGDD-3474)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    resetSystemResourcesCache()
     mockIsConfigured.mockReturnValue(true)
-    mockQuery.mockResolvedValue({ hits: { hits: [], total: { value: 0 } } })
+    mockQuery.mockResolvedValue({ aggregations: { cpu: { value: 0.2 } } })
   })
 
   it('401s an unauthenticated request before touching Elasticsearch', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
-
-    const { req, res } = buildReqRes(LOG_SEARCH_QUERY)
-    await handler(req, res)
-
+    const res = await call()
     expect(res.status).toHaveBeenCalledWith(401)
     expect(mockQuery).not.toHaveBeenCalled()
   })
 
-  it('a role without canViewConsole (IZG Support) is refused the log search', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'noconsole@example.com', roles: ['Jurisdiction Support'] },
+  it.each([['Sender Operations'], ['Jurisdiction Support'], ['IZG Operations']])(
+    '%s can read the status report',
+    async (role) => {
+      signIn([role])
+      const res = await call()
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.json).toHaveBeenCalledWith({ aggregations: { cpu: { value: 0.2 } } })
+    }
+  )
+
+  it('runs only the fixed aggregations-only query', async () => {
+    signIn(['Sender Operations'])
+    await call()
+    const sent = mockQuery.mock.calls[0][1] as Record<string, unknown>
+    expect(mockQuery.mock.calls[0][0]).toBe('test-index')
+    expect(sent.size).toBe(0)
+    expect(Object.keys(sent.aggs as object).sort()).toEqual([
+      'connections',
+      'cpu',
+      'disk',
+      'memory',
+    ])
+  })
+
+  // REGRESSION: IGDD-3170 recognized the status-report query by its four
+  // aggregation names and otherwise forwarded the caller's body, so adding
+  // those names to any query read every jurisdiction's log documents. A body
+  // now has no route to Elasticsearch at all: POST is not accepted.
+  it('405s a POST, even one carrying the status-report aggregation names', async () => {
+    signIn(['Sender Operations'])
+    const res = await call('POST', {
+      query: {
+        size: 10000,
+        query: { match_all: {} },
+        aggs: { cpu: {}, memory: {}, disk: {}, connections: {} },
+      },
     })
-
-    const { req, res } = buildReqRes(LOG_SEARCH_QUERY)
-    await handler(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(403)
+    expect(res.status).toHaveBeenCalledWith(405)
+    expect(res.setHeader).toHaveBeenCalledWith('Allow', ['GET'])
     expect(mockQuery).not.toHaveBeenCalled()
   })
 
-  it('a role with canViewConsole (IZG Support) can run the log search', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'izgsupport@example.com', roles: ['IZG Support'] },
-    })
-
-    const { req, res } = buildReqRes(LOG_SEARCH_QUERY)
-    await handler(req, res)
-
-    expect(res.status).not.toHaveBeenCalledWith(403)
-    expect(mockQuery).toHaveBeenCalled()
+  it('500s when Elasticsearch is not configured', async () => {
+    signIn(['IZG Operations'])
+    mockIsConfigured.mockReturnValue(false)
+    const res = await call()
+    expect(res.status).toHaveBeenCalledWith(500)
+    expect(mockQuery).not.toHaveBeenCalled()
   })
 
-  it('any signed-in role, even with no console access, can run the status-report query', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'noconsole@example.com', roles: ['Jurisdiction Support'] },
-    })
+  it('500s when the query fails', async () => {
+    signIn(['IZG Operations'])
+    mockQuery.mockRejectedValue(new Error('boom'))
+    const res = await call()
+    expect(res.status).toHaveBeenCalledWith(500)
+  })
+})
 
-    const { req, res } = buildReqRes(SYSTEM_RESOURCES_QUERY)
-    await handler(req, res)
+describe('fetchSystemResources: one hub-wide result shared by every caller', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    resetSystemResourcesCache()
+    mockQuery.mockResolvedValue({ aggregations: {} })
+  })
 
-    expect(res.status).not.toHaveBeenCalledWith(403)
-    expect(mockQuery).toHaveBeenCalled()
+  it('serves repeat requests within the window from the cache', async () => {
+    let now = 1_000
+    await fetchSystemResources('a@example.com', () => now)
+    now += SYSTEM_RESOURCES_CACHE_TTL_MS - 1
+    await fetchSystemResources('b@example.com', () => now)
+    expect(mockQuery).toHaveBeenCalledTimes(1)
+  })
+
+  it('queries again once the window has passed', async () => {
+    let now = 1_000
+    await fetchSystemResources(undefined, () => now)
+    now += SYSTEM_RESOURCES_CACHE_TTL_MS + 1
+    await fetchSystemResources(undefined, () => now)
+    expect(mockQuery).toHaveBeenCalledTimes(2)
+  })
+
+  it('shares a query already in flight', async () => {
+    await Promise.all([fetchSystemResources(), fetchSystemResources()])
+    expect(mockQuery).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not cache a failure', async () => {
+    mockQuery.mockRejectedValueOnce(new Error('boom'))
+    await expect(fetchSystemResources()).rejects.toThrow('boom')
+    await expect(fetchSystemResources()).resolves.toEqual({ aggregations: {} })
+    expect(mockQuery).toHaveBeenCalledTimes(2)
   })
 })
