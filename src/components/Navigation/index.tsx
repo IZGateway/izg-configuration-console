@@ -5,11 +5,14 @@ import IZGLogo from './Branding'
 import MuiDrawer from '@mui/material/Drawer'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import LogoutIcon from '@mui/icons-material/Logout'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import type { Session } from 'next-auth'
 import Cookies from 'js-cookie'
 import {
+  Box,
   Collapse,
   styled,
   List,
@@ -20,19 +23,58 @@ import {
   ListItemIcon,
   ListItemText,
   Button,
-  Link,
+  Tooltip,
 } from '@mui/material'
 import { menuItems } from './menuItems'
 import { canEnterPage } from '../../lib/security/accessregistry'
 import palette from '../../styles/theme/palette'
 
+// Swagger API and Log Out: two halves of a row pinned to the bottom of the
+// drawer, under a divider. Icons only when collapsed (both fit the 5em
+// drawer), icon and label when open. White, like the menu items.
+//
+// `first`: the left-hand item. When open, its icon is centred on the menu
+// icons' column, 40px in (1.5rem item padding + half the 2rem icon).
+const footerButtonSx = (open: boolean, first: boolean) => ({
+  flex: 1,
+  minWidth: 0,
+  justifyContent: open ? 'flex-start' : 'center',
+  gap: 1.5,
+  pl: open ? (first ? '28px' : 2) : 0,
+  pr: open ? 1 : 0,
+  py: 1.5,
+  borderRadius: 0,
+  color: palette.white,
+  fontSize: '0.875rem',
+  textTransform: 'none',
+  whiteSpace: 'nowrap',
+  '&:hover': { bgcolor: 'rgb(255 255 255 / 10%)' },
+})
+const footerIconSx = { fontSize: '1.125rem' }
+
 const drawerWidthOpen = '300px'
 const drawerWidthClosed = '5em'
+
+// A subtle curve, as if the panel turned away from the light toward its right
+// edge: the original navy on the left, easing into shade on the right. The
+// shade builds slowly and then faster (an ease-in), so it reads as a rounded
+// surface rather than a flat fade. Only darkens, so white text contrast only
+// goes up.
+const navBackground = `linear-gradient(
+  90deg,
+  rgb(0 0 0 / 0%) 0%,
+  rgb(0 0 0 / 0%) 25%,
+  rgb(0 0 0 / 2%) 45%,
+  rgb(0 0 0 / 5%) 62%,
+  rgb(0 0 0 / 9%) 76%,
+  rgb(0 0 0 / 14%) 88%,
+  rgb(0 0 0 / 20%) 100%
+), ${palette.primaryDark}`
 
 const closedMixin = () => ({
   width: drawerWidthClosed,
   overflowX: 'hidden',
-  background: palette.primaryDark,
+  background: navBackground,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
   transition: 'width 0.8s ease',
@@ -41,7 +83,7 @@ const closedMixin = () => ({
 const openMixin = () => ({
   width: drawerWidthOpen,
   overflowX: 'hidden',
-  background: palette.primaryDark,
+  background: navBackground,
   color: palette.white,
   boxShadow: '5px 0px 10px rgb(0 0 0 / 30%)',
   transition: 'width 0.2s ease',
@@ -92,6 +134,10 @@ export type MenuItem = {
 
 const MiniDrawer = () => {
   const { data: session } = useSession()
+  // Was `session?.user.isAdmin`. Now the same PAGE_ENTRY constant the page's
+  // own gate reads, so the Swagger API link and /api-doc cannot disagree —
+  // which they did before IGDD-3472.
+  const canSeeApiDoc = canEnterPage('api-doc', session?.user.roles)
   const [isMobile, setIsMobile] = React.useState(false)
   // Initialize drawer state based on screen size
   const [open, setOpen] = React.useState(() => {
@@ -136,7 +182,8 @@ const MiniDrawer = () => {
       <List
         sx={{
           padding: '0 0',
-          backgroundColor: palette.primaryDark,
+          // Transparent so the drawer's shading shows through.
+          backgroundColor: 'transparent',
           ' && .Mui-selected:focus': {
             backgroundColor: palette.primaryLight,
 
@@ -249,51 +296,55 @@ const MiniDrawer = () => {
         </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
-        {/* Was `session?.user.isAdmin`. Now the same PAGE_ENTRY constant the
-            page's own gate reads, so this link and /api-doc cannot disagree —
-            which they did before IGDD-3472. */}
-        {canEnterPage('api-doc', session?.user.roles) && (
-          <Link href="/api-doc">
-            <Button
-              variant="text"
-              name="swagger api"
-              sx={{
-                color: palette.white,
-                textDecoration: 'underline',
-                position: 'absolute',
-                left: '5px',
-                bottom: '50px',
-                textTransform: 'capitalize',
-                textWrap: 'wrap',
-                textAlign: 'left',
-              }}
-            >
-              Swagger API
-            </Button>
-          </Link>
-        )}
-        <Button
-          id="logout"
-          variant="text"
-          onClick={() => {
-            Cookies.remove('destination')
-            signOut().then(() => {
-              return (window.location.href = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/login/signout`)
-            })
-          }}
+        {/* In normal flow, pushed to the bottom of the drawer paper (a flex
+            column) by mt: auto. Absolutely positioned, it reserved no space,
+            so on a short viewport it covered the last menu items. */}
+        <Box
           sx={{
-            textWrap: 'wrap',
-            textAlign: 'center',
-            color: palette.white,
-            textDecoration: 'underline',
-            position: 'absolute',
-            left: '8px',
-            bottom: '20px',
-            textTransform: 'capitalize',
+            mt: 'auto',
+            flexShrink: 0,
+            display: 'flex',
+            borderTop: `1px solid ${palette.primaryLight}`,
           }}
         >
-          Log Out
-        </Button>
+          {canSeeApiDoc && (
+            // Labels show only in the open drawer; the tooltip stands in for
+            // them when it's collapsed (an empty title disables it).
+            <Tooltip title={open ? '' : 'Swagger API'} placement="top">
+              <Button
+                component={NextLink}
+                href="/api-doc"
+                aria-label="Swagger API"
+                sx={footerButtonSx(open, true)}
+              >
+                <DescriptionOutlinedIcon sx={footerIconSx} />
+                {open && 'Swagger API'}
+              </Button>
+            </Tooltip>
+          )}
+          <Tooltip title={open ? '' : 'Log Out'} placement="top">
+            <Button
+              id="logout"
+              aria-label="Log Out"
+              onClick={() => {
+                Cookies.remove('destination')
+                signOut().then(() => {
+                  return (window.location.href = `${process.env.NEXT_PUBLIC_OKTA_ISSUER}/login/signout`)
+                })
+              }}
+              sx={[
+                footerButtonSx(open, !canSeeApiDoc),
+                // The divider between the two, when both are shown.
+                canSeeApiDoc && {
+                  borderLeft: `1px solid ${palette.primaryLight}`,
+                },
+              ]}
+            >
+              <LogoutIcon sx={footerIconSx} />
+              {open && 'Log Out'}
+            </Button>
+          </Tooltip>
+        </Box>
         <Collapse in={!open} timeout="auto" />
         {/* Commenting this code as it is not part of any user story right now */}
         {/* <Button

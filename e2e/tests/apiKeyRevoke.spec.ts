@@ -18,12 +18,14 @@ const REVOKE_REASON = 'Automated test revocation'
 let context: BrowserContext
 let page: Page
 
+// Reads data-value, not the text: the visible number counts up, so mid-
+// animation it isn't the final count.
 const revokedCount = async () =>
   Number(
     await page
       .getByTestId('stat-card-revoked')
       .getByTestId('stat-card-value')
-      .innerText()
+      .getAttribute('data-value')
   )
 
 test.beforeAll(async ({ browser }) => {
