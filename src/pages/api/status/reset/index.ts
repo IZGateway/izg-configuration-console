@@ -31,7 +31,7 @@ import { regionsNotComplete } from '../../../../lib/utils/hubregionstatus'
  *           reports `complete`; a `partial` region returns 200 with
  *           `success: false` and a message naming the region.
  *       403:
- *         description: Forbidden (non-admin).
+ *         description: Forbidden (caller's role lacks the required capability).
  *       502:
  *         description: >
  *           No hub instance reset its circuit breakers. Returned when every
@@ -133,9 +133,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// 'checkAdmin' stays alongside the capability for now, so removing the
-// isAdmin axis later is a pure subtraction rather than a re-gating.
-export default withMiddleware(
-  { capability: { page: 'adminoperations', capability: 'canResetHubCircuitBreakers' } },
-  'checkAdmin'
-)(handler)
+// IGDD-3547: 'checkAdmin' dropped. It required Okta OPERATIONS_GROUP
+// membership (today, IZG Operations only), a second axis invisible to the
+// matrix. IZG Program holds canResetHubCircuitBreakers but is not in
+// OPERATIONS_GROUP, so the matrix grant 403'd behind this check — exactly the
+// pure subtraction the removed comment anticipated: the capability check
+// above already authorizes this route correctly.
+export default withMiddleware({
+  capability: { page: 'adminoperations', capability: 'canResetHubCircuitBreakers' },
+})(handler)
