@@ -159,6 +159,53 @@ describe('policy: union with Sender Operations keeps each role scoped independen
   })
 })
 
+describe('policy: IZG Program gets exactly what the target matrix grants it (IGDD-3547)', () => {
+  const program = subject(['IZG Program'], ['az'])
+
+  it('has global reach', () => {
+    expect(hasGlobalTenancy(program)).toBe(true)
+  })
+
+  it('can view, test and operate on connections, but not edit them', () => {
+    const access = mergePageAccess(program, 'manageconnections')
+    expect(access.canViewConnections).toBe(true)
+    expect(access.canRunConnectionTest).toBe(true)
+    expect(access.canScheduleMaintainance).toBe(true)
+    expect(access.canViewHistory).toBe(true)
+    expect(access.canViewChangeRequest).toBe(true)
+    expect(access.canResetCircuitBreaker).toBe(true)
+    expect(access.canEditConnection).toBeFalsy()
+  })
+
+  it('can run the standalone connection test', () => {
+    expect(mergePageAccess(program, 'test').canRunConnectionTest).toBe(true)
+  })
+
+  it('can view onboarding senders but not manage them', () => {
+    const access = mergePageAccess(program, 'onboarding')
+    expect(access.canViewOnboarding).toBe(true)
+    expect(access.canManageSenders).toBeFalsy()
+  })
+
+  it('holds the hub-wide admin reset/refresh capabilities, but not password encryption or admin log search', () => {
+    const access = mergePageAccess(program, 'adminoperations')
+    expect(access.canViewAdminOperations).toBe(true)
+    expect(access.canResetHubCircuitBreakers).toBe(true)
+    expect(access.canRefreshHubDatabase).toBe(true)
+    expect(access.canManagePasswordEncryption).toBeFalsy()
+    expect(mergePageAccess(program, 'console').canViewConsole).toBeFalsy()
+  })
+
+  it('has no access to edit, change request, history, apikeys, access control or the API doc', () => {
+    expect(mergePageAccess(program, 'edit').canChangeCredentials).toBeFalsy()
+    expect(mergePageAccess(program, 'changerequest').canViewDetails).toBeFalsy()
+    expect(mergePageAccess(program, 'history').canViewChangeHistory).toBeFalsy()
+    expect(mergePageAccess(program, 'apikeys').canListApiKeys).toBeFalsy()
+    expect(mergePageAccess(program, 'accesscontrol').canViewAccessControl).toBeFalsy()
+    expect(mergePageAccess(program, 'api-doc').canViewApiDoc).toBeFalsy()
+  })
+})
+
 describe('policy: deny by default', () => {
   it('no roles denies everything and yields empty page access', () => {
     const none = subject([])
