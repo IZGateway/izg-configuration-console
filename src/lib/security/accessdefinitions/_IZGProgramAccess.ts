@@ -24,13 +24,22 @@ import { RoleAccess } from '../accesslevel'
 const IZGProgramAccess: RoleAccess = {
   // Target matrix: Tenancy — Reach = All.
   globalTenancy: true,
+  // canViewHistory and canViewChangeRequest are deliberately NOT set here
+  // despite the matrix showing ✓ on "Manage Connections — view
+  // history/change request" for IZG Program. Both flags double as the
+  // visibility switch for a link into the /history and /changerequest pages
+  // (popOverActionButtons.tsx, ChangeRequestActionButtons.tsx), and this
+  // role's "History — all view flags" / "Change Request — view details" rows
+  // are both "—" — the only role in the matrix where these two groups of
+  // cells disagree. Setting the Manage Connections flags true renders a
+  // button that always Access-Denies. Until the matrix's intent is
+  // clarified, false avoids shipping a broken affordance; false is also the
+  // narrower, AC-compliant reading ("no more... than the matrix grants").
   manageconnections: {
     ...defaultManageConnectionsPageAccessControl,
     canViewConnections: true,
     canRunConnectionTest: true,
     canScheduleMaintainance: true,
-    canViewHistory: true,
-    canViewChangeRequest: true,
     canResetCircuitBreaker: true,
   },
   test: {

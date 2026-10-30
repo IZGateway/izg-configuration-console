@@ -171,10 +171,20 @@ describe('policy: IZG Program gets exactly what the target matrix grants it (IGD
     expect(access.canViewConnections).toBe(true)
     expect(access.canRunConnectionTest).toBe(true)
     expect(access.canScheduleMaintainance).toBe(true)
-    expect(access.canViewHistory).toBe(true)
-    expect(access.canViewChangeRequest).toBe(true)
     expect(access.canResetCircuitBreaker).toBe(true)
     expect(access.canEditConnection).toBeFalsy()
+  })
+
+  // Deliberately false despite the matrix showing ✓ on the Manage Connections
+  // summary cells: both flags double as the visibility switch for a link into
+  // /history and /changerequest, and IZG Program's "History — all view
+  // flags" / "Change Request — view details" rows are both "—". Granting the
+  // summary flag without the detail-page flag renders a button that always
+  // Access-Denies — see the comment in _IZGProgramAccess.ts.
+  it('does not get a dead link to History or Change Request from Manage Connections', () => {
+    const access = mergePageAccess(program, 'manageconnections')
+    expect(access.canViewHistory).toBeFalsy()
+    expect(access.canViewChangeRequest).toBeFalsy()
   })
 
   it('can run the standalone connection test', () => {

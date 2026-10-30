@@ -41,9 +41,9 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | manageconnections | canResetCircuitBreaker | YES | YES | — | YES | — | — |
 | manageconnections | canRunConnectionTest | YES | YES | YES | YES | YES | — |
 | manageconnections | canScheduleMaintainance | YES | YES | — | YES | — | — |
-| manageconnections | canViewChangeRequest | YES | YES | YES | YES | YES | — |
+| manageconnections | canViewChangeRequest | YES | — | YES | YES | YES | — |
 | manageconnections | canViewConnections | YES | YES | YES | YES | YES | — |
-| manageconnections | canViewHistory | YES | YES | YES | YES | YES | — |
+| manageconnections | canViewHistory | YES | — | YES | YES | YES | — |
 | onboarding | canManageSenders | YES | — | YES | YES | — | — |
 | onboarding | canViewOnboarding | YES | YES | YES | YES | YES | — |
 | test | canRunConnectionTest | YES | YES | YES | YES | YES | — |
