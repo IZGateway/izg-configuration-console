@@ -6,6 +6,7 @@ import { type AccessGroup } from './AccessGroups'
 import SearchableMultiSelect from '../Dropdown/SearchableMultiSelect'
 import EnvironmentSelect from '../Dropdown/EnvironmentSelect'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 interface EditAccessGroupProps {
   group?: AccessGroup
   onSave: (group: AccessGroup) => void
@@ -86,7 +87,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
           position: 'relative',
           zIndex: 10,
           height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          boxShadow: DROP_SHADOW,
           marginBottom: '-16px',
           backgroundColor: palette.white,
         }}

@@ -18,6 +18,7 @@ import {
 
 import palette from '../../styles/theme/palette'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const customPaperStyles = {
   borderRadius: '0px 0px 30px 30px',
   boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.1)',
@@ -26,7 +27,7 @@ const customPaperStyles = {
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 50,
   height: 50,
   transition: 'transform 0.15s ease-in-out',
