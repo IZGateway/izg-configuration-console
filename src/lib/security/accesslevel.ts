@@ -13,6 +13,7 @@ import {
 } from '../type/PageAccessControls'
 import {
   IZGOperationsAccess,
+  IZGProgramAccess,
   JurisdictionOperationsAccess,
   IZGSupportAccess,
   JurisdictionSupportAccess,
@@ -22,6 +23,7 @@ import {
 const accessLevel: AccessLevel = {
   'IZG Operations': IZGOperationsAccess,
   'IZG Support': IZGSupportAccess,
+  'IZG Program': IZGProgramAccess,
   'Jurisdiction Support': JurisdictionSupportAccess,
   'Jurisdiction Operations': JurisdictionOperationsAccess,
   'Sender Operations': SenderOperationsAccess,
