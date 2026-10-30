@@ -41,8 +41,9 @@ export type CcRole =
  * a union across all held roles, so precedence no longer decides what a user can
  * do. It only makes `session.user.roles` stable for logs and display, and makes
  * `Decision.grantedBy` deterministic when more than one role would allow an
- * action. Kept in the same order the old `roles.ts` used, minus the three
- * unmapped entries, so nothing about existing output order changes.
+ * action. Kept in the same order the old `roles.ts` used, minus the two
+ * still-unmapped entries (`CDC Program`, `CDC CISO`), so nothing about
+ * existing output order changes.
  */
 export const ROLE_PRECEDENCE: CcRole[] = [
   'IZG Operations',
