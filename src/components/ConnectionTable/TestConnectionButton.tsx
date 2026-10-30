@@ -3,10 +3,11 @@ import Link from 'next/link'
 import palette from '../../styles/theme/palette'
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 35,
   height: 35,
   marginRight: 2,

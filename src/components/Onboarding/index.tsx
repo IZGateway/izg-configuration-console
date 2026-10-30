@@ -42,6 +42,7 @@ import {
 } from '../../lib/desttypehelper'
 import PageHeader from '../PageHeader'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -546,7 +547,7 @@ const OnboardSender: React.FC<OnboardSenderProps> = ({
   const actionButtonStyle = {
     borderRadius: 90,
     background: palette.white,
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+    boxShadow: DROP_SHADOW,
     width: 35,
     height: 35,
     marginRight: 2,
