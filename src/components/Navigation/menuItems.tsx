@@ -36,8 +36,8 @@ export const menuItems: MenuItem[] = [
     icon: <AdminPanelSettingsIcon sx={iconSx} />,
     path: '/adminoperations',
     // Was adminOnly: true (the Okta OPERATIONS_GROUP axis). Now a matrix
-    // capability, which is what the page gate reads. Behaviour-identical
-    // today, since IZG Operations is the only role seeded with it.
+    // capability, which is what the page gate reads. Held by IZG Security,
+    // IZG Operations, IZG Support and IZG Program (IGDD-3498, IGDD-3547).
     isVisible: (roles) => canEnterPage('adminoperations', roles),
   },
   {

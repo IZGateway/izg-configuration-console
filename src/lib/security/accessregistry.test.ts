@@ -3,7 +3,7 @@
  */
 import fs from 'fs'
 import path from 'path'
-import { PAGE_ENTRY, derivePageKey } from './accessregistry'
+import { PAGE_ENTRY, derivePageKey, entryCapabilityOf } from './accessregistry'
 import { AUTHZ_DEBT } from './authzDebt'
 
 /**
@@ -52,6 +52,22 @@ function pageKeyOf(file: string): string {
 
 const debtSubjects = (kind: string) =>
   AUTHZ_DEBT.filter((d) => d.kind === kind).map((d) => d.subject)
+
+describe('entryCapabilityOf (IGDD-3498)', () => {
+  it('defaults to PAGE_ENTRY', () => {
+    expect(entryCapabilityOf('adminoperations')).toEqual({
+      page: 'adminoperations',
+      capability: 'canViewAdminOperations',
+    })
+  })
+
+  it('uses the stricter entry capability when one is given', () => {
+    expect(entryCapabilityOf('adminoperations', 'canManagePasswordEncryption')).toEqual({
+      page: 'adminoperations',
+      capability: 'canManagePasswordEncryption',
+    })
+  })
+})
 
 describe('derivePageKey matches every declared page key', () => {
   // This is why the api-doc page key is 'api-doc' and not 'apidoc': the
@@ -161,6 +177,43 @@ describe('page coverage: an ungated page is a test failure', () => {
         file: relPosix(file),
         rendersDenial: src.includes('AccessDenied'),
       }).toEqual({ file: relPosix(file), rendersDenial: true })
+    }
+  })
+
+  it('a page with a stricter entry capability has no link to it anywhere (IGDD-3498)', () => {
+    // withPageAccess's `entry` override makes the page gate read a different
+    // capability from PAGE_ENTRY, which the nav predicate reads. That is only
+    // safe while nothing links to the page; otherwise the link would render for
+    // users the page then refuses. Searches all of src except the page itself
+    // and tests — components, other pages, lib — not just the menu. A static
+    // search cannot see a URL assembled at runtime; the withPageAccess docblock
+    // says not to link that way.
+    const overriding = pageFiles.filter((f) =>
+      /\{\s*entry\s*:/.test(fs.readFileSync(f, 'utf8'))
+    )
+    // Guards against the regex silently matching nothing.
+    expect(overriding.map(pageKeyOf)).toEqual(['passwordencryption'])
+
+    const sources = walk(SRC, ['.ts', '.tsx', '.js', '.jsx']).filter(
+      (f) => !/\.test\.[jt]sx?$/.test(f) && !f.includes(`${path.sep}__tests__${path.sep}`)
+    )
+    // Comments are stripped first: prose that names the route is not a link.
+    const code = (f: string) =>
+      fs
+        .readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('//'))
+        .join('\n')
+    for (const page of overriding) {
+      const route = '/' + pageKeyOf(page)
+      const linkedFrom = sources.filter(
+        (f) => f !== page && new RegExp(`['"\`]${route}['"\`/?#]`).test(code(f))
+      )
+      expect({ route, linkedFrom: linkedFrom.map(relPosix) }).toEqual({
+        route,
+        linkedFrom: [],
+      })
     }
   })
 

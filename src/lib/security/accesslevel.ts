@@ -14,6 +14,7 @@ import {
 import {
   IZGOperationsAccess,
   IZGProgramAccess,
+  IZGSecurityAccess,
   JurisdictionOperationsAccess,
   IZGSupportAccess,
   JurisdictionSupportAccess,
@@ -21,6 +22,7 @@ import {
 } from './accessdefinitions'
 
 const accessLevel: AccessLevel = {
+  'IZG Security': IZGSecurityAccess,
   'IZG Operations': IZGOperationsAccess,
   'IZG Support': IZGSupportAccess,
   'IZG Program': IZGProgramAccess,
@@ -68,7 +70,9 @@ export type PageControls = {
   // 'apidoc', so the invariant holds with no exceptions.
   accesscontrol: AccessControlPageAccessControl
   // /passwordencryption deliberately shares this block rather than taking a
-  // page key of its own — it duplicates the Admin Operations password card.
+  // page key of its own — it duplicates the Admin Operations password card. It
+  // is entered on `canManagePasswordEncryption` rather than this block's
+  // `PAGE_ENTRY` capability (IGDD-3498; see `PageAccessOptions`).
   adminoperations: AdminOperationsPageAccessControl
   console: ConsolePageAccessControl
   'api-doc': ApiDocPageAccessControl
