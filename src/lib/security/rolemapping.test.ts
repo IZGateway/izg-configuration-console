@@ -47,6 +47,22 @@ describe('group name normalization', () => {
   ])('resolves %p to the IZG Program role', (groupName) => {
     expect(rolesFromGroups([groupName])).toEqual(['IZG Program'])
   })
+
+  it.each([
+    'IZG Security',
+    'izg security',
+    'izg-security',
+    '  IZG_SECURITY  ',
+  ])('resolves %p to the IZG Security role', (groupName) => {
+    expect(rolesFromGroups([groupName])).toEqual(['IZG Security'])
+  })
+
+  it('holds IZG Security alongside another recognized group, Security first', () => {
+    expect(rolesFromGroups(['IZG Operations', 'IZG Security'])).toEqual([
+      'IZG Security',
+      'IZG Operations',
+    ])
+  })
 })
 
 describe('tolerant claim shapes', () => {

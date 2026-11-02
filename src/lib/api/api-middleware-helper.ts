@@ -203,30 +203,6 @@ const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
   }
 }
 
-// Check the caller is an operations/admin user (Okta OPERATIONS_GROUP).
-//
-// A second authorization axis, separate from the CcRole matrix and invisible
-// to can(). IGDD-3472 adds no new readers of it and layers real capabilities
-// *alongside* its two remaining call sites, so removing the axis later is a
-// pure subtraction.
-const checkAdmin: Middleware = async (req, res, next) => {
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || 'unknown'
-  const isAdmin = context?.session?.user?.isAdmin
-  if (isAdmin) {
-    await next()
-  } else {
-    logAccessDenied({
-      reason: 'admin-only operation',
-      url: req.url,
-      method: req.method,
-      user,
-      roles: subjectOf(context?.session).roles,
-    })
-    res.status(403).send('forbidden')
-  }
-}
-
 /**
  * Enforcer 2 of 2: the generic route authorization middleware (IGDD-3472).
  *
@@ -384,7 +360,6 @@ const withMiddleware = (
     captureErrors,
     checkAccessToDestId,
     checkAccessToDestIdSlug,
-    checkAdmin,
   }
   // `logApiRequest` is prepended for every route rather than named by callers,
   // so drop it from the caller list if someone passes it explicitly.

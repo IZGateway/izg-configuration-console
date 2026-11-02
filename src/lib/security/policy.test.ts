@@ -216,6 +216,51 @@ describe('policy: IZG Program gets exactly what the target matrix grants it (IGD
   })
 })
 
+describe('policy: IZG Security holds every capability, everywhere (IGDD-3498)', () => {
+  const security = subject(['IZG Security'])
+
+  it('has global reach', () => {
+    expect(hasGlobalTenancy(security)).toBe(true)
+  })
+
+  // Enumerated from another role's blocks rather than from IZG Security's own,
+  // so a flag missing from _IZGSecurityAccess.ts is caught. The block-shape
+  // drift test keeps every role's flag set identical.
+  const EVERY_CAPABILITY = Object.entries(accessLevel['IZG Operations'])
+    .filter(([page]) => page !== 'globalTenancy')
+    .flatMap(([page, block]) =>
+      Object.keys(block as object).map((capability) => ({ page, capability }))
+    )
+
+  it.each(EVERY_CAPABILITY)('holds $page.$capability in any jurisdiction', (ref) => {
+    expect(
+      can(security, ref.page as PageKey, ref.capability as never, ANY_JURISDICTION).allowed
+    ).toBe(true)
+    expect(can(security, ref.page as PageKey, ref.capability as never, 'vha').allowed).toBe(true)
+  })
+})
+
+describe('policy: IZG Support gets the hub-wide corrective actions (IGDD-3498)', () => {
+  const support = subject(['IZG Support'], ['az'])
+
+  it('can reach Admin Operations, reset hub circuit breakers and refresh the hub database', () => {
+    const access = mergePageAccess(support, 'adminoperations')
+    expect(access.canViewAdminOperations).toBe(true)
+    expect(access.canResetHubCircuitBreakers).toBe(true)
+    expect(access.canRefreshHubDatabase).toBe(true)
+  })
+
+  it('does not get password encryption, Access Control or the API doc', () => {
+    expect(mergePageAccess(support, 'adminoperations').canManagePasswordEncryption).toBeFalsy()
+    const accessControl = mergePageAccess(support, 'accesscontrol')
+    expect(accessControl.canViewAccessControl).toBeFalsy()
+    expect(accessControl.canManageAccessGroups).toBeFalsy()
+    expect(accessControl.canManageDenyList).toBeFalsy()
+    expect(accessControl.canManageAdsFileTypes).toBeFalsy()
+    expect(mergePageAccess(support, 'api-doc').canViewApiDoc).toBeFalsy()
+  })
+})
+
 describe('policy: deny by default', () => {
   it('no roles denies everything and yields empty page access', () => {
     const none = subject([])
@@ -260,8 +305,9 @@ const ADMIN_CAPABILITIES: CapabilityRef[] = [
   { page: 'api-doc', capability: 'canViewApiDoc' },
 ]
 
+// IZG Support left this list in IGDD-3498, when it gained the hub-wide Admin
+// Operations capabilities; its admin grants are asserted in their own block.
 const NON_OPERATIONS_ROLES: CcRole[] = [
-  'IZG Support',
   'Jurisdiction Operations',
   'Jurisdiction Support',
   'Sender Operations',
@@ -282,12 +328,10 @@ describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly
   )
 
   // console.canViewConsole (Admin Log Search) is the one admin-tier grant
-  // outside IZG Operations: IZG Support (IGDD-3170) and, own jurisdiction
-  // only, Jurisdiction Operations and Jurisdiction Support (IGDD-3474, target
-  // matrix v11). Every other admin flag is still checked for every
-  // non-operations role.
+  // these roles hold: own jurisdiction only, Jurisdiction Operations and
+  // Jurisdiction Support (IGDD-3474, target matrix v11). Every other admin
+  // flag is still checked for every role in the list.
   const CONSOLE_HOLDERS: CcRole[] = [
-    'IZG Support',
     'Jurisdiction Operations',
     'Jurisdiction Support',
   ]
