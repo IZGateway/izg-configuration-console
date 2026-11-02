@@ -3,12 +3,8 @@ import { withRequestContext } from '../requestContext'
 import type { Context } from '../Context'
 import { subjectOf } from './authzsubject'
 import { logAccessDenied } from './accessDeniedAudit'
-import {
-  decideCapability,
-  entryCapabilityOf,
-  PAGE_ENTRY,
-} from './accessregistry'
-import type { PageKey } from './accesslevel'
+import { decideCapability, entryCapabilityOf } from './accessregistry'
+import type { PageControls, PageKey } from './accesslevel'
 
 /**
  * Enforcer 1 of 2: the server-side page gate (IGDD-3472).
@@ -31,11 +27,33 @@ import type { PageKey } from './accesslevel'
 export type AccessDeniedProp = { accessDenied?: boolean }
 
 /**
+ * Options for `withPageAccess`.
+ *
+ * `entry` replaces `PAGE_ENTRY[page]` as the capability that gates the page. It
+ * exists for a page that shares another page's block but needs a stricter entry
+ * rule — `/passwordencryption` shares `adminoperations` but is entered on
+ * `canManagePasswordEncryption` (IGDD-3498). It is typed against the page's own
+ * block, so naming a flag that does not exist there is a compile error.
+ *
+ * **Only for a page with no navigation link.** The nav predicate reads
+ * `PAGE_ENTRY`, so a linked page with an override could show its link to users
+ * the page refuses. `accessregistry.test.ts` fails if anything under `src`
+ * other than the page itself links to a page passing `entry`. That test is a
+ * static search, so it cannot see a URL assembled at runtime (a constant joined
+ * to a string, `router.push(someVariable)`): do not link to such a page that way
+ * either.
+ */
+export type PageAccessOptions<P extends PageKey> = {
+  entry?: keyof PageControls[P]
+}
+
+/**
  * Gate a page on the entry capability for `page`, then delegate to `handler`.
  *
- * The capability is read from `PAGE_ENTRY[page]` and is deliberately **not** an
- * argument: the navigation-visibility predicate reads the same constant, so the
- * link and the gate cannot resolve to different flags.
+ * The capability is read from `PAGE_ENTRY[page]`, the same constant the
+ * navigation-visibility predicate reads, so the link and the gate cannot
+ * resolve to different flags. The one exception is `options.entry`, allowed
+ * only for pages with no navigation link — see `PageAccessOptions`.
  *
  * Denial renders in place — `{ props: { accessDenied: true } }`, never a
  * redirect. A redirect hides the fact that access was denied and makes the
@@ -57,8 +75,11 @@ export function withPageAccess<
   handler?: (
     context: GetServerSidePropsContext,
     requestContext: Context
-  ) => ReturnType<GetServerSideProps<T & AccessDeniedProp>>
+  ) => ReturnType<GetServerSideProps<T & AccessDeniedProp>>,
+  options?: PageAccessOptions<P>
 ): GetServerSideProps<T & AccessDeniedProp> {
+  const entry = entryCapabilityOf(page, options?.entry)
+
   // Wrap withRequestContext rather than sitting beside it, so the gate, the
   // denial event and the handler all run inside `asyncRequestContext` and the
   // event inherits the sessionUser block (userId, email, sessionId, jti) from
@@ -70,7 +91,6 @@ export function withPageAccess<
         return { redirect: { destination: '/api/auth/signin', permanent: false } }
       }
 
-      const capability = PAGE_ENTRY[page]
       const subject = subjectOf(session)
 
       // These pages carry no jurisdiction in their URL, so they are authorized
@@ -86,14 +106,14 @@ export function withPageAccess<
       // The tenancy predicate is `decideCapability`'s own default, not an
       // argument: both enforcers and the nav predicate call it the same way, so
       // there is one decision here rather than three spellings of one.
-      const allowed = decideCapability(subject, entryCapabilityOf(page))
+      const allowed = decideCapability(subject, entry)
 
       if (!allowed) {
         logAccessDenied({
           reason: 'insufficient role for page access',
           deniedAt: 'page',
           page,
-          permission: `${page}.${String(capability)}`,
+          permission: `${entry.page}.${String(entry.capability)}`,
           // resolvedUrl, not req.url: on a client-side transition Next fetches
           // the /_next/data/... path, so req.url would record that while the
           // browser shows the page URL the user actually asked for.

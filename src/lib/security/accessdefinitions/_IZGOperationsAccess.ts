@@ -39,11 +39,15 @@ const IZGOperationsAccess: RoleAccess = {
     ...defaultTestPageAccessControl,
     canRunConnectionTest: true,
   } as TestPageAccessControl,
+  // Target matrix (Confluence 1006043137, v13): "Edit Connection — approve
+  // change request" is IZG Security and Jurisdiction Security only, so
+  // `canApproveChangeRequest` stays at the default `false` (IGDD-3498). No code
+  // reads that flag until IGDD-3545, so removing it changes nothing a user sees
+  // yet.
   edit: {
     ...defaultEditPageAccessControl,
     canChangeCredentials: true,
     canCreateChangeRequest: true,
-    canApproveChangeRequest: true,
     canSaveDraft: true,
     canResetDraft: true,
     canRunDraftConnectionTest: true,
@@ -88,29 +92,24 @@ const IZGOperationsAccess: RoleAccess = {
   // type-check and then be `false` forever. The `RoleAccess` annotation on the
   // parent already types each property and restores excess-property checking.
 
-  // [PROVISIONAL — IGDD-3472] Reproduces the access IZG Operations had under
-  // `isAdmin`. Target matrix (Confluence 1006043137, v13) removes
-  // "Access Control — write Access Groups" from IZG Operations; IZG Security,
-  // which takes it over, now exists (IGDD-3498). The narrowing is applied
-  // separately, once that role's members are in place.
+  // Target matrix (v13), Access Control split by tab: IZG Operations views all
+  // three tabs and writes the Deny List and ADS File Types. "Write Access
+  // Groups" is IZG Security only, so `canManageAccessGroups` stays at the
+  // default `false` (IGDD-3498).
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
     canViewAccessControl: true,
-    canManageAccessGroups: true,
     canManageDenyList: true,
     canManageAdsFileTypes: true,
   },
 
-  // [PROVISIONAL — IGDD-3472] Reproduces the access IZG Operations had under
-  // `isAdmin`. Target matrix (v13) rows "Admin Operations — Password
-  // Encryption card" and "Password Encryption (standalone page)" are
-  // IZG Security only; that role now exists (IGDD-3498) and the narrowing is
-  // applied separately. "Circuit Breaker Reset / DB Refresh" matches the
-  // matrix.
+  // Target matrix (v13): "Circuit Breaker Reset / DB Refresh" grants IZG
+  // Operations. "Password Encryption card" and "Password Encryption
+  // (standalone page)" are IZG Security only, so `canManagePasswordEncryption`
+  // stays at the default `false` (IGDD-3498).
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
     canViewAdminOperations: true,
-    canManagePasswordEncryption: true,
     canResetHubCircuitBreakers: true,
     canRefreshHubDatabase: true,
   },

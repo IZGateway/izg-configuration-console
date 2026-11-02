@@ -49,6 +49,7 @@ jest.mock('../../../logger', () => ({
 import { getServerSideProps as accessControlGSSP } from '../../pages/accesscontrol/index'
 import { getServerSideProps as consoleGSSP } from '../../pages/console/index'
 import { getServerSideProps as adminOperationsGSSP } from '../../pages/adminoperations/index'
+import { getServerSideProps as passwordEncryptionGSSP } from '../../pages/passwordencryption/index'
 
 type Gssp = typeof accessControlGSSP
 
@@ -197,5 +198,71 @@ describe('adminoperations: the gate runs before the page loads any data', () => 
     expect(mockGetHubEnvironments).toHaveBeenCalled()
     expect(result.props.hubEnvironments).toEqual([{ id: 1, name: 'prod' }])
     expect(result.props.accessDenied).toBeFalsy()
+  })
+})
+
+// IGDD-3498. /passwordencryption shares the `adminoperations` block but is
+// entered on canManagePasswordEncryption, which only IZG Security holds — so the
+// roles that can open Admin Operations are refused here.
+describe('passwordencryption page gate: IZG Security only', () => {
+  const PERMISSION = 'adminoperations.canManagePasswordEncryption'
+  const originalKeyName = process.env.DB_ENCRYPTION_KEYNAME
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.DB_ENCRYPTION_KEYNAME = 'synthetic-key-name'
+  })
+  afterAll(() => {
+    process.env.DB_ENCRYPTION_KEYNAME = originalKeyName
+  })
+
+  it('allows IZG Security, runs the page handler and writes no event', async () => {
+    signIn(['IZG Security'])
+    const result: any = await passwordEncryptionGSSP(context('/passwordencryption'))
+
+    expect(result.props.accessDenied).toBeFalsy()
+    expect(result.props.hasKeyName).toBe(true)
+    expect(deniedEvents()).toHaveLength(0)
+  })
+
+  it.each(['IZG Operations', 'IZG Support', 'IZG Program'])(
+    'denies %s in place, without running the page handler',
+    async (role) => {
+      signIn([role])
+      const result: any = await passwordEncryptionGSSP(context('/passwordencryption'))
+
+      expect(result.props.accessDenied).toBe(true)
+      expect(result.redirect).toBeUndefined()
+      expect(result.props.hasKeyName).toBeUndefined()
+
+      const events = deniedEvents()
+      expect(events).toHaveLength(1)
+      expect(events[0][1]).toMatchObject({
+        eventType: 'AccessDenied',
+        deniedAt: 'page',
+        page: 'adminoperations',
+        permission: PERMISSION,
+        url: { path: '/passwordencryption' },
+        roles: [role],
+      })
+    }
+  )
+
+  it('still lets those roles into Admin Operations itself', async () => {
+    signIn(['IZG Support'])
+    const result: any = await adminOperationsGSSP(context('/adminoperations'))
+
+    expect(result.props.accessDenied).toBeFalsy()
+  })
+
+  it('redirects an unauthenticated request to sign-in with NO audit event', async () => {
+    signIn(null)
+    const result: any = await passwordEncryptionGSSP(context('/passwordencryption'))
+
+    expect(result.redirect).toEqual({
+      destination: '/api/auth/signin',
+      permanent: false,
+    })
+    expect(deniedEvents()).toHaveLength(0)
   })
 })

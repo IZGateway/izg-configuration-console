@@ -27,12 +27,22 @@ const PasswordEncryption = ({
 // Uses the `adminoperations` page key rather than one of its own: this page
 // duplicates the Admin Operations password card, so a separate key would mean
 // two capabilities that must always be granted together.
+//
+// Entered on `canManagePasswordEncryption`, not the block's usual
+// `canViewAdminOperations`: target matrix row "Password Encryption (standalone
+// page)" is IZG Security only (IGDD-3498). Without the override, every role
+// that can open Admin Operations could open this page and see it with no
+// actions. The override is safe only because this page has no nav link.
 export const getServerSideProps = withPageAccess<
   'adminoperations',
   { hasKeyName: boolean }
->('adminoperations', async () => {
-  const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
-  return { props: { hasKeyName } }
-})
+>(
+  'adminoperations',
+  async () => {
+    const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
+    return { props: { hasKeyName } }
+  },
+  { entry: 'canManagePasswordEncryption' }
+)
 
 export default PasswordEncryption
