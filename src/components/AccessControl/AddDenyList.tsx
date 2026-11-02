@@ -267,7 +267,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({ onSave, onCancel }) => {
                 cursor: 'pointer',
               }}
             >
-              izgateway@cdc.gov
+              support@izgateway.org
             </Box>
           </Typography>
         </Box>
