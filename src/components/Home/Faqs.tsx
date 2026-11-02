@@ -527,7 +527,7 @@ const Faq = () => {
             <AccordionDetails>
               <Typography>
                 For more questions, email{' '}
-                <a href="mailto:IZGateway@cdc.gov">IZGateway@cdc.gov</a>
+                <a href="mailto:support@izgateway.org">support@izgateway.org</a>
               </Typography>
             </AccordionDetails>
           </Accordion>
