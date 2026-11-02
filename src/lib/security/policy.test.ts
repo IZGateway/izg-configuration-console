@@ -313,11 +313,25 @@ const NON_OPERATIONS_ROLES: CcRole[] = [
   'Sender Operations',
 ]
 
-describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly', () => {
-  // The seed values must grant precisely what `isAdmin` grants today and no
-  // more. If this table ever needs editing, the change is granting or removing
+// The two capabilities target matrix v13 takes from IZG Operations (IGDD-3498).
+const NARROWED_FROM_OPERATIONS: CapabilityRef[] = [
+  { page: 'accesscontrol', capability: 'canManageAccessGroups' },
+  { page: 'adminoperations', capability: 'canManagePasswordEncryption' },
+]
+const isNarrowed = (ref: CapabilityRef) =>
+  NARROWED_FROM_OPERATIONS.some(
+    (n) => n.page === ref.page && n.capability === ref.capability
+  )
+
+describe('admin capability holders follow the ratified matrix (IGDD-3472, IGDD-3498)', () => {
+  // If either table ever needs editing, the change is granting or removing
   // access and must be reviewed as such.
-  it.each(ADMIN_CAPABILITIES)(
+  it.each(ADMIN_CAPABILITIES)('IZG Security holds $page.$capability', (ref) => {
+    const s = subject(['IZG Security'])
+    expect(can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed).toBe(true)
+  })
+
+  it.each(ADMIN_CAPABILITIES.filter((ref) => !isNarrowed(ref)))(
     'IZG Operations holds $page.$capability',
     (ref) => {
       const s = subject(['IZG Operations'])
@@ -326,6 +340,30 @@ describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly
       )
     }
   )
+
+  it.each(NARROWED_FROM_OPERATIONS)(
+    'IZG Operations does not hold $page.$capability (target matrix v13)',
+    (ref) => {
+      const s = subject(['IZG Operations'])
+      expect(can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed).toBe(
+        false
+      )
+    }
+  )
+
+  it('IZG Operations cannot approve a change request (target matrix v13)', () => {
+    const s = subject(['IZG Operations'])
+    expect(can(s, 'edit', 'canApproveChangeRequest', ANY_JURISDICTION).allowed).toBe(false)
+  })
+
+  it('only IZG Security holds password encryption', () => {
+    const holders = ROLE_PRECEDENCE.filter(
+      (role) =>
+        can(subject([role]), 'adminoperations', 'canManagePasswordEncryption', ANY_JURISDICTION)
+          .allowed
+    )
+    expect(holders).toEqual(['IZG Security'])
+  })
 
   // console.canViewConsole (Admin Log Search) is the one admin-tier grant
   // these roles hold: own jurisdiction only, Jurisdiction Operations and

@@ -5,11 +5,11 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | Page | Capability | IZG Operations | IZG Program | IZG Security | IZG Support | Jurisdiction Operations | Jurisdiction Support | Sender Operations |
 |---|---|---|---|---|---|---|---|---|
 | _tenancy_ | globalTenancy | YES | YES | YES | YES | — | — | — |
-| accesscontrol | canManageAccessGroups | YES | — | YES | — | — | — | — |
+| accesscontrol | canManageAccessGroups | — | — | YES | — | — | — | — |
 | accesscontrol | canManageAdsFileTypes | YES | — | YES | — | — | — | — |
 | accesscontrol | canManageDenyList | YES | — | YES | — | — | — | — |
 | accesscontrol | canViewAccessControl | YES | — | YES | — | — | — | — |
-| adminoperations | canManagePasswordEncryption | YES | — | YES | — | — | — | — |
+| adminoperations | canManagePasswordEncryption | — | — | YES | — | — | — | — |
 | adminoperations | canRefreshHubDatabase | YES | YES | YES | YES | — | — | — |
 | adminoperations | canResetHubCircuitBreakers | YES | YES | YES | YES | — | — | — |
 | adminoperations | canViewAdminOperations | YES | YES | YES | YES | — | — | — |
@@ -26,7 +26,7 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | changerequest | canViewDetails | YES | — | YES | YES | YES | YES | — |
 | changerequest | canViewJiraTicket | YES | — | YES | — | — | — | — |
 | console | canViewConsole | YES | — | YES | YES | YES | YES | — |
-| edit | canApproveChangeRequest | YES | — | YES | — | YES | — | — |
+| edit | canApproveChangeRequest | — | — | YES | — | YES | — | — |
 | edit | canChangeCredentials | YES | — | YES | — | YES | — | — |
 | edit | canCreateChangeRequest | YES | — | YES | — | YES | — | — |
 | edit | canResetDraft | YES | — | YES | — | YES | — | — |

@@ -40,30 +40,30 @@
 
 ## 7. Commit B — narrow IZG Operations
 
-- [ ] 7.1 `_IZGOperationsAccess.ts`: set `accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption` and `edit.canApproveChangeRequest` to `false`
-- [ ] 7.2 Replace the PROVISIONAL comments on the `accesscontrol`, `adminoperations` and `edit` blocks with the matrix v13 rows they implement; (the `apikeys`, `api-doc` and `console` comments were already finalized in commit A, naming IGDD-3549 and IGDD-3550); note on `edit` that `canApproveChangeRequest` has no reader until IGDD-3545
+- [x] 7.1 `_IZGOperationsAccess.ts`: set `accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption` and `edit.canApproveChangeRequest` to `false`
+- [x] 7.2 Replace the PROVISIONAL comments on the `accesscontrol`, `adminoperations` and `edit` blocks with the matrix v13 rows they implement; (the `apikeys`, `api-doc` and `console` comments were already finalized in commit A, naming IGDD-3549 and IGDD-3550); note on `edit` that `canApproveChangeRequest` has no reader until IGDD-3545
 
 ## 8. Commit B — gate `/passwordencryption` on `canManagePasswordEncryption`
 
-- [ ] 8.1 `pageAccessGate.ts`: add optional third parameter `options?: { entry?: keyof PageControls[P] }`; decide on `{ page, capability: options?.entry ?? PAGE_ENTRY[page] }` through `decideCapability`; use the same capability in the `AccessDenied` event's `permission`
-- [ ] 8.2 Reword the `withPageAccess` docblock: the override exists only for pages with no navigation link, because the nav predicate reads `PAGE_ENTRY`
-- [ ] 8.3 `pages/passwordencryption/index.tsx`: pass `{ entry: 'canManagePasswordEncryption' }`; update the comment above `getServerSideProps`
-- [ ] 8.4 `accesslevel.ts`: update the comment on the `adminoperations` key (the page shares the block, with a stricter entry capability)
+- [x] 8.1 `pageAccessGate.ts`: add optional third parameter `options?: { entry?: keyof PageControls[P] }`; decide on `{ page, capability: options?.entry ?? PAGE_ENTRY[page] }` through `decideCapability`; use the same capability in the `AccessDenied` event's `permission`
+- [x] 8.2 Reword the `withPageAccess` docblock: the override exists only for pages with no navigation link, because the nav predicate reads `PAGE_ENTRY`
+- [x] 8.3 `pages/passwordencryption/index.tsx`: pass `{ entry: 'canManagePasswordEncryption' }`; update the comment above `getServerSideProps`
+- [x] 8.4 `accesslevel.ts`: update the comment on the `adminoperations` key (the page shares the block, with a stricter entry capability)
 
 ## 9. Commit B — tests
 
-- [ ] 9.1 `policy.test.ts`: replace "IZG Operations holds $page.$capability" with an IZG Security table over all `ADMIN_CAPABILITIES`, and an IZG Operations table asserting `canManageAccessGroups` and `canManagePasswordEncryption` are denied and the other eight are granted; assert IZG Operations lacks `edit.canApproveChangeRequest`
-- [ ] 9.2 `api-middleware-helper.test.ts`: change the `rotatekey` "calls next() for an authorized caller" case from IZG Operations to IZG Security; add a case that IZG Operations is now refused with `403`
-- [ ] 9.3 `adminPageGates.test.ts`: add `/passwordencryption` cases — IZG Security allowed with `hasKeyName` in props; IZG Operations, IZG Support and IZG Program each denied in place with one `AccessDenied` event whose permission is `adminoperations.canManagePasswordEncryption` and the handler not run; unauthenticated redirects to sign-in with no event
-- [ ] 9.4 Add the entry-override guard test (in `accessregistry.test.ts` beside the page-coverage tests): every page file passing `entry` to `withPageAccess` has no item in `Navigation/menuItems.tsx`
-- [ ] 9.5 Check the existing registry tests still pass unchanged ("gates exactly the seven pages", "gating a page and handling the denial are checked separately")
-- [ ] 9.6 Regenerate the role matrix snapshot; confirm the diff is exactly three IZG Operations cells `YES` → `—` (`accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption`, `edit.canApproveChangeRequest`)
-- [ ] 9.7 Run the security suites, `npm run code-quality-check` and `npm run test` (record jsdom suites that fail for the pre-existing reason); all others pass
-- [ ] 9.8 Commit B: `feat(security): narrow IZG Operations and restrict Password Encryption page to IZG Security (IGDD-3498)`; body lists the snapshot cell changes and the merge gate
+- [x] 9.1 `policy.test.ts`: replace "IZG Operations holds $page.$capability" with an IZG Security table over all `ADMIN_CAPABILITIES`, and an IZG Operations table asserting `canManageAccessGroups` and `canManagePasswordEncryption` are denied and the other eight are granted; assert IZG Operations lacks `edit.canApproveChangeRequest`
+- [x] 9.2 `api-middleware-helper.test.ts`: change the `rotatekey` "calls next() for an authorized caller" case from IZG Operations to IZG Security; add a case that IZG Operations is now refused with `403`
+- [x] 9.3 `adminPageGates.test.ts`: add `/passwordencryption` cases — IZG Security allowed with `hasKeyName` in props; IZG Operations, IZG Support and IZG Program each denied in place with one `AccessDenied` event whose permission is `adminoperations.canManagePasswordEncryption` and the handler not run; unauthenticated redirects to sign-in with no event
+- [x] 9.4 Add the entry-override guard test (in `accessregistry.test.ts` beside the page-coverage tests): every page file passing `entry` to `withPageAccess` is linked from nowhere in `src` outside the page and tests, comments excluded; verified it fails when a link is added under `src/components`, `src/pages` and `src/lib`; `entryCapabilityOf(page, entry?)` builds the entry capability for both the gate and `canEnterPage`
+- [x] 9.5 Check the existing registry tests still pass unchanged ("gates exactly the seven pages", "gating a page and handling the denial are checked separately")
+- [x] 9.6 Regenerate the role matrix snapshot; confirm the diff is exactly three IZG Operations cells `YES` → `—` (`accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption`, `edit.canApproveChangeRequest`)
+- [x] 9.7 Run the security suites, `npm run code-quality-check` and `npm run test` (record jsdom suites that fail for the pre-existing reason); all others pass
+- [x] 9.8 Commit B: `feat(security): narrow IZG Operations and restrict Password Encryption page to IZG Security (IGDD-3498)`; body lists the snapshot cell changes and the merge gate
 
 ## 10. Pull request and verification
 
 - [ ] 10.1 Open one PR against `develop` with both commits; description has a section per commit (snapshot diff, user-visible effect), the IGDD-3552 limitation for IZG Security (multi-environment API keys, full deep health check), the list of suites run, and the merge gate: do not merge until the Product Owner signs off and the people who edit Access Groups or use Password Encryption are in the `IZG Security` group
 - [ ] 10.2 Identify current IZG Operations users of the removed features from `logApiRequest` logs (`/api/accessgroups` POST/PUT/DELETE, `/api/encrypt`, `/api/rotatekey`, `/api/encryptionStatus`) and hand the list to the Product Owner
 - [ ] 10.3 After deploy to dev, verify manually with the dev test users: IZG Support resets circuit breakers and refreshes the DB; IZG Security opens `/passwordencryption` and edits Access Groups; IZG Operations views all Access Control tabs, changes Deny List and ADS File Types, cannot edit Access Groups, has no Password Encryption card and gets Access Denied at `/passwordencryption`; IZG Program gets Access Denied at `/passwordencryption`
-- [ ] 10.4 Run `openspec validate igdd-3498-admin-operations-roles --strict` before requesting review
+- [x] 10.4 Run `openspec validate igdd-3498-admin-operations-roles --strict` before requesting review

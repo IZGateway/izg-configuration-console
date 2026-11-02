@@ -185,13 +185,23 @@ describe('enforceRouteAuthz: capability rules', () => {
   })
 
   it('calls next() for an authorized caller', async () => {
-    signIn(['IZG Operations'])
+    signIn(['IZG Security'])
     const res = response()
     const handler = await run(ROTATEKEY, request('POST', '/api/rotatekey'), res)
 
     expect(handler).toHaveBeenCalled()
     expect(res.status).not.toHaveBeenCalledWith(403)
     expect(deniedEvent(warnSpy)).toHaveLength(0)
+  })
+
+  it('403s IZG Operations, which no longer holds password encryption (IGDD-3498)', async () => {
+    signIn(['IZG Operations'])
+    const res = response()
+    const handler = await run(ROTATEKEY, request('POST', '/api/rotatekey'), res)
+
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(deniedEvent(warnSpy)).toHaveLength(1)
   })
 })
 
