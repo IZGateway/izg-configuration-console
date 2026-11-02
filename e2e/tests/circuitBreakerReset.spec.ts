@@ -25,7 +25,9 @@
  * fails in CI, because a skipped privacy check reports green every night
  * without ever running:
  *   OKTA_USERNAME / OKTA_PASSWORD
- *     IZG Operations. The only role holding `canResetHubCircuitBreakers`.
+ *     IZG Operations. One of the four IZG roles holding
+ *     `canResetHubCircuitBreakers` (with IZG Security, IZG Support and
+ *     IZG Program, IGDD-3498); the one the nightly account belongs to.
  *   E2E_RBAC_JURIS_OPS_USERNAME / _PASSWORD / _FULLNAME
  *     Jurisdiction Operations, for the negative case.
  */
@@ -186,7 +188,7 @@ test.describe('Admin Operations circuit breaker reset (IGDD-3599)', () => {
   })
 
   /**
-   * `canResetHubCircuitBreakers` belongs to IZG Operations alone, and
+   * `canResetHubCircuitBreakers` belongs to the IZG-tier roles only, and
    * `canViewAdminOperations` gates the page itself, so a jurisdiction-scoped
    * role never reaches the card. The per-destination reset in Manage
    * Connections is the surface that role does hold.

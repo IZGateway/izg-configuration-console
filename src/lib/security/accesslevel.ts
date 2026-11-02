@@ -14,6 +14,7 @@ import {
 import {
   IZGOperationsAccess,
   IZGProgramAccess,
+  IZGSecurityAccess,
   JurisdictionOperationsAccess,
   IZGSupportAccess,
   JurisdictionSupportAccess,
@@ -21,6 +22,7 @@ import {
 } from './accessdefinitions'
 
 const accessLevel: AccessLevel = {
+  'IZG Security': IZGSecurityAccess,
   'IZG Operations': IZGOperationsAccess,
   'IZG Support': IZGSupportAccess,
   'IZG Program': IZGProgramAccess,

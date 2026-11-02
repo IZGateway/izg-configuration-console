@@ -81,8 +81,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // isAdmin dependency to anyone auditing that axis.
       //
       // Reads `hasGlobalTenancy` from the role matrix, not `isOperationsRole`
-      // (PR #729 review): the two currently select the same roles, but
-      // `accessutils.ts` answers "is this IZG staff?" while this call needs
+      // (PR #729 review; that predicate was deleted in IGDD-3498): the two
+      // selected the same roles, but it answered "is this IZG staff?" while this call needs
       // "does this role bypass jurisdiction scoping?" — see
       // `src/pages/api/destinations/index.ts` for the same reasoning.
       const subject = subjectOf(session)

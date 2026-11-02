@@ -87,14 +87,15 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
     expect(item(label).isVisible?.(['IZG Operations'])).toBe(true)
   })
 
-  // Console (Admin Log Search) is granted beyond IZG Operations: IZG Support
-  // (IGDD-3170) and, own jurisdiction only, the two jurisdiction roles
-  // (IGDD-3474). Access Control stays IZG Operations only. Admin Operations
-  // also reaches IZG Program now (IGDD-3547, canViewAdminOperations) — see
-  // the dedicated case below — so it is no longer "the other two admin items
-  // stay IZG Operations only" for every role in this list.
+  it.each(ADMIN_ITEMS)('%s is visible for IZG Security (IGDD-3498)', (label) => {
+    expect(item(label).isVisible?.(['IZG Security'])).toBe(true)
+  })
+
+  // Console (Admin Log Search) is granted beyond IZG Operations, own
+  // jurisdiction only, to the two jurisdiction roles (IGDD-3474). Access
+  // Control stays with IZG Security and IZG Operations. IZG Support and
+  // IZG Program have their own cases below.
   it.each([
-    'IZG Support',
     'Jurisdiction Operations',
     'Jurisdiction Support',
   ])('%s sees Console and no other admin item', (role) => {
@@ -103,6 +104,18 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
         label,
         visible: label === 'Console',
       })
+    }
+  })
+
+  // IGDD-3498: IZG Support holds adminoperations.canViewAdminOperations
+  // (circuit-breaker reset / DB refresh) and console.canViewConsole
+  // (IGDD-3170), but not accesscontrol.canViewAccessControl.
+  it('IZG Support sees Admin Operations and Console, but not Access Control', () => {
+    for (const label of ADMIN_ITEMS) {
+      expect({
+        label,
+        visible: item(label).isVisible?.(['IZG Support']),
+      }).toEqual({ label, visible: label !== 'Access Control' })
     }
   })
 
