@@ -122,9 +122,9 @@ describe('page coverage: an ungated page is a test failure', () => {
     add: 'orphan with zero inbound links, proposed for deletion',
     user: 'orphan with zero inbound links, proposed for deletion',
     // `api-doc` used to sit here, on the reasoning that the spec endpoint
-    // behind it was gated. That reasoning was wrong — the page embeds the spec
-    // in its own static payload and never calls the endpoint — so it is an
-    // AUTHZ_DEBT row now rather than a page we claim is fine. PR #700.
+    // behind it was gated. That reasoning was wrong — the page embedded the
+    // spec in its own static payload and never called the endpoint (PR #700).
+    // It is gated with withPageAccess now (IGDD-3550), so needs no entry.
   }
 
   // Excluding src/pages/api/** matters: without it the .tsx API route is
@@ -164,10 +164,11 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('gates exactly the seven pages this change is responsible for', () => {
+  it('gates exactly the eight pages that have a server-side gate', () => {
     // manageconnections and apikeys already checked the right capability
     // before this change; what they did on failure was a silent redirect, so
     // they were migrated to the shared gate for the outcome, not the check.
+    // api-doc joined in IGDD-3550, once it stopped exporting getStaticProps.
     const gated = pageFiles
       .filter((f) => fs.readFileSync(f, 'utf8').includes('withPageAccess'))
       .map(pageKeyOf)
@@ -175,6 +176,7 @@ describe('page coverage: an ungated page is a test failure', () => {
     expect(gated).toEqual([
       'accesscontrol',
       'adminoperations',
+      'api-doc',
       'apikeys',
       'console',
       'manageconnections',

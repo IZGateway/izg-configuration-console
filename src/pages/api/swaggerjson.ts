@@ -1,20 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import withMiddleware from '../../lib/api/api-middleware-helper'
-import { buildApiDocSpec } from '../../lib/apiDocDefinition'
+import { loadApiDocSpec } from '../../lib/apiDocSpec'
 
-// Replaces next-swagger-doc's withSwagger, which has no hook for the spec
-// fixes: buildApiDocSpec applies them, so this serves the same spec as the
-// /api-doc page. Same responses as withSwagger: 200 with the spec, or 400
-// with the error message.
+// Serves the spec built at build time (see API_DOC_SPEC_FILE) rather than
+// building it here: that needs src/pages/api/**, which the runner image does
+// not ship, so it returned an empty spec in every deployed environment
+// (IGDD-3550). Same responses as before: 200 with the spec, or 400 with the
+// error message.
 const swaggerHandler = (_req: NextApiRequest, res: NextApiResponse) => {
   try {
-    res.status(200).send(buildApiDocSpec())
+    res.status(200).json(loadApiDocSpec())
   } catch (error) {
     res.status(400).json({
       error:
-        error instanceof Error
-          ? error.message
-          : 'Failed to create Swagger spec',
+        error instanceof Error ? error.message : 'Failed to load Swagger spec',
     })
   }
 }
@@ -22,9 +21,8 @@ const swaggerHandler = (_req: NextApiRequest, res: NextApiResponse) => {
 // flag it, since a file that never calls the wrapper has nothing to type-check.
 // The route-coverage test is what holds that line.
 //
-// This endpoint, not /api-doc, is what actually protects the API documentation:
-// /api-doc exports getStaticProps and cannot be server-side gated, so its
-// client gate only hides the interface. An empty Swagger UI is the result.
+// The /api-doc page fetches the spec from here, so this check and the page's
+// server-side gate cover both the page and its content (IGDD-3550).
 export default withMiddleware({
   capability: { page: 'api-doc', capability: 'canViewApiDoc' },
 })(swaggerHandler)
