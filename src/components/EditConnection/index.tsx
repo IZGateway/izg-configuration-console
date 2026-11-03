@@ -626,8 +626,13 @@ const EditConnection = (props: editConnectionProps) => {
       if (response.ok) {
         return true
       }
+      // Only a 400 is a verdict on the URL. Anything else (a 504 from the
+      // proxy, a 500) means the check never finished, so do not tell the user
+      // their URL was rejected.
       let message =
-        'This destination URL is not permitted. Please correct it and try again.'
+        response.status === 400
+          ? 'This destination URL is not permitted. Please correct it and try again.'
+          : `The destination URL could not be validated (HTTP ${response.status}). Please try again.`
       try {
         const body = await response.json()
         if (body?.error) {
