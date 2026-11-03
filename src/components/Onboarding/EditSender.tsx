@@ -590,7 +590,7 @@ const EditSender: React.FC<EditSenderProps> = ({
                 cursor: 'pointer',
               }}
             >
-              izgateway@cdc.gov
+              support@izgateway.org
             </Box>
           </Typography>
         </Box>
