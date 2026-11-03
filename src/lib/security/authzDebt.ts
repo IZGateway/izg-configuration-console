@@ -112,20 +112,6 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   },
   {
     kind: 'ungated-page',
-    subject: 'api-doc',
-    ticket: 'IGDD-3472',
-    note:
-      'Cannot be SSR-gated: it exports getStaticProps and Next forbids both. The client gate hides ' +
-      'the interface but NOT the content — getStaticProps runs at build time, where src/ exists, so ' +
-      'the full spec is serialized into the page payload and any authenticated user can read it out ' +
-      'of __NEXT_DATA__. Pre-existing and unchanged here, but previously mis-recorded as "permanently ' +
-      'fine" on the false premise that the page fetched the gated endpoint (PR #700). Fixing it means ' +
-      'serving the spec from /api/swaggerjson, which needs that endpoint fixed first — it resolves ' +
-      'src/pages/api/** at request time and the runner image ships no src/, so it very likely returns ' +
-      'an empty spec in every deployed environment. Both halves together, tested in a real container.',
-  },
-  {
-    kind: 'ungated-page',
     subject: 'edit',
     ticket: 'IGDD-3472',
     note: 'One-line withPageAccess("edit") on canChangeCredentials. Deferred: the seed must preserve the current ungated audience, not isAdmin.',
