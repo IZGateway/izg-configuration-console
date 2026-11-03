@@ -86,7 +86,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware(
-  { inHandler: 'IGDD-3472: maps to history.canViewHubStatusHistory, currently unwired' },
-  'checkAccessToDestIdSlug'
-)(handler)
+export default withMiddleware({
+  capability: { page: 'history', capability: 'canViewHubStatusHistory' },
+  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+})(handler)
