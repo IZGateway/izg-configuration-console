@@ -158,15 +158,30 @@ jobs:
             ECS_DESIRED_COUNT="1"
           fi
 
+          # Every stop is attempted, in parallel; the step fails if any failed.
+          # pipefail: without it an aws error is hidden behind jq's success.
+          # A bare `wait` returns 0 whatever the jobs returned, so each one is
+          # waited for by its PID.
+          set -o pipefail
+          pids=()
           for region in $AWS_REGIONS; do
             echo "Stopping IZG Hub in $region"
             aws ecs update-service --region $region --cluster izgateway-dev-izgateway-services --service izgateway-devalb-service --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
+            pids+=($!)
 
             echo "Stopping IZG CC in $region"
             aws ecs update-service --region $region --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
+            pids+=($!)
           done
 
-          wait
+          failed=0
+          for pid in "${pids[@]}"; do
+            wait "$pid" || failed=1
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::At least one ECS service did not accept the stop; dev may still be running"
+            exit 1
+          fi
 
       # RBAC report (IGDD-3621) goes to a private S3 bucket, never to a GitHub
       # artifact: this repo is public, and the report lists unenforced access.

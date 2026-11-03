@@ -13,20 +13,27 @@ export type ApiResult = { status: number; body: unknown }
  *
  * `redirect: 'manual'` turns a middleware rejection into status 0 (opaque
  * redirect) instead of silently following it to the sign-in page's 200.
+ *
+ * Playwright's action and navigation timeouts do not cover a fetch inside
+ * page.evaluate, so the request carries its own: a stalled route rejects
+ * after `timeoutMs` (the reading of the body included) instead of hanging
+ * the test until its own timeout.
  */
 export const callApi = (
   page: Page,
   method: string,
   path: string,
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  timeoutMs = 30000
 ): Promise<ApiResult> =>
   page.evaluate(
-    async ({ method, path, body }) => {
+    async ({ method, path, body, timeoutMs }) => {
       const res = await fetch(path, {
         method,
         redirect: 'manual',
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(timeoutMs),
       })
       const text = await res.text()
       let parsed: unknown = text
@@ -37,5 +44,5 @@ export const callApi = (
       }
       return { status: res.status, body: parsed }
     },
-    { method, path, body }
+    { method, path, body, timeoutMs }
   )

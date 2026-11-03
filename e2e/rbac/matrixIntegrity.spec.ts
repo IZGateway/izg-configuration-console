@@ -46,7 +46,7 @@ test.describe('matrix.ts', () => {
 
   test('a row is either automated or says why not', () => {
     const automated = (r: (typeof MATRIX)[number]) =>
-      !!(r.nav?.length || r.pages?.length || r.api?.length || r.ui?.length)
+      !!(r.nav?.length || r.pages?.length || r.api?.length || r.ui?.length || r.pageData?.length)
     const neither = MATRIX.filter((r) => !r.notAutomated && !automated(r)).map((r) => r.id)
     const both = MATRIX.filter((r) => r.notAutomated && automated(r)).map((r) => r.id)
     expect({ neither, both }).toEqual({ neither: [], both: [] })
@@ -168,7 +168,7 @@ test.describe('cell logic', () => {
   })
 
   test('a jurisdiction role with no foreign destination is an error in CI only', () => {
-    const ctx = { own: { typeId: 1, destId: 'al' }, listed: [] }
+    const ctx = { own: { typeId: 1, destId: 'al' }, outOfClaim: [], listed: [] }
     const saved = process.env.CI
     try {
       process.env.CI = 'true'

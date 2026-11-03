@@ -2,7 +2,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { Page } from '@playwright/test'
 import { callApi } from '../helpers/dpopFetch'
-import { ApiProbe, DestinationKind, DestinationState, UiProbe } from './matrix'
+import { ApiProbe, DestinationKind, DestinationState, PageDataProbe, UiProbe } from './matrix'
 import { Outcome } from './evaluate'
 import { Reach } from './roles'
 
@@ -24,8 +24,9 @@ export interface SessionInfo {
 
 /** The caller's CC session. /api/auth/* needs no DPoP proof. */
 export async function sessionOf(page: Page): Promise<SessionInfo> {
+  // Its own timeout, as in callApi: page.evaluate has none.
   const session = await page.evaluate(async () => {
-    const res = await fetch('/api/auth/session')
+    const res = await fetch('/api/auth/session', { signal: AbortSignal.timeout(30000) })
     return res.json()
   })
   return {
@@ -176,6 +177,8 @@ export function uiDestination(
 export interface ProbeContext {
   own?: Destination
   foreign?: Destination
+  /** Destinations /api/destinations listed outside the session's jurisdictions. */
+  outOfClaim: Destination[]
   listed: ListedDestination[]
 }
 
@@ -225,6 +228,9 @@ export type Observation =
   | { observed: Outcome; detail: string }
   | { error: string }
 
+/** Statuses that may come from infrastructure rather than the route. */
+const UNDECIDED = new Set([408, 429, 502, 503, 504])
+
 /**
  * Send one probe and read the gate's answer from the status code.
  *
@@ -251,6 +257,13 @@ export async function observeApi(
   }
   if (status === 0) {
     return { target, error: 'redirected to sign-in by the middleware (session or DPoP proof)' }
+  }
+  // Answered by a proxy, a rate limiter or a timeout, possibly before the
+  // gate ran: they say nothing about the role. A plain 500 still counts as
+  // past the gate, since several probes rely on a handler throwing for an
+  // unsupported method.
+  if (UNDECIDED.has(status)) {
+    return { target, error: `HTTP ${status}: answered before authorization could decide` }
   }
   if (status === 401) {
     const session = await sessionOf(page).catch(() => undefined)
@@ -306,6 +319,32 @@ export async function observePage(page: Page, url: string): Promise<Observation>
   // A crashed page is not evidence that the role got in.
   if (await page.getByText(ERROR_TEXT).isVisible()) return { error: CRASHED }
   return { observed: 'allowed', detail: 'page rendered' }
+}
+
+/**
+ * Open a page and report whether its props payload carries `probe.prop`. It
+ * reads the server-rendered `__NEXT_DATA__` script, which is what any
+ * signed-in browser receives, whatever the page then shows.
+ */
+export async function observePageData(page: Page, probe: PageDataProbe): Promise<Observation> {
+  const decided = await navigate(page, probe.page)
+  if (decided) return decided
+  // The payload is in the HTML already, but the next API probe runs on this
+  // page: until the app has installed its DPoP fetch wrapper, those calls go
+  // out without a proof and the middleware redirects them to sign-in.
+  await page.waitForLoadState('networkidle', IDLE_WAIT).catch(() => {})
+  const size = await page.evaluate((prop) => {
+    const json = document.getElementById('__NEXT_DATA__')?.textContent
+    if (!json) return -1
+    const value = JSON.parse(json)?.props?.pageProps?.[prop]
+    if (value === null || value === undefined) return 0
+    const text = JSON.stringify(value)
+    return text === '{}' || text === '[]' || text === '""' ? 0 : text.length
+  }, probe.prop)
+  if (size < 0) return { error: 'the page sent no __NEXT_DATA__ payload' }
+  return size > 0
+    ? { observed: 'allowed', detail: `payload carries ${probe.prop} (${size} bytes)` }
+    : { observed: 'denied', detail: `payload has no ${probe.prop}` }
 }
 
 /** The fallback `src/pages/_error.tsx` renders, also for a crashed component. */

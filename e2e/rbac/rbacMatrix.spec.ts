@@ -3,9 +3,11 @@
  *
  * One test per role column. Each signs in once as that role's Okta test
  * account, confirms the CC session holds exactly that role, then checks
- * every row of e2e/rbac/matrix.ts at up to four layers: the nav link, the
- * page gate, the API routes behind the feature, and the controls a page
- * shows on a destination in the right state. Every cell is recorded,
+ * every row of e2e/rbac/matrix.ts at up to five layers: the nav link, the
+ * page gate, the data a page sends in its payload, the API routes behind the
+ * feature, and the controls a page shows on a destination in the right
+ * state. Jurisdiction roles' own and foreign destinations come from the
+ * session's jurisdictions, not from the API under test. Every cell is recorded,
  * even after a mismatch, and attached as JSON for e2e/rbac/rbacReporter.ts.
  *
  * Report only: the nightly Playwright workflow runs this with
@@ -57,6 +59,7 @@ import {
   navLinks,
   observeApi,
   observePage,
+  observePageData,
   observeUi,
   reachableDestinations,
   resolveDestination,
@@ -103,6 +106,28 @@ async function evaluateRow(
 
   for (const url of row.pages ?? []) {
     checks.push(toCheck('page', url, expected, await observePage(page, url)))
+  }
+
+  for (const probe of row.pageData ?? []) {
+    const target = `${probe.page} pageProps.${probe.prop}`
+    checks.push(toCheck('data', target, expected, await observePageData(page, probe)))
+  }
+
+  // A jurisdiction role's destination list must hold only the jurisdictions
+  // in its session. An extra entry is a tenancy leak, and a foreign
+  // destination too, which is how the fold keeps it from any known gap.
+  if (row.checksDestinationList && role.reach === 'own') {
+    const extra = ctx.outOfClaim.map((d) => `${d.typeId}/${d.destId}`)
+    checks.push({
+      ...decide(
+        'api',
+        'GET /api/destinations (outside the jurisdictions claim)',
+        'denied',
+        extra.length ? 'allowed' : 'denied',
+        extra.length ? `lists ${extra.join(', ')}` : "lists only the session's jurisdictions"
+      ),
+      dest: 'foreign',
+    })
   }
 
   for (const probe of row.api ?? []) {
@@ -181,11 +206,19 @@ async function runColumn(
     return
   }
 
-  const own = await reachableDestinations(page)
-  if (role.reach === 'all') cache.record(own)
+  // Own and foreign come from the verified session's jurisdictions, not from
+  // /api/destinations: the list is part of what is under test, and a leaked
+  // entry taken as "own" would never be probed as foreign. hasAccessToDestId
+  // matches a destination id against the claim, exactly.
+  const listed = await reachableDestinations(page)
+  if (role.reach === 'all') cache.record(listed)
+  const claims = new Set(session.jurisdictions.map((j) => j.toLowerCase()))
+  const inClaim = (d: { destId: string }) => role.reach === 'all' || claims.has(d.destId.toLowerCase())
+  const own = listed.filter(inClaim)
   const ctx: ProbeContext = {
     own: own[0],
     foreign: foreignDestination(own, cache),
+    outOfClaim: listed.filter((d) => !inClaim(d)),
     listed: MATRIX.some((r) => r.ui?.length) ? await listedDestinations(page) : [],
   }
   const links = await navLinks(page)

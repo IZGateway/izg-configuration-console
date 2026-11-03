@@ -101,6 +101,17 @@ export interface UiProbe {
   open?: string
 }
 
+/**
+ * Data a page sends in its props (the `__NEXT_DATA__` payload) that only
+ * allowed roles should receive. A client-side gate can hide the interface
+ * while the payload still carries the data: this checks the payload.
+ */
+export interface PageDataProbe {
+  page: string
+  /** Key under `pageProps`; present and non-empty means the role got it. */
+  prop: string
+}
+
 export interface KnownGap {
   /** Ticket that closes the gap, if one exists. */
   ticket?: string
@@ -121,6 +132,13 @@ export interface MatrixRow {
   api?: readonly ApiProbe[]
   /** Controls that appear iff allowed. */
   ui?: readonly UiProbe[]
+  /** Page payload data that is sent iff allowed. */
+  pageData?: readonly PageDataProbe[]
+  /**
+   * For jurisdiction roles: also check that /api/destinations lists only
+   * the jurisdictions in the session.
+   */
+  checksDestinationList?: boolean
   /**
    * Set when hiding the control is the only protection: no server check
    * reads the capability. A role the target denies is then a known gap even
@@ -192,6 +210,12 @@ const PROGRAM_LINK_HELD_BACK: KnownGap = {
   reason: 'Not yet granted: held back until the matrix intent is clarified.',
 }
 
+/** The /api-doc spec reaches every signed-in user in the page payload. */
+const SPEC_IN_PAYLOAD: KnownGap = {
+  ticket: 'IGDD-3472',
+  reason: 'Not enforced by role yet: the page payload is not gated.',
+}
+
 /** For `uiOnly`: the control is hidden, but no server check backs it yet. */
 const uiOnlyUntil = (ticket: string): KnownGap => ({
   ticket,
@@ -215,6 +239,7 @@ export const MATRIX: readonly MatrixRow[] = [
     allow: ALL_TARGET_ROLES,
     // Reach-only route: checkAccessToDestIdSlug, no capability. A foreign
     // destination is allowed only for roles that reach every jurisdiction.
+    checksDestinationList: true,
     api: [
       { method: 'GET', path: '/api/destinations/{dest}', dest: 'own', refusal: 401 },
       { method: 'GET', path: '/api/destinations/{dest}', dest: 'foreign', refusal: 401 },
@@ -613,7 +638,17 @@ export const MATRIX: readonly MatrixRow[] = [
     nav: ['/api-doc'],
     pages: ['/api-doc'],
     api: [{ method: 'GET', path: '/api/swaggerjson', refusal: 403 }],
-    knownGaps: { 'IZG Operations': MOVES_TO_IZG_SECURITY },
+    // The page gates on the client, but the spec is built into its static
+    // payload, which every signed-in user receives (authzDebt.ts, api-doc).
+    pageData: [{ page: '/api-doc', prop: 'spec' }],
+    knownGaps: {
+      'IZG Operations': MOVES_TO_IZG_SECURITY,
+      'Jurisdiction Security': SPEC_IN_PAYLOAD,
+      'Jurisdiction Operations': SPEC_IN_PAYLOAD,
+      'IZG Support': SPEC_IN_PAYLOAD,
+      'Jurisdiction Support': SPEC_IN_PAYLOAD,
+      'IZG Program': SPEC_IN_PAYLOAD,
+    },
   },
   {
     id: 'test.runconnectiontest',

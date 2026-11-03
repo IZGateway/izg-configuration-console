@@ -29,7 +29,7 @@ export interface ColumnResults {
 }
 
 export type Outcome = 'allowed' | 'denied'
-export type Layer = 'nav' | 'page' | 'api' | 'ui' | 'identity'
+export type Layer = 'nav' | 'page' | 'data' | 'api' | 'ui' | 'identity'
 
 export interface CheckResult {
   layer: Layer
