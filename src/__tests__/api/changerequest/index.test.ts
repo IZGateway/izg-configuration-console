@@ -30,12 +30,20 @@ jest.mock('../../../../logger', () => ({
 }))
 
 const mockUpsertDestinationChangeRequest = jest.fn()
+// Base-repository read (no decrypt) vs the decrypting wrapper's read.
+const mockFetchDestination = jest.fn()
+const mockDecryptingFetchDestination = jest.fn()
 jest.mock('../../../lib/db/DbClientFactory', () => ({
   __esModule: true,
   default: {
     getDbClient: jest.fn().mockResolvedValue({
       upsertDestinationChangeRequest: (...args: unknown[]) =>
         mockUpsertDestinationChangeRequest(...args),
+      getRepository: () => ({
+        fetchDestination: (...args: unknown[]) => mockFetchDestination(...args),
+      }),
+      fetchDestination: (...args: unknown[]) =>
+        mockDecryptingFetchDestination(...args),
       fetchDestinationPassword: jest.fn().mockResolvedValue('stored-password'),
       deleteDestinationChangeRequest: jest.fn(),
     }),
@@ -93,6 +101,81 @@ describe('POST /api/changerequest audit identity (IGDD-3175)', () => {
     expect(mockUpsertDestinationChangeRequest).toHaveBeenCalledWith(
       expect.objectContaining({ requestedBy: 'real-user@example.com' })
     )
+  })
+})
+
+/**
+ * IGDD-3640: the form sends destUri on every edit. A URI already stored for the
+ * connection must not block unrelated edits, even if it predates the
+ * destination URL specification. A '?' fails the guard's textual check before
+ * any DNS lookup, so these cases need no network.
+ */
+describe('POST /api/changerequest unchanged destUri (IGDD-3640)', () => {
+  const legacyUri = 'https://iis.example.gov/soa/HL7Service.wsdl?'
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
+    })
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
+    mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
+    mockFetchDestination.mockResolvedValue({ destUri: legacyUri })
+    mockDecryptingFetchDestination.mockRejectedValue(
+      new Error('password decrypt failed')
+    )
+  })
+
+  const draftWith = (destUri: string, current: Record<string, unknown> = {}) =>
+    buildReqRes({
+      destId: 'dest1',
+      destType: { typeId: 1, type: 'PROD' },
+      isDraft: true,
+      requested: { destUri, username: 'user' },
+      current,
+    })
+
+  it('accepts the stored destUri unchanged, even though it would fail the guard', async () => {
+    const { req, res } = draftWith(legacyUri)
+
+    await handler(req, res)
+
+    expect(mockFetchDestination).toHaveBeenCalledWith('dest1', 1)
+    // No password decrypt just to read destUri: a decrypt failure must not
+    // turn an unchanged URI into a rejection.
+    expect(mockDecryptingFetchDestination).not.toHaveBeenCalled()
+    expect(res.status).not.toHaveBeenCalledWith(400)
+    expect(mockUpsertDestinationChangeRequest).toHaveBeenCalled()
+  })
+
+  it('still rejects a changed destUri that fails the guard', async () => {
+    const { req, res } = draftWith('https://evil.example.com/x?a=1')
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+  })
+
+  it('ignores a client-supplied current destUri and compares with the stored one', async () => {
+    const forged = 'https://evil.example.com/x?a=1'
+    const { req, res } = draftWith(forged, { destUri: forged })
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+  })
+
+  it('validates the destUri when the stored destination cannot be read', async () => {
+    mockFetchDestination.mockRejectedValue(new Error('dynamo down'))
+    const { req, res } = draftWith(legacyUri)
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
   })
 })
 
