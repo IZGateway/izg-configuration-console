@@ -13,6 +13,11 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
 
+    # id-token: the RBAC report upload signs in to AWS with GitHub OIDC.
+    permissions:
+      contents: read
+      id-token: write
+
     env:
       OKTA_USERNAME: ${{ secrets.OKTA_USERNAME }}
       OKTA_PASSWORD: ${{ secrets.OKTA_PASSWORD }}
@@ -30,6 +35,22 @@ jobs:
       E2E_RBAC_NO_ROLE_USERNAME: ${{ secrets.E2E_RBAC_NO_ROLE_USERNAME }}
       E2E_RBAC_NO_ROLE_PASSWORD: ${{ secrets.E2E_RBAC_NO_ROLE_PASSWORD }}
       E2E_RBAC_NO_ROLE_FULLNAME: ${{ secrets.E2E_RBAC_NO_ROLE_FULLNAME }}
+      # RBAC matrix check (e2e/rbac, IGDD-3621). IZG Operations and
+      # Jurisdiction Operations reuse the accounts above; a role whose
+      # secrets are unset is reported as CONFIG or PENDING, not run.
+      # IZG Security and Jurisdiction Security are mapped ahead of time: their
+      # columns stay PENDING until roles.ts marks them live.
+      E2E_RBAC_IZG_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_IZG_SECURITY_USERNAME }}
+      E2E_RBAC_IZG_SECURITY_PASSWORD: ${{ secrets.E2E_RBAC_IZG_SECURITY_PASSWORD }}
+      E2E_RBAC_JURIS_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_JURIS_SECURITY_USERNAME }}
+      E2E_RBAC_JURIS_SECURITY_PASSWORD: ${{ secrets.E2E_RBAC_JURIS_SECURITY_PASSWORD }}
+      E2E_RBAC_IZG_PROGRAM_USERNAME: ${{ secrets.E2E_RBAC_IZG_PROGRAM_USERNAME }}
+      E2E_RBAC_IZG_PROGRAM_PASSWORD: ${{ secrets.E2E_RBAC_IZG_PROGRAM_PASSWORD }}
+      E2E_RBAC_IZG_SUPPORT_USERNAME: ${{ secrets.E2E_RBAC_IZG_SUPPORT_USERNAME }}
+      E2E_RBAC_IZG_SUPPORT_PASSWORD: ${{ secrets.E2E_RBAC_IZG_SUPPORT_PASSWORD }}
+      E2E_RBAC_JURIS_SUPPORT_USERNAME: ${{ secrets.E2E_RBAC_JURIS_SUPPORT_USERNAME }}
+      E2E_RBAC_JURIS_SUPPORT_PASSWORD: ${{ secrets.E2E_RBAC_JURIS_SUPPORT_PASSWORD }}
+      E2E_RBAC_FOREIGN_DEST: ${{ vars.E2E_RBAC_FOREIGN_DEST }}
 
     steps:
       - name: Checkout code
@@ -110,7 +131,19 @@ jobs:
           path: playwright-report
           retention-days: 1
 
+      # Report only (IGDD-3621): runs even if the suite above failed, and a
+      # finding here never fails the workflow.
+      - name: Verify RBAC matrix (report only)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: npm run test:rbac
+
+      # The RBAC report is uploaded at the end of the job, after AWS Dev is
+      # stopped: see the last two steps.
+
+      # always(): stop dev even when a test step above failed or was cancelled.
       - name: Stop IZG Hub and IZG CC in AWS Dev
+        if: always()
         env:
           AWS_REGIONS: ${{ vars.AWS_REGIONS }}
           ECS_DESIRED_COUNT: ${{ vars.ECS_DESIRED_COUNT }}
@@ -126,9 +159,57 @@ jobs:
           fi
 
           for region in $AWS_REGIONS; do
-            echo "Stopping IZG Hub in $region
+            echo "Stopping IZG Hub in $region"
             aws ecs update-service --region $region --cluster izgateway-dev-izgateway-services --service izgateway-devalb-service --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
 
-            echo "Stopping IZG CC in $region
+            echo "Stopping IZG CC in $region"
             aws ecs update-service --region $region --cluster izgateway-configuration-console --service izgateway-config-console --force-new-deployment --enable-execute-command --desired-count 0 | jq ".service.deployments[].id" &
           done
+
+          wait
+
+      # RBAC report (IGDD-3621) goes to a private S3 bucket, never to a GitHub
+      # artifact: this repo is public, and the report lists unenforced access.
+      # GitHub gets only the counts in the job summary.
+      #
+      # Last on purpose: signing in with the OIDC role replaces the AWS
+      # credentials above for every later step, and the role can do nothing
+      # but upload reports. It trusts the develop branch only (scheduled runs),
+      # so runs of other branches skip the upload. The role and bucket come
+      # from iz-gateway-terraform (hub/console/rbac-report-bucket.tf).
+      # Both steps are continue-on-error: a broken role or upload must not
+      # fail a report-only check.
+      - name: Sign in to AWS for the RBAC report
+        id: rbac-aws
+        if: ${{ !cancelled() && vars.RBAC_REPORT_ROLE_ARN != '' && github.ref == 'refs/heads/develop' && hashFiles('rbac-report/rbac-report.json') != '' }}
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.RBAC_REPORT_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Upload RBAC report
+        if: ${{ !cancelled() && hashFiles('rbac-report/rbac-report.json') != '' }}
+        continue-on-error: true
+        env:
+          SIGNED_IN: ${{ steps.rbac-aws.outcome }}
+          RBAC_REPORT_BUCKET: ${{ vars.RBAC_REPORT_BUCKET }}
+        run: |
+          if [ "$SIGNED_IN" != "success" ] || [ -z "$RBAC_REPORT_BUCKET" ]; then
+            echo "::notice::RBAC report not uploaded: it is uploaded from develop once RBAC_REPORT_ROLE_ARN and RBAC_REPORT_BUCKET are set"
+            exit 0
+          fi
+          folder="rbac-reports/$(date -u +%F)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          # Create only: the role may only upload with If-None-Match: *, so a
+          # run can never replace an earlier report. `aws s3 cp` cannot send
+          # that header, hence one put-object per file.
+          for file in rbac-report/*; do
+            case "$file" in
+              *.html) type="text/html" ;;
+              *.json) type="application/json" ;;
+              *) type="text/markdown" ;;
+            esac
+            aws s3api put-object --bucket "$RBAC_REPORT_BUCKET" --key "${folder}/$(basename "$file")" \
+              --body "$file" --content-type "$type" --if-none-match '*' > /dev/null
+          done
+          echo "Full report: \`${folder}/\` in the RBAC report bucket." >> "$GITHUB_STEP_SUMMARY"
