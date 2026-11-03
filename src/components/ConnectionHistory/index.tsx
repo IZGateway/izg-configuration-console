@@ -7,6 +7,7 @@ import Close from '../Close'
 import ViewChangeRequest from './viewChangeRequest'
 import useSWR from 'swr'
 import _ from 'lodash'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 
 type connectionHistoryProps = {
   destId: string
@@ -14,12 +15,18 @@ type connectionHistoryProps = {
   status: string
 }
 const ConnectionHistory = (props: connectionHistoryProps) => {
+  const accessLevels = useRoleAccess('history')
   const {
     data: changeRequestData,
     error: changeRequestError,
     isLoading: ischangeRequestLoading,
   } = useSWR(`/api/changerequest/${props.destTypeId}/${props.destId}`)
-  if (changeRequestError) return <div>failed to load</div>
+  // Thrown, not returned as a div: TestHistory and ChangeHistory in this same
+  // directory already throw on their own fetch errors specifically so the
+  // ErrorBoundary already mounted around this component (history/[...slug].tsx)
+  // catches it, logs it, and renders the real ErrorPage - matching that
+  // convention instead of a silent, unstyled, unlogged dead end.
+  if (changeRequestError) throw new Error(changeRequestError.message)
   if (ischangeRequestLoading) return <div>loading...</div>
 
   function Item(props: BoxProps) {
@@ -69,17 +76,22 @@ const ConnectionHistory = (props: connectionHistoryProps) => {
             destTypeId={props.destTypeId}
             status={props.status}
           />
-          {!_.isEmpty(changeRequestData) && (
-            <ViewChangeRequest
-              destId={props.destId}
-              destTypeId={props.destTypeId}
-            />
-          )}
+          {!_.isEmpty(changeRequestData) &&
+            accessLevels.canViewChangeRequest && (
+              <ViewChangeRequest
+                destId={props.destId}
+                destTypeId={props.destTypeId}
+              />
+            )}
         </Item>
 
         <Item sx={{ flexGrow: 1 }}>
-          <TestHistory destId={props.destId} destTypeId={props.destTypeId} />
-          <ChangeHistory destId={props.destId} destTypeId={props.destTypeId} />
+          {accessLevels.canViewHubStatusHistory && (
+            <TestHistory destId={props.destId} destTypeId={props.destTypeId} />
+          )}
+          {accessLevels.canViewChangeHistory && (
+            <ChangeHistory destId={props.destId} destTypeId={props.destTypeId} />
+          )}
         </Item>
       </Box>
     </div>

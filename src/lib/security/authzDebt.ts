@@ -64,52 +64,10 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   // ---------------------------------------------------------------------
   // Pages with no server-side gate.
   // ---------------------------------------------------------------------
-  // The first four are the *next increment of this same requirement*, not a
-  // different problem: each needs one line on a capability that already exists
-  // in PAGE_ENTRY. They are sequenced second because their seeds must preserve
-  // today's *ungated* audience, which is a separate decision from reproducing
-  // `isAdmin`.
-  {
-    kind: 'split-decision',
-    subject: 'changerequest/index.ts',
-    ticket: 'IGDD-3472',
-    note:
-      'The declaration checks the capability with ANY_JURISDICTION; the handler separately calls ' +
-      'hasAccessToDestId, which unions reach across roles. Jurisdiction Operations (holds ' +
-      'canCancelRequest, scoped) plus IZG Support (global, holds no change-request write) can ' +
-      'therefore mutate a request outside the granting role reach. Strictly narrower than before ' +
-      'this change, which checked reach ALONE, but short of the same-role rule. Closing it needs ' +
-      'the destination id — carried in the body here — resolved in one role-local decision.',
-  },
-  {
-    kind: 'split-decision',
-    subject: 'changerequest/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'As changerequest/index.ts; the destination id is in the slug here rather than the body.',
-  },
-  {
-    kind: 'split-decision',
-    subject: 'maintenance/update/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note:
-      'As changerequest/index.ts. Also the route whose reach half answers 401 where the capability ' +
-      'half answers 403 — 403 is correct for both, but the reach middleware is shared with five ' +
-      'other routes and changing its status code can affect client retry behaviour.',
-  },
-  {
-    kind: 'split-decision',
-    subject: 'allowedusers/index.ts',
-    ticket: 'IGDD-3546',
-    note:
-      'POST/DELETE declare onboarding.canManageSenders with ANY_JURISDICTION; the handler ' +
-      'separately calls hasAccessToDestId on body.destinationId, which unions reach across roles. ' +
-      'Jurisdiction Operations (holds canManageSenders, scoped) plus any other role held by the ' +
-      'same user that contributes global reach (e.g. IZG Support, IGDD-3170) can therefore write a ' +
-      'sender outside the granting role reach. Strictly narrower than before this row existed, when ' +
-      'POST/DELETE applied no reach check at all — see PR #729 review. Same shape as the ' +
-      'changerequest/index.ts row above; closing it needs destinationId resolved against one ' +
-      'role-local decision rather than two unioned checks.',
-  },
+  // edit, history, test, changerequest and testreport were gated by
+  // protect-connection-pages-and-endpoints (IGDD-3545/3548) and no longer
+  // appear here. api-doc is the one page that structurally cannot use the
+  // same fix.
   {
     kind: 'ungated-page',
     subject: 'api-doc',
@@ -123,36 +81,6 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
       'serving the spec from /api/swaggerjson, which needs that endpoint fixed first — it resolves ' +
       'src/pages/api/** at request time and the runner image ships no src/, so it very likely returns ' +
       'an empty spec in every deployed environment. Both halves together, tested in a real container.',
-  },
-  {
-    kind: 'ungated-page',
-    subject: 'edit',
-    ticket: 'IGDD-3472',
-    note: 'One-line withPageAccess("edit") on canChangeCredentials. Deferred: the seed must preserve the current ungated audience, not isAdmin.',
-  },
-  {
-    kind: 'ungated-page',
-    subject: 'history',
-    ticket: 'IGDD-3472',
-    note: 'One-line withPageAccess("history") on canViewConnectionInfo. Same deferral reason as edit.',
-  },
-  {
-    kind: 'ungated-page',
-    subject: 'test',
-    ticket: 'IGDD-3472',
-    note: 'One-line withPageAccess("test") on canRunConnectionTest. Same deferral reason as edit.',
-  },
-  {
-    kind: 'ungated-page',
-    subject: 'changerequest',
-    ticket: 'IGDD-3472',
-    note: 'One-line withPageAccess("changerequest") on canViewDetails. Same deferral reason as edit.',
-  },
-  {
-    kind: 'ungated-page',
-    subject: 'testreport',
-    ticket: 'IGDD-3472',
-    note: 'Has no page key in the access matrix, so unlike the four above it needs a new capability and a seed value before it can be gated.',
   },
 
   // ---------------------------------------------------------------------
@@ -210,33 +138,15 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   },
   {
     kind: 'in-handler',
-    subject: 'destinations/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'Per-destination reach check in the handler; the capability half has no agreed flag yet.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'destinationaudit/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'As destinations/[...slug].ts.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'statushistory/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'Maps to history.canViewHubStatusHistory, which is currently unwired — wiring both together is one change.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'tests/connectiontest/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'Maps to test.canRunConnectionTest, currently unwired; the /test page gate and this route should land together.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'status/reset/[...slug].ts',
-    ticket: 'IGDD-3472',
-    note: 'The per-destination reset. Maps to manageconnections.canResetCircuitBreaker plus a reach check; deliberately NOT the new hub-wide canResetHubCircuitBreakers.',
+    subject: 'changerequest/[...slug].ts',
+    ticket: 'IGDD-3545',
+    note:
+      'protect-connection-pages-and-endpoints: converted from a split-decision row, DELETE method ' +
+      'only - GET on this same file is fully declarative and carries no row. DELETE\'s ' +
+      'destination id is only known after fetching the change request by id, so no declarative ' +
+      '`scope` extractor can name it ahead of time; the handler does the combined ' +
+      'capability+reach check itself via can(), the same primitive decideRouteCapability uses ' +
+      'declaratively for every other route this change touches.',
   },
 
   // ---------------------------------------------------------------------
@@ -253,79 +163,15 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   // on it but no server check reads it.
   {
     kind: 'unwired-flag',
-    subject: 'edit.canChangeCredentials',
-    ticket: 'IGDD-3472',
-    note: 'Named as the /edit page entry in PAGE_ENTRY, but that entry is inert until the page is gated.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
     subject: 'edit.canApproveChangeRequest',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'edit.canSaveDraft',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'edit.canResetDraft',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'edit.canRunDraftConnectionTest',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'history.canViewChangeRequest',
-    ticket: 'IGDD-3472',
-    note: 'The identically-named manageconnections flag IS read, on the connection table — this one, on the history block, is not. The duplicate name is why the audit event records a dotted, page-qualified permission.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'history.canViewConnectionInfo',
-    ticket: 'IGDD-3472',
-    note: 'Named as the /history page entry in PAGE_ENTRY, but that entry is inert until the page is gated.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'history.canViewConnectionInfoDetails',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'history.canViewHubStatusHistory',
-    ticket: 'IGDD-3472',
-    note: 'The route that would enforce it, statushistory/[...slug].ts, decides in-handler — see the in-handler row above.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'history.canViewChangeHistory',
-    ticket: 'IGDD-3472',
-    note: 'No reader.',
-    enforcement: 'Not enforced',
-  },
-  {
-    kind: 'unwired-flag',
-    subject: 'test.canRunConnectionTest',
-    ticket: 'IGDD-3472',
-    note: 'The identically-named manageconnections flag IS read, on the connection table — this one, on the test block, is not.',
+    ticket: 'IGDD-3545',
+    note:
+      'PO-confirmed 2026-11-03: editing privilege for a change request IS canCreateChangeRequest ' +
+      '— if a role can create, it can edit, and there is no other way to get edit access. There is ' +
+      'no separate "approve" action anywhere in the UI (the Jira ticket is approved externally; ' +
+      'canDeployChange, a different flag, gates deploying an already-approved request). This row ' +
+      'will never gain a reader by design, not by oversight — it is intentionally redundant with ' +
+      'edit.canCreateChangeRequest, which is enforced.',
     enforcement: 'Not enforced',
   },
 ]

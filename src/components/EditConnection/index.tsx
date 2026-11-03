@@ -22,6 +22,7 @@ import ActionButtons from './actionButtons'
 import AcceptButton from './acceptButton'
 import { Destination } from '../../lib/type/Destination'
 import { DestinationChangeRequest } from '../../lib/type/DestinationChangeRequest'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 interface editConnectionProps {
   destId: string
   destTypeId: string
@@ -87,6 +88,7 @@ const getDelta = (a, b) =>
 const EditConnection = (props: editConnectionProps) => {
   const router = useRouter()
   const { data: session } = useSession()
+  const accessLevels = useRoleAccess('edit')
   const { clearValue, setAlert, alert } = useContext(CombinedContext)
   const [formErrors, setFormErrors] = useState(null)
   const [activeStep, setActiveStep] = useState(0)
@@ -1050,6 +1052,9 @@ const EditConnection = (props: editConnectionProps) => {
           saveDraft={saveDraft}
           isResetButtonDisabled={isResetButtonDisabled}
           resetDraft={resetDraftValues}
+          canRunDraftConnectionTest={accessLevels.canRunDraftConnectionTest}
+          canSaveDraft={accessLevels.canSaveDraft}
+          canResetDraft={accessLevels.canResetDraft}
         />
       ) : (
         <TestDrawer

@@ -102,6 +102,18 @@ export function requiresGlobalTenancy(ref: CapabilityRef): boolean {
  */
 export const REQUIRES_DESTINATION_SCOPE: ReadonlyArray<CapabilityRef> = [
   { page: 'console', capability: 'canViewConsole' },
+  // Added by protect-connection-pages-and-endpoints (IGDD-3545, IGDD-3548).
+  { page: 'history', capability: 'canViewConnectionInfo' },
+  { page: 'history', capability: 'canViewChangeHistory' },
+  { page: 'history', capability: 'canViewHubStatusHistory' },
+  { page: 'test', capability: 'canRunConnectionTest' },
+  { page: 'manageconnections', capability: 'canResetCircuitBreaker' },
+  { page: 'manageconnections', capability: 'canScheduleMaintainance' },
+  { page: 'edit', capability: 'canCreateChangeRequest' },
+  { page: 'changerequest', capability: 'canRescheduleRequest' },
+  { page: 'changerequest', capability: 'canCancelRequest' },
+  { page: 'changerequest', capability: 'canViewDetails' },
+  { page: 'onboarding', capability: 'canManageSenders' },
 ]
 
 /** True if `ref`'s API data path must be scoped to one destination per request. */
