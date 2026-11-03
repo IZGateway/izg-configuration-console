@@ -6,10 +6,11 @@ import { ConnectionTestRequest } from '../types/ConnectionTestRequest'
 import { promises as dnsPromises } from 'dns';
 
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
+// Uses the task's default resolver (the VPC's Route 53 Resolver); public DNS
+// servers are unreachable from the ECS task.
 const resolver = new dnsPromises.Resolver({
   "timeout": CONNECTION_TEST_TIMEOUT
 });
-resolver.setServers(['8.8.8.8', '8.8.4.4']); // Set Google's public DNS servers
 export default class DNS extends ConnectionTest {
   private readonly TEST_NAME : string
   private dnsConnectionTestResult: ConnectionTestResult 

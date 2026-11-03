@@ -47,8 +47,11 @@ const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
   ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10)
   : 5000
 
+// Uses the task's default resolver (the VPC's Route 53 Resolver). Public DNS
+// servers are unreachable from the ECS task: queries to them hang through every
+// retry (~2 minutes) before the lookup fails open. Any private address the VPC
+// resolver returns is still refused by the publicly-routable rule below.
 const resolver = new dnsPromises.Resolver({ timeout: CONNECTION_TEST_TIMEOUT })
-resolver.setServers(['8.8.8.8', '8.8.4.4']) // public DNS only - never the VPC resolver
 
 export class UnsafeDestinationUriError extends Error {
   constructor(message: string) {
