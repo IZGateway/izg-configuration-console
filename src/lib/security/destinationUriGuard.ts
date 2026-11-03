@@ -51,7 +51,12 @@ const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT
 // servers are unreachable from the ECS task: queries to them hang through every
 // retry (~2 minutes) before the lookup fails open. Any private address the VPC
 // resolver returns is still refused by the publicly-routable rule below.
-const resolver = new dnsPromises.Resolver({ timeout: CONNECTION_TEST_TIMEOUT })
+// A single try (Node's default is 4, with growing timeouts) bounds a lookup to
+// about CONNECTION_TEST_TIMEOUT per configured server.
+const resolver = new dnsPromises.Resolver({
+  timeout: CONNECTION_TEST_TIMEOUT,
+  tries: 1,
+})
 
 export class UnsafeDestinationUriError extends Error {
   constructor(message: string) {
