@@ -104,8 +104,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // '?'), and rejecting it would block unrelated edits such as a password
       // change. Compared with the stored value, never the client's `current`,
       // which the caller controls. If the read fails, the URI is validated.
+      // Read from the base repository: only destUri is needed, so skip the
+      // password decrypt, which could otherwise fail and reject the edit.
       const storedDestUri = requestedDestUri
         ? await dbClient
+            .getRepository()
             .fetchDestination(requestBody.destId, requestBody?.destType?.typeId)
             .then((destination) => destination?.destUri)
             .catch(() => undefined)

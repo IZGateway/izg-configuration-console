@@ -30,14 +30,20 @@ jest.mock('../../../../logger', () => ({
 }))
 
 const mockUpsertDestinationChangeRequest = jest.fn()
+// Base-repository read (no decrypt) vs the decrypting wrapper's read.
 const mockFetchDestination = jest.fn()
+const mockDecryptingFetchDestination = jest.fn()
 jest.mock('../../../lib/db/DbClientFactory', () => ({
   __esModule: true,
   default: {
     getDbClient: jest.fn().mockResolvedValue({
       upsertDestinationChangeRequest: (...args: unknown[]) =>
         mockUpsertDestinationChangeRequest(...args),
-      fetchDestination: (...args: unknown[]) => mockFetchDestination(...args),
+      getRepository: () => ({
+        fetchDestination: (...args: unknown[]) => mockFetchDestination(...args),
+      }),
+      fetchDestination: (...args: unknown[]) =>
+        mockDecryptingFetchDestination(...args),
       fetchDestinationPassword: jest.fn().mockResolvedValue('stored-password'),
       deleteDestinationChangeRequest: jest.fn(),
     }),
@@ -116,6 +122,9 @@ describe('POST /api/changerequest unchanged destUri (IGDD-3640)', () => {
     ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
     mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
     mockFetchDestination.mockResolvedValue({ destUri: legacyUri })
+    mockDecryptingFetchDestination.mockRejectedValue(
+      new Error('password decrypt failed')
+    )
   })
 
   const draftWith = (destUri: string, current: Record<string, unknown> = {}) =>
@@ -133,6 +142,9 @@ describe('POST /api/changerequest unchanged destUri (IGDD-3640)', () => {
     await handler(req, res)
 
     expect(mockFetchDestination).toHaveBeenCalledWith('dest1', 1)
+    // No password decrypt just to read destUri: a decrypt failure must not
+    // turn an unchanged URI into a rejection.
+    expect(mockDecryptingFetchDestination).not.toHaveBeenCalled()
     expect(res.status).not.toHaveBeenCalledWith(400)
     expect(mockUpsertDestinationChangeRequest).toHaveBeenCalled()
   })

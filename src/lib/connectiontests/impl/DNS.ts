@@ -7,11 +7,12 @@ import { promises as dnsPromises } from 'dns';
 
 const CONNECTION_TEST_TIMEOUT = process.env.CONNECTION_TEST_TIMEOUT ? parseInt(process.env.CONNECTION_TEST_TIMEOUT, 10) : 5000
 // Uses the task's default resolver (the VPC's Route 53 Resolver); public DNS
-// servers are unreachable from the ECS task. A single try keeps an unanswered
-// lookup to about CONNECTION_TEST_TIMEOUT instead of Node's 4 growing retries.
+// servers are unreachable from the ECS task. Two tries allow one retry for a
+// dropped reply while keeping an unanswered lookup to about 3x
+// CONNECTION_TEST_TIMEOUT instead of Node's 4 doubling tries.
 const resolver = new dnsPromises.Resolver({
   "timeout": CONNECTION_TEST_TIMEOUT,
-  "tries": 1
+  "tries": 2
 });
 export default class DNS extends ConnectionTest {
   private readonly TEST_NAME : string
