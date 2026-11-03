@@ -12,6 +12,8 @@
  *     `CDC CISO`) had no entry in the access matrix. They could be selected at
  *     login and then resolve to no permissions — and worse, displace a role that
  *     would have worked. Only roles that exist in the matrix can be named now.
+ *     `IZG Program` gained a matrix entry and rejoined the mapping in IGDD-3547;
+ *     `CDC Program` and `CDC CISO` remain unmapped.
  *  2. Group names were matched exactly and case-sensitively, so an Okta group
  *     called `IZG-Operations` silently granted nothing, indistinguishable from
  *     the group not existing. Names are normalized now.
@@ -27,6 +29,7 @@
 export type CcRole =
   | 'IZG Operations'
   | 'IZG Support'
+  | 'IZG Program'
   | 'Jurisdiction Operations'
   | 'Jurisdiction Support'
   | 'Sender Operations'
@@ -38,12 +41,14 @@ export type CcRole =
  * a union across all held roles, so precedence no longer decides what a user can
  * do. It only makes `session.user.roles` stable for logs and display, and makes
  * `Decision.grantedBy` deterministic when more than one role would allow an
- * action. Kept in the same order the old `roles.ts` used, minus the three
- * unmapped entries, so nothing about existing output order changes.
+ * action. Kept in the same order the old `roles.ts` used, minus the two
+ * still-unmapped entries (`CDC Program`, `CDC CISO`), so nothing about
+ * existing output order changes.
  */
 export const ROLE_PRECEDENCE: CcRole[] = [
   'IZG Operations',
   'IZG Support',
+  'IZG Program',
   'Jurisdiction Operations',
   'Jurisdiction Support',
   'Sender Operations',
@@ -68,6 +73,12 @@ const GROUP_ROLE_MAPPING: Record<string, CcRole[]> = {
   // tolerates capitalization/punctuation choices, so confirming this later is
   // not a breaking change.
   'Sender Operations': ['Sender Operations'],
+  // [CONFIRM] IGDD-3600 (Okta directory work) has not yet recorded whether
+  // this group exists, its exact spelling, or its membership — see that
+  // ticket's "Group to confirm" row. normalizeGroupName tolerates
+  // capitalization/punctuation, so correcting the spelling later is not
+  // breaking; a wrong name simply grants nothing until then.
+  'IZG Program': ['IZG Program'],
 }
 
 /**

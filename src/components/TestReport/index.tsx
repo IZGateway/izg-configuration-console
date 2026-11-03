@@ -13,6 +13,7 @@ import { Box, Typography, Card, Chip, Button, Tooltip } from '@mui/material'
 import palette from '../../styles/theme/palette'
 import router from 'next/router'
 import Cookies from 'js-cookie'
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -249,7 +250,7 @@ const TestReportTable = ({
             position: 'relative',
             zIndex: 10,
             height: 'auto',
-            boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+            boxShadow: DROP_SHADOW,
             marginBottom: '-16px',
           }}
         >

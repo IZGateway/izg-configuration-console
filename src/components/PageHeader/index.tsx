@@ -2,6 +2,7 @@ import React from 'react'
 import { Box, Card, SxProps, Theme, Typography } from '@mui/material'
 import palette from '../../styles/theme/palette'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 export interface PageHeaderProps {
   title: React.ReactNode
   subtitle: React.ReactNode
@@ -23,7 +24,7 @@ const PageHeader = ({ title, subtitle, id, actions, sx }: PageHeaderProps) => {
           position: 'relative',
           zIndex: 10,
           height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          boxShadow: DROP_SHADOW,
           marginBottom: '16px',
         },
         ...(Array.isArray(sx) ? sx : [sx]),

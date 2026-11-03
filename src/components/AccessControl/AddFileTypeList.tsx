@@ -4,6 +4,7 @@ import { Close as CloseIcon } from '@mui/icons-material'
 import palette from '../../styles/theme/palette'
 import { AdsFileTypeItem } from '../../lib/type/AdsFileType'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 interface AddFileTypeListProps {
   onSave: (item: AdsFileTypeItem) => void
   onCancel: () => void
@@ -51,7 +52,7 @@ const AddFileTypeList = ({
           position: 'relative',
           zIndex: 10,
           height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          boxShadow: DROP_SHADOW,
           marginBottom: '-16px',
           backgroundColor: palette.white,
         }}

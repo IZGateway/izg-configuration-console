@@ -8,6 +8,7 @@ import EnvironmentSelect, {
   getFirstAvailableEnvironment,
 } from '../Dropdown/EnvironmentSelect'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 interface AddDenyListProps {
   onSave: (item: Partial<DenyListItem>) => void
   onCancel: () => void
@@ -128,7 +129,7 @@ const AddDenyList: React.FC<AddDenyListProps> = ({ onSave, onCancel }) => {
           position: 'relative',
           zIndex: 10,
           height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          boxShadow: DROP_SHADOW,
           marginBottom: '-16px',
           backgroundColor: palette.white,
         }}

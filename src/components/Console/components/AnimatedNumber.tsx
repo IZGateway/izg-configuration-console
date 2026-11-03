@@ -4,6 +4,10 @@ interface AnimatedNumberProps {
   value: string | number
   duration?: number
   className?: string
+  // false: no live region. The final value is still in the accessibility
+  // tree, read in place, but not announced. For counts that sit in a page
+  // header, where several announcing on load is noise.
+  live?: boolean
 }
 
 // Visually-hidden live region: clip-path avoids WAVE small-text alert;
@@ -30,6 +34,7 @@ const AnimatedNumber = ({
   value,
   duration = 1000,
   className,
+  live = true,
 }: AnimatedNumberProps) => {
   const [displayValue, setDisplayValue] = useState<string>('')
   const [liveValue, setLiveValue] = useState<string>('')
@@ -108,15 +113,19 @@ const AnimatedNumber = ({
       <span className={className} aria-hidden="true">
         {displayValue}
       </span>
-      {/* Live region announces the final value once animation completes */}
-      <span
-        style={srOnlyStyle}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {liveValue}
-      </span>
+      {live ? (
+        // Live region announces the final value once animation completes
+        <span
+          style={srOnlyStyle}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {liveValue}
+        </span>
+      ) : (
+        <span style={srOnlyStyle}>{value}</span>
+      )}
     </>
   )
 }

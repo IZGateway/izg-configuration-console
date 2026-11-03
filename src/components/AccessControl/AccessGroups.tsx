@@ -23,6 +23,7 @@ import CustomDialogBox from '../DialogBox/CustomDialogBox'
 import { ENVIRONMENT_LABELS } from '../Dropdown/EnvironmentSelect'
 import Loader from '../Loader'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 export interface AccessGroup {
   id: string
   groupName: string
@@ -125,7 +126,7 @@ const AccessGroups: React.FC<AccessGroupsProps> = ({
   const actionButtonStyle = {
     borderRadius: 90,
     background: palette.white,
-    boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+    boxShadow: DROP_SHADOW,
     width: 35,
     height: 35,
     marginRight: 1,
