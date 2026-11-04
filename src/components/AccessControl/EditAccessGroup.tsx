@@ -245,7 +245,7 @@ const EditAccessGroup: React.FC<EditAccessGroupProps> = ({
                 cursor: 'pointer',
               }}
             >
-              izgateway@cdc.gov
+              support@izgateway.org
             </Box>
           </Typography>
         </Box>

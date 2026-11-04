@@ -98,7 +98,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Jira ticket is raised and no draft is stored for a URI we would refuse.
     if (req.method === 'POST' || req.method === 'PUT') {
       const requestedDestUri = requestBody?.requested?.destUri
-      if (requestedDestUri) {
+      // The form always sends the full field set, so an unchanged destUri
+      // arrives on every edit. A URI already live for this connection is not
+      // re-judged: it predates the specification (e.g. a WSDL URL ending in
+      // '?'), and rejecting it would block unrelated edits such as a password
+      // change. Compared with the stored value, never the client's `current`,
+      // which the caller controls. If the read fails, the URI is validated.
+      // Read from the base repository: only destUri is needed, so skip the
+      // password decrypt, which could otherwise fail and reject the edit.
+      const storedDestUri = requestedDestUri
+        ? await dbClient
+            .getRepository()
+            .fetchDestination(requestBody.destId, requestBody?.destType?.typeId)
+            .then((destination) => destination?.destUri)
+            .catch(() => undefined)
+        : undefined
+      if (requestedDestUri && requestedDestUri !== storedDestUri) {
         try {
           await assertSafeDestinationUri(
             requestedDestUri,
