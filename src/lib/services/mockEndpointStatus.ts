@@ -21,7 +21,8 @@
 import type DbClient from '../db/DbClient'
 import type { Destination } from '../type/Destination'
 import type { DestinationChangeRequest } from '../type/DestinationChangeRequest'
-import isOperationsRole from '../security/accessutils'
+import { hasGlobalTenancy } from '../security/policy'
+import type { CcRole } from '../security/rolemapping'
 
 const HOUR = 60 * 60 * 1000
 
@@ -111,8 +112,9 @@ const findMock = (destId: string, destTypeId: number) =>
   )
 
 /**
- * Hub status rows, scoped like the real request: operations roles see every
- * row, everyone else only the destinations in their jurisdictions.
+ * Hub status rows, scoped like the real request: globally-scoped roles see
+ * every row, everyone else only the destinations in their jurisdictions.
+ * IGDD-3547: mirrors fetchEndpointStatus.ts's switch to hasGlobalTenancy.
  */
 export const mockHubEndpointStatus = (
   roles: string[],
@@ -120,9 +122,10 @@ export const mockHubEndpointStatus = (
 ): Record<string, unknown>[] => {
   const allowed = new Set((jurisdictions ?? []).map((j) => j.toLowerCase()))
   const statusAt = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const isGlobal = hasGlobalTenancy({ roles: roles as CcRole[], jurisdictions })
 
   return MOCK_CONNECTIONS.filter(
-    (c) => isOperationsRole(roles) || allowed.has(c.destId.toLowerCase())
+    (c) => isGlobal || allowed.has(c.destId.toLowerCase())
   ).map((c) => ({
     destId: c.destId,
     destTypeId: c.destTypeId,

@@ -52,6 +52,14 @@ describe('nav visibility: existing roles are unchanged', () => {
   })
 })
 
+// IGDD-3547: IZG Program holds canViewConnections and canViewOnboarding.
+describe('nav visibility: IZG Program', () => {
+  it('sees Manage Connections and Onboarding Senders', () => {
+    expect(item('Manage Connections').isVisible?.(['IZG Program'])).toBe(true)
+    expect(item('Onboarding Senders').isVisible?.(['IZG Program'])).toBe(true)
+  })
+})
+
 describe('nav visibility: no held roles', () => {
   it('hides every gated item even with the feature flag on', () => {
     expect(item('Manage Connections').isVisible?.([])).toBe(false)
@@ -81,7 +89,10 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
 
   // Console (Admin Log Search) is granted beyond IZG Operations: IZG Support
   // (IGDD-3170) and, own jurisdiction only, the two jurisdiction roles
-  // (IGDD-3474). The other two admin items stay IZG Operations only.
+  // (IGDD-3474). Access Control stays IZG Operations only. Admin Operations
+  // also reaches IZG Program now (IGDD-3547, canViewAdminOperations) — see
+  // the dedicated case below — so it is no longer "the other two admin items
+  // stay IZG Operations only" for every role in this list.
   it.each([
     'IZG Support',
     'Jurisdiction Operations',
@@ -92,6 +103,18 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
         label,
         visible: label === 'Console',
       })
+    }
+  })
+
+  // IGDD-3547: IZG Program holds adminoperations.canViewAdminOperations
+  // (circuit-breaker reset / DB refresh) but neither accesscontrol.
+  // canViewAccessControl nor console.canViewConsole.
+  it('IZG Program sees Admin Operations and no other admin item', () => {
+    for (const label of ADMIN_ITEMS) {
+      expect({
+        label,
+        visible: item(label).isVisible?.(['IZG Program']),
+      }).toEqual({ label, visible: label === 'Admin Operations' })
     }
   })
 
