@@ -232,9 +232,18 @@ export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
   changerequest: 'canViewDetails',
 }
 
-/** The `CapabilityRef` that gates entry to `page`. */
-export function entryCapabilityOf<P extends PageKey>(page: P): CapabilityRef {
-  return { page, capability: PAGE_ENTRY[page] } as CapabilityRef
+/**
+ * The `CapabilityRef` that gates entry to `page`: `PAGE_ENTRY[page]`, or
+ * `entry` when a page with no navigation link declares a stricter one
+ * (`withPageAccess`'s `entry` option, IGDD-3498). The one place a page key
+ * becomes an entry `CapabilityRef`, so the page gate and `canEnterPage` cannot
+ * build it differently.
+ */
+export function entryCapabilityOf<P extends PageKey>(
+  page: P,
+  entry?: keyof PageControls[P]
+): CapabilityRef {
+  return { page, capability: entry ?? PAGE_ENTRY[page] } as CapabilityRef
 }
 
 /**

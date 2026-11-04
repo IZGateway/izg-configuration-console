@@ -63,19 +63,17 @@ const IZGProgramAccess: RoleAccess = {
     canViewOnboarding: true,
   },
 
-  // Target matrix: "Access Control — view tabs / write actions" is IZG
-  // Security only. IZG Program holds neither.
+  // Target matrix (v13): every "Access Control" row is IZG Security and
+  // IZG Operations only. IZG Program holds none of them.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
   },
 
   // Target matrix: "Admin Operations — Circuit Breaker Reset / DB Refresh" is
-  // a real grant for IZG Program (unlike IZG Support's same row, which is
-  // deferred — see Finding #14 in _IZGSupportAccess.ts — this is a brand new
-  // role file, not a pure-removal change, so it is seeded from the matrix
-  // directly). `canViewAdminOperations` is set alongside it so the role can
-  // reach the page the other two flags act on. Password Encryption remains
-  // IZG Security only.
+  // a real grant for IZG Program, seeded from the matrix directly (IZG Support
+  // holds the same row since IGDD-3498). `canViewAdminOperations` is set
+  // alongside it so the role can reach the page the other two flags act on.
+  // Password Encryption remains IZG Security only.
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
     canViewAdminOperations: true,

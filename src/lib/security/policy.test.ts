@@ -216,6 +216,51 @@ describe('policy: IZG Program gets exactly what the target matrix grants it (IGD
   })
 })
 
+describe('policy: IZG Security holds every capability, everywhere (IGDD-3498)', () => {
+  const security = subject(['IZG Security'])
+
+  it('has global reach', () => {
+    expect(hasGlobalTenancy(security)).toBe(true)
+  })
+
+  // Enumerated from another role's blocks rather than from IZG Security's own,
+  // so a flag missing from _IZGSecurityAccess.ts is caught. The block-shape
+  // drift test keeps every role's flag set identical.
+  const EVERY_CAPABILITY = Object.entries(accessLevel['IZG Operations'])
+    .filter(([page]) => page !== 'globalTenancy')
+    .flatMap(([page, block]) =>
+      Object.keys(block as object).map((capability) => ({ page, capability }))
+    )
+
+  it.each(EVERY_CAPABILITY)('holds $page.$capability in any jurisdiction', (ref) => {
+    expect(
+      can(security, ref.page as PageKey, ref.capability as never, ANY_JURISDICTION).allowed
+    ).toBe(true)
+    expect(can(security, ref.page as PageKey, ref.capability as never, 'vha').allowed).toBe(true)
+  })
+})
+
+describe('policy: IZG Support gets the hub-wide corrective actions (IGDD-3498)', () => {
+  const support = subject(['IZG Support'], ['az'])
+
+  it('can reach Admin Operations, reset hub circuit breakers and refresh the hub database', () => {
+    const access = mergePageAccess(support, 'adminoperations')
+    expect(access.canViewAdminOperations).toBe(true)
+    expect(access.canResetHubCircuitBreakers).toBe(true)
+    expect(access.canRefreshHubDatabase).toBe(true)
+  })
+
+  it('does not get password encryption, Access Control or the API doc', () => {
+    expect(mergePageAccess(support, 'adminoperations').canManagePasswordEncryption).toBeFalsy()
+    const accessControl = mergePageAccess(support, 'accesscontrol')
+    expect(accessControl.canViewAccessControl).toBeFalsy()
+    expect(accessControl.canManageAccessGroups).toBeFalsy()
+    expect(accessControl.canManageDenyList).toBeFalsy()
+    expect(accessControl.canManageAdsFileTypes).toBeFalsy()
+    expect(mergePageAccess(support, 'api-doc').canViewApiDoc).toBeFalsy()
+  })
+})
+
 describe('policy: deny by default', () => {
   it('no roles denies everything and yields empty page access', () => {
     const none = subject([])
@@ -260,18 +305,33 @@ const ADMIN_CAPABILITIES: CapabilityRef[] = [
   { page: 'api-doc', capability: 'canViewApiDoc' },
 ]
 
+// IZG Support left this list in IGDD-3498, when it gained the hub-wide Admin
+// Operations capabilities; its admin grants are asserted in their own block.
 const NON_OPERATIONS_ROLES: CcRole[] = [
-  'IZG Support',
   'Jurisdiction Operations',
   'Jurisdiction Support',
   'Sender Operations',
 ]
 
-describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly', () => {
-  // The seed values must grant precisely what `isAdmin` grants today and no
-  // more. If this table ever needs editing, the change is granting or removing
+// The two capabilities target matrix v13 takes from IZG Operations (IGDD-3498).
+const NARROWED_FROM_OPERATIONS: CapabilityRef[] = [
+  { page: 'accesscontrol', capability: 'canManageAccessGroups' },
+  { page: 'adminoperations', capability: 'canManagePasswordEncryption' },
+]
+const isNarrowed = (ref: CapabilityRef) =>
+  NARROWED_FROM_OPERATIONS.some(
+    (n) => n.page === ref.page && n.capability === ref.capability
+  )
+
+describe('admin capability holders follow the ratified matrix (IGDD-3472, IGDD-3498)', () => {
+  // If either table ever needs editing, the change is granting or removing
   // access and must be reviewed as such.
-  it.each(ADMIN_CAPABILITIES)(
+  it.each(ADMIN_CAPABILITIES)('IZG Security holds $page.$capability', (ref) => {
+    const s = subject(['IZG Security'])
+    expect(can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed).toBe(true)
+  })
+
+  it.each(ADMIN_CAPABILITIES.filter((ref) => !isNarrowed(ref)))(
     'IZG Operations holds $page.$capability',
     (ref) => {
       const s = subject(['IZG Operations'])
@@ -281,13 +341,35 @@ describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly
     }
   )
 
+  it.each(NARROWED_FROM_OPERATIONS)(
+    'IZG Operations does not hold $page.$capability (target matrix v13)',
+    (ref) => {
+      const s = subject(['IZG Operations'])
+      expect(can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed).toBe(
+        false
+      )
+    }
+  )
+
+  it('IZG Operations cannot approve a change request (target matrix v13)', () => {
+    const s = subject(['IZG Operations'])
+    expect(can(s, 'edit', 'canApproveChangeRequest', ANY_JURISDICTION).allowed).toBe(false)
+  })
+
+  it('only IZG Security holds password encryption', () => {
+    const holders = ROLE_PRECEDENCE.filter(
+      (role) =>
+        can(subject([role]), 'adminoperations', 'canManagePasswordEncryption', ANY_JURISDICTION)
+          .allowed
+    )
+    expect(holders).toEqual(['IZG Security'])
+  })
+
   // console.canViewConsole (Admin Log Search) is the one admin-tier grant
-  // outside IZG Operations: IZG Support (IGDD-3170) and, own jurisdiction
-  // only, Jurisdiction Operations and Jurisdiction Support (IGDD-3474, target
-  // matrix v11). Every other admin flag is still checked for every
-  // non-operations role.
+  // these roles hold: own jurisdiction only, Jurisdiction Operations and
+  // Jurisdiction Support (IGDD-3474, target matrix v11). Every other admin
+  // flag is still checked for every role in the list.
   const CONSOLE_HOLDERS: CcRole[] = [
-    'IZG Support',
     'Jurisdiction Operations',
     'Jurisdiction Support',
   ]
