@@ -6,7 +6,6 @@ import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
 import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
-import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
@@ -1394,17 +1393,6 @@ class Dynamo implements DbClient {
       })
       throw error
     }
-  }
-
-  async fetchSenderData(): Promise<SenderRecord> {
-    const params: GetCommandInput = {
-      TableName: TABLE_NAME,
-      Key: {
-        entityType: 'Sender', // update this table
-      },
-    }
-    const result = await dynamodDbDocClient.send(new GetCommand(params))
-    return result.Item as SenderRecord
   }
 
   async fetchAccessGroups(): Promise<AccessGroupRecord[]> {

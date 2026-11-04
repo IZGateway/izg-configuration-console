@@ -28,7 +28,7 @@ Every log event generated while handling an authenticated user interaction SHALL
 
 ### Requirement: Server-side page-load renders carry sessionUser
 
-Every authenticated page render in `getServerSideProps` SHALL execute inside the request context so its log events — including downstream DB-layer logs — carry the `sessionUser` object, the same way `/api/*` requests do. This SHALL be applied uniformly via a shared `withRequestContext(getServerSideProps)` wrapper so that every page defining `getServerSideProps` is covered — current pages (`manageconnections`, `changerequest/[...slug]`, `testreport`, `test/[...slug]`, `onboarding`, `passwordencryption`) and any page added later — without per-page wiring. Existing identity fields on those lines (for example the connection test's `userContext`) SHALL be preserved (additive).
+Every authenticated page render in `getServerSideProps` SHALL execute inside the request context so its log events — including downstream DB-layer logs — carry the `sessionUser` object, the same way `/api/*` requests do. This SHALL be applied uniformly via a shared `withRequestContext(getServerSideProps)` wrapper so that every page defining `getServerSideProps` is covered — current pages (`manageconnections`, `changerequest/[...slug]`, `testreport`, `test/[...slug]`, `onboarding`) and any page added later — without per-page wiring. Existing identity fields on those lines (for example the connection test's `userContext`) SHALL be preserved (additive).
 
 #### Scenario: Page-load read is attributed
 
