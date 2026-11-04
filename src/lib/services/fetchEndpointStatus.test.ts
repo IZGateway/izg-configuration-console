@@ -3,14 +3,12 @@ import axios from 'axios'
 import fs from 'fs'
 import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../../lib/IZGHubStatusHistoryEndpoint'
-import isOperationsRole from '../../lib/security/accessutils'
 
 // Mock dependencies
 jest.mock('axios')
 jest.mock('fs')
 jest.mock('https')
 jest.mock('../../lib/IZGHubStatusHistoryEndpoint')
-jest.mock('../../lib/security/accessutils')
 
 import { fetchEndpointStatus } from './fetchEndpointStatus'
 
@@ -18,7 +16,6 @@ const mockedAxios = axios as jest.Mocked<typeof axios>
 const mockedFs = fs as jest.Mocked<typeof fs>
 const mockedHttps = https as jest.Mocked<typeof https>
 const mockedIZGHubStatusHistoryEndpoint = IZGHubStatusHistoryEndpoint as jest.MockedClass<typeof IZGHubStatusHistoryEndpoint>
-const mockedIsOperationsRole = isOperationsRole as jest.MockedFunction<typeof isOperationsRole>
 
 describe('fetchEndpointStatus', () => {
   beforeEach(() => {
@@ -47,9 +44,8 @@ describe('fetchEndpointStatus', () => {
   })
 
   it('should fetch endpoint status with no statusBy field', async () => {
-    // Arrange
-    mockedIsOperationsRole.mockReturnValue(true)
-    
+    // Arrange: 'IZG Operations' holds globalTenancy: true in the real access
+    // matrix, so hasGlobalTenancy needs no mocking here.
     const mockResponseData1 = {
       endpoint1: [{
         destId: 'test-dest-1',
@@ -75,8 +71,8 @@ describe('fetchEndpointStatus', () => {
     const result = await fetchEndpointStatus(['IZG Operations'], ['TN', 'MD'])
 
     expect(mockedIZGHubStatusHistoryEndpoint).toHaveBeenCalledWith('https://fake.org')
-    expect(mockedIsOperationsRole).toHaveBeenCalledWith(['IZG Operations'])
     expect(mockedAxios.get).toHaveBeenCalledTimes(2)
+    // No `?include=` suffix: a globally-scoped role gets the unfiltered hub URLs.
     expect(mockedAxios.get).toHaveBeenCalledWith('https://fake1.hub.org', {
       httpsAgent: expect.any(Object),
       timeout: 30000
@@ -85,12 +81,49 @@ describe('fetchEndpointStatus', () => {
       httpsAgent: expect.any(Object),
       timeout: 30000
     })
-    
+
     // Check that statusBy field is removed
     expect(result).toEqual([
       { destId: 'test-dest-1', destTypeId: 1, status: 'active' },
       { destId: 'test-dest-2', destTypeId: 2, status: 'inactive' }
     ])
+  })
+
+  // IGDD-3547: hasGlobalTenancy replaced isOperationsRole here. Jurisdiction
+  // Support is scoped (globalTenancy: false), so it must still get the
+  // `?include=` filtered URL form.
+  it('appends assigned jurisdictions for a scoped role', async () => {
+    mockedAxios.get.mockResolvedValue({ data: {} })
+
+    await fetchEndpointStatus(['Jurisdiction Support'], ['TN', 'MD'])
+
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      'https://fake1.hub.org?include=TN,MD',
+      { httpsAgent: expect.any(Object), timeout: 30000 }
+    )
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      'https://fake2.hub.org?include=TN,MD',
+      { httpsAgent: expect.any(Object), timeout: 30000 }
+    )
+  })
+
+  // IGDD-3547: IZG Program holds globalTenancy: true but was excluded from
+  // the old isOperationsRole allowlist, which would have scoped it down to
+  // (typically zero) assigned jurisdictions despite its matrix-granted global
+  // reach. This is the regression the switch to hasGlobalTenancy fixes.
+  it('gives IZG Program the unfiltered hub URLs, matching its matrix-granted global reach', async () => {
+    mockedAxios.get.mockResolvedValue({ data: {} })
+
+    await fetchEndpointStatus(['IZG Program'], [])
+
+    expect(mockedAxios.get).toHaveBeenCalledWith('https://fake1.hub.org', {
+      httpsAgent: expect.any(Object),
+      timeout: 30000
+    })
+    expect(mockedAxios.get).toHaveBeenCalledWith('https://fake2.hub.org', {
+      httpsAgent: expect.any(Object),
+      timeout: 30000
+    })
   })
 
 })
