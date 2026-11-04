@@ -8,8 +8,7 @@ import { isIP } from 'net'
  * and the DNS test re-checks the address it hands to the rest of the suite.
  * But `https.request({ hostname })` and `tls.connect({ host })` perform their
  * own fresh resolution at connect time, through the OS resolver - a third
- * lookup, separate from the guard's and the DNS test's (both of which query
- * 8.8.8.8). An attacker controlling the destination's authoritative nameserver
+ * lookup, separate from the guard's and the DNS test's. An attacker controlling the destination's authoritative nameserver
  * can answer the first two queries with a public address and the connect-time
  * query with a private one (short-TTL rebinding, or branching on the querying
  * resolver), reaching an internal host despite the guard.
