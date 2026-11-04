@@ -12,6 +12,7 @@ import useSWR, { mutate } from 'swr'
 import Loader from '../Loader'
 import CombinedContext from '../../contexts/app'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 // Component to handle tooltips for truncated text
 const TruncatedTextWithTooltip = ({
   value,
@@ -140,7 +141,10 @@ const dataGridCustom = {
       alignItems: 'stretch',
     },
   },
+  // Remove MUI's default footer top border, which drew a stray line above the
+  // pagination control.
   '& .MuiDataGrid-footerContainer': {
+    borderTop: 'none',
     justifyContent: 'flex-end',
   },
   '& .MuiTablePagination-actions': {
@@ -491,7 +495,7 @@ const FileTypeList: React.FC<FileTypeListComponentProps> = ({
               sx={{
                 borderRadius: 90,
                 background: palette.white,
-                boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+                boxShadow: DROP_SHADOW,
                 width: 35,
                 height: 35,
               }}

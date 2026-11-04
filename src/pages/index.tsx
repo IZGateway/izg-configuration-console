@@ -1,12 +1,14 @@
 import Container from '../components/Container'
-import type { NextPage } from 'next'
+import type { PageWithFooter } from '../components/Layout'
 import HomeComponent from '../components/Home'
-const HomePage: NextPage = () => {
+const HomePage: PageWithFooter = () => {
   return (
     <Container title="IZ Gateway Configuration Console">
       <HomeComponent />
     </Container>
   )
 }
+
+HomePage.showFooter = true
 
 export default HomePage

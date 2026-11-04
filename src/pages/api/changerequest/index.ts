@@ -5,7 +5,9 @@ import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
 import _ from 'lodash'
-import createChangeRequestTicket from '../../../lib/createchangerequestticket'
+import createChangeRequestTicket, {
+  ChangeRequestTicketError,
+} from '../../../lib/createchangerequestticket'
 import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
@@ -62,6 +64,21 @@ const isJiraConfigured = () => {
   return false
 }
 
+/**
+ * Reads what a failed ticket call knows about the ticket. Returns undefined when
+ * the failure carries no verdict, which the caller reports as unknown.
+ */
+const classifyTicketFailure = (error: unknown): boolean | undefined => {
+  if (error instanceof ChangeRequestTicketError) {
+    return error.ticketMayExist
+  }
+  const cause = (error as { cause?: unknown })?.cause
+  if (cause instanceof ChangeRequestTicketError) {
+    return cause.ticketMayExist
+  }
+  return undefined
+}
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const requestBody = JSON.parse(req.body)
   const session = await getServerSession(req, res, authOptions)
@@ -81,7 +98,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Jira ticket is raised and no draft is stored for a URI we would refuse.
     if (req.method === 'POST' || req.method === 'PUT') {
       const requestedDestUri = requestBody?.requested?.destUri
-      if (requestedDestUri) {
+      // The form always sends the full field set, so an unchanged destUri
+      // arrives on every edit. A URI already live for this connection is not
+      // re-judged: it predates the specification (e.g. a WSDL URL ending in
+      // '?'), and rejecting it would block unrelated edits such as a password
+      // change. Compared with the stored value, never the client's `current`,
+      // which the caller controls. If the read fails, the URI is validated.
+      // Read from the base repository: only destUri is needed, so skip the
+      // password decrypt, which could otherwise fail and reject the edit.
+      const storedDestUri = requestedDestUri
+        ? await dbClient
+            .getRepository()
+            .fetchDestination(requestBody.destId, requestBody?.destType?.typeId)
+            .then((destination) => destination?.destUri)
+            .catch(() => undefined)
+        : undefined
+      if (requestedDestUri && requestedDestUri !== storedDestUri) {
         try {
           await assertSafeDestinationUri(
             requestedDestUri,
@@ -124,7 +156,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         }
       } else {
         let changeRequestTicketResponse = null
-        let changeRequestDBResponse = null
         try {
           changeRequestTicketResponse = await createChangeRequestTicket({
             ...requestBody,
@@ -145,7 +176,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               requestBody.requested.password = requestBody.requested.newPassword
             }
             _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
-            changeRequestDBResponse = await upsertChangeRequest({
+            await upsertChangeRequest({
               ...requestBody,
               jiraId: changeRequestTicketResponse.key,
             })
@@ -159,14 +190,32 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           }
           res.status(200).json('Change request ticket created successfully.')
         } catch (error) {
-          throw new Error(
-            `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`
+          // IGDD-3566: report which failure this is, because the three are very
+          // different for the caller. A ticket that provably does not exist lets
+          // the console report a clean failure at once. A ticket that does exist
+          // must never be reported as "nothing happened". Anything we cannot
+          // classify is reported as unknown, so the console confirms rather than
+          // inviting a retry that could raise a second ticket.
+          const ticketCreated = _.isNull(changeRequestTicketResponse)
+            ? classifyTicketFailure(error)
+            : true
+          logger.error(
+            `Error creating change request ticket for destination id ${requestBody.destId} on environment ${requestBody.destType.type} : ${error}`,
+            {
+              destId: requestBody.destId,
+              destType: requestBody.destType?.type,
+              jiraTicketId: changeRequestTicketResponse?.key,
+              ticketCreated,
+              userId: session?.user?.email,
+              operation: 'create_change_request_ticket',
+            }
           )
-        } finally {
-          if (_.isNull(changeRequestTicketResponse)) {
-            await dbClient.deleteDestinationChangeRequest(
-              changeRequestDBResponse.id
-            ) 
+          if (_.isUndefined(ticketCreated)) {
+            // No usable answer. Say nothing about the ticket so that the console
+            // looks up the record instead of guessing.
+            res.status(500).json({})
+          } else {
+            res.status(ticketCreated ? 500 : 502).json({ ticketCreated })
           }
         }
       }
@@ -191,10 +240,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             scheduledAt: requestBody.scheduledAt,
             isDraft: false,
             isPasswordDifferent: requestBody.isPasswordDifferent,
-            createdBy: requestBody.createdBy, 
-            createdOn: requestBody.createdOn, 
-            updatedBy: requestBody.updatedBy, 
-            updatedOn: requestBody.updatedOn, 
+            createdBy: requestBody.createdBy,
+            createdOn: requestBody.createdOn,
+            updatedBy: requestBody.updatedBy,
+            updatedOn: requestBody.updatedOn,
             requested: {
               destUri: requestBody.requested.destUri,
               username: requestBody.requested.username,
@@ -230,7 +279,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     } else if (req.method === 'DELETE') {
       try {
-        await dbClient.deleteDestinationChangeRequest(requestBody.id)  // Log deleter info
+        await dbClient.deleteDestinationChangeRequest(requestBody.id) // Log deleter info
         logger.info('Change request deleted successfully', {
           changeRequestId: requestBody.id,
           userId: session?.user?.email,
@@ -272,10 +321,10 @@ const upsertChangeRequest = async (
     requestedAt: new Date(),
     scheduledAt: changeRequestDetails.scheduledAt,
     requestedBy: changeRequestDetails.requestedBy,
-    createdBy: changeRequestDetails.createdBy, 
-    createdOn: changeRequestDetails.createdOn, 
-    updatedBy: changeRequestDetails.updatedBy, 
-    updatedOn: changeRequestDetails.updatedOn, 
+    createdBy: changeRequestDetails.createdBy,
+    createdOn: changeRequestDetails.createdOn,
+    updatedBy: changeRequestDetails.updatedBy,
+    updatedOn: changeRequestDetails.updatedOn,
     isPasswordDifferent: changeRequestDetails.isPasswordDifferent || false,
     requested: {
       destUri: changeRequestDetails.requested.destUri,

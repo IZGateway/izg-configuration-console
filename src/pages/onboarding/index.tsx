@@ -1,12 +1,19 @@
 import React from 'react'
+import { Alert } from '@mui/material'
 import Container from '../../components/Container'
 import OnboardSender from '../../components/Onboarding'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import AppHeaderBar from '../../components/AppHeader'
 import { InferGetServerSidePropsType } from 'next'
-import { SerializedAllowedUser } from '../../lib/type/AllowedUser'
+import {
+  SerializedAllowedUser,
+  serializeAllowedUser,
+} from '../../lib/type/AllowedUser'
 import AccessDenied from '../../components/AccessDenied'
 import { withPageAccess } from '../../lib/security/pageAccessGate'
+import DbClientFactory from '../../lib/db/DbClientFactory'
+import { subjectOf } from '../../lib/security/authzsubject'
+import { hasGlobalTenancy } from '../../lib/security/policy'
 import logger from '../../../logger'
 
 const OnboardingPage = (
@@ -18,6 +25,11 @@ const OnboardingPage = (
     <Container title="Onboarding">
       <AppHeaderBar open />
       <ErrorBoundary>
+        {props.error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {props.error}
+          </Alert>
+        )}
         <OnboardSender allowedUsers={props.allowedUsers} />
       </ErrorBoundary>
     </Container>
@@ -29,52 +41,39 @@ const OnboardingPage = (
 // holds canViewOnboarding: false. The gate now covers both the page and the
 // three allowed-user routes behind it, so the write endpoints are closed too,
 // not just the page.
+//
+// Reads the DB directly, like manageconnections, rather than calling
+// /api/allowedusers/bydestination over HTTP (IGDD-3469). That server-side
+// self-fetch carried only the session cookie, never a DPoP proof, so once the
+// browser had bound its key the middleware redirected it to the sign-in page
+// and the page rendered an empty grid. Row scoping matches the API route.
 export const getServerSideProps = withPageAccess<
   'onboarding',
   {
     allowedUsers: SerializedAllowedUser[]
     error?: string
   }
->('onboarding', async (context) => {
+>('onboarding', async (context, requestContext) => {
+  const session = requestContext.session
+
   try {
-    // Use API endpoint instead of direct database access
-    const protocol = context.req.headers['x-forwarded-proto'] || 'http'
-    const host = context.req.headers.host
-    const baseUrl = process.env.NEXTAUTH_URL || `${protocol}://${host}`
-
-    const response = await fetch(`${baseUrl}/api/allowedusers/bydestination`, {
-      headers: {
-        cookie: context.req.headers.cookie || '',
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch allowed users: ${response.status} ${response.statusText}`
-      )
-    }
-
-    const allowedUsers: SerializedAllowedUser[] = await response.json()
+    // Reads hasGlobalTenancy from the role matrix, not isOperationsRole (PR
+    // #729 review) — same reasoning as src/pages/api/destinations/index.ts.
+    const subject = subjectOf(session)
+    const dbClient = await DbClientFactory.getDbClient()
+    const allowedUsers = await dbClient.fetchAllowedUsersByDestination(
+      hasGlobalTenancy(subject),
+      subject.jurisdictions
+    )
 
     return {
       props: {
-        allowedUsers,
+        allowedUsers: allowedUsers.map(serializeAllowedUser),
       },
     }
   } catch (error) {
     logger.error('Error fetching allowed users for onboarding page', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      // Node's fetch reports every transport failure as the bare message
-      // "fetch failed" and puts the actual reason on `cause` — TLS rejection,
-      // DNS, connection refused. Without this the log says nothing useful:
-      // locally, where nginx serves a self-signed cert generated in
-      // local-docker/Dockerfile and NEXTAUTH_URL is https://localhost, the
-      // cause is certificate verification, which looks nothing like a
-      // permission problem but is easily mistaken for one.
-      cause:
-        error instanceof Error && error.cause instanceof Error
-          ? error.cause.message
-          : undefined,
       stack: error instanceof Error ? error.stack : undefined,
     })
 
@@ -87,5 +86,7 @@ export const getServerSideProps = withPageAccess<
     }
   }
 })
+
+OnboardingPage.showFooter = true
 
 export default OnboardingPage

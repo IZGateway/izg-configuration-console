@@ -41,9 +41,7 @@ export type CapabilityRef = {
  * and carry no jurisdiction in their URL, so they are authorized with
  * `ANY_JURISDICTION` — safe only while every holder is globally scoped. Without
  * this guard, granting one to a jurisdiction-scoped role would leak every other
- * tenant's data as the result of a one-line data edit. That is not
- * hypothetical: the spike review's Finding #13 queues exactly that grant for
- * `console.canViewConsole` to `Jurisdiction Support`.
+ * tenant's data as the result of a one-line data edit.
  *
  * Central, and deliberately **not** a field on `CapabilityRef`: the same
  * capability is declared at more than one route, so a per-declaration flag
@@ -53,8 +51,6 @@ export type CapabilityRef = {
  *
  * Membership follows from whether the data path filters by jurisdiction, not
  * from which page the capability sits on:
- *  - `console.canViewConsole` — the Elastic message-traffic query applies no
- *    jurisdiction filter.
  *  - all four `accesscontrol` capabilities — `fetchDenyListData()` and
  *    `fetchAccessGroups()` take no jurisdiction argument at all. The whole
  *    block, not just the entry flag: a role that should not *see* every
@@ -63,9 +59,14 @@ export type CapabilityRef = {
  * `adminoperations.*` is deliberately absent — those are hub-wide operations,
  * not tenant data, so the argument for guarding them is blast radius, which is
  * a different question. `'api-doc'.canViewApiDoc` is a static spec.
+ *
+ * `console.canViewConsole` was a member until IGDD-3474, when the browser built
+ * the Elastic message-traffic query and the server forwarded it unfiltered.
+ * The log search now goes through /api/console/metrics, which builds the query
+ * on the server and filters it to one destination, so scoped roles may hold it.
+ * It moved to `REQUIRES_DESTINATION_SCOPE` below, not off every list.
  */
 export const REQUIRES_GLOBAL_TENANCY: ReadonlyArray<CapabilityRef> = [
-  { page: 'console', capability: 'canViewConsole' },
   { page: 'accesscontrol', capability: 'canViewAccessControl' },
   { page: 'accesscontrol', capability: 'canManageAccessGroups' },
   { page: 'accesscontrol', capability: 'canManageDenyList' },
@@ -76,6 +77,37 @@ export const REQUIRES_GLOBAL_TENANCY: ReadonlyArray<CapabilityRef> = [
 export function requiresGlobalTenancy(ref: CapabilityRef): boolean {
   return REQUIRES_GLOBAL_TENANCY.some(
     (guarded) => guarded.page === ref.page && guarded.capability === ref.capability
+  )
+}
+
+/**
+ * Capabilities held by jurisdiction-scoped roles whose API data path is
+ * filtered to **one destination per request**.
+ *
+ * Holding one of these means "may act on a destination you reach", never "may
+ * act on every destination". So an API route that declares one must also name
+ * which destination the request acts on, through `scope` on its `RouteAuthz`
+ * declaration; the route enforcer then decides that destination per role with
+ * `can()`. A declaration with **no** `scope` fails closed: only a role that
+ * reaches every jurisdiction passes. Forgetting the scope on a new route
+ * therefore locks scoped roles out instead of handing them every
+ * jurisdiction's data. Raised by review on PR #756.
+ *
+ * Read by the route enforcer only. The page gate and the nav decide page
+ * entry, which is not a data path, through `decideCapability`, so JO/JS still
+ * enter `/console`; the data behind it is what this list protects.
+ *
+ * Distinct from `REQUIRES_GLOBAL_TENANCY`, whose data paths have no
+ * jurisdiction filter at all, so no scope could make them safe.
+ */
+export const REQUIRES_DESTINATION_SCOPE: ReadonlyArray<CapabilityRef> = [
+  { page: 'console', capability: 'canViewConsole' },
+]
+
+/** True if `ref`'s API data path must be scoped to one destination per request. */
+export function requiresDestinationScope(ref: CapabilityRef): boolean {
+  return REQUIRES_DESTINATION_SCOPE.some(
+    (scoped) => scoped.page === ref.page && scoped.capability === ref.capability
   )
 }
 
@@ -130,6 +162,41 @@ export function decideCapability(
       ANY_JURISDICTION
     ).allowed
   })
+}
+
+/**
+ * Decide one `CapabilityRef` for an **API route**: `decideCapability`, plus the
+ * `REQUIRES_DESTINATION_SCOPE` rule.
+ *
+ * For a destination-scoped capability, `scope` is the destination the request
+ * acts on, as the route's declaration extracted it:
+ *  - given: `can()` for that destination, which is role-local — one role must
+ *    hold the capability AND reach the destination.
+ *  - absent (no `scope` declared, or the request names none): only a role that
+ *    holds the capability AND reaches every jurisdiction passes.
+ *
+ * Every other capability is `decideCapability` unchanged, and `scope` is
+ * ignored for it.
+ */
+export function decideRouteCapability(
+  subject: AuthzSubject,
+  ref: CapabilityRef,
+  scope?: string
+): boolean {
+  if (!requiresDestinationScope(ref)) return decideCapability(subject, ref)
+  if (scope) {
+    return can(subject, ref.page, ref.capability as never, scope).allowed
+  }
+  return subject.roles.some(
+    (role) =>
+      roleHasGlobalTenancy(role) &&
+      can(
+        { ...subject, roles: [role] },
+        ref.page,
+        ref.capability as never,
+        ANY_JURISDICTION
+      ).allowed
+  )
 }
 
 /**

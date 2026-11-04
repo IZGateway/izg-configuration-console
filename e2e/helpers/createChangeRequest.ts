@@ -1,7 +1,7 @@
 import { Page, expect } from '@playwright/test'
 import { filterByDestinationId } from './filterByDestinationId'
 
-const newValues = {
+export const newValues = {
   username: 'UsernameNEW',
   password: 'NEWpassword123!!',
   facilityId: 'xyz',
@@ -14,9 +14,19 @@ const newValues = {
   RXA11: 'RXA11',
 }
 
-export async function createChangeRequest(page: Page, destId: string) {
+/**
+ * Walks the Create Change Request stepper to the SCHEDULE step and selects "As
+ * Soon As Possible". It stops before the submit, so the caller decides what
+ * happens next.
+ *
+ * Returns false when the destination has no edit button, which means an open
+ * change request already holds it.
+ */
+export async function openScheduleStep(
+  page: Page,
+  destId: string
+): Promise<boolean> {
   const nextButton = page.locator('#next')
-  const scheduleButton = page.locator('#schedule')
   const alert = page.locator('[class*="MuiAlert-message"]')
 
   const editButton = page.locator('button[aria-label="edit"]')
@@ -90,13 +100,24 @@ export async function createChangeRequest(page: Page, destId: string) {
 
     //schedule
     await page.locator('[value="As Soon As Possible"]').click()
-    await scheduleButton.click()
-
-    await page.waitForURL('/manageconnections', { timeout: 30000 })
-    await page.waitForLoadState('networkidle')
-    await expect(alert).toBeVisible({ timeout: 15000 })
-    expect(await alert.textContent()).toContain(
-      'Change request is created successfully'
-    )
+    return true
   }
+
+  return false
+}
+
+export async function createChangeRequest(page: Page, destId: string) {
+  const alert = page.locator('[class*="MuiAlert-message"]')
+
+  const opened = await openScheduleStep(page, destId)
+  if (!opened) return
+
+  await page.locator('#schedule').click()
+
+  await page.waitForURL('/manageconnections', { timeout: 30000 })
+  await page.waitForLoadState('networkidle')
+  await expect(alert).toBeVisible({ timeout: 15000 })
+  expect(await alert.textContent()).toContain(
+    'Change request is created successfully'
+  )
 }

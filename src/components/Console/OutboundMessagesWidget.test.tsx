@@ -36,34 +36,6 @@ const createMockOrganizationsResponse = () => [
 // Mock organizations to pass as prop
 const mockOrganizations = createMockOrganizationsResponse()
 
-// Mock destinations with jurisdiction info
-const mockDestinations = [
-  {
-    destId: 'TX',
-    jurisdiction: {
-      jurisdictionId: 1,
-      name: 'Texas',
-      description: 'Texas IIS',
-    },
-    destinationType: {
-      typeId: 1,
-      type: 'PRODUCTION',
-    },
-  },
-  {
-    destId: 'CA',
-    jurisdiction: {
-      jurisdictionId: 2,
-      name: 'California',
-      description: 'California IIS',
-    },
-    destinationType: {
-      typeId: 1,
-      type: 'PRODUCTION',
-    },
-  },
-]
-
 // Helper to create a mock Elasticsearch response
 const createMockElasticsearchResponse = (overrides?: {
   successCount?: number
@@ -145,7 +117,6 @@ describe('OutboundMessagesWidget', () => {
         render(
           <OutboundMessagesWidget
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -158,7 +129,6 @@ describe('OutboundMessagesWidget', () => {
         render(
           <OutboundMessagesWidget
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -174,7 +144,6 @@ describe('OutboundMessagesWidget', () => {
         render(
           <OutboundMessagesWidget
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -197,7 +166,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -215,7 +183,6 @@ describe('OutboundMessagesWidget', () => {
         render(
           <OutboundMessagesWidget
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -224,34 +191,31 @@ describe('OutboundMessagesWidget', () => {
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
-    it('should not fetch data when principalNames cannot be derived', async () => {
-      // Destinations without matching organization
-      const destinationsWithoutMatchingOrg = [
-        {
-          destId: 'XX',
-          jurisdiction: {
-            jurisdictionId: 99,
-            name: 'Unknown State',
-            description: 'Unknown IIS',
-          },
-        },
-      ]
+    it("shows the server's reason when nothing is in scope", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            unavailable:
+              "Cannot display outbound data: no organization found matching the destination's jurisdiction (Unknown State).",
+          }),
+      })
 
       await act(async () => {
         render(
           <OutboundMessagesWidget
             selectedConnection="XX"
             organizations={mockOrganizations}
-            destinations={destinationsWithoutMatchingOrg}
           />
         )
       })
 
-      // No fetch because principalNames would be undefined
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(
+        await screen.findByText(/no organization found matching the destination's jurisdiction \(Unknown State\)/)
+      ).toBeInTheDocument()
     })
 
-    it('should fetch data when selectedConnection and principalNames are available', async () => {
+    it('should fetch data when a connection is selected', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -262,19 +226,24 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/elasticsearch/query',
+          '/api/console/metrics',
           expect.objectContaining({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })
         )
+      })
+      // IGDD-3474: the selection only — the server builds the query and the
+      // principal filter, so none is sent from the browser.
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
+        view: 'outbound',
+        destId: 'TX',
       })
     })
 
@@ -294,7 +263,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -308,7 +276,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="CA"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -326,7 +293,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -358,7 +324,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -388,7 +353,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -414,7 +378,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -440,7 +403,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -467,7 +429,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -492,7 +453,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -515,7 +475,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -556,7 +515,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -599,7 +557,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -637,7 +594,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -677,7 +633,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -713,7 +668,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -737,7 +691,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -779,7 +732,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -812,8 +764,8 @@ describe('OutboundMessagesWidget', () => {
     })
   })
 
-  describe('Principal Names Derivation', () => {
-    it('should derive principalNames from destination jurisdiction', async () => {
+  describe('Organization resolution is server-side', () => {
+    it('fetches before organizations have loaded, since the server resolves principals', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -823,47 +775,18 @@ describe('OutboundMessagesWidget', () => {
         render(
           <OutboundMessagesWidget
             selectedConnection="TX"
-            organizations={mockOrganizations}
-            destinations={mockDestinations}
+            organizations={[]}
+            organizationsLoading
           />
         )
       })
 
-      // Verify fetch was called (meaning principalNames was derived successfully)
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledTimes(1)
       })
     })
 
-    it('should not fetch when destination has no matching organization', async () => {
-      const destinationsNoMatch = [
-        {
-          destId: 'TX',
-          jurisdiction: {
-            jurisdictionId: 1,
-            name: 'NonExistentOrg',
-            description: 'No matching org',
-          },
-        },
-      ]
-
-      await act(async () => {
-        render(
-          <OutboundMessagesWidget
-            selectedConnection="TX"
-            organizations={mockOrganizations}
-            destinations={destinationsNoMatch}
-          />
-        )
-      })
-
-      // Should not fetch because principalNames cannot be derived
-      expect(mockFetch).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('Destination from Organization Reverse Lookup', () => {
-    it('should compute destinationFromOrganization when organization is selected', async () => {
+    it('sends the selected organization for the server to resolve', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve(createMockElasticsearchResponse()),
@@ -874,7 +797,6 @@ describe('OutboundMessagesWidget', () => {
           <OutboundMessagesWidget
             selectedConnection="TX"
             organizations={mockOrganizations}
-            destinations={mockDestinations}
           />
         )
       })
@@ -883,7 +805,6 @@ describe('OutboundMessagesWidget', () => {
         expect(mockFetch).toHaveBeenCalled()
       })
 
-      // Select an organization to trigger reverse lookup
       const selectElement = screen.getByRole('combobox')
       await act(async () => {
         fireEvent.mouseDown(selectElement)
@@ -894,10 +815,150 @@ describe('OutboundMessagesWidget', () => {
         fireEvent.click(orgOption)
       })
 
-      // The component should refetch with the new destinationFromOrganization
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledTimes(2)
       })
+      expect(JSON.parse(mockFetch.mock.calls[1][1].body)).toEqual({
+        view: 'outbound',
+        destId: 'TX',
+        organization: 'California',
+      })
+    })
+
+    it('clears the previous result when the new selection is unavailable', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve(createMockElasticsearchResponse({ successCount: 950, errorCount: 50 })),
+      })
+
+      await act(async () => {
+        render(
+          <OutboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      const total = (1000).toLocaleString()
+      await waitFor(() => {
+        expect(screen.getAllByText(total).length).toBeGreaterThan(0)
+      })
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            unavailable:
+              'Cannot display outbound data: no destination found matching the selected organization (California).',
+          }),
+      })
+
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByRole('combobox'))
+      })
+      const orgOption = await screen.findByText('California')
+      await act(async () => {
+        fireEvent.click(orgOption)
+      })
+
+      expect(
+        await screen.findByText(/no destination found matching the selected organization \(California\)/)
+      ).toBeInTheDocument()
+      expect(screen.queryAllByText(total)).toHaveLength(0)
+    })
+  })
+
+  describe('Failed requests', () => {
+    it('replaces the previous result with an error when a later request fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(createMockElasticsearchResponse()),
+      })
+
+      await act(async () => {
+        render(
+          <OutboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      const total = (1000).toLocaleString()
+      await waitFor(() => {
+        expect(screen.getAllByText(total).length).toBeGreaterThan(0)
+      })
+
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error' })
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByRole('combobox'))
+      })
+      const orgOption = await screen.findByText('California')
+      await act(async () => {
+        fireEvent.click(orgOption)
+      })
+
+      expect(
+        await screen.findByText('Unable to load outbound message data.')
+      ).toBeInTheDocument()
+      expect(screen.queryAllByText(total)).toHaveLength(0)
+    })
+  })
+
+  // PR #756 review: a superseded request must not change state when it
+  // finishes, whether it fails (wiping the newer result) or just ends (hiding
+  // the spinner while the newer request is still in flight).
+  describe('Superseded requests', () => {
+    it('ignores a failure and the end of an older request', async () => {
+      let rejectOld: (err: Error) => void = () => undefined
+      let resolveNew: (value: unknown) => void = () => undefined
+      mockFetch
+        .mockReturnValueOnce(new Promise((_r, reject) => (rejectOld = reject)))
+        .mockReturnValueOnce(new Promise((resolve) => (resolveNew = resolve)))
+
+      await act(async () => {
+        render(
+          <OutboundMessagesWidget
+            selectedConnection="TX"
+            organizations={mockOrganizations}
+          />
+        )
+      })
+
+      // A newer request replaces the first before it settles.
+      await act(async () => {
+        fireEvent.mouseDown(screen.getByRole('combobox'))
+      })
+      const orgOption = await screen.findByText('California')
+      await act(async () => {
+        fireEvent.click(orgOption)
+      })
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(2))
+
+      // The old one now fails. Nothing may change: no error, spinner stays.
+      await act(async () => {
+        rejectOld(new Error('late failure'))
+      })
+      expect(
+        screen.queryByText('Unable to load outbound message data.')
+      ).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Loading messages data')).toBeInTheDocument()
+
+      // The newer request's result is what shows.
+      await act(async () => {
+        resolveNew({
+          ok: true,
+          json: () => Promise.resolve(createMockElasticsearchResponse()),
+        })
+      })
+      await waitFor(() =>
+        expect(screen.queryByLabelText('Loading messages data')).not.toBeInTheDocument()
+      )
+      expect(
+        screen.queryByText('Unable to load outbound message data.')
+      ).not.toBeInTheDocument()
     })
   })
 })

@@ -33,6 +33,7 @@ import {
 } from '../../lib/desttypehelper'
 import CustomSnackbar from '../SnackBar'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 interface EditSenderProps {
   senderData: SenderData
   onSave: (data: SenderData) => void
@@ -269,7 +270,7 @@ const EditSender: React.FC<EditSenderProps> = ({
           position: 'relative',
           zIndex: 10,
           height: 'auto',
-          boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+          boxShadow: DROP_SHADOW,
           marginBottom: '-16px',
           backgroundColor: palette.white,
         }}
@@ -589,7 +590,7 @@ const EditSender: React.FC<EditSenderProps> = ({
                 cursor: 'pointer',
               }}
             >
-              izgateway@cdc.gov
+              support@izgateway.org
             </Box>
           </Typography>
         </Box>

@@ -13,6 +13,7 @@ import { DenyListItem } from '../../lib/type/DenyList'
 import CombinedContext from '../../contexts/app'
 import Loader from '../Loader'
 import { DEST_TYPES } from '../../lib/desttypehelper'
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const dataGridCustom = {
   '&.MuiDataGrid-root.MuiDataGrid-autoHeight.MuiDataGrid-root--densityComfortable':
     {
@@ -73,7 +74,10 @@ const dataGridCustom = {
       alignItems: 'stretch',
     },
   },
+  // Remove MUI's default footer top border, which drew a stray line above the
+  // pagination control.
   '& .MuiDataGrid-footerContainer': {
+    borderTop: 'none',
     justifyContent: 'flex-end',
   },
   '& .MuiTablePagination-actions': {
@@ -429,7 +433,7 @@ const DenyList: React.FC<DenyListComponentProps> = ({
               sx={{
                 borderRadius: 90,
                 background: palette.white,
-                boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+                boxShadow: DROP_SHADOW,
                 width: 35,
                 height: 35,
               }}

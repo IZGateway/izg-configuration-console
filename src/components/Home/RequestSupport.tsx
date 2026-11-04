@@ -3,10 +3,11 @@ import { IconButton, Typography, Box } from '@mui/material'
 import ContactSupportOutlinedIcon from '@mui/icons-material/ContactSupportOutlined'
 import palette from '../../styles/theme/palette'
 
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 50,
   height: 50,
   transition: 'transform 0.15s ease-in-out',

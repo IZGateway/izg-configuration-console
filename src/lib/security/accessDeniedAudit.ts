@@ -1,4 +1,5 @@
 import logger from '../../../logger'
+import { toEcsUrl } from '../utils/ecsUrl'
 
 /**
  * Structured "Access Denied" event for RBAC/authorization rejections.
@@ -54,8 +55,14 @@ export interface AccessDeniedEvent {
 }
 
 export function logAccessDenied(event: AccessDeniedEvent): void {
+  // Callers pass `url` as a plain string; it is converted to the ECS object
+  // shape here, once, rather than at every call site. A string `url` is
+  // rejected by the Elastic index and the event silently never arrives
+  // (IGDD-3541) — see `toEcsUrl`.
+  const { url, ...rest } = event
   logger.warn('Access denied: RBAC rejection', {
     eventType: 'AccessDenied',
-    ...event,
+    ...rest,
+    url: toEcsUrl(url),
   })
 }

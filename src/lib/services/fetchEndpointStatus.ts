@@ -12,6 +12,16 @@ export const fetchEndpointStatus = async (
   roles: string[],
   jurisdictions: string[]
 ): Promise<any[]> => {
+  // Local development only. NODE_ENV is inlined at build time, so production
+  // builds drop this branch and the mock module with it.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.MOCK_ENDPOINT_STATUS === 'true'
+  ) {
+    const { mockHubEndpointStatus } = await import('./mockEndpointStatus')
+    return mockHubEndpointStatus(roles, jurisdictions)
+  }
+
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || ''
   const IZG_ENDPOINT_KEY_PATH = process.env.IZG_ENDPOINT_KEY_PATH || ''

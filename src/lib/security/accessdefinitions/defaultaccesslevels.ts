@@ -34,6 +34,7 @@ const defaultManageConnectionsPageAccessControl: ManageConnectionsPageAccessCont
 
 const defaultOnboardingPageAccessControl: OnboardingPageAccessControl = {
   canViewOnboarding: false,
+  canManageSenders: false,
 }
 
 const defaultTestPageAccessControl: TestPageAccessControl = {

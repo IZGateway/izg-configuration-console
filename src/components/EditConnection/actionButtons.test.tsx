@@ -91,4 +91,57 @@ describe('ActionButtons', () => {
     fireEvent.click(screen.getByText('NEXT'))
     expect(handleNextMock).toHaveBeenCalledTimes(1)
   })
+  // IGDD-3566: isSubmitting disables SCHEDULE while a submission is in flight.
+  // It must not open the date Tooltip, which belongs to isScheduleButtonDisabled.
+  const lastStepProps = {
+    activeStep: 4,
+    handlePrevious: jest.fn(),
+    steps: ['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5'],
+    handleNext: jest.fn(),
+    isNextButtonDisabled: false,
+  }
+
+  it('disables SCHEDULE and shows the pending label while submitting', () => {
+    const handleScheduleMock = jest.fn()
+    render(
+      <ActionButtons
+        {...lastStepProps}
+        isScheduleButtonDisabled={false}
+        isSubmitting={true}
+        handleSchedule={handleScheduleMock}
+      />
+    )
+    const button = screen.getByRole('button', { name: /SCHEDULING/i })
+    expect(button).toBeDisabled()
+    expect(screen.queryByText('SCHEDULE')).not.toBeInTheDocument()
+    fireEvent.click(button)
+    expect(handleScheduleMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the date Tooltip closed when only isSubmitting is true', () => {
+    render(
+      <ActionButtons
+        {...lastStepProps}
+        isScheduleButtonDisabled={false}
+        isSubmitting={true}
+        handleSchedule={jest.fn()}
+      />
+    )
+    expect(
+      screen.queryByText('Please select date and time')
+    ).not.toBeInTheDocument()
+  })
+
+  it('opens the date Tooltip when isScheduleButtonDisabled is true', () => {
+    render(
+      <ActionButtons
+        {...lastStepProps}
+        isScheduleButtonDisabled={true}
+        isSubmitting={false}
+        handleSchedule={jest.fn()}
+      />
+    )
+    expect(screen.getByText('Please select date and time')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'SCHEDULE' })).toBeDisabled()
+  })
 })

@@ -4,6 +4,11 @@ import { authOptions } from '../../api/auth/[...nextauth]'
 import withMiddleware from '../../../lib/api/api-middleware-helper'
 import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
+import { subjectOf } from '../../../lib/security/authzsubject'
+import { hasGlobalTenancy } from '../../../lib/security/policy'
+import hasAccessToDestId from '../../../lib/accesshelper'
+import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
+import { serializeAllowedUser } from '../../../lib/type/AllowedUser'
 
 /**
  * @swagger
@@ -95,6 +100,8 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *         description: OK. Returns the created/updated allowed user.
  *       400:
  *         description: Bad request - missing required fields
+ *       403:
+ *         description: Forbidden - destinationId is outside the caller's jurisdiction
  *       500:
  *         description: Internal server error
  *   delete:
@@ -124,6 +131,8 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
  *         description: OK. User successfully deleted.
  *       400:
  *         description: Bad request - missing required fields
+ *       403:
+ *         description: Forbidden - destinationId is outside the caller's jurisdiction
  *       500:
  *         description: Internal server error
  */
@@ -138,42 +147,35 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     logger.info('Received GET request to fetch allowed users')
     try {
+      // Row-scoped by the caller's reach, same pair as /api/destinations
+      // (IGDD-3542) and the onboarding page's own SSR load
+      // (src/pages/onboarding/index.tsx). Before IGDD-3546 this called the
+      // unfiltered fetchAllowedUsers(), so a direct call to this route — the
+      // onboarding page itself never called it — returned every jurisdiction's
+      // senders to any role holding canViewOnboarding.
+      const subject = subjectOf(session)
+      const hasGlobalReach = hasGlobalTenancy(subject)
+
       const dbClient = await DbClientFactory.getDbClient()
-      const result = await dbClient.fetchAllowedUsers()
+      const result = await dbClient.fetchAllowedUsersByDestination(
+        hasGlobalReach,
+        subject.jurisdictions
+      )
 
       logger.info('Successfully fetched allowed users', {
         count: result.length,
-        operation: 'fetchAllowedUsers',
+        operation: 'fetchAllowedUsersByDestination',
         httpMethod: req.method,
         endpoint: req.url,
       })
 
-      // Serialize dates to ISO strings for JSON response
-      const serializedResult = result.map((user) => ({
-        principal: user.principal,
-        environment: user.environment,
-        destinationId: user.destinationId,
-        organization: user.organization,
-        enabled: user.enabled,
-        createdBy: user.createdBy,
-        createdOn: user.createdOn?.toISOString() || null,
-        updatedBy: user.updatedBy,
-        updatedOn: user.updatedOn?.toISOString() || null,
-        validatedOn: user.validatedOn?.toISOString() || null,
-      }))
-
-      logger.info('About to send response', {
-        count: serializedResult.length,
-        sampleRecord: serializedResult[0] || null,
-      })
-
-      return res.status(200).json(serializedResult)
+      return res.status(200).json(result.map(serializeAllowedUser))
     } catch (error) {
       logger.error('Failed to fetch allowed users', {
         errorMessage: error?.message || 'Unknown error',
         errorType: error?.name || 'Unknown',
         stack: error?.stack || 'No stack trace',
-        operation: 'fetchAllowedUsers',
+        operation: 'fetchAllowedUsersByDestination',
         httpMethod: req.method,
         endpoint: req.url,
         errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
@@ -224,6 +226,34 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({
           error: 'Missing required fields',
           missingFields,
+        })
+      }
+
+      // Reach check on the write, not just the capability (IGDD-3546 review).
+      // `canManageSenders` says *whether* a role may mutate; it says nothing
+      // about *which* destinationId. Without this, a Jurisdiction Operations
+      // caller could POST any jurisdiction's destinationId, not just its own.
+      //
+      // `hasAccessToDestId` unions reach across every held role, same as the
+      // `canManageSenders` capability check the middleware already ran unions
+      // capability across every held role — so a caller holding Jurisdiction
+      // Operations (scoped, grants canManageSenders) plus IZG Support (global
+      // reach, grants no onboarding write) could still combine the two into a
+      // global write. See authzDebt.ts for this residual, which matches the
+      // existing changerequest/index.ts entry for the same shape.
+      if (!hasAccessToDestId(body.destinationId, session)) {
+        logAccessDenied({
+          reason: 'Destination outside caller reach',
+          url: req.url,
+          method: req.method,
+          user: session.user.email,
+          roles: subjectOf(session).roles,
+          destId: body.destinationId,
+          page: 'onboarding',
+          permission: 'onboarding.canManageSenders',
+        })
+        return res.status(403).json({
+          error: 'Forbidden - destination outside your jurisdiction',
         })
       }
 
@@ -374,6 +404,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
+      // Reach check on the write, not just the capability — see the matching
+      // comment on the POST branch above (IGDD-3546 review).
+      if (!hasAccessToDestId(body.destinationId, session)) {
+        logAccessDenied({
+          reason: 'Destination outside caller reach',
+          url: req.url,
+          method: req.method,
+          user: session.user.email,
+          roles: subjectOf(session).roles,
+          destId: body.destinationId,
+          page: 'onboarding',
+          permission: 'onboarding.canManageSenders',
+        })
+        return res.status(403).json({
+          error: 'Forbidden - destination outside your jurisdiction',
+        })
+      }
+
       const dbClient = await DbClientFactory.getDbClient()
 
       // Fetch existing user for audit trail before deletion
@@ -478,11 +526,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Before IGDD-3472 this route carried 'captureErrors' and NO authorization,
-// so any authenticated session could reach it. One capability across every
-// method, deliberately: splitting view from mutate needs a flag whose seed
-// value nobody has decided, and this closes the hole without inventing one.
+// Before IGDD-3472 this route carried 'captureErrors' and NO authorization, so
+// any authenticated session could reach it. IGDD-3472 closed that with one
+// capability across every method. IGDD-3546 narrows further: GET (view) and
+// POST/DELETE (mutate) now require separate capabilities, so a view-only role
+// can see the list without being able to change it. GET is also row-scoped by
+// jurisdiction (fetchAllowedUsersByDestination), and POST/DELETE each check
+// hasAccessToDestId on body.destinationId before writing — both added after
+// PR review found this route split *who* may write without ever restricting
+// *which* jurisdiction's rows. See authzDebt.ts for the residual risk from
+// unioning capability and reach checks independently across held roles.
 export default withMiddleware(
-  { capability: { page: 'onboarding', capability: 'canViewOnboarding' } },
+  {
+    byMethod: {
+      GET: { page: 'onboarding', capability: 'canViewOnboarding' },
+      POST: { page: 'onboarding', capability: 'canManageSenders' },
+      DELETE: { page: 'onboarding', capability: 'canManageSenders' },
+    },
+  },
   'captureErrors'
 )(handler)

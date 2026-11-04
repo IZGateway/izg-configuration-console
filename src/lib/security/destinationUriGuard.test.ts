@@ -140,8 +140,18 @@ describe('assertSafeDestinationUrl', () => {
     await expectRejected('https://user:pass@example.com/')
   })
 
-  it('rejects non-allowlisted ports', async () => {
-    await expectRejected('https://example.com:22/')
+  it.each(['https://example.com:8443/hub', 'https://example.com:22/'])(
+    'allows any port on a public host: %s',
+    async (url) => {
+      await expect(
+        assertSafeDestinationUrl(new URL(url))
+      ).resolves.toBeUndefined()
+    }
+  )
+
+  it('still rejects a non-default port on a private address', async () => {
+    dnsMock.__resolve4.mockResolvedValue(['10.0.0.5'])
+    await expectRejected('https://evil.com:8443/')
   })
 
   // The hostname allowlist subsumes the old internal-name denylist.

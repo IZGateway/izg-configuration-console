@@ -14,6 +14,7 @@ interface SearchableMultiSelectProps {
   chipColor?: 'primary' | 'default'
   helperText?: string
   error?: boolean
+  'data-testid'?: string
 }
 
 /**
@@ -30,6 +31,7 @@ const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
   chipColor = 'default',
   helperText,
   error = false,
+  'data-testid': dataTestId,
 }) => {
   // Chip styling based on color variant
   const getChipStyles = () => {
@@ -48,7 +50,7 @@ const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
   }
 
   return (
-    <Box>
+    <Box data-testid={dataTestId}>
       <Autocomplete
         multiple
         options={options}

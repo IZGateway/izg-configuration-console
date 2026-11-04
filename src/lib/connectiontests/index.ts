@@ -6,6 +6,7 @@ import ConnectionTestFactory from './ConnectionTestFactory'
 import { TestStatus } from './TestStatus'
 import { ConnectionTestRequest } from './types/ConnectionTestRequest'
 import { ConnectionTestResult } from './types/ConnectionTestResult'
+import { toEcsUrl } from '../utils/ecsUrl'
 import {
   assertSafeDestinationUrl,
   assertSafeRawDestinationUri,
@@ -114,7 +115,7 @@ const connectionTest = async (destination: Destination, user: UserContext) => {
       testResults: connectionTestResult.testResults,
       destination: connectionTestResult.destId,
       destinationType: connectionTestResult.destType,
-      url: connectionTestResult.destUrl,
+      url: toEcsUrl(connectionTestResult.destUrl),
     })
     throw new Error(`${JSON.stringify(connectionTestResult, null, 3)}`)
   } else {

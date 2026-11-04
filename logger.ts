@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import winston from 'winston'
-import ecsFormat from '@elastic/ecs-winston-format'
+import { ecsFields } from '@elastic/ecs-winston-format'
 import { asyncRequestContext } from './src/lib/Context'
+import { isPrimitive, toEcsUrlValue } from './src/lib/utils/ecsUrl'
+import {
+  ecsErrors,
+  safeStringify,
+  toEcsErrorValue,
+} from './src/lib/utils/ecsError'
 
 let appVersion = 'unknown'
 try {
@@ -54,18 +60,192 @@ export const injectUserContext = (info: winston.Logform.TransformableInfo) => {
 
 const userContextFormat = winston.format(injectUserContext)
 
+/**
+ * A backstop as a winston format that never throws out of a log call: an event
+ * it cannot read (a throwing getter) is passed on unchanged, and safeStringify
+ * leaves out what cannot be read.
+ */
+const backstop = (
+  normalize: (
+    info: winston.Logform.TransformableInfo
+  ) => winston.Logform.TransformableInfo
+) =>
+  winston.format((info) => {
+    try {
+      return normalize(info)
+    } catch {
+      return info
+    }
+  })
+
+/**
+ * Backstop: rewrite a top-level scalar `url` (or `URL`) into the ECS object
+ * shape (IGDD-3541).
+ *
+ * The Elastic index maps `url` as an object, so a document with a scalar `url`
+ * is rejected and filebeat drops it — while the event still prints to stdout,
+ * so CloudWatch looks correct and nothing signals the loss. Call sites should
+ * pass `toEcsUrl(...)` themselves; this catches the next one that doesn't.
+ * Only a scalar or a `URL` is touched: any other object (including what
+ * `convertReqRes` builds from `req`) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUrl = (info: winston.Logform.TransformableInfo) => {
+  const url = info.url
+  const ecsUrl = toEcsUrlValue(url)
+  if (ecsUrl !== url) info.url = ecsUrl
+  return info
+}
+
+const ecsUrlFormat = backstop(normalizeEcsUrl)
+
+/**
+ * Backstop: rewrite a top-level scalar `user` into the ECS object shape
+ * `{ name }` (IGDD-3541).
+ *
+ * metricbeat writes to the same data stream and sends `user` as an object
+ * (`user.id` / `user.name` / `user.full_name`). The index template does not
+ * pin `user`, so each new backing index types it from whichever document
+ * arrives first. When metricbeat wins, every event with a string `user` —
+ * every `API Request`, every AccessDenied — is rejected and filebeat drops
+ * it. Writing the object here makes both writers agree, so the type no
+ * longer depends on that race.
+ *
+ * Done only at serialization: call sites, the request context and the
+ * DynamoDB audit records keep the plain string. A `user` that is not a scalar
+ * (an object, or null) passes through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsUser = (info: winston.Logform.TransformableInfo) => {
+  if (isPrimitive(info.user)) {
+    info.user = { name: String(info.user) }
+  }
+  return info
+}
+
+const ecsUserFormat = backstop(normalizeEcsUser)
+
+/**
+ * Backstop: write a top-level `error` that is not an Error in the ECS object
+ * shape (IGDD-3541): a scalar as `{ message }`, and an object with each
+ * `error.*` field as its one type (see `toEcsErrorValue`).
+ *
+ * Same race as `user`: ECS `error.*` objects reach the data stream from this
+ * logger's Error handling, from filebeat's `add_error_key` and from metricbeat,
+ * so a backing index can type `error` as an object, and then every event
+ * logging `error: err.message` is rejected and dropped.
+ *
+ * Exported for unit testing.
+ */
+export const normalizeEcsError = (info: winston.Logform.TransformableInfo) => {
+  if (info.error !== undefined) info.error = toEcsErrorValue(info.error)
+  return info
+}
+
+const ecsErrorFormat = backstop(normalizeEcsError)
+
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info', // Fail-safe. If LOG_LEVEL not set, default to info to hide sensitive information
   format: winston.format.combine(
+    ecsErrors({ defaultMeta: () => logger.defaultMeta }),
     winston.format.uncolorize(),
-    winston.format.errors({ stack: true }),
     versionFormat(),
     userContextFormat(),
-    ecsFormat({ convertReqRes: true, apmIntegration: false })
+    ecsUrlFormat(),
+    ecsUserFormat(),
+    ecsErrorFormat(),
+    // ecsFormat, with Errors converted by ecsErrors and serialized by safeStringify.
+    ecsFields({
+      convertErr: false,
+      convertReqRes: true,
+      apmIntegration: false,
+    }),
+    safeStringify()
   ),
   transports: [new winston.transports.Console()],
   exitOnError: false,
 })
+
+/**
+ * A log call never throws (IGDD-3541). winston reads its arguments before any
+ * format runs: it writes `level` onto a logged Error (`logger.error(err)`) and
+ * copies a meta object's properties into the event (`logger.error('msg',
+ * err)`), so a frozen Error, a throwing getter or a Proxy throws out of the
+ * call. Such a call logs its message and the safe `error.*` fields of what was
+ * logged instead (toEcsErrorValue never throws).
+ */
+type LogMethod = (...args: unknown[]) => winston.Logger
+const methods = logger as unknown as Record<string, LogMethod>
+const writeLog = methods.log.bind(logger)
+
+const levelOf = (info: unknown) => {
+  try {
+    const level = (info as { level?: unknown }).level
+    return typeof level === 'string' && level in logger.levels ? level : 'error'
+  } catch {
+    return 'error'
+  }
+}
+
+const unreadableEvent = (level: string, args: unknown[]) => {
+  const [first, second] = args
+  const message = typeof first === 'string' ? first : undefined
+  const error = toEcsErrorValue(message === undefined ? first : second) as
+    | { message?: unknown }
+    | undefined
+  return {
+    level,
+    message:
+      message ??
+      (typeof error?.message === 'string'
+        ? error.message
+        : '[log event could not be read]'),
+    error,
+  }
+}
+
+for (const name of ['log', ...Object.keys(logger.levels)]) {
+  const method = methods[name]
+  methods[name] = function (this: unknown, ...args: unknown[]) {
+    try {
+      return method.apply(this, args)
+    } catch {
+      // logger.log(level, msg, ...meta) or logger.log(info)
+      const [first, ...rest] = args
+      const isLog = name === 'log'
+      const level = !isLog
+        ? name
+        : typeof first === 'string'
+        ? first
+        : levelOf(first)
+      try {
+        writeLog(
+          unreadableEvent(
+            level,
+            isLog && typeof first === 'string' ? rest : args
+          )
+        )
+      } catch {
+        // nothing more can be written
+      }
+      return logger
+    }
+  }
+}
+
+/**
+ * winston's child loggers copy a logged Error into a plain object before any
+ * format runs (`child.error(err)`), so ecsErrors could no longer recognise it
+ * and its request config would be written. The app has none: pass the
+ * metadata in each log call, or set `logger.defaultMeta`, instead.
+ */
+logger.child = () => {
+  throw new Error(
+    'logger.child() is not supported (IGDD-3541): pass the metadata in each log call'
+  )
+}
 
 if (process.env.NODE_ENV === 'production') {
   logger.add(

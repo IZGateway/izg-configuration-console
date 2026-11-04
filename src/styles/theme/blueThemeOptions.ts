@@ -1,12 +1,15 @@
 // This theme will be used in the future, do not use.//
 
 import { ThemeOptions } from '@mui/material/styles'
+import palette from './palette'
 
+import { DROP_SHADOW } from './shadows'
 const blueThemeOptions: ThemeOptions = {
   palette: {
     mode: 'light',
     background: {
-      default: '#F9F9F9',
+      // App-wide page background, painted on <body> by CssBaseline.
+      default: palette.greyLight,
     },
     common: {
       black: '#000',
@@ -61,7 +64,7 @@ const blueThemeOptions: ThemeOptions = {
     '0px 3px 5px rgba(0, 0, 0, 0.25)',
     '0px 3px 5px rgba(0, 0, 0, 0.30)',
     '0px 3px 5px rgba(0, 0, 0, 0.35)',
-    '0px 3px 5px rgba(0, 0, 0, 0.40)',
+    DROP_SHADOW,
     '0px 3px 5px rgba(0, 0, 0, 0.45)',
     '0px 3px 5px rgba(0, 0, 0, 0.50)',
     '0px 3px 5px rgba(0, 0, 0, 0.55)',

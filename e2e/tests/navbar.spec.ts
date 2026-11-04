@@ -47,13 +47,14 @@ test('Navigation panel has expected links', async () => {
 
   const apiLink = navPanel.locator('xpath=//a[@href="/api-doc"]')
   await expect.soft(apiLink).toHaveAttribute('href', '/api-doc')
-  await expect.soft(apiLink).toHaveText('Swagger API')
+  // Icon buttons: the name is the aria-label (also the tooltip), not text.
+  await expect.soft(apiLink).toHaveAccessibleName('Swagger API')
 
-  const swaggerButton = navPanel.getByText('Swagger API')
+  const swaggerButton = navPanel.getByRole('link', { name: 'Swagger API' })
   await expect.soft(swaggerButton).toBeVisible()
 
   const logoutLink = navPanel.locator('#logout')
-  await expect.soft(logoutLink).toHaveText('Log Out')
+  await expect.soft(logoutLink).toHaveAccessibleName('Log Out')
   await expect.soft(logoutLink).toBeVisible()
 })
 

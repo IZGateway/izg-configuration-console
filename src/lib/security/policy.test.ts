@@ -224,14 +224,49 @@ describe('IGDD-3472 seeds: the admin capabilities reproduce today access exactly
     }
   )
 
+  // console.canViewConsole (Admin Log Search) is the one admin-tier grant
+  // outside IZG Operations: IZG Support (IGDD-3170) and, own jurisdiction
+  // only, Jurisdiction Operations and Jurisdiction Support (IGDD-3474, target
+  // matrix v11). Every other admin flag is still checked for every
+  // non-operations role.
+  const CONSOLE_HOLDERS: CcRole[] = [
+    'IZG Support',
+    'Jurisdiction Operations',
+    'Jurisdiction Support',
+  ]
+  const ADMIN_CAPABILITIES_EXCEPT_CONSOLE = ADMIN_CAPABILITIES.filter(
+    (ref) => !(ref.page === 'console' && ref.capability === 'canViewConsole')
+  )
+
   it.each(NON_OPERATIONS_ROLES)('%s holds no new admin capability', (role) => {
     const s = subject([role], ['az'])
-    for (const ref of ADMIN_CAPABILITIES) {
+    const capabilities = CONSOLE_HOLDERS.includes(role)
+      ? ADMIN_CAPABILITIES_EXCEPT_CONSOLE
+      : ADMIN_CAPABILITIES
+    for (const ref of capabilities) {
       expect(
         can(s, ref.page, ref.capability as never, ANY_JURISDICTION).allowed
       ).toBe(false)
     }
   })
+
+  it('IZG Support holds console.canViewConsole for every jurisdiction (IGDD-3170)', () => {
+    const s = subject(['IZG Support'], ['az'])
+    expect(
+      can(s, 'console', 'canViewConsole', ANY_JURISDICTION).allowed
+    ).toBe(true)
+    expect(can(s, 'console', 'canViewConsole', 'ma').allowed).toBe(true)
+  })
+
+  it.each(['Jurisdiction Operations', 'Jurisdiction Support'] as CcRole[])(
+    '%s holds console.canViewConsole for its own jurisdiction only (IGDD-3474)',
+    (role) => {
+      const s = subject([role], ['az'])
+      expect(can(s, 'console', 'canViewConsole', 'az').allowed).toBe(true)
+      expect(can(s, 'console', 'canViewConsole', 'AZ').allowed).toBe(true)
+      expect(can(s, 'console', 'canViewConsole', 'ma').allowed).toBe(false)
+    }
+  )
 })
 
 describe('IGDD-3472 block-shape drift', () => {
@@ -300,14 +335,19 @@ describe('IGDD-3472 tenancy invariant on unfiltered data paths', () => {
   // throughout and caught nothing. So the tenancy predicate is injected here
   // to model the arrangement the ratified matrix is expected to create.
   describe('the guard is role-local, not subject-wide', () => {
+    // Not console.canViewConsole: IGDD-3170 granted that to IZG Support, so it
+    // no longer demonstrates two roles each supplying one half.
+    // accesscontrol.canViewAccessControl still splits the same way (IZG
+    // Operations holds it, IZG Support does not) and is still guarded.
     const GUARDED: CapabilityRef = {
-      page: 'console',
-      capability: 'canViewConsole',
+      page: 'accesscontrol',
+      capability: 'canViewAccessControl',
     }
 
     it('denies when the capability and the global reach come from different roles', () => {
-      // IZG Operations holds canViewConsole; IZG Support does not. Treat only
-      // IZG Support as global, so no single role supplies both halves.
+      // IZG Operations holds canViewAccessControl; IZG Support does not.
+      // Treat only IZG Support as global, so no single role supplies both
+      // halves.
       const held = decideCapability(
         subject(['IZG Operations', 'IZG Support']),
         GUARDED,
@@ -348,15 +388,15 @@ describe('IGDD-3472 tenancy invariant on unfiltered data paths', () => {
       'accesscontrol.canManageAdsFileTypes',
       'accesscontrol.canManageDenyList',
       'accesscontrol.canViewAccessControl',
-      'console.canViewConsole',
     ])
   })
 
   it('the guard is evaluated per alternative in an any-of rule', () => {
-    // The /api/organizations rule. Two of its three alternatives are guarded;
-    // Jurisdiction Support reaches the route through the unguarded third and
+    // The /api/organizations rule. Its first alternative is guarded;
+    // Jurisdiction Support reaches the route through the unguarded ones and
     // must continue to. Applying the strictest guard across the array would
-    // break that silently.
+    // break that silently. (console.canViewConsole left the guarded set in
+    // IGDD-3474, when the log search moved to a server-filtered data path.)
     const organizationsRule: CapabilityRef[] = [
       { page: 'accesscontrol', capability: 'canViewAccessControl' },
       { page: 'console', capability: 'canViewConsole' },
@@ -369,9 +409,9 @@ describe('IGDD-3472 tenancy invariant on unfiltered data paths', () => {
       (!requiresGlobalTenancy(ref) || hasGlobalTenancy(scoped))
 
     expect(organizationsRule.some(satisfies)).toBe(true)
-    // ...and only via the unguarded alternative.
+    // ...and only via the unguarded alternatives.
     expect(satisfies(organizationsRule[0])).toBe(false)
-    expect(satisfies(organizationsRule[1])).toBe(false)
+    expect(satisfies(organizationsRule[1])).toBe(true)
     expect(satisfies(organizationsRule[2])).toBe(true)
   })
 })

@@ -2,10 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Box } from '@mui/material'
 import MetricCard from './components/MetricCard'
 import { MetricChange, DEFAULT_METRIC_CHANGE } from './types/destinationMetrics'
-import {
-  buildDestinationMetricsQuery,
-  ELASTICSEARCH_API_ENDPOINT,
-} from './queries/destinationMetricsQuery'
+import { fetchConsoleMetrics } from '../../lib/console/consoleMetricsClient'
 import { computeStatuses, DESTINATION_METRICS } from './config/statusThresholds'
 
 interface DestinationDetailWidgetProps {
@@ -63,25 +60,28 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
   useEffect(() => {
     if (!selectedConnection) return
 
+    // Abort the previous request when the selection changes, so a slower
+    // earlier response can never overwrite the current one.
+    const controller = new AbortController()
+
     const fetchDestinationData = async () => {
       try {
-        const query = buildDestinationMetricsQuery(selectedConnection, envTag)
-
-        const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        // The server builds the query and checks this destination is in reach.
+        const response = await fetchConsoleMetrics(
+          {
+            view: 'destination',
+            destId: selectedConnection,
+            envTag,
           },
-          body: JSON.stringify({
-            query: query,
-          }),
-        })
+          controller.signal
+        )
 
         if (!response.ok) {
           throw new Error('Failed to fetch destination data')
         }
 
         const data = await response.json()
+        if (controller.signal.aborted) return
 
         if (data?.aggregations) {
           const bucket0 = data.aggregations['0']?.buckets?.['Last 24h']
@@ -215,6 +215,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
           }
         }
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         if (err instanceof Error) {
           console.error('Error fetching destination data:', err)
         }
@@ -222,6 +223,7 @@ const DestinationDetailWidget = (props: DestinationDetailWidgetProps) => {
     }
 
     fetchDestinationData()
+    return () => controller.abort()
   }, [selectedConnection, envTag])
 
   return (

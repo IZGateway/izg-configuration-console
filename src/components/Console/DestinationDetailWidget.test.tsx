@@ -120,12 +120,30 @@ describe('DestinationDetailWidget', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/elasticsearch/query',
+        '/api/console/metrics',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         })
       )
+    })
+
+    it('sends the selection, never Elasticsearch DSL (IGDD-3474)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(createMockElasticsearchResponse()),
+      })
+
+      await act(async () => {
+        render(<DestinationDetailWidget selectedConnection="TX" envTag="prod" />)
+      })
+
+      const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+      expect(requestBody).toEqual({
+        view: 'destination',
+        destId: 'TX',
+        envTag: 'prod',
+      })
     })
 
     it('should not include index in the request body (resolved server-side)', async () => {
@@ -574,6 +592,48 @@ describe('DestinationDetailWidget', () => {
       expect(
         container.querySelector('#percentile-95-response-time')
       ).toBeInTheDocument()
+    })
+  })
+
+  describe('Stale responses', () => {
+    it('ignores a slower response for a previous selection', async () => {
+      let resolveSlow: (value: unknown) => void = () => undefined
+      mockFetch
+        .mockReturnValueOnce(new Promise((resolve) => (resolveSlow = resolve)))
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              createMockElasticsearchResponse({
+                lastBucket: {
+                  '3-bucket': { doc_count: 4000 },
+                  '4-bucket': { doc_count: 1000 },
+                },
+              })
+            ),
+        })
+
+      const { rerender } = render(
+        <DestinationDetailWidget selectedConnection="TX" envTag="prod" />
+      )
+      // The environment changes before the first response arrives. The widget
+      // is keyed on the destination, so this is the in-place case.
+      rerender(<DestinationDetailWidget selectedConnection="TX" envTag="test" />)
+
+      await waitFor(() => {
+        expect(screen.getAllByText((5000).toLocaleString()).length).toBeGreaterThan(0)
+      })
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true)
+
+      await act(async () => {
+        resolveSlow({
+          ok: true,
+          json: () => Promise.resolve(createMockElasticsearchResponse()),
+        })
+      })
+
+      expect(screen.getAllByText((5000).toLocaleString()).length).toBeGreaterThan(0)
+      expect(screen.queryAllByText((1000).toLocaleString())).toHaveLength(0)
     })
   })
 })

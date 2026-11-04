@@ -8,10 +8,11 @@ import useSWR from 'swr'
 import moment from 'moment'
 import useRoleAccess from '../../lib/security/useRoleAccess'
 import { ManageConnectionsPageAccessControl } from '../../lib/type/PageAccessControls'
+import { DROP_SHADOW } from '../../styles/theme/shadows'
 const actionButtonStyle = {
   borderRadius: 90,
   background: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 35,
   height: 35,
   marginRight: 2,
@@ -20,7 +21,7 @@ const draftButtonStyle = {
   borderRadius: 90,
   background: palette.primary,
   color: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 35,
   height: 35,
   marginRight: 2,
@@ -34,7 +35,7 @@ const publishButtonStyle = {
   borderRadius: 90,
   background: palette.primaryDark,
   color: palette.white,
-  boxShadow: '0px 3px 5px rgba(0, 0, 0, 0.40)',
+  boxShadow: DROP_SHADOW,
   width: 35,
   height: 35,
   marginRight: 2,

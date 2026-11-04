@@ -27,9 +27,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // Any-of: a shared lookup called from Access Control (AddDenyList,
 // AccessControl/index), the Console, and Onboarding's certificate selector.
 // Requiring a single capability would break two of the three callers.
-// The first two alternatives are tenancy-guarded and the third is not; the
-// guard is evaluated per alternative, so Jurisdiction Operations and
-// Support still reach this through canViewOnboarding.
+// The guards are evaluated per alternative. canViewAccessControl requires
+// global tenancy; canViewConsole is destination-scoped and this route names no
+// destination, so it too passes only for global-reach roles. Jurisdiction
+// Operations and Support reach this through canViewOnboarding. The
+// organization list is a sender directory, not per-jurisdiction data, and both
+// roles already reached it before IGDD-3474.
 export default withMiddleware({
   capability: [
     { page: 'accesscontrol', capability: 'canViewAccessControl' },

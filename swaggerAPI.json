@@ -1,8 +1,9 @@
 {
   "openapi": "3.0.0",
   "info": {
-    "title": "NextJS Swagger",
-    "version": "0.1.0"
+    "title": "IZ Gateway Configuration Console API",
+    "version": "1.20.0",
+    "description": "Internal API behind the IZ Gateway Configuration Console. It manages\ndestinations and change requests, connection tests, access control,\nonboarding, and API keys.\n\n**Authentication:** requests use your signed-in console session. Every\nrequest carries a DPoP proof that is bound to this browser session."
   },
   "paths": {
     "/api/statushistory/{id}": {
@@ -23,7 +24,10 @@
           "200": {
             "description": "OK."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/healthcheck": {
@@ -33,7 +37,38 @@
           "200": {
             "description": "OK."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/destinationuri/validate": {
+      "post": {
+        "summary": "Check a destination URI against the destination URL specification.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "destId": "string",
+                "destTypeId": "number",
+                "destUri": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The URI is a permitted destination."
+          },
+          "400": {
+            "description": "The URI is not a permitted destination; `error` explains why."
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/destinations/{destTypeId}/{destId}": {
@@ -63,7 +98,10 @@
           "200": {
             "description": "OK."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/destinations": {
@@ -73,7 +111,10 @@
           "200": {
             "description": "List of destinations"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/destinationaudit/{destTypeId}/{destId}": {
@@ -103,17 +144,153 @@
           "200": {
             "description": "OK."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/deephealthcheck": {
       "get": {
-        "summary": "returns HTTP OK (200).",
+        "summary": "Reports reachability of each dependency (DB, Okta, Jira, IZ Gateway).",
+        "description": "Callers in OPERATIONS_GROUP receive the full result for each component. Every other caller — the load balancer probe and signed-in non-admin users alike — receives only the component name, its status and the time it was taken. The HTTP status code does not depend on the caller.\n",
         "responses": {
           "200": {
             "description": "OK."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/console/metrics": {
+      "post": {
+        "summary": "Console widget metrics for one destination",
+        "description": "Builds the Elasticsearch query for a /console widget on the server and applies the caller's jurisdiction restriction. The caller names a view and a destination; it never supplies query DSL.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "view",
+                  "destId"
+                ],
+                "properties": {
+                  "view": {
+                    "type": "string",
+                    "enum": [
+                      "destination",
+                      "inbound",
+                      "outbound"
+                    ]
+                  },
+                  "destId": {
+                    "type": "string"
+                  },
+                  "envTag": {
+                    "type": "string",
+                    "enum": [
+                      "prod",
+                      "onboard",
+                      "staging",
+                      "dev",
+                      "test"
+                    ]
+                  },
+                  "organization": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Raw Elasticsearch aggregation response, or `{ unavailable: <reason> }` when the selection resolves to nothing the caller may see (no query is run).\n"
+          },
+          "400": {
+            "description": "Invalid request body"
+          },
+          "403": {
+            "description": "Caller may not view the console for this destination"
+          },
+          "405": {
+            "description": "Method not allowed"
+          },
+          "500": {
+            "description": "Elasticsearch not configured or query failed"
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/changerequest/{destTypeId}/{destId}": {
+      "get": {
+        "summary": "Get destination change request for destination type and destination id.",
+        "parameters": [
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of destination type"
+          },
+          {
+            "name": "destId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/changerequest/{id}": {
+      "delete": {
+        "summary": "Delete a change request by its id. If it is not a draft, also comments on its Jira ticket.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of the change request."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Change request deleted."
+          },
+          "401": {
+            "description": "Unauthorized, or no access to the change request's destination."
+          },
+          "500": {
+            "description": "Unable to delete the change request."
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/changerequest": {
@@ -151,13 +328,77 @@
           "200": {
             "description": "destination successfully scheduled to change upon approval.",
             "content": {
-              "application/json": null
+              "application/json": {}
             }
           },
           "400": {
             "description": "Bad request."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/apikeysaudit/{sortKey}": {
+      "get": {
+        "summary": "Get the lifecycle audit history for an API key credential",
+        "parameters": [
+          {
+            "name": "sortKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The credential's sortKey (its jti)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK. Returns the credential's audit history, oldest first."
+          },
+          "400": {
+            "description": "Bad request - missing sortKey"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient role, or not this caller's jurisdiction"
+          },
+          "404": {
+            "description": "API key not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/apikeysaudit": {
+      "get": {
+        "summary": "API key lifecycle activity feed across every credential the caller can see",
+        "responses": {
+          "200": {
+            "description": "OK. Audit rows, newest first."
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - insufficient role"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/allowedusersaudit/{environment}/{destinationId}/{principal}": {
@@ -199,10 +440,16 @@
           "400": {
             "description": "Bad request - missing required parameters"
           },
+          "403": {
+            "description": "Destination outside the caller's jurisdiction"
+          },
           "500": {
             "description": "Internal server error"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/allowedusers": {
@@ -266,7 +513,10 @@
           "500": {
             "description": "Internal server error"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       },
       "post": {
         "summary": "Create or update an allowed user",
@@ -326,10 +576,16 @@
           "400": {
             "description": "Bad request - missing required fields"
           },
+          "403": {
+            "description": "Forbidden - destinationId is outside the caller's jurisdiction"
+          },
           "500": {
             "description": "Internal server error"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       },
       "delete": {
         "summary": "Delete an allowed user",
@@ -369,10 +625,16 @@
           "400": {
             "description": "Bad request - missing required fields"
           },
+          "403": {
+            "description": "Forbidden - destinationId is outside the caller's jurisdiction"
+          },
           "500": {
             "description": "Internal server error"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/tests/connectiontest/{destTypeId}/{destId}": {
@@ -413,33 +675,81 @@
           "200": {
             "description": "successfully received test results for the destination values posted in body.",
             "content": {
-              "application/json": null
+              "application/json": {}
             }
           },
           "400": {
             "description": "Bad request."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/status/reset/{destTypeId}/{destId}": {
+      "post": {
+        "summary": "Reset the circuit breaker for a single destination.",
+        "parameters": [
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of the destination type."
+          },
+          {
+            "name": "destId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The destination status returned by the Hub, with `statusBy`, `hosts` and `regions` removed. The first two carry private Hub host names; `regions` names AWS regions, which a jurisdiction-scoped caller of this route has no use for. In their place, `resetComplete` is true only when the Hub cleared the breaker on every instance. The Hub answers 200 even when it did not, so a caller must read `resetComplete` rather than the status code. The field is absent against a Hub release older than IGDD-3599.\n"
+          },
+          "404": {
+            "description": "Destination not found."
+          },
+          "502": {
+            "description": "The Hub could not be reached."
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/status/reset": {
       "post": {
         "summary": "Reset all circuit breakers across all Hub environments.",
-        "description": "Signals every configured hub to reset all of its circuit breakers so connections recover without a service restart. Operations/admin users only.\n",
+        "description": "Signals every configured hub to reset all of its circuit breakers so connections recover without a service restart. Operations/admin users only. The hub clears the breakers on every instance in every region and reports the outcome per region in `result.regions`, whose values are `complete`, `partial` or `failed`. That block is absent against a hub release older than IGDD-3599, and absent when no `destinationTypeId` is given, because several hubs are then called and their region keys collide. `result.level` carries one verdict over every hub called and is present on both paths, so a caller never has to read success from the status code. Hub host names are never returned.\n",
         "responses": {
           "200": {
-            "description": "OK."
+            "description": "The hub was reached. `success` is true only when every region reports `complete`; a `partial` region returns 200 with `success: false` and a message naming the region.\n"
           },
           "403": {
             "description": "Forbidden (non-admin)."
+          },
+          "502": {
+            "description": "No hub instance reset its circuit breakers. Returned when every hub endpoint was unreachable, or when every region reports `failed`. The body still carries `result.regions`.\n"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/status/refresh": {
       "post": {
-        "summary": "Refresh all hubs' configuration from the database.",
-        "description": "Signals every configured hub to reload its configuration from the database across all Hub environments. Operations/admin users only.\n",
+        "summary": "Refresh hub configuration from the database.",
+        "description": "Signals a configured hub environment, or every configured hub when no destinationTypeId is provided, to reload its configuration from the database. Operations/admin users only.\n",
         "responses": {
           "200": {
             "description": "OK."
@@ -447,7 +757,43 @@
           "403": {
             "description": "Forbidden (non-admin)."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
+      }
+    },
+    "/api/maintenance/update/{destTypeId}/{destId}": {
+      "post": {
+        "summary": "Update maintenance start date, end date, reason for connection maintenance",
+        "parameters": [
+          {
+            "name": "destTypeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The ID of destination type"
+          },
+          {
+            "name": "destId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the destination."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK."
+          }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/changerequest/deploye/{id}": {
@@ -494,13 +840,16 @@
           "200": {
             "description": "destination successfully updated.",
             "content": {
-              "application/json": null
+              "application/json": {}
             }
           },
           "400": {
             "description": "Bad request."
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     },
     "/api/allowedusers/bydestination": {
@@ -568,7 +917,10 @@
           "500": {
             "description": "Internal server error"
           }
-        }
+        },
+        "tags": [
+          "IZ Gateway"
+        ]
       }
     }
   },

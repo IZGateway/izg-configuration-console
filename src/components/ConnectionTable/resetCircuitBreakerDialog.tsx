@@ -54,7 +54,30 @@ const ResetCircuitBreakerDialog = (props: resetCircuitBreakerDialogProps) => {
         }
       )
       if (response.ok) {
-        const updatedStatus = await response.json()
+        // IGDD-3599: the hub clears the breaker on every instance it runs, and
+        // answers 200 even when it did not reach them all. `resetComplete` is
+        // the API's one-field verdict; it is absent against a hub older than
+        // IGDD-3599, and the dialog then behaves as it did before.
+        const { resetComplete, ...updatedStatus } = await response.json()
+
+        // A reset that did not reach every instance is reported as a plain
+        // failure, with the message this dialog has always used. Deliberate:
+        // Manage Connections is reachable by `Jurisdiction Operations`, a
+        // jurisdiction-scoped role, and the detail behind a partial reset is
+        // Hub topology that a jurisdiction operator does not own and cannot
+        // act on. The per-region view belongs to Admin Operations, which only
+        // `IZG Operations` can reach. See the change's design D11.
+        if (resetComplete === false) {
+          setAlert({
+            level: 'error',
+            message: `Request to reset the circuit breaker for ${props.jurisdictionName} ${props.destType} was not successful. Please try again later.`,
+          })
+          return
+        }
+
+        // The row is left untouched above on the failure path, so it keeps
+        // showing the tripped indicator rather than a status that contradicts
+        // the message.
         props.updateRow({ ...props.row, ...updatedStatus })
         props.handleClose()
         setAlert({

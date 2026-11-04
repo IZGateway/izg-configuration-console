@@ -6,31 +6,16 @@ import {
   DEFAULT_MESSAGE_METRICS,
 } from './types/messageMetrics'
 import {
-  ELASTICSEARCH_API_ENDPOINT,
-  buildOutboundCombinedQuery,
-} from './queries/outboundMessagesQuery'
+  ALL_ORGANIZATIONS,
+  fetchConsoleMetrics,
+} from '../../lib/console/consoleMetricsClient'
 import { computeStatuses, OUTBOUND_METRICS } from './config/statusThresholds'
-
-interface Destination {
-  destId: string
-  jurisdictionName?: string
-  jurisdiction?: {
-    jurisdictionId: number
-    name: string
-    description: string
-  }
-  destinationType?: {
-    typeId: number
-    type: string
-  }
-}
 
 interface OutboundMessagesWidgetProps {
   selectedConnection?: string
   selectedConnectionDescription?: string
   organizations?: Organization[]
   organizationsLoading?: boolean
-  destinations?: Destination[]
   envTag?: string
 }
 
@@ -39,7 +24,6 @@ const OutboundMessagesWidget = ({
   selectedConnectionDescription,
   organizations = [],
   organizationsLoading = false,
-  destinations = [],
   envTag,
 }: OutboundMessagesWidgetProps) => {
   const [metrics, setMetrics] = useState<MessageMetrics>(
@@ -49,117 +33,44 @@ const OutboundMessagesWidget = ({
   const [loading, setLoading] = useState(false)
   const [showAllFailures, setShowAllFailures] = useState(false)
 
-  const [selectedOrganization, setSelectedOrganization] = useState('IZGateway')
+  const [selectedOrganization, setSelectedOrganization] =
+    useState(ALL_ORGANIZATIONS)
 
-  // ## TOP FILTER ##
-  // Compute principal names from destination's jurisdiction.name
-  const principalNames = useMemo(() => {
-    if (!selectedConnection) {
-      return undefined
-    }
-    // Find the selected destination to get its jurisdiction.name
-    const selectedDest = destinations.find(
-      (d) => d.destId === selectedConnection
-    )
-    const jurisdictionName = selectedDest?.jurisdiction?.name
-    if (!jurisdictionName) {
-      return undefined
-    }
-    // Match jurisdiction name to organizationName and get principalNames
-    const matchingOrg = organizations.find(
-      (org) => org.organizationName === jurisdictionName
-    )
-    return matchingOrg?.principalNames
-  }, [selectedConnection, destinations, organizations])
-
-  // ## COMPONENT LEVEL FILTER ##
-  // Compute destination ID from selected organization (reverse lookup)
-  const destinationFromOrganization = useMemo(() => {
-    if (selectedOrganization === 'IZGateway') {
-      return undefined
-    }
-    // Find the destination where jurisdiction.name matches the selected organization name
-    const matchingDest = destinations.find(
-      (d) => d.jurisdiction?.name === selectedOrganization
-    )
-    return matchingDest?.destId
-  }, [selectedOrganization, destinations])
-
-  // Compute error message if principalNames or destinationFromOrganization can't be found
-  const outboundError = useMemo(() => {
-    // Avoid showing an error while organizations are still loading
-    if (organizationsLoading) {
-      return undefined
-    }
-
-    // If selectedConnection exists but principalNames couldn't be resolved
-    if (
-      selectedConnection &&
-      (!principalNames || principalNames.length === 0)
-    ) {
-      const selectedDest = destinations.find(
-        (d) => d.destId === selectedConnection
-      )
-      const jurisdictionName = selectedDest?.jurisdiction?.name
-      if (jurisdictionName) {
-        if (!principalNames) {
-          return `Cannot display outbound data: no organization found matching the destination's jurisdiction (${jurisdictionName}).`
-        }
-        return `Cannot display outbound data: the organization matching the destination's jurisdiction (${jurisdictionName}) has no principal names configured.`
-      }
-      return 'Cannot display outbound data: unable to resolve organization for the selected destination.'
-    }
-
-    // If a specific organization is selected but destinationFromOrganization couldn't be resolved
-    if (selectedOrganization !== 'IZGateway' && !destinationFromOrganization) {
-      return `Cannot display outbound data: no destination found matching the selected organization (${selectedOrganization}).`
-    }
-
-    return undefined
-  }, [
-    selectedConnection,
-    principalNames,
-    selectedOrganization,
-    destinationFromOrganization,
-    destinations,
-    organizationsLoading,
-  ])
+  // Shown in place of the metrics: why the server found nothing to show for
+  // this selection (for example the jurisdiction has no principals configured,
+  // or the selected organization has no destination; the server owns that
+  // resolution, see lib/console/consoleMetrics.ts), or that the request failed.
+  const [errorMessage, setErrorMessage] = useState<string>()
 
   // Fetch message data from Elasticsearch
   useEffect(() => {
-    // Don't fetch if there's an error condition, no connection selected, or missing required data
-    if (
-      !selectedConnection ||
-      outboundError ||
-      !principalNames ||
-      principalNames.length === 0
-    )
-      return
+    if (!selectedConnection) return
 
     const controller = new AbortController()
 
+    // Back to the empty state, so nothing from the previous selection is
+    // shown under the new one.
+    const clearResults = () => {
+      setMetrics(DEFAULT_MESSAGE_METRICS)
+      setFailures([])
+    }
+
     const fetchMessageData = async () => {
       setLoading(true)
+      setErrorMessage(undefined)
       try {
-        // Fetch combined metrics and errors data in a single call
-        const combinedQuery = buildOutboundCombinedQuery(
-          principalNames,
-          destinationFromOrganization,
-          envTag
-        )
-
-        const requestBody = {
-          query: combinedQuery,
-        }
-
-        const response = await fetch(ELASTICSEARCH_API_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        // Fetch combined metrics and errors data in a single call. The server
+        // resolves the jurisdiction's principals and the organization's
+        // destination itself.
+        const response = await fetchConsoleMetrics(
+          {
+            view: 'outbound',
+            destId: selectedConnection,
+            envTag,
+            organization: selectedOrganization,
           },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        })
+          controller.signal
+        )
 
         if (!response.ok) {
           throw new Error(
@@ -168,6 +79,13 @@ const OutboundMessagesWidget = ({
         }
 
         const data = await response.json()
+        if (controller.signal.aborted) return
+
+        if (data?.unavailable) {
+          setErrorMessage(data.unavailable)
+          clearResults()
+          return
+        }
 
         // Track the calculated total messages for percentage calculations
         let calculatedTotalMessages = 0
@@ -275,23 +193,23 @@ const OutboundMessagesWidget = ({
           setFailures(failureTypes)
         }
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return
+        // A superseded request (aborted by the cleanup below) must not touch
+        // state: its failure would wipe the newer request's result. Checked on
+        // the signal, not the error name, since any error can arrive late.
+        if (controller.signal.aborted) return
         console.error('Error fetching message data:', err)
+        setErrorMessage('Unable to load outbound message data.')
+        clearResults()
       } finally {
-        setLoading(false)
+        // Likewise, only the current request may end the loading state; a
+        // superseded one finishing would hide the spinner mid-fetch.
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
 
     fetchMessageData()
     return () => controller.abort()
-  }, [
-    selectedConnection,
-    principalNames ? [...principalNames].sort().join('|') : '',
-    selectedOrganization,
-    destinationFromOrganization,
-    envTag,
-    outboundError,
-  ])
+  }, [selectedConnection, selectedOrganization, envTag])
 
   const metricStatuses = useMemo(
     () => computeStatuses(OUTBOUND_METRICS, metrics),
@@ -314,7 +232,7 @@ const OutboundMessagesWidget = ({
       organizations={organizations}
       onOrganizationChange={setSelectedOrganization}
       onToggleShowAll={() => setShowAllFailures(!showAllFailures)}
-      error={outboundError}
+      error={errorMessage}
       metricStatuses={metricStatuses}
     />
   )

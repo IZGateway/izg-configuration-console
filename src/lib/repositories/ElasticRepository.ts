@@ -203,4 +203,11 @@ export class ElasticRepositoryClient {
  */
 export const elasticClient = new ElasticRepositoryClient()
 
+/**
+ * The log index the Operations Console reads (status report and /console log
+ * search). One place, so the two routes cannot drift onto different indexes.
+ */
+export const getConsoleElasticIndex = (): string =>
+  process.env.OPERATIONS_CONSOLE_ELASTIC_INDEX || 'izgw-dev-logstash'
+
 export default ElasticRepositoryClient

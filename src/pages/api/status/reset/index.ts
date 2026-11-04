@@ -5,6 +5,7 @@ import {
   resetAllCircuitBreakers,
   resetCircuitBreakersForEnvironment,
 } from '../../../../lib/utils/izghubcircuitbreakerreset'
+import { regionsNotComplete } from '../../../../lib/utils/hubregionstatus'
 
 /**
  * @swagger
@@ -14,12 +15,28 @@ import {
  *     description: >
  *       Signals every configured hub to reset all of its circuit breakers so
  *       connections recover without a service restart. Operations/admin users
- *       only.
+ *       only. The hub clears the breakers on every instance in every region
+ *       and reports the outcome per region in `result.regions`, whose values
+ *       are `complete`, `partial` or `failed`. That block is absent against a
+ *       hub release older than IGDD-3599, and absent when no
+ *       `destinationTypeId` is given, because several hubs are then called and
+ *       their region keys collide. `result.level` carries one verdict over
+ *       every hub called and is present on both paths, so a caller never has
+ *       to read success from the status code. Hub host names are never
+ *       returned.
  *     responses:
  *       200:
- *         description: OK.
+ *         description: >
+ *           The hub was reached. `success` is true only when every region
+ *           reports `complete`; a `partial` region returns 200 with
+ *           `success: false` and a message naming the region.
  *       403:
  *         description: Forbidden (non-admin).
+ *       502:
+ *         description: >
+ *           No hub instance reset its circuit breakers. Returned when every
+ *           hub endpoint was unreachable, or when every region reports
+ *           `failed`. The body still carries `result.regions`.
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -55,6 +72,43 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         error: isEnvironmentReset
           ? 'Failed to signal the hub instance to reset circuit breakers.'
           : 'Failed to signal any hub instance to reset circuit breakers.',
+        result,
+      })
+    }
+
+    // IGDD-3599: the hub answers 200 even when a region did not fully reset, so
+    // the HTTP status cannot decide this. The verdict comes from the utility
+    // rather than from `result.regions`, because a multi-hub call carries no
+    // merged block but still has a verdict. It is undefined against a hub that
+    // sends no block at all, which keeps the pre-IGDD-3599 wording.
+    const level = result.level
+    // Named only when one hub was called. A multi-hub call has no merged block,
+    // so the message carries the verdict without a region list.
+    const unfinished = regionsNotComplete(result.regions)
+    const affected = unfinished.length
+      ? ` Affected regions: ${unfinished.join(', ')}.`
+      : ''
+    // A hub endpoint that could not be reached is a different fact from a
+    // region that did not reset, and the caller needs both.
+    const unreachable = result.failed
+      ? ` ${result.failed} of ${result.attempted} hub endpoints could not be reached.`
+      : ''
+
+    if (level === 'error') {
+      return res.status(502).json({
+        success: false,
+        error: `No hub instance reset its circuit breakers.${affected}${unreachable}`,
+        result,
+      })
+    }
+
+    // 200, because the hub was reached and some of it did reset. The browser
+    // picks its own wording from `result.regions`; this `message` is for a
+    // direct API caller, and the @swagger block above documents it.
+    if (level === 'warning') {
+      return res.status(200).json({
+        success: false,
+        message: `Circuit breakers were not reset everywhere.${affected}${unreachable}`,
         result,
       })
     }

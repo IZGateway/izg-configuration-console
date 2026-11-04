@@ -2,6 +2,7 @@
 import * as React from 'react'
 import EditConnection from '../../components/EditConnection/index'
 import Container from '../../components/Container'
+import PageLoading from '../../components/Loader/PageLoading'
 import { Box } from '@mui/material'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import { useRouter } from 'next/router'
@@ -16,7 +17,7 @@ const Edit = (props) => {
   }, [isReady, query])
 
   return !isReady ? (
-    <>Loading....</>
+    <PageLoading />
   ) : (
     <Container title="Edit Connection">
       <ErrorBoundary>

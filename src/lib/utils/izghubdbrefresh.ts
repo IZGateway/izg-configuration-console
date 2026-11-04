@@ -5,6 +5,7 @@ import https from 'https'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
 import logger from '../../../logger'
 import { getDestinationType } from '../desttypehelper'
+import { toEcsUrl } from './ecsUrl'
 
 /**
  * Hub refresh REST path, relative to the hub's `/rest/` base. Signals a hub to
@@ -52,11 +53,17 @@ const refreshHubsForBaseUrls = async (
     baseUrls.map((baseUrl) => {
       const url = `${baseUrl}${HUB_REFRESH_PATH}`
       logger.info('Signaling hub to refresh from database', {
-        url,
+        url: toEcsUrl(url),
         operation: 'refresh_database',
         ...metadata,
       })
-      return axios.get(url, { httpsAgent, timeout: 5000 })
+      // IGDD-3599: `refresh?all=true` fans out to every hub instance over SQS
+      // and waits up to 15s for the replies. The old 5000 here predated that
+      // and reported failure whenever one host was slow. 30s matches the reset
+      // utility and the per-destination route; see the reasoning there, which
+      // is a measured 16.86s round trip when one instance is down. nginx
+      // allows it (NGINX_READ_TIMEOUT, 60s).
+      return axios.get(url, { httpsAgent, timeout: 30000 })
     })
   )
 

@@ -8,13 +8,27 @@ import { requireApiKeyAccess } from '../../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
 import dns from 'dns/promises'
 
-// DNS-verification bypass for local dev / automated tests ONLY. Requires BOTH a
-// non-production NODE_ENV and an explicit opt-in flag, so it can never be turned
-// on in production even by accident. When enabled, the real DNS TXT lookup is
-// skipped and the challenge is treated as satisfied.
+// DNS-verification bypass for local dev, automated tests, and the deployed
+// development environment ONLY. Requires an explicit opt-in flag AND a
+// development context: either a non-production NODE_ENV (`next dev` / jest) or
+// a deployment whose NEXT_PUBLIC_APP_ENV is exactly 'development'. Every
+// deployed image runs `next start`, so NODE_ENV alone can't identify the dev
+// deployment. The exact match fails closed: an unset, misspelled, or non-dev
+// app env (production/onboarding/preprod/test) keeps the bypass off even if
+// the flag is set. When enabled, the real DNS TXT lookup is skipped and the
+// challenge is treated as satisfied.
+const DEPLOYED_APP_ENV = process.env.NEXT_PUBLIC_APP_ENV?.trim().toLowerCase()
 const DNS_VERIFY_BYPASS_ENABLED =
-  process.env.NODE_ENV !== 'production' &&
-  process.env.ALLOW_DNS_VERIFY_BYPASS === 'true'
+  process.env.ALLOW_DNS_VERIFY_BYPASS === 'true' &&
+  (process.env.NODE_ENV !== 'production' || DEPLOYED_APP_ENV === 'development')
+
+if (DNS_VERIFY_BYPASS_ENABLED) {
+  logger.warn('DNS verification bypass is ARMED for this process', {
+    nodeEnv: process.env.NODE_ENV,
+    appEnv: DEPLOYED_APP_ENV,
+    operation: 'verifyDomain',
+  })
+}
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -265,8 +279,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // breakdown below preserves which environment was actually bypassed.
       //
       // Rows written before `verificationMethod` existed carry none; those
-      // read as 'dns_txt', since bypass has never been reachable in
-      // production (see DNS_VERIFY_BYPASS_ENABLED).
+      // read as 'dns_txt', since bypass has never been reachable outside
+      // development (see DNS_VERIFY_BYPASS_ENABLED).
       const verificationByEnvironment = environments.map((env, i) => ({
         env,
         method: domainRecords[i]?.verificationMethod ?? 'dns_txt',
@@ -318,7 +332,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       if (DNS_VERIFY_BYPASS_ENABLED) {
         // Dev/test only, explicitly opted in via ALLOW_DNS_VERIFY_BYPASS (and
-        // never in production — see DNS_VERIFY_BYPASS_ENABLED). Skips the real
+        // never outside development — see DNS_VERIFY_BYPASS_ENABLED). Skips the real
         // DNS lookup so the success path can be exercised without owning the
         // domain. Logged as a warning so a skipped verification is auditable.
         logger.warn('DNS verification bypass ENABLED — skipping real TXT lookup', {
