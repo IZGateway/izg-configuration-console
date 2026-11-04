@@ -14,12 +14,12 @@ import {
  *     description: >
  *       Signals a configured hub environment, or every configured hub when no
  *       destinationTypeId is provided, to reload its configuration from the
- *       database. Requires the adminoperations.canRefreshHubDatabase capability.
+ *       database. Operations/admin users only.
  *     responses:
  *       200:
  *         description: OK.
  *       403:
- *         description: Forbidden (caller's role lacks the required capability).
+ *         description: Forbidden (non-admin).
  */
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -77,12 +77,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// IGDD-3547: 'checkAdmin' dropped. It required Okta OPERATIONS_GROUP
-// membership (today, IZG Operations only), a second axis invisible to the
-// matrix. IZG Program holds canRefreshHubDatabase but is not in
-// OPERATIONS_GROUP, so the matrix grant 403'd behind this check — exactly the
-// pure subtraction the removed comment anticipated: the capability check
-// above already authorizes this route correctly.
-export default withMiddleware({
-  capability: { page: 'adminoperations', capability: 'canRefreshHubDatabase' },
-})(handler)
+// 'checkAdmin' stays alongside the capability for now, so removing the
+// isAdmin axis later is a pure subtraction rather than a re-gating.
+export default withMiddleware(
+  { capability: { page: 'adminoperations', capability: 'canRefreshHubDatabase' } },
+  'checkAdmin'
+)(handler)

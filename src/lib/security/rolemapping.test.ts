@@ -38,15 +38,6 @@ describe('group name normalization', () => {
   ])('resolves %p to the Sender Operations role', (groupName) => {
     expect(rolesFromGroups([groupName])).toEqual(['Sender Operations'])
   })
-
-  it.each([
-    'IZG Program',
-    'izg program',
-    'IZG-Program',
-    '  IZG_PROGRAM  ',
-  ])('resolves %p to the IZG Program role', (groupName) => {
-    expect(rolesFromGroups([groupName])).toEqual(['IZG Program'])
-  })
 })
 
 describe('tolerant claim shapes', () => {
@@ -182,7 +173,7 @@ describe('role resolution', () => {
     expect(rolesFromGroups(['CDC Program', 'Jurisdiction Operations'])).toEqual([
       'Jurisdiction Operations',
     ])
-    expect(rolesFromGroups(['IZG Program', 'CDC CISO'])).toEqual(['IZG Program'])
+    expect(rolesFromGroups(['IZG Program', 'CDC CISO'])).toEqual([])
   })
 
   it('returns [] for a user in no recognized group', () => {

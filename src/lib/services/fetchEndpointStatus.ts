@@ -4,8 +4,7 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import IZGHubStatusHistoryEndpoint from '../IZGHubStatusHistoryEndpoint'
-import { hasGlobalTenancy } from '../security/policy'
-import type { CcRole } from '../security/rolemapping'
+import isOperationsRole from '../security/accessutils'
 
 const ALL_SETTLED_SUCCESSFUL = 'fulfilled'
 
@@ -40,14 +39,7 @@ export const fetchEndpointStatus = async (
   )
   let hubURLs = configuredHubURLs.getIZGHubURLs()
 
-  // IGDD-3547: reads hasGlobalTenancy from the role matrix, not
-  // isOperationsRole, matching src/pages/api/destinations/index.ts and
-  // src/pages/onboarding/index.tsx (PR #729 review). isOperationsRole answers
-  // "is this IZG staff?", a hardcoded two-role list that excluded IZG Program
-  // even though its matrix entry grants global reach precisely so it can see
-  // every connection. A role with no matrix entry is simply not global here
-  // (accessLevel[role] is undefined), so the cast below is safe at runtime.
-  if (!hasGlobalTenancy({ roles: roles as CcRole[], jurisdictions })) {
+  if (!isOperationsRole(roles)) {
     hubURLs = appendJurisdictionsAssignedToUser(hubURLs, jurisdictions)
   }
 
