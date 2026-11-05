@@ -18,7 +18,11 @@ declare module 'next-auth' {
        * logic. Read this through `subjectOf()` rather than directly.
        */
       roles: CcRole[]
-      /** Member of OPERATIONS_GROUP. Separate from `roles` — see api-middleware-helper checkAdmin. */
+      /**
+       * Member of OPERATIONS_GROUP. A second authorization axis, separate from
+       * `roles` and invisible to `can()`. No middleware reads it since IGDD-3498
+       * deleted `checkAdmin`; its remaining in-handler readers are IGDD-3552's.
+       */
       isAdmin: boolean
       /** Jurisdiction prefixes from the Okta userinfo claim, lowercased. */
       jurisdictions: string[]

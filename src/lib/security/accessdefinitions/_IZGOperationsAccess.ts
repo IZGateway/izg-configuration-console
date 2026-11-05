@@ -39,11 +39,15 @@ const IZGOperationsAccess: RoleAccess = {
     ...defaultTestPageAccessControl,
     canRunConnectionTest: true,
   } as TestPageAccessControl,
+  // Target matrix (Confluence 1006043137, v13): "Edit Connection — approve
+  // change request" is IZG Security and Jurisdiction Security only, so
+  // `canApproveChangeRequest` stays at the default `false` (IGDD-3498). No code
+  // reads that flag until IGDD-3545, so removing it changes nothing a user sees
+  // yet.
   edit: {
     ...defaultEditPageAccessControl,
     canChangeCredentials: true,
     canCreateChangeRequest: true,
-    canApproveChangeRequest: true,
     canSaveDraft: true,
     canResetDraft: true,
     canRunDraftConnectionTest: true,
@@ -65,6 +69,10 @@ const IZGOperationsAccess: RoleAccess = {
     canViewHubStatusHistory: true,
     canViewChangeHistory: true,
   } as HistoryPageAccessControl,
+  // Diverges from the target matrix (Confluence 1006043137, v13): "API Key
+  // Management" rows are IZG Security and Jurisdiction Security only. The
+  // decision to remove IZG Operations' access belongs to IGDD-3549, so these
+  // values are left as they are.
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
     canListApiKeys: true,
@@ -84,54 +92,40 @@ const IZGOperationsAccess: RoleAccess = {
   // type-check and then be `false` forever. The `RoleAccess` annotation on the
   // parent already types each property and restores excess-property checking.
 
-  // [PROVISIONAL — IGDD-3472] Reproduces today's access exactly: these surfaces
-  // are gated on `isAdmin` (Okta group OPERATIONS_GROUP = IZG Operations), so
-  // IZG Operations is the only current holder. Target matrix (Keith + Anusha
-  // spike, "Part 4 — Combined Matrix") rows "Access Control — view tabs /
-  // write actions", "Deny List" and "ADS File Type Mgmt" assign these to
-  // `IZG Security`, a role that does not exist in this codebase yet. Seeding
-  // `false` here would lock IZG Operations out of a page they use today, so
-  // the value diverges from target until that role lands.
+  // Target matrix (v13), Access Control split by tab: IZG Operations views all
+  // three tabs and writes the Deny List and ADS File Types. "Write Access
+  // Groups" is IZG Security only, so `canManageAccessGroups` stays at the
+  // default `false` (IGDD-3498).
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
     canViewAccessControl: true,
-    canManageAccessGroups: true,
     canManageDenyList: true,
     canManageAdsFileTypes: true,
   },
 
-  // [PROVISIONAL — IGDD-3472] Reproduces today's `isAdmin` access. Two
-  // divergences from the target matrix, both deliberate:
-  //  - "Admin Ops — Password Encryption card" and the standalone Password
-  //    Encryption page assign to `IZG Security` (absent role) — same reason as
-  //    the accesscontrol block above.
-  //  - "Admin Ops — CB Reset / DB Refresh" grants `IZG Support` as well
-  //    (Finding #14). That is a real *widening*, deferred to its own ticket so
-  //    IGDD-3472 only ever removes access. Four flags in `_IZGSupportAccess.ts`
-  //    when it lands, with no code change — which is the proof this
-  //    infrastructure works.
+  // Target matrix (v13): "Circuit Breaker Reset / DB Refresh" grants IZG
+  // Operations. "Password Encryption card" and "Password Encryption
+  // (standalone page)" are IZG Security only, so `canManagePasswordEncryption`
+  // stays at the default `false` (IGDD-3498).
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
     canViewAdminOperations: true,
-    canManagePasswordEncryption: true,
     canResetHubCircuitBreakers: true,
     canRefreshHubDatabase: true,
   },
 
-  // [PROVISIONAL — IGDD-3472] Reproduces today's `isAdmin` access to the admin
-  // log search. Target matrix row "Admin Log Search (current /console route)"
-  // also grants `IZG Support`; deferred with Finding #14 above. Do not confuse
-  // that row with "Console — status report", a separate surface (the Home
-  // SystemResourcesWidget) that this flag does not gate.
+  // Target matrix (v13) row "Admin Log Search (current /console route)"
+  // grants IZG Operations. Do not confuse that row with "Console — status
+  // report", a separate surface (the Home SystemResourcesWidget) that this
+  // flag does not gate.
   console: {
     ...defaultConsolePageAccessControl,
     canViewConsole: true,
   },
 
-  // [PROVISIONAL — IGDD-3472] Reproduces today's access: the /api-doc nav link
-  // is `isAdmin`-gated. Target matrix row "Swagger API Doc" assigns to
-  // `IZG Security` + the CDC roles, all absent, and Keith marks the row
-  // **Unconfirmed** — so there is no settled target to diverge toward yet.
+  // Diverges from the target matrix (v13): "Swagger API Doc" is IZG Security
+  // and the CDC roles, not IZG Operations. The decision to remove IZG
+  // Operations' access belongs to IGDD-3550, so the value is left as it is.
   'api-doc': {
     ...defaultApiDocPageAccessControl,
     canViewApiDoc: true,

@@ -34,6 +34,13 @@ const IZGSupportAccess: RoleAccess = {
     canRunConnectionTest: true,
     canViewHistory: true,
     canViewChangeRequest: true,
+    // [IGDD-3498] Target matrix (v13) grants IZG Support per-connection
+    // circuit breaker reset and maintenance scheduling, for the same reason as
+    // the hub-wide reset below: a stuck breaker should not need escalation.
+    // Both are decided per destination (reset in-handler with `can()`,
+    // maintenance through `checkAccessToDestIdSlug`); this role is global.
+    canScheduleMaintainance: true,
+    canResetCircuitBreaker: true,
   } as ManageConnectionsPageAccessControl,
   test: {
     ...defaultTestPageAccessControl,
@@ -46,6 +53,8 @@ const IZGSupportAccess: RoleAccess = {
     ...defaultChangeRequestPageAccessControl,
     canRunHealthCheck: true,
     canViewDetails: true,
+    // [IGDD-3498] Target matrix (v13): the change request's Jira ticket link.
+    canViewJiraTicket: true,
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,
@@ -72,21 +81,23 @@ const IZGSupportAccess: RoleAccess = {
   // then be `false` forever. The `RoleAccess` annotation on the parent
   // already types each property and restores excess-property checking.
 
-  // [PROVISIONAL — IGDD-3472] accesscontrol and adminoperations are denied
-  // outright. Spreading the all-false defaults and adding nothing is what
-  // makes that deny deliberate rather than incidental. These reproduce
-  // today's access exactly: both surfaces are `isAdmin`-gated and IZG Support
-  // is not in OPERATIONS_GROUP.
-  // The target matrix also grants IZG Support `canViewAdminOperations`,
-  // `canResetHubCircuitBreakers`, `canRefreshHubDatabase` (Finding #14,
-  // still unconfirmed). Left deferred: applying them here would make
-  // IGDD-3472 grant access as well as remove it, costing the change the
-  // property that makes it reviewable as a pure security fix.
+  // Target matrix (Confluence 1006043137, v13): every "Access Control" row is
+  // IZG Security and IZG Operations only. Spreading the all-false defaults and
+  // adding nothing is what makes that deny deliberate rather than incidental.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
   },
+  // [IGDD-3498] Target matrix row "Admin Operations — Circuit Breaker Reset /
+  // DB Refresh" grants IZG Support (IGDD-3486 Finding #14, deferred by
+  // IGDD-3472 so that change only removed access). `canViewAdminOperations` is
+  // set alongside so the role can reach the page the other two flags act on.
+  // "Password Encryption card" is IZG Security only, so
+  // `canManagePasswordEncryption` stays at the default `false`.
   adminoperations: {
     ...defaultAdminOperationsPageAccessControl,
+    canViewAdminOperations: true,
+    canResetHubCircuitBreakers: true,
+    canRefreshHubDatabase: true,
   },
   // [IGDD-3170] Confirmed in ticket QA (2026-10-19): the "console" in
   // "onboarding senders/console" refers to the /console admin log search
