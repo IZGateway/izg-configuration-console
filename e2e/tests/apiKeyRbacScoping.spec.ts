@@ -41,6 +41,7 @@
 import { Browser, BrowserContext, Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
+import { ApiResult, callApi } from '../helpers/dpopFetch'
 import { apiKeyRow } from '../helpers/createApiKey'
 import {
   API_KEYS_VIEWPORT,
@@ -89,7 +90,6 @@ type Jurisdiction = {
   prefix?: string
   useTypes?: string[]
 }
-type ApiResult = { status: number; body: { error?: string } | unknown }
 type Credential = {
   sortKey: string
   jurisdictionId: string
@@ -100,35 +100,6 @@ type Credential = {
   cancelledAt?: string
 }
 type SessionUser = { isAdmin?: boolean; jurisdictions?: string[] }
-
-// fetch() from inside the page so the DPoP wrapper signs it. `redirect:
-// 'manual'` turns a middleware rejection into status 0 (opaque redirect)
-// instead of silently following it to the sign-in page's 200.
-const callApi = (
-  page: Page,
-  method: string,
-  path: string,
-  body?: Record<string, unknown>
-): Promise<ApiResult> =>
-  page.evaluate(
-    async ({ method, path, body }) => {
-      const res = await fetch(path, {
-        method,
-        redirect: 'manual',
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
-        body: body ? JSON.stringify(body) : undefined,
-      })
-      const text = await res.text()
-      let parsed: unknown = text
-      try {
-        parsed = JSON.parse(text)
-      } catch {
-        // Non-JSON body; keep the raw text for the failure message.
-      }
-      return { status: res.status, body: parsed }
-    },
-    { method, path, body }
-  )
 
 const errorOf = (res: ApiResult) =>
   typeof res.body === 'object' && res.body !== null
