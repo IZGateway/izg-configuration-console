@@ -15,7 +15,7 @@ const PasswordEncryption = ({
   if (accessDenied) return <AccessDenied title="Password Encryption" />
 
   return (
-    <Container title="Manage Connections">
+    <Container title="Password Encryption">
       <AppHeaderBar open />
       <ErrorBoundary>
         <PasswordEncryptionConsole hasKeyName={hasKeyName} />
@@ -24,25 +24,15 @@ const PasswordEncryption = ({
   )
 }
 
-// Uses the `adminoperations` page key rather than one of its own: this page
-// duplicates the Admin Operations password card, so a separate key would mean
-// two capabilities that must always be granted together.
-//
-// Entered on `canManagePasswordEncryption`, not the block's usual
-// `canViewAdminOperations`: target matrix row "Password Encryption (standalone
-// page)" is IZG Security only (IGDD-3498). Without the override, every role
-// that can open Admin Operations could open this page and see it with no
-// actions. The override is safe only because this page has no nav link.
+// Gated on its `ROUTE_ENTRY` row in accessregistry, not a `PAGE_ENTRY` key:
+// this page shares the `adminoperations` block but is entered on
+// `canManagePasswordEncryption`, which only IZG Security holds (IGDD-3498).
 export const getServerSideProps = withPageAccess<
-  'adminoperations',
+  'passwordencryption',
   { hasKeyName: boolean }
->(
-  'adminoperations',
-  async () => {
-    const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
-    return { props: { hasKeyName } }
-  },
-  { entry: 'canManagePasswordEncryption' }
-)
+>('passwordencryption', async () => {
+  const hasKeyName = !!process.env.DB_ENCRYPTION_KEYNAME?.trim()
+  return { props: { hasKeyName } }
+})
 
 export default PasswordEncryption

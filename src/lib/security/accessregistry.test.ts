@@ -3,7 +3,13 @@
  */
 import fs from 'fs'
 import path from 'path'
-import { PAGE_ENTRY, derivePageKey, entryCapabilityOf } from './accessregistry'
+import {
+  PAGE_ENTRY,
+  ROUTE_ENTRY,
+  canEnterPage,
+  derivePageKey,
+  entryCapabilityOf,
+} from './accessregistry'
 import { AUTHZ_DEBT } from './authzDebt'
 
 /**
@@ -61,11 +67,32 @@ describe('entryCapabilityOf (IGDD-3498)', () => {
     })
   })
 
-  it('uses the stricter entry capability when one is given', () => {
-    expect(entryCapabilityOf('adminoperations', 'canManagePasswordEncryption')).toEqual({
+  it('reads a ROUTE_ENTRY route from its row', () => {
+    expect(entryCapabilityOf('passwordencryption')).toEqual({
       page: 'adminoperations',
       capability: 'canManagePasswordEncryption',
     })
+  })
+
+  it('no ROUTE_ENTRY key shadows a PAGE_ENTRY key', () => {
+    const shadowed = Object.keys(ROUTE_ENTRY).filter((key) => key in PAGE_ENTRY)
+    expect(shadowed).toEqual([])
+  })
+
+  // The nav predicate and the page gate now read the same override, so a link
+  // to /passwordencryption would render for exactly the roles the page admits.
+  it('canEnterPage applies the ROUTE_ENTRY override', () => {
+    expect(canEnterPage('passwordencryption', ['IZG Security'])).toBe(true)
+    for (const role of ['IZG Operations', 'IZG Support', 'IZG Program']) {
+      expect({ role, enters: canEnterPage('passwordencryption', [role]) }).toEqual({
+        role,
+        enters: false,
+      })
+      expect({ role, enters: canEnterPage('adminoperations', [role]) }).toEqual({
+        role,
+        enters: true,
+      })
+    }
   })
 })
 
@@ -73,9 +100,12 @@ describe('derivePageKey matches every declared page key', () => {
   // This is why the api-doc page key is 'api-doc' and not 'apidoc': the
   // invariant "page key === key derived from that page's route" holds with no
   // exceptions, so a denial event's page field is always the matrix key.
-  it.each(Object.keys(PAGE_ENTRY))('/%s derives to itself', (key) => {
-    expect(derivePageKey('/' + key)).toBe(key)
-  })
+  it.each([...Object.keys(PAGE_ENTRY), ...Object.keys(ROUTE_ENTRY)])(
+    '/%s derives to itself',
+    (key) => {
+      expect(derivePageKey('/' + key)).toBe(key)
+    }
+  )
 
   it('strips dynamic segments', () => {
     expect(derivePageKey('/changerequest/[...slug]')).toBe('changerequest')
@@ -94,7 +124,10 @@ describe('derivePageKey matches every declared page key', () => {
     // segment would instead hand it the *parent* page's flags. That trades a
     // hypothetical collision for a real widening. So the derivation stays as
     // it is, and this is what makes a collision impossible to add quietly.
-    const declared = new Set(Object.keys(PAGE_ENTRY))
+    const declared = new Set([
+      ...Object.keys(PAGE_ENTRY),
+      ...Object.keys(ROUTE_ENTRY),
+    ])
     const seen = new Map<string, string>()
     const pages = walk(PAGES, ['.tsx']).filter(
       (f) => !f.startsWith(API + path.sep)
@@ -108,7 +141,7 @@ describe('derivePageKey matches every declared page key', () => {
       })
       seen.set(key, relPosix(file))
 
-      // A page whose derived key IS a matrix key must live at that key's own
+      // A page whose derived key IS a matrix (or ROUTE_ENTRY) key must live at that key's own
       // route — never at a nested path that happens to collapse onto it.
       if (!declared.has(key)) continue
       const route =
@@ -180,40 +213,17 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('a page with a stricter entry capability has no link to it anywhere (IGDD-3498)', () => {
-    // withPageAccess's `entry` override makes the page gate read a different
-    // capability from PAGE_ENTRY, which the nav predicate reads. That is only
-    // safe while nothing links to the page; otherwise the link would render for
-    // users the page then refuses. Searches all of src except the page itself
-    // and tests — components, other pages, lib — not just the menu. A static
-    // search cannot see a URL assembled at runtime; the withPageAccess docblock
-    // says not to link that way.
-    const overriding = pageFiles.filter((f) =>
-      /\{\s*entry\s*:/.test(fs.readFileSync(f, 'utf8'))
-    )
-    // Guards against the regex silently matching nothing.
-    expect(overriding.map(pageKeyOf)).toEqual(['passwordencryption'])
-
-    const sources = walk(SRC, ['.ts', '.tsx', '.js', '.jsx']).filter(
-      (f) => !/\.test\.[jt]sx?$/.test(f) && !f.includes(`${path.sep}__tests__${path.sep}`)
-    )
-    // Comments are stripped first: prose that names the route is not a link.
-    const code = (f: string) =>
-      fs
-        .readFileSync(f, 'utf8')
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .split('\n')
-        .filter((line) => !line.trim().startsWith('//'))
-        .join('\n')
-    for (const page of overriding) {
-      const route = '/' + pageKeyOf(page)
-      const linkedFrom = sources.filter(
-        (f) => f !== page && new RegExp(`['"\`]${route}['"\`/?#]`).test(code(f))
-      )
-      expect({ route, linkedFrom: linkedFrom.map(relPosix) }).toEqual({
-        route,
-        linkedFrom: [],
-      })
+  it('every ROUTE_ENTRY route is a page on disk that gates on its own key', () => {
+    // A row whose page passes some other key to withPageAccess is dead: the
+    // gate would read that key's PAGE_ENTRY instead of the row.
+    for (const key of Object.keys(ROUTE_ENTRY)) {
+      const file = pageFiles.find((f) => pageKeyOf(f) === key)
+      const gatesOnKey =
+        !!file &&
+        new RegExp(`withPageAccess(<[^>]*>)?\\(\\s*'${key}'`).test(
+          fs.readFileSync(file, 'utf8')
+        )
+      expect({ key, gatesOnKey }).toEqual({ key, gatesOnKey: true })
     }
   })
 

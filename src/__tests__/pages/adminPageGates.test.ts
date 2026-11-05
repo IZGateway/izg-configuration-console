@@ -201,8 +201,8 @@ describe('adminoperations: the gate runs before the page loads any data', () => 
   })
 })
 
-// IGDD-3498. /passwordencryption shares the `adminoperations` block but is
-// entered on canManagePasswordEncryption, which only IZG Security holds — so the
+// IGDD-3498. /passwordencryption shares the `adminoperations` block but its
+// ROUTE_ENTRY row enters it on canManagePasswordEncryption, which only IZG Security holds — so the
 // roles that can open Admin Operations are refused here.
 describe('passwordencryption page gate: IZG Security only', () => {
   const PERMISSION = 'adminoperations.canManagePasswordEncryption'
@@ -213,7 +213,10 @@ describe('passwordencryption page gate: IZG Security only', () => {
     process.env.DB_ENCRYPTION_KEYNAME = 'synthetic-key-name'
   })
   afterAll(() => {
-    process.env.DB_ENCRYPTION_KEYNAME = originalKeyName
+    // Assigning `undefined` would store the string 'undefined', which is
+    // non-empty, so a later test would see hasKeyName === true.
+    if (originalKeyName === undefined) delete process.env.DB_ENCRYPTION_KEYNAME
+    else process.env.DB_ENCRYPTION_KEYNAME = originalKeyName
   })
 
   it('allows IZG Security, runs the page handler and writes no event', async () => {
@@ -240,7 +243,7 @@ describe('passwordencryption page gate: IZG Security only', () => {
       expect(events[0][1]).toMatchObject({
         eventType: 'AccessDenied',
         deniedAt: 'page',
-        page: 'adminoperations',
+        page: 'passwordencryption',
         permission: PERMISSION,
         url: { path: '/passwordencryption' },
         roles: [role],

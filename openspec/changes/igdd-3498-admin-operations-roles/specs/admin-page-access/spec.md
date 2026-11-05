@@ -108,13 +108,13 @@ not merely hidden from navigation.
 - **AND** the page SHALL NOT render the password-encryption card, so the encryption-status route
   SHALL NOT be called
 
-#### Scenario: A stricter entry capability is allowed only on a page with no navigation link
+#### Scenario: The navigation predicate agrees with a stricter entry capability
 
-- **WHEN** a page's server-side gate names an entry capability other than its page key's
+- **WHEN** a route's server-side gate uses an entry capability other than its page key's
   `PAGE_ENTRY` value
-- **THEN** that page SHALL have no navigation link
-- **AND** a test SHALL fail if such a page gains one, so that a link can never render for users
-  the page refuses
+- **THEN** that override SHALL be recorded in the access registry, not at the page
+- **AND** the navigation-visibility predicate SHALL apply the same override, so a link to the
+  route can never render for users the route refuses
 
 #### Scenario: `/api-doc` hides its interface but is not a secured page
 

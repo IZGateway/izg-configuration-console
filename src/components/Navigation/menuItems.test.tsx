@@ -87,9 +87,15 @@ describe('nav visibility: admin items read the matrix, not isAdmin', () => {
     expect(item(label).isVisible?.(['IZG Operations'])).toBe(true)
   })
 
-  it.each(ADMIN_ITEMS)('%s is visible for IZG Security (IGDD-3498)', (label) => {
-    expect(item(label).isVisible?.(['IZG Security'])).toBe(true)
-  })
+  // Every menu item, not just the admin three: IZG Security holds every
+  // capability, so dropping canViewConnections, canViewOnboarding or
+  // canListApiKeys from _IZGSecurityAccess.ts must fail here too.
+  it.each(menuItems.map((m) => m.label))(
+    '%s is visible for IZG Security (IGDD-3498)',
+    (label) => {
+      expect(item(label).isVisible?.(['IZG Security'], enabledSession)).toBe(true)
+    }
+  )
 
   // Console (Admin Log Search) is granted beyond IZG Operations, own
   // jurisdiction only, to the two jurisdiction roles (IGDD-3474). Access

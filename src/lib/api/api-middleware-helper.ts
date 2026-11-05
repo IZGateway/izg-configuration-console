@@ -351,16 +351,23 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
   }
 }
 
+// Hoisted so `withMiddleware`'s parameter can be typed against its keys: a
+// caller naming a middleware that is not here (one since removed, as
+// `checkAdmin` was in IGDD-3498) is a compile error rather than an `undefined`
+// in the stack that 500s every request. Raised by review on PR #767.
+const middlewareMap = {
+  logApiRequest,
+  captureErrors,
+  checkAccessToDestId,
+  checkAccessToDestIdSlug,
+} satisfies Record<string, Middleware>
+
+type MiddlewareName = keyof typeof middlewareMap
+
 const withMiddleware = (
   authz: RouteAuthz,
-  ...middlewareNames: string[]
+  ...middlewareNames: MiddlewareName[]
 ) => {
-  const middlewareMap = {
-    logApiRequest,
-    captureErrors,
-    checkAccessToDestId,
-    checkAccessToDestIdSlug,
-  }
   // `logApiRequest` is prepended for every route rather than named by callers,
   // so drop it from the caller list if someone passes it explicitly.
   const declaredNames = Array.from(new Set(middlewareNames)).filter(

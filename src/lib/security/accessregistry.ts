@@ -203,10 +203,10 @@ export function decideRouteCapability(
  * The capability that gates entry to each page.
  *
  * Exists so the server-side page gate and the navigation-visibility predicate
- * cannot resolve to different flags. That drift is live today: `Home` shows the
- * "OUR API" button to `isOperationsRole` (IZG Operations **and** IZG Support)
- * while `AdminGuard` admits IZG Operations only, so IZG Support sees a link to
- * a page that rejects them. Eleven lines makes that unrepresentable.
+ * cannot resolve to different flags. Before IGDD-3472 they did: `Home` showed
+ * the "OUR API" button to IZG Operations **and** IZG Support while `AdminGuard`
+ * admitted IZG Operations only, so IZG Support saw a link to a page that
+ * rejected them. Eleven lines makes that unrepresentable.
  *
  * The mapped type over `PageKey` means **adding a page key without an entry
  * capability is a compile error**, and naming a capability that does not exist
@@ -233,21 +233,50 @@ export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
 }
 
 /**
- * The `CapabilityRef` that gates entry to `page`: `PAGE_ENTRY[page]`, or
- * `entry` when a page with no navigation link declares a stricter one
- * (`withPageAccess`'s `entry` option, IGDD-3498). The one place a page key
- * becomes an entry `CapabilityRef`, so the page gate and `canEnterPage` cannot
- * build it differently.
+ * Routes gated on **another page's block** with a stricter entry capability.
+ *
+ * `/passwordencryption` shares the `adminoperations` block — it duplicates the
+ * Admin Operations password card, so a key of its own would mean two
+ * capabilities that must always be granted together — but target matrix row
+ * "Password Encryption (standalone page)" is IZG Security only (IGDD-3498).
+ * Entered on `canViewAdminOperations`, every role that can open Admin
+ * Operations could open it and see a page with no actions.
+ *
+ * Lives here, beside `PAGE_ENTRY`, for the same reason `PAGE_ENTRY` does: the
+ * page gate and `canEnterPage` both read it, so a link to one of these routes
+ * and the route itself run the same decision. An override passed at the page
+ * instead was invisible to `canEnterPage`. Raised by review on PR #767.
+ *
+ * A key here must not also be a `PageKey` (it would shadow that page's
+ * `PAGE_ENTRY`), and it must equal the key derived from its route, as a
+ * `PageKey` must. `accessregistry.test.ts` asserts both.
  */
-export function entryCapabilityOf<P extends PageKey>(
-  page: P,
-  entry?: keyof PageControls[P]
-): CapabilityRef {
-  return { page, capability: entry ?? PAGE_ENTRY[page] } as CapabilityRef
+export const ROUTE_ENTRY = {
+  passwordencryption: {
+    page: 'adminoperations',
+    capability: 'canManagePasswordEncryption',
+  },
+} as const satisfies Record<string, CapabilityRef>
+
+/** A key the page gate and `canEnterPage` accept: a matrix page or a `ROUTE_ENTRY` route. */
+export type GatedRoute = PageKey | keyof typeof ROUTE_ENTRY
+
+const isRouteEntryKey = (key: GatedRoute): key is keyof typeof ROUTE_ENTRY =>
+  Object.prototype.hasOwnProperty.call(ROUTE_ENTRY, key)
+
+/**
+ * The `CapabilityRef` that gates entry to `key`: its `ROUTE_ENTRY` row, else
+ * `PAGE_ENTRY[key]`. The one place a key becomes an entry `CapabilityRef`, so
+ * the page gate and `canEnterPage` cannot build it differently.
+ */
+export function entryCapabilityOf(key: GatedRoute): CapabilityRef {
+  if (isRouteEntryKey(key)) return ROUTE_ENTRY[key]
+  return { page: key, capability: PAGE_ENTRY[key] } as CapabilityRef
 }
 
 /**
- * Is this page's entry capability held by any of these roles?
+ * Is this page's (or `ROUTE_ENTRY` route's) entry capability held by any of
+ * these roles?
  *
  * The navigation-visibility predicate — what decides whether a nav link or a
  * landing-page button renders. It lives here, beside `PAGE_ENTRY` and
@@ -255,8 +284,8 @@ export function entryCapabilityOf<P extends PageKey>(
  * written: it is a pure authorization question with no JSX, and while it lived
  * in the menu module any other surface needing it had to import the whole menu
  * (as `Home` did) or re-implement the check — and re-implementation is exactly
- * how the `AdminGuard` / `isOperationsRole` divergence this change removes came
- * about. Raised by review on PR #700.
+ * how the `AdminGuard` / `isOperationsRole` divergence removed by IGDD-3472
+ * came about. Raised by review on PR #700.
  *
  * It routes through `decideCapability`, so a link and the page it points at run
  * the *same* decision, tenancy guard included. Reading `accessLevel` directly —
@@ -271,7 +300,7 @@ export function entryCapabilityOf<P extends PageKey>(
  * short-circuits on it before the prefix list is consulted.
  */
 export function canEnterPage(
-  page: PageKey,
+  page: GatedRoute,
   roles: string[] | undefined
 ): boolean {
   const subject: AuthzSubject = {
