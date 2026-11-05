@@ -27,6 +27,7 @@
 
 /** Roles CC understands. Every value here must have an `accessLevel` entry. */
 export type CcRole =
+  | 'IZG Security'
   | 'IZG Operations'
   | 'IZG Support'
   | 'IZG Program'
@@ -43,9 +44,14 @@ export type CcRole =
  * `Decision.grantedBy` deterministic when more than one role would allow an
  * action. Kept in the same order the old `roles.ts` used, minus the two
  * still-unmapped entries (`CDC Program`, `CDC CISO`), so nothing about
- * existing output order changes.
+ * existing output order changes. `IZG Security` (IGDD-3498) goes first, matching
+ * the target matrix's column order. A user already in the `IZG Security` Okta
+ * group gains the role on their next session callback, and where they also hold
+ * another role that allows an action, `Decision.grantedBy` names IZG Security
+ * from then on.
  */
 export const ROLE_PRECEDENCE: CcRole[] = [
+  'IZG Security',
   'IZG Operations',
   'IZG Support',
   'IZG Program',
@@ -64,6 +70,8 @@ export const ROLE_PRECEDENCE: CcRole[] = [
  * that should grant several roles at once); it is not exercised yet.
  */
 const GROUP_ROLE_MAPPING: Record<string, CcRole[]> = {
+  // IGDD-3498. Official Okta group name, confirmed on IGDD-3600.
+  'IZG Security': ['IZG Security'],
   'IZG Operations': ['IZG Operations'],
   'IZG Support': ['IZG Support'],
   'Jurisdiction Operations': ['Jurisdiction Operations'],
