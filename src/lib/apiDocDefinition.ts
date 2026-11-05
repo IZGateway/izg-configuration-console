@@ -2,16 +2,15 @@ import { createSwaggerSpec } from 'next-swagger-doc'
 import pack from '../../package.json'
 
 /**
- * The OpenAPI definition shared by every place that builds the API spec: the
- * /api-doc page (at build time) and /api/swaggerjson. The route annotations
+ * The OpenAPI definition used to build the API spec. The route annotations
  * under src/pages/api supply the paths; this supplies the title, version and
  * description shown at the top of the documentation.
  *
- * `npm run swagger:generate-doc` (scripts/generate-swagger-doc.ts) uses it
- * too, so every copy of the spec reads its version from package.json.
- *
- * Server-only: import it from getStaticProps or an API route, never from
- * component code, or it (and package.json) ends up in the client bundle.
+ * Build-time only (IGDD-3550): scripts/generate-swagger-doc.ts builds the spec
+ * with it during `prebuild`, and /api/swaggerjson serves that file. Building
+ * it at request time finds no annotations, because the runner image does not
+ * ship src/. Never import it from component code, or it (and package.json)
+ * ends up in the client bundle.
  * For the same reason, page-specific rules such as which methods "Try it out"
  * may run belong on the page, not in this shared description.
  */
@@ -92,20 +91,10 @@ export function fillEmptyMediaTypes<T extends Record<string, any>>(spec: T): T {
   return spec
 }
 
-/** How many documented operations use the given HTTP method (e.g. 'get'). */
-export function countOperations(
-  spec: Record<string, any>,
-  method: string
-): number {
-  return Object.values(spec.paths ?? {}).filter(
-    (pathItem) => (pathItem as Record<string, any>)[method]
-  ).length
-}
-
 /**
  * Builds the API spec from the route annotations, with the fixes Swagger UI
  * needs (the IZ Gateway tag, no null media types). The one way to build it,
- * so the /api-doc page and /api/swaggerjson serve the same spec.
+ * so swaggerAPI.json and the copy /api/swaggerjson serves are the same spec.
  */
 export function buildApiDocSpec(): Record<string, any> {
   return fillEmptyMediaTypes(
