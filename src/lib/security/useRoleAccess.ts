@@ -47,12 +47,24 @@ function useRoleAccess(): any
 function useRoleAccess<P extends PageKey>(page?: P): any {
   /* eslint-enable no-redeclare */
   const session = useSession()
-  const router = useRouter()
+  // Called unconditionally every render, same as any other hook (Rules of
+  // Hooks) — only its result is conditional. The explicit-page-key form is
+  // documented as not needing routing info, but `useRouter()` itself still
+  // throws "NextRouter was not mounted" outside a RouterContext provider
+  // (e.g. a component test that doesn't mock next/router), regardless of
+  // whether the caller ever reads `router.pathname`. Caught here so the
+  // explicit form actually delivers the router-independence it promises.
+  let router: ReturnType<typeof useRouter> | undefined
+  try {
+    router = useRouter()
+  } catch {
+    router = undefined
+  }
 
   if (session.status === 'loading' || session.status === 'unauthenticated')
     return {}
 
-  const key = page ?? (derivePageKey(router.pathname) as PageKey)
+  const key = page ?? (derivePageKey(router?.pathname ?? '') as PageKey)
   const subject = subjectOf(session.data)
 
   // A route with no matching page block (e.g. `/`) yields `{}` — every flag then

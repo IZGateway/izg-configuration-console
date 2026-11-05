@@ -52,7 +52,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     )
   }
 }
-export default withMiddleware(
-  { inHandler: 'IGDD-3472: per-destination reach check in the handler; the capability half has no agreed flag' },
-  'checkAccessToDestIdSlug'
-)(handler)
+export default withMiddleware({
+  capability: { page: 'history', capability: 'canViewChangeHistory' },
+  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+})(handler)

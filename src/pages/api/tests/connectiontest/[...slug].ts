@@ -190,7 +190,7 @@ const handler = async (
   }
 }
 
-export default withMiddleware(
-  { inHandler: 'IGDD-3472: maps to test.canRunConnectionTest, currently unwired' },
-  'checkAccessToDestIdSlug'
-)(handler)
+export default withMiddleware({
+  capability: { page: 'test', capability: 'canRunConnectionTest' },
+  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+})(handler)

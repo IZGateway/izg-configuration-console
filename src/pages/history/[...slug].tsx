@@ -1,19 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as React from 'react'
+import { InferGetServerSidePropsType } from 'next'
 import Container from '../../components/Container'
 import PageLoading from '../../components/Loader/PageLoading'
 import ConnectionHistory from '../../components/ConnectionHistory/index'
 import { useRouter } from 'next/router'
 import ErrorBoundary from '../../components/ErrorBoundary'
+import AccessDenied from '../../components/AccessDenied'
+import { withPageAccess } from '../../lib/security/pageAccessGate'
 import { useEffect } from 'react'
 
-const HistoryPage = (props) => {
+const HistoryPage = ({
+  accessDenied,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) => {
   const router = useRouter()
   const { isReady, query } = router
 
   useEffect(() => {
     if (!isReady) return
   }, [isReady, query])
+
+  if (accessDenied) return <AccessDenied title="Connection History" />
 
   return !isReady ? (
     <PageLoading />
@@ -29,5 +35,9 @@ const HistoryPage = (props) => {
     </Container>
   )
 }
+
+// Had no access check of any kind before this change — the page rendered for
+// anyone who could sign in.
+export const getServerSideProps = withPageAccess('history')
 
 export default HistoryPage

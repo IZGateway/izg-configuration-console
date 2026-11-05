@@ -342,11 +342,28 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
   }
   const post = (body: unknown) => ({ ...request('POST', '/api/console/metrics'), body })
 
-  it('canViewConsole is destination-scoped, and not also globally guarded', () => {
+  it('REQUIRES_DESTINATION_SCOPE names exactly the expected capabilities, none also globally guarded', () => {
     const { REQUIRES_DESTINATION_SCOPE, REQUIRES_GLOBAL_TENANCY } =
       require('../security/accessregistry')
     const key = (r: { page: string; capability: string }) => `${r.page}.${r.capability}`
-    expect(REQUIRES_DESTINATION_SCOPE.map(key)).toEqual(['console.canViewConsole'])
+    // console.canViewConsole predates this change; the rest were added by
+    // protect-connection-pages-and-endpoints (IGDD-3545/3548).
+    expect(REQUIRES_DESTINATION_SCOPE.map(key).sort()).toEqual(
+      [
+        'console.canViewConsole',
+        'history.canViewConnectionInfo',
+        'history.canViewChangeHistory',
+        'history.canViewHubStatusHistory',
+        'test.canRunConnectionTest',
+        'manageconnections.canResetCircuitBreaker',
+        'manageconnections.canScheduleMaintainance',
+        'edit.canCreateChangeRequest',
+        'changerequest.canRescheduleRequest',
+        'changerequest.canCancelRequest',
+        'changerequest.canViewDetails',
+        'onboarding.canManageSenders',
+      ].sort()
+    )
     const guarded = new Set(REQUIRES_GLOBAL_TENANCY.map(key))
     expect(REQUIRES_DESTINATION_SCOPE.map(key).filter((k: string) => guarded.has(k))).toEqual([])
   })
@@ -506,6 +523,95 @@ describe('enforceRouteAuthz: byMethod', () => {
     expect(handler).not.toHaveBeenCalled()
     expect(res.status).toHaveBeenCalledWith(405)
     expect(res.setHeader).toHaveBeenCalledWith('Allow', 'GET, POST')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// protect-connection-pages-and-endpoints (IGDD-3545/3548) — byMethod gains
+// the same `scope` extractor as the top-level `capability` variant, plus a
+// per-method `{ inHandler }` escape for the one method whose destination id
+// isn't known without a database lookup the declaration site can't do.
+// ---------------------------------------------------------------------------
+
+describe('enforceRouteAuthz: byMethod with a scope extractor and a per-method inHandler escape', () => {
+  let warnSpy: jest.SpyInstance
+  beforeEach(() => {
+    warnSpy = jest.spyOn(logger, 'warn').mockImplementation(() => undefined as never)
+  })
+  afterEach(() => jest.restoreAllMocks())
+
+  // canCancelRequest: true for IZG/Jurisdiction Operations, false for every
+  // Support role and Sender Operations — a real discriminator, unlike
+  // canViewDetails, which almost every role holds.
+  const CANCEL_REQUEST = { page: 'changerequest', capability: 'canCancelRequest' } as const
+  const BY_METHOD: RouteAuthz = {
+    byMethod: {
+      GET: { ...CANCEL_REQUEST, scope: (req) => (req.query.slug as string[] | undefined)?.[1] },
+      DELETE: { inHandler: 'IGDD-3545/3548: test fixture, destination id needs a DB lookup' },
+    },
+  }
+  const slugReq = (method: string, destId: string) => {
+    const req = request(method, `/api/changerequest/1/${destId}`)
+    req.query = { slug: ['1', destId] }
+    return req
+  }
+
+  it('a byMethod entry with scope passes when one role grants both halves', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    const handler = await run(BY_METHOD, slugReq('GET', 'az'), response())
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('a byMethod entry with scope 403s a role that reaches the destination but lacks the capability', async () => {
+    signIn(['Jurisdiction Support'], ['az'])
+    const res = response()
+    const handler = await run(BY_METHOD, slugReq('GET', 'az'), res)
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
+  })
+
+  it('a byMethod entry with scope 403s a role that holds the capability but not reach to this destination', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    const res = response()
+    const handler = await run(BY_METHOD, slugReq('GET', 'ma'), res)
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
+  })
+
+  // Regression test: `deny()` used to read the top-level `scope` closure
+  // variable, which is never set for byMethod routes, so every byMethod
+  // reach-denial was mis-logged as "no destination named" with no destId,
+  // even when the per-method `scope` extractor had resolved one correctly.
+  it('a byMethod reach-denial logs the resolved destId and the correct reason', async () => {
+    signIn(['Jurisdiction Operations'], ['az'])
+    await run(BY_METHOD, slugReq('GET', 'ma'), response())
+
+    const events = deniedEvent(warnSpy)
+    expect(events).toHaveLength(1)
+    expect(events[0][1]).toMatchObject({
+      reason: 'Destination outside caller reach',
+      destId: 'ma',
+    })
+  })
+
+  it('a byMethod inHandler entry runs the handler for that method without a capability check', async () => {
+    signIn(['Sender Operations'], ['azova'])
+    const handler = await run(BY_METHOD, slugReq('DELETE', 'azova'), response())
+    expect(handler).toHaveBeenCalled()
+    expect(deniedEvent(warnSpy)).toHaveLength(0)
+  })
+
+  it('the two methods on one declaration are decided independently', async () => {
+    // Same caller, same declaration: GET is capability+scope gated and denies
+    // them; DELETE is inHandler and lets them through regardless.
+    signIn(['Sender Operations'], ['azova'])
+    const getRes = response()
+    const getHandler = await run(BY_METHOD, slugReq('GET', 'azova'), getRes)
+    expect(getHandler).not.toHaveBeenCalled()
+    expect(getRes.status).toHaveBeenCalledWith(403)
+
+    const deleteHandler = await run(BY_METHOD, slugReq('DELETE', 'azova'), response())
+    expect(deleteHandler).toHaveBeenCalled()
   })
 })
 

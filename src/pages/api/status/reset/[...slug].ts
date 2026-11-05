@@ -8,7 +8,6 @@ import withMiddleware from '../../../../lib/api/api-middleware-helper'
 import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../../lib/IZGHubStatusHistoryEndpoint'
 import { asyncRequestContext } from '../../../../lib/Context'
-import { logAccessDenied } from '../../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../../lib/security/authzsubject'
 import { can } from '../../../../lib/security/policy'
 import { hubOperationLevel } from '../../../../lib/utils/hubregionstatus'
@@ -87,31 +86,25 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const destId = slug[1]
   const destTypeId = _.toNumber(slug[0])
 
-  // Permission and tenancy evaluated together, from the SAME held role — the
-  // same rule `apikeys` uses (see policy.ts). This used to be a role-list
+  // Permission and reach are already decided, combined and role-local, by
+  // `enforceRouteAuthz` before the handler runs — see the `capability`/`scope`
+  // declaration at the bottom of this file. This used to be a role-list
   // membership check plus a SEPARATE tenancy check (the `checkAccessToDestIdSlug`
   // middleware), evaluated independently: `(∃r: role∈allowed) ∧ (∃r: reach(r))`.
   // That let a user holding a globally-scoped role with no reset permission
-  // (`IZG Support`, before IGDD-3498 granted it the reset) combine with a different, jurisdiction-scoped role
-  // that IS allowed to reset (e.g. `Jurisdiction Operations`) to reset a
-  // circuit breaker OUTSIDE that second role's own jurisdiction — access
-  // neither role grants alone.
+  // (`IZG Support`, before IGDD-3498 granted it the reset) combine with a
+  // different, jurisdiction-scoped role that IS allowed to reset (e.g.
+  // `Jurisdiction Operations`) to reset a circuit breaker OUTSIDE that second
+  // role's own jurisdiction — access neither role grants alone. Recomputed
+  // here, not to gate anything (that already happened above), but to
+  // attribute the success log to the specific role that granted it, which the
+  // middleware layer does not hand back to the handler.
   const decision = can(
     subjectOf(context?.session),
     'manageconnections',
     'canResetCircuitBreaker',
     destId
   )
-  if (!decision.allowed) {
-    logAccessDenied({
-      reason: 'role not permitted to reset circuit breaker',
-      url: req.url,
-      method: req.method,
-      user: context?.user,
-      roles: subjectOf(context?.session).roles,
-    })
-    return res.status(401).send('unauthorized')
-  }
 
   const IZG_STATUS_ENDPOINT_URL = process.env.IZG_STATUS_ENDPOINT_URL || ''
   const IZG_ENDPOINT_CRT_PATH = process.env.IZG_ENDPOINT_CRT_PATH || undefined
@@ -198,10 +191,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// No `checkAccessToDestIdSlug` here — that middleware is a reach-only check,
-// and pairing it separately from a permission check is exactly the escalation
-// this route used to be vulnerable to. `can()` above is the sole, authoritative
-// gate; it already evaluates reach.
+// No `checkAccessToDestIdSlug` here, and no separate reach check — `scope`
+// below is resolved combined with the capability, role-local, by
+// `decideRouteCapability` (REQUIRES_DESTINATION_SCOPE), which is what used to
+// make this route's own in-handler `can()` call the only correct gate.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: per-destination reset; maps to manageconnections.canResetCircuitBreaker plus a reach check, NOT the hub-wide flag',
+  capability: { page: 'manageconnections', capability: 'canResetCircuitBreaker' },
+  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
 })(handler)

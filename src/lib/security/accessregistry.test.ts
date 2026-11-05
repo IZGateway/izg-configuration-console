@@ -227,10 +227,12 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('gates exactly the seven pages this change is responsible for', () => {
+  it('gates exactly the twelve pages this change is responsible for', () => {
     // manageconnections and apikeys already checked the right capability
     // before this change; what they did on failure was a silent redirect, so
     // they were migrated to the shared gate for the outcome, not the check.
+    // edit, history, test, changerequest and testreport were added by
+    // protect-connection-pages-and-endpoints (IGDD-3545/3548).
     const gated = pageFiles
       .filter((f) => fs.readFileSync(f, 'utf8').includes('withPageAccess'))
       .map(pageKeyOf)
@@ -239,10 +241,15 @@ describe('page coverage: an ungated page is a test failure', () => {
       'accesscontrol',
       'adminoperations',
       'apikeys',
+      'changerequest',
       'console',
+      'edit',
+      'history',
       'manageconnections',
       'onboarding',
       'passwordencryption',
+      'test',
+      'testreport',
     ])
   })
 
