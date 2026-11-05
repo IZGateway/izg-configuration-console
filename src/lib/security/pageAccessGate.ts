@@ -3,12 +3,8 @@ import { withRequestContext } from '../requestContext'
 import type { Context } from '../Context'
 import { subjectOf } from './authzsubject'
 import { logAccessDenied } from './accessDeniedAudit'
-import {
-  decideCapability,
-  entryCapabilityOf,
-  PAGE_ENTRY,
-} from './accessregistry'
-import type { PageKey } from './accesslevel'
+import { decideCapability, entryCapabilityOf } from './accessregistry'
+import type { GatedRoute } from './accessregistry'
 
 /**
  * Enforcer 1 of 2: the server-side page gate (IGDD-3472).
@@ -33,9 +29,10 @@ export type AccessDeniedProp = { accessDenied?: boolean }
 /**
  * Gate a page on the entry capability for `page`, then delegate to `handler`.
  *
- * The capability is read from `PAGE_ENTRY[page]` and is deliberately **not** an
- * argument: the navigation-visibility predicate reads the same constant, so the
- * link and the gate cannot resolve to different flags.
+ * The capability is read through `entryCapabilityOf(page)` — `PAGE_ENTRY[page]`,
+ * or the `ROUTE_ENTRY` row for a route that shares another page's block — the
+ * same function the navigation-visibility predicate reads, so the link and the
+ * gate cannot resolve to different flags.
  *
  * Denial renders in place — `{ props: { accessDenied: true } }`, never a
  * redirect. A redirect hides the fact that access was denied and makes the
@@ -50,7 +47,7 @@ export type AccessDeniedProp = { accessDenied?: boolean }
  * is the noise the header warning in `accessDeniedAudit.ts` exists to prevent.
  */
 export function withPageAccess<
-  P extends PageKey,
+  P extends GatedRoute,
   T extends Record<string, unknown> = Record<string, never>
 >(
   page: P,
@@ -59,6 +56,8 @@ export function withPageAccess<
     requestContext: Context
   ) => ReturnType<GetServerSideProps<T & AccessDeniedProp>>
 ): GetServerSideProps<T & AccessDeniedProp> {
+  const entry = entryCapabilityOf(page)
+
   // Wrap withRequestContext rather than sitting beside it, so the gate, the
   // denial event and the handler all run inside `asyncRequestContext` and the
   // event inherits the sessionUser block (userId, email, sessionId, jti) from
@@ -70,7 +69,6 @@ export function withPageAccess<
         return { redirect: { destination: '/api/auth/signin', permanent: false } }
       }
 
-      const capability = PAGE_ENTRY[page]
       const subject = subjectOf(session)
 
       // These pages carry no jurisdiction in their URL, so they are authorized
@@ -86,14 +84,14 @@ export function withPageAccess<
       // The tenancy predicate is `decideCapability`'s own default, not an
       // argument: both enforcers and the nav predicate call it the same way, so
       // there is one decision here rather than three spellings of one.
-      const allowed = decideCapability(subject, entryCapabilityOf(page))
+      const allowed = decideCapability(subject, entry)
 
       if (!allowed) {
         logAccessDenied({
           reason: 'insufficient role for page access',
           deniedAt: 'page',
           page,
-          permission: `${page}.${String(capability)}`,
+          permission: `${entry.page}.${String(entry.capability)}`,
           // resolvedUrl, not req.url: on a client-side transition Next fetches
           // the /_next/data/... path, so req.url would record that while the
           // browser shows the page URL the user actually asked for.

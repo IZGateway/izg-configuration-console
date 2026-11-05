@@ -180,7 +180,9 @@ describe('adminoperations: the gate runs before the page loads any data', () => 
   })
 
   it('does not call getHubEnvironments for a denied user', async () => {
-    signIn(['IZG Support'])
+    // Jurisdiction Support, not IZG Support: IGDD-3498 gave IZG Support
+    // canViewAdminOperations.
+    signIn(['Jurisdiction Support'], ['az'])
     const result: any = await adminOperationsGSSP(context('/adminoperations'))
 
     expect(result.props.accessDenied).toBe(true)

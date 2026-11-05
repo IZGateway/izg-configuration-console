@@ -92,7 +92,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   // membership check plus a SEPARATE tenancy check (the `checkAccessToDestIdSlug`
   // middleware), evaluated independently: `(∃r: role∈allowed) ∧ (∃r: reach(r))`.
   // That let a user holding a globally-scoped role with no reset permission
-  // (e.g. `IZG Support`) combine with a different, jurisdiction-scoped role
+  // (`IZG Support`, before IGDD-3498 granted it the reset) combine with a different, jurisdiction-scoped role
   // that IS allowed to reset (e.g. `Jurisdiction Operations`) to reset a
   // circuit breaker OUTSIDE that second role's own jurisdiction — access
   // neither role grants alone.
