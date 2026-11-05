@@ -625,13 +625,6 @@ export const MATRIX: readonly MatrixRow[] = [
     api: [{ method: 'GET', path: '/api/allowedusers/bydestination', refusal: 403 }],
   },
   {
-    id: 'passwordencryption.page',
-    feature: 'Password Encryption (standalone page)',
-    allow: [IZG_SEC],
-    pages: ['/passwordencryption'],
-    knownGaps: { 'IZG Operations': MOVES_TO_IZG_SECURITY },
-  },
-  {
     id: 'apidoc.view',
     feature: 'Swagger API Doc',
     allow: [IZG_SEC],

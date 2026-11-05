@@ -235,12 +235,11 @@ export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
 /**
  * Routes gated on **another page's block** with a stricter entry capability.
  *
- * `/passwordencryption` shares the `adminoperations` block — it duplicates the
- * Admin Operations password card, so a key of its own would mean two
- * capabilities that must always be granted together — but target matrix row
- * "Password Encryption (standalone page)" is IZG Security only (IGDD-3498).
- * Entered on `canViewAdminOperations`, every role that can open Admin
- * Operations could open it and see a page with no actions.
+ * Empty since IGDD-3645. Its one row was `/passwordencryption` (IGDD-3498),
+ * which shared the `adminoperations` block but was entered on
+ * `canManagePasswordEncryption`; that page was deleted as a duplicate of the
+ * Admin Operations password card. The mechanism stays for the next route that
+ * needs a stricter entry than the block it shares.
  *
  * Lives here, beside `PAGE_ENTRY`, for the same reason `PAGE_ENTRY` does: the
  * page gate and `canEnterPage` both read it, so a link to one of these routes
@@ -251,12 +250,7 @@ export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
  * `PAGE_ENTRY`), and it must equal the key derived from its route, as a
  * `PageKey` must. `accessregistry.test.ts` asserts both.
  */
-export const ROUTE_ENTRY = {
-  passwordencryption: {
-    page: 'adminoperations',
-    capability: 'canManagePasswordEncryption',
-  },
-} as const satisfies Record<string, CapabilityRef>
+export const ROUTE_ENTRY = {} as const satisfies Record<string, CapabilityRef>
 
 /** A key the page gate and `canEnterPage` accept: a matrix page or a `ROUTE_ENTRY` route. */
 export type GatedRoute = PageKey | keyof typeof ROUTE_ENTRY
