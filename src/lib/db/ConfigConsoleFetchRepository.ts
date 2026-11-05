@@ -5,7 +5,6 @@ import { DestinationType } from '../type/DestinationType'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
 import { AdsFileTypeItem } from '../type/AdsFileType'
-import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import type { OrganizationRecord } from '../type/OrganizationRecord'
@@ -37,7 +36,6 @@ export default interface ConfigConsoleFetchRepository {
   fetchDestinationPassword(destId: string, destType: number): Promise<string>
   isPasswordChanged(destId: string, dest_type: number): Promise<boolean>
   isDatabaseConnected(): Promise<boolean>
-  fetchSenderData: () => Promise<SenderRecord>
   fetchAccessGroups: () => Promise<AccessGroupRecord[]>
   fetchDenyListData: () => Promise<DenyListItem[]>
   checkDenyListRecordExists: (sortKey: string) => Promise<boolean>
