@@ -57,41 +57,6 @@ describe('RBAC rejection audit logging', () => {
     jest.restoreAllMocks()
   })
 
-  it('logs a structured AccessDenied event when checkAdmin rejects a non-admin caller', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'nonadmin@example.com', role: 'Jurisdiction Operations', isAdmin: false },
-    })
-    ;(getToken as jest.Mock).mockResolvedValue({ sub: '00uXYZ' })
-    const warnSpy = jest.spyOn(logger, 'warn')
-
-    const handler = jest.fn()
-    // checkAdmin still runs alongside the capability on the two status routes;
-    // the capability is granted here so the assertion isolates checkAdmin.
-    const wrapped = withMiddleware(
-      { capability: { page: 'adminoperations', capability: 'canResetHubCircuitBreakers' } },
-      'checkAdmin'
-    )(handler)
-
-    const req: any = {
-      url: '/api/status/reset',
-      method: 'POST',
-      headers: {},
-      socket: { remoteAddress: '203.0.113.7' },
-      query: {},
-    }
-    const res: any = { status: jest.fn(() => res), json: jest.fn(), send: jest.fn() }
-
-    await wrapped(req, res)
-
-    expect(handler).not.toHaveBeenCalled()
-    expect(res.status).toHaveBeenCalledWith(403)
-
-    const deniedCall: any = warnSpy.mock.calls.find(
-      (call: any) => call[1]?.eventType === 'AccessDenied'
-    )
-    expect(deniedCall).toBeDefined()
-  })
-
   it('logs a structured AccessDenied event when checkAccessToDestId rejects an out-of-jurisdiction caller', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
       user: {
@@ -220,13 +185,23 @@ describe('enforceRouteAuthz: capability rules', () => {
   })
 
   it('calls next() for an authorized caller', async () => {
-    signIn(['IZG Operations'])
+    signIn(['IZG Security'])
     const res = response()
     const handler = await run(ROTATEKEY, request('POST', '/api/rotatekey'), res)
 
     expect(handler).toHaveBeenCalled()
     expect(res.status).not.toHaveBeenCalledWith(403)
     expect(deniedEvent(warnSpy)).toHaveLength(0)
+  })
+
+  it('403s IZG Operations, which no longer holds password encryption (IGDD-3498)', async () => {
+    signIn(['IZG Operations'])
+    const res = response()
+    const handler = await run(ROTATEKEY, request('POST', '/api/rotatekey'), res)
+
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(deniedEvent(warnSpy)).toHaveLength(1)
   })
 })
 

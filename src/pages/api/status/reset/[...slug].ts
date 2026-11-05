@@ -88,10 +88,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   // Permission and reach are already decided, combined and role-local, by
   // `enforceRouteAuthz` before the handler runs — see the `capability`/`scope`
-  // declaration at the bottom of this file. Recomputed here, not to gate
-  // anything (that already happened), but to attribute the success log to the
-  // specific role that granted it, which the middleware layer does not hand
-  // back to the handler.
+  // declaration at the bottom of this file. This used to be a role-list
+  // membership check plus a SEPARATE tenancy check (the `checkAccessToDestIdSlug`
+  // middleware), evaluated independently: `(∃r: role∈allowed) ∧ (∃r: reach(r))`.
+  // That let a user holding a globally-scoped role with no reset permission
+  // (`IZG Support`, before IGDD-3498 granted it the reset) combine with a
+  // different, jurisdiction-scoped role that IS allowed to reset (e.g.
+  // `Jurisdiction Operations`) to reset a circuit breaker OUTSIDE that second
+  // role's own jurisdiction — access neither role grants alone. Recomputed
+  // here, not to gate anything (that already happened above), but to
+  // attribute the success log to the specific role that granted it, which the
+  // middleware layer does not hand back to the handler.
   const decision = can(
     subjectOf(context?.session),
     'manageconnections',
