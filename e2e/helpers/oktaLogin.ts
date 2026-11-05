@@ -13,11 +13,16 @@ const setInputValue = async (locator: Locator, value: string) => {
   }, value)
 }
 
+/**
+ * Sign in through Okta. `userFullName` is checked against the app header;
+ * pass `null` to skip that check when the caller verifies the identity some
+ * other way (the RBAC matrix check compares the session's roles instead).
+ */
 export const loginToOkta = async (
   page: Page,
   username: string,
   password: string,
-  userFullName: string = 'Automation Testerson'
+  userFullName: string | null = 'Automation Testerson'
 ) => {
   if (typeof username !== 'string' || username.length === 0) {
     throw new Error(
@@ -77,14 +82,18 @@ export const loginToOkta = async (
 
   if (await appHeader.isVisible().catch(() => false)) {
     const headerText = (await appHeader.innerText().catch(() => '')).trim()
-    if (headerText.toLowerCase().includes(userFullName.toLowerCase())) {
+    if (
+      userFullName !== null &&
+      headerText.toLowerCase().includes(userFullName.toLowerCase())
+    ) {
       await page.goto('/')
       await page.waitForLoadState('networkidle')
       return
     }
 
-    // Session is valid but for the wrong user; sign out first so we can
-    // authenticate with the requested account.
+    // Session is valid but for the wrong user (or, with no name to compare,
+    // an unknown one); sign out first so we can authenticate with the
+    // requested account.
     await logout(page)
     if (await signInWithOktaButton.isVisible().catch(() => false)) {
       await signInWithOktaButton.click()
@@ -131,7 +140,9 @@ export const loginToOkta = async (
     .first()
     .waitFor({ state: 'visible', timeout: 60000 })
   await failIfOktaRejected('password')
-  await expect(appHeader).toContainText(userFullName)
+  if (userFullName !== null) {
+    await expect(appHeader).toContainText(userFullName)
+  }
   await page.goto('/')
   await page.waitForLoadState('networkidle')
 }

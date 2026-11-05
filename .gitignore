@@ -43,6 +43,8 @@ docker-compose.override.yml
 .env.test
 test-results
 playwright-report
+playwright-report-rbac
+rbac-report
 /docker/
 
 # Claude Code agent worktrees (nested repo checkouts, not source content)

@@ -3,7 +3,13 @@
  */
 import fs from 'fs'
 import path from 'path'
-import { PAGE_ENTRY, derivePageKey } from './accessregistry'
+import {
+  PAGE_ENTRY,
+  ROUTE_ENTRY,
+  canEnterPage,
+  derivePageKey,
+  entryCapabilityOf,
+} from './accessregistry'
 import { AUTHZ_DEBT } from './authzDebt'
 
 /**
@@ -53,13 +59,53 @@ function pageKeyOf(file: string): string {
 const debtSubjects = (kind: string) =>
   AUTHZ_DEBT.filter((d) => d.kind === kind).map((d) => d.subject)
 
+describe('entryCapabilityOf (IGDD-3498)', () => {
+  it('defaults to PAGE_ENTRY', () => {
+    expect(entryCapabilityOf('adminoperations')).toEqual({
+      page: 'adminoperations',
+      capability: 'canViewAdminOperations',
+    })
+  })
+
+  it('reads a ROUTE_ENTRY route from its row', () => {
+    expect(entryCapabilityOf('passwordencryption')).toEqual({
+      page: 'adminoperations',
+      capability: 'canManagePasswordEncryption',
+    })
+  })
+
+  it('no ROUTE_ENTRY key shadows a PAGE_ENTRY key', () => {
+    const shadowed = Object.keys(ROUTE_ENTRY).filter((key) => key in PAGE_ENTRY)
+    expect(shadowed).toEqual([])
+  })
+
+  // The nav predicate and the page gate now read the same override, so a link
+  // to /passwordencryption would render for exactly the roles the page admits.
+  it('canEnterPage applies the ROUTE_ENTRY override', () => {
+    expect(canEnterPage('passwordencryption', ['IZG Security'])).toBe(true)
+    for (const role of ['IZG Operations', 'IZG Support', 'IZG Program']) {
+      expect({ role, enters: canEnterPage('passwordencryption', [role]) }).toEqual({
+        role,
+        enters: false,
+      })
+      expect({ role, enters: canEnterPage('adminoperations', [role]) }).toEqual({
+        role,
+        enters: true,
+      })
+    }
+  })
+})
+
 describe('derivePageKey matches every declared page key', () => {
   // This is why the api-doc page key is 'api-doc' and not 'apidoc': the
   // invariant "page key === key derived from that page's route" holds with no
   // exceptions, so a denial event's page field is always the matrix key.
-  it.each(Object.keys(PAGE_ENTRY))('/%s derives to itself', (key) => {
-    expect(derivePageKey('/' + key)).toBe(key)
-  })
+  it.each([...Object.keys(PAGE_ENTRY), ...Object.keys(ROUTE_ENTRY)])(
+    '/%s derives to itself',
+    (key) => {
+      expect(derivePageKey('/' + key)).toBe(key)
+    }
+  )
 
   it('strips dynamic segments', () => {
     expect(derivePageKey('/changerequest/[...slug]')).toBe('changerequest')
@@ -78,7 +124,10 @@ describe('derivePageKey matches every declared page key', () => {
     // segment would instead hand it the *parent* page's flags. That trades a
     // hypothetical collision for a real widening. So the derivation stays as
     // it is, and this is what makes a collision impossible to add quietly.
-    const declared = new Set(Object.keys(PAGE_ENTRY))
+    const declared = new Set([
+      ...Object.keys(PAGE_ENTRY),
+      ...Object.keys(ROUTE_ENTRY),
+    ])
     const seen = new Map<string, string>()
     const pages = walk(PAGES, ['.tsx']).filter(
       (f) => !f.startsWith(API + path.sep)
@@ -92,7 +141,7 @@ describe('derivePageKey matches every declared page key', () => {
       })
       seen.set(key, relPosix(file))
 
-      // A page whose derived key IS a matrix key must live at that key's own
+      // A page whose derived key IS a matrix (or ROUTE_ENTRY) key must live at that key's own
       // route — never at a nested path that happens to collapse onto it.
       if (!declared.has(key)) continue
       const route =
@@ -164,7 +213,21 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('gates exactly the eight pages that have a server-side gate', () => {
+  it('every ROUTE_ENTRY route is a page on disk that gates on its own key', () => {
+    // A row whose page passes some other key to withPageAccess is dead: the
+    // gate would read that key's PAGE_ENTRY instead of the row.
+    for (const key of Object.keys(ROUTE_ENTRY)) {
+      const file = pageFiles.find((f) => pageKeyOf(f) === key)
+      const gatesOnKey =
+        !!file &&
+        new RegExp(`withPageAccess(<[^>]*>)?\\(\\s*'${key}'`).test(
+          fs.readFileSync(file, 'utf8')
+        )
+      expect({ key, gatesOnKey }).toEqual({ key, gatesOnKey: true })
+    }
+  })
+
+  it('gates exactly the seven pages this change is responsible for', () => {
     // manageconnections and apikeys already checked the right capability
     // before this change; what they did on failure was a silent redirect, so
     // they were migrated to the shared gate for the outcome, not the check.

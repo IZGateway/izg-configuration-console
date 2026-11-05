@@ -18,8 +18,8 @@ import { hasGlobalTenancy } from './security/policy'
  * role's permission.
  *
  * Global reach now comes from the `globalTenancy` flag on each role definition
- * rather than a hardcoded role-name list that was duplicated here and in
- * `accessutils.ts`.
+ * rather than a hardcoded role-name list that was duplicated here and in the
+ * since-deleted `accessutils.ts`.
  */
 export default function hasAccessToDestId(destId: string, session: unknown) {
   const subject = subjectOf(session)

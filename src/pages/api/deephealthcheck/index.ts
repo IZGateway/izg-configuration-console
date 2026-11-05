@@ -67,7 +67,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const deepHealthCheckResults: ComponentHealth[] = []
   const checkConnections = ['DB', 'OKTA', 'JIRA', 'IZG']
 
-  // Membership of OPERATIONS_GROUP, the same axis `checkAdmin` enforces — not mere
+  // Membership of OPERATIONS_GROUP (`session.user.isAdmin`) — not mere
   // authentication. There is no `signIn` callback, so anyone who completes the Okta
   // flow holds a session; gating the detail on `session.user` alone would disclose
   // dependency addresses to a tenant user with no roles and no capabilities anywhere
