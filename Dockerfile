@@ -47,6 +47,9 @@ RUN apk add --no-cache bash gettext tini curl libc6-compat \
     && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+# The API spec, built by `prebuild` from src/pages/api/**, which this stage does
+# not ship. /api/swaggerjson serves this file (IGDD-3550).
+COPY --from=builder /app/generated/api-doc-spec.json ./generated/api-doc-spec.json
 COPY --from=builder /app/filebeat.yml ./filebeat.yml
 COPY --from=builder /app/metricbeat.yml ./metricbeat.yml
 COPY --from=builder /app/next.config.js ./next.config.js
