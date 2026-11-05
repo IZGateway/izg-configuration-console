@@ -27,7 +27,7 @@ Where the IZG-tier roles stand on develop, against v13:
 |---|---|---|---|
 | IZG Security | No role | Every flag, global | Unchanged |
 | IZG Operations | Every admin flag; all `edit`, `apikeys`, `api-doc` | Unchanged | Loses `canManageAccessGroups`, `canManagePasswordEncryption`, `canApproveChangeRequest`; denied at `/passwordencryption` |
-| IZG Support | `adminoperations` all false (deferred, Finding #14) | Gains view page + reset + refresh | Denied at `/passwordencryption` |
+| IZG Support | `adminoperations` all false (deferred, Finding #14) | Gains view page + hub-wide reset + refresh; per-connection reset, maintenance scheduling, change request Jira link | Denied at `/passwordencryption` |
 | IZG Program | Has the three Admin Operations capabilities | Unchanged | Denied at `/passwordencryption` |
 
 IZG Operations versus v13, row by row: apart from the three flags above, the only CC rows where
@@ -80,10 +80,10 @@ row "Password Encryption (standalone page)" is IZG Security only, and the team d
 | | Commit A | Commit B |
 |---|---|---|
 | Access | Only grants | Only removes |
-| Data | Support +3, new IZG Security | Ops −3 |
-| Code | Delete `checkAdmin` (dead) | `withPageAccess` entry override; `/passwordencryption` uses it |
+| Data | Support +6, new IZG Security | Ops −3 |
+| Code | Delete `checkAdmin` (dead) | `ROUTE_ENTRY` registry row; `/passwordencryption` gates on it |
 | Comments | Support, Program, Ops "role does not exist yet" | Ops `accesscontrol` / `adminoperations` / `edit` rewritten to v13; `accesslevel.ts` `adminoperations` key |
-| Tests | Snapshot, policy, rolemapping, adminPageGates, middleware `checkAdmin` test | Snapshot, policy seed table, middleware `rotatekey` holder, `/passwordencryption` gate, override guard |
+| Tests | Snapshot, policy, rolemapping, adminPageGates, middleware `checkAdmin` test | Snapshot, policy seed table, middleware `rotatekey` holder, `/passwordencryption` gate, `ROUTE_ENTRY` invariants |
 
 The page gate belongs in B because it only removes access (from IZG Program today, and from
 IZG Support and IZG Operations once they would otherwise reach the page). Between A and B on the
@@ -104,6 +104,13 @@ group membership work that the narrowing depends on is handled in the rollout (s
 Set `canViewAdminOperations`, `canResetHubCircuitBreakers` and `canRefreshHubDatabase` to `true`
 in `_IZGSupportAccess.ts`, keeping the `...defaultAdminOperationsPageAccessControl` spread so
 `canManagePasswordEncryption` stays `false`. `accesscontrol` stays at defaults.
+
+Also set the three other cells matrix v13 gives IZG Support, added in review (PR #767):
+`manageconnections.canResetCircuitBreaker`, `manageconnections.canScheduleMaintainance` and
+`changerequest.canViewJiraTicket`. The per-connection reset fits the same reason as the hub-wide one:
+a support engineer should not have to escalate to clear a stuck breaker. The reset route decides
+per role with `can()` for the destination, and the maintenance route declares its capability plus
+`checkAccessToDestIdSlug`. IZG Support is global, so it reaches every destination on both.
 
 No route changes: both status routes already require only their capability.
 
@@ -167,29 +174,30 @@ The PROVISIONAL comments on the `accesscontrol`, `adminoperations` and `edit` bl
 with the v13 rows the values now implement. The comments on `apikeys` and `api-doc` are reworded to
 name IGDD-3549 and IGDD-3550 as the owners of those remaining divergences.
 
-### 5. Gate `/passwordencryption` on `canManagePasswordEncryption` with a typed entry override (B)
+### 5. Gate `/passwordencryption` on `canManagePasswordEncryption` through a registry route entry (B)
 
-`withPageAccess` gains an optional third argument naming the entry capability, typed against the
-page's own block:
+`accessregistry.ts` gains `ROUTE_ENTRY`, a table of routes that share another page's block but have
+a stricter entry capability, beside `PAGE_ENTRY`:
 
 ```ts
-export function withPageAccess<P extends PageKey, T …>(
-  page: P,
-  handler?: …,
-  options?: { entry?: keyof PageControls[P] }
-)
+export const ROUTE_ENTRY = {
+  passwordencryption: { page: 'adminoperations', capability: 'canManagePasswordEncryption' },
+} as const satisfies Record<string, CapabilityRef>
+
+export type GatedRoute = PageKey | keyof typeof ROUTE_ENTRY
 ```
 
-The gate decides on `{ page, capability: options?.entry ?? PAGE_ENTRY[page] }`. Everything else is
-unchanged: the per-role tenancy guard in `decideCapability`, the in-place `accessDenied` prop, the
-sign-in redirect, and the `AccessDenied` event, whose `permission` becomes
+`entryCapabilityOf(key: GatedRoute)` returns the `ROUTE_ENTRY` row if there is one, else
+`{ page: key, capability: PAGE_ENTRY[key] }`. Both `withPageAccess` and `canEnterPage` take a
+`GatedRoute` and call it. Everything else in the gate is unchanged: the per-role tenancy guard in
+`decideCapability`, the in-place `accessDenied` prop, the sign-in redirect, and the `AccessDenied`
+event, whose `page` is `passwordencryption` and whose `permission` is
 `adminoperations.canManagePasswordEncryption`. The page becomes:
 
 ```ts
-export const getServerSideProps = withPageAccess<'adminoperations', { hasKeyName: boolean }>(
-  'adminoperations',
-  async () => ({ props: { hasKeyName: … } }),
-  { entry: 'canManagePasswordEncryption' }
+export const getServerSideProps = withPageAccess<'passwordencryption', { hasKeyName: boolean }>(
+  'passwordencryption',
+  async () => ({ props: { hasKeyName: … } })
 )
 ```
 
@@ -201,20 +209,20 @@ What this gives:
   never runs for a denied user. The repeated `403` disappears.
 - The page keeps sharing the `adminoperations` block, so the card on Admin Operations and the
   standalone page still read one flag. The three encryption routes are unchanged.
-- A typo in `entry` fails to compile, because it is `keyof AdminOperationsPageAccessControl`.
+- A typo in the row fails to compile (`satisfies Record<string, CapabilityRef>`), and so does an
+  unknown key passed to `withPageAccess` or `canEnterPage`.
 
-**The nav invariant.** `withPageAccess` documents that its capability is deliberately not an
-argument, because the nav predicate (`canEnterPage`) reads `PAGE_ENTRY` and the two must not
-disagree. An override is only safe for a page with no nav link. `/passwordencryption` has none
-(`menuItems.tsx` lists `/adminoperations` only). So:
+**The nav invariant.** The page gate and the nav predicate (`canEnterPage`) must not disagree.
+Because the override is registry data that both read, `canEnterPage('passwordencryption', roles)`
+returns what the page gate decides, so a future nav link to the page would render for exactly the
+roles the page admits. No link-search test is needed. Tests assert that no `ROUTE_ENTRY` key
+shadows a `PAGE_ENTRY` key, that each key derives from its own route, and that each key's page
+gates on that key.
 
-- the docblock is reworded to state that rule;
-- a test asserts that nothing under `src` other than the page itself links to a page passing
-  `entry`, so a future nav link to such a page fails CI instead of silently rendering for users the
-  page refuses. Being a static search, it cannot see a URL assembled at runtime; the docblock says
-  so.
-- `entryCapabilityOf(page, entry?)` builds the entry capability for both the page gate and the nav
-  predicate, so there is one place that turns a page key into a `CapabilityRef`.
+*First version, replaced in review (PR #767):* an optional `{ entry }` argument to
+`withPageAccess`, typed against the page's block. `canEnterPage` could not see it, so it reported
+`/passwordencryption` as enterable by every Admin Operations role. A static source-search test
+guarded against anyone linking to it, but it could miss real links and match non-links.
 
 The existing registry coverage tests keep working unchanged, because they find gated pages by the
 string `withPageAccess`.
@@ -274,8 +282,8 @@ New assertions:
   exactly one `AccessDenied` event carrying `adminoperations.canManagePasswordEncryption`; the
   handler does not run for them; an unauthenticated request still redirects to sign-in with no
   event.
-- The entry-override guard (B): every page file passing `entry` to `withPageAccess` has no menu
-  item.
+- The `ROUTE_ENTRY` invariants (B): no key shadows a `PAGE_ENTRY` key, each key derives from its
+  own route and its page gates on that key, and `canEnterPage` applies the row.
 
 ### 9. No tenancy guard, no Hub change
 
@@ -298,16 +306,12 @@ New assertions:
 - **[IZG Security is less than a full superuser]** → A member who is not also in
   `OPERATIONS_GROUP` does not get multi-environment API key create or the full deep health check
   detail until IGDD-3552. Say so in the PR. The ticket lists this dependency.
-- **[The entry override becomes a general escape hatch]** → A page with a nav link could pass an
-  `entry` that disagrees with `PAGE_ENTRY`, so the link renders for users the page refuses. The
-  guard test in Decision 5 fails CI for that case, and the docblock limits the override to pages
-  with no nav link.
 - **[Someone bookmarked `/passwordencryption` without holding `canManagePasswordEncryption`]** →
   They now see Access Denied instead of an inert page. That is the intended outcome; it is logged.
 - **[`edit.canApproveChangeRequest` changes but nothing enforces it]** → Expected; the snapshot
   shows the cell change and `authzDebt.ts` already labels the flag "Not enforced".
 - **[The snapshot is approved without reading it]** → Each commit's PR description section lists
-  its exact cell changes: A, one new column plus three Support cells; B, three Operations cells.
+  its exact cell changes: A, one new column plus six Support cells; B, three Operations cells.
 - **[No test accounts for the success paths]** → Palak added dev test users for IZG Security and
   IZG Program (IGDD-3600, 2026-10-30). The nightly e2e accounts cover Operations and a
   jurisdiction role only, so Support and Security success paths are verified manually on dev.

@@ -4,6 +4,7 @@
 import accessLevel from './accesslevel'
 import type { PageKey } from './accesslevel'
 import { ANY_JURISDICTION, can, mergePageAccess, hasGlobalTenancy } from './policy'
+import type { JurisdictionScope } from './policy'
 import { ROLE_PRECEDENCE, type CcRole } from './rolemapping'
 import type { AuthzSubject } from './authzsubject'
 import {
@@ -248,6 +249,21 @@ describe('policy: IZG Support gets the hub-wide corrective actions (IGDD-3498)',
     expect(access.canViewAdminOperations).toBe(true)
     expect(access.canResetHubCircuitBreakers).toBe(true)
     expect(access.canRefreshHubDatabase).toBe(true)
+  })
+
+  // Target matrix v13: the per-connection reset, maintenance scheduling and
+  // the change request's Jira link, for any destination (global reach).
+  it.each([
+    ['manageconnections', 'canResetCircuitBreaker'],
+    ['manageconnections', 'canScheduleMaintainance'],
+    ['changerequest', 'canViewJiraTicket'],
+  ] as const)('holds %s.%s in any jurisdiction', (page, capability) => {
+    for (const jurisdiction of ['az', 'ny', ANY_JURISDICTION] as JurisdictionScope[]) {
+      expect({
+        jurisdiction,
+        allowed: can(support, page, capability as never, jurisdiction).allowed,
+      }).toEqual({ jurisdiction, allowed: true })
+    }
   })
 
   it('does not get password encryption, Access Control or the API doc', () => {

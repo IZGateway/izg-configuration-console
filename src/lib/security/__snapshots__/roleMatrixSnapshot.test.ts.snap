@@ -24,7 +24,7 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | changerequest | canRescheduleRequest | YES | — | YES | — | YES | — | — |
 | changerequest | canRunHealthCheck | YES | — | YES | YES | YES | YES | — |
 | changerequest | canViewDetails | YES | — | YES | YES | YES | YES | — |
-| changerequest | canViewJiraTicket | YES | — | YES | — | — | — | — |
+| changerequest | canViewJiraTicket | YES | — | YES | YES | — | — | — |
 | console | canViewConsole | YES | — | YES | YES | YES | YES | — |
 | edit | canApproveChangeRequest | — | — | YES | — | YES | — | — |
 | edit | canChangeCredentials | YES | — | YES | — | YES | — | — |
@@ -38,9 +38,9 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | history | canViewConnectionInfoDetails | YES | — | YES | YES | YES | YES | — |
 | history | canViewHubStatusHistory | YES | — | YES | YES | YES | YES | — |
 | manageconnections | canEditConnection | YES | — | YES | — | YES | — | — |
-| manageconnections | canResetCircuitBreaker | YES | YES | YES | — | YES | — | — |
+| manageconnections | canResetCircuitBreaker | YES | YES | YES | YES | YES | — | — |
 | manageconnections | canRunConnectionTest | YES | YES | YES | YES | YES | YES | — |
-| manageconnections | canScheduleMaintainance | YES | YES | YES | — | YES | — | — |
+| manageconnections | canScheduleMaintainance | YES | YES | YES | YES | YES | — | — |
 | manageconnections | canViewChangeRequest | YES | — | YES | YES | YES | YES | — |
 | manageconnections | canViewConnections | YES | YES | YES | YES | YES | YES | — |
 | manageconnections | canViewHistory | YES | — | YES | YES | YES | YES | — |

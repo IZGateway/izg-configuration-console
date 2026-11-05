@@ -34,6 +34,9 @@ it. Either can be reviewed alone, and B can be reverted without touching A.
 
 - Grant `IZG Support` three `adminoperations` capabilities: `canViewAdminOperations` (to reach the
   page), `canResetHubCircuitBreakers` and `canRefreshHubDatabase`.
+- Grant `IZG Support` the other three cells matrix v13 gives it (added in review, PR #767):
+  `manageconnections.canResetCircuitBreaker` (per-connection reset),
+  `manageconnections.canScheduleMaintainance` and `changerequest.canViewJiraTicket`.
 - Add `IZG Security` as a recognized role:
   - add it to `CcRole`, `ROLE_PRECEDENCE` and `GROUP_ROLE_MAPPING` (`'IZG Security'`, confirmed
     as the official group name; no `[CONFIRM]` marker);
@@ -62,9 +65,9 @@ it. Either can be reviewed alone, and B can be reverted without touching A.
   - `edit.canApproveChangeRequest`
 - Gate `/passwordencryption` on `adminoperations.canManagePasswordEncryption` instead of
   `canViewAdminOperations`:
-  - `withPageAccess` gains an optional, type-checked entry-capability override for a page that
-    shares another page's block but has a stricter entry rule;
-  - `/passwordencryption` uses it; every other page is unchanged;
+  - `accessregistry.ts` gains `ROUTE_ENTRY`, a type-checked table of routes that share another
+    page's block but have a stricter entry rule, read by both the page gate and the nav predicate;
+  - `/passwordencryption` gates on its row; every other page is unchanged;
   - after B, only IZG Security holds `canManagePasswordEncryption`, so only IZG Security can open
     the page. Everyone else gets the standard in-place Access Denied page and one `AccessDenied`
     event, and the encryption status request is never made.
@@ -138,12 +141,13 @@ None.
   - `src/lib/security/rolemapping.ts`
 - **Middleware:** `src/lib/api/api-middleware-helper.ts` (`checkAdmin` and its name-map entry
   removed); `src/next-auth.d.ts` (comment).
-- **Page gate (B):** `src/lib/security/pageAccessGate.ts` (optional entry override);
-  `src/pages/passwordencryption/index.tsx` (uses it); the comment on the `adminoperations` key in
+- **Page gate (B):** `src/lib/security/accessregistry.ts` (`ROUTE_ENTRY`, `GatedRoute`);
+  `src/lib/security/pageAccessGate.ts` (accepts a `GatedRoute`);
+  `src/pages/passwordencryption/index.tsx` (gates on `'passwordencryption'`); the comment on the `adminoperations` key in
   `src/lib/security/accesslevel.ts`.
 - **Tests:**
   - `src/lib/security/__snapshots__/roleMatrixSnapshot.test.ts.snap`, regenerated in each commit.
-    A: a new IZG Security column (all `YES`) and three IZG Support cells `—` → `YES`. B: three
+    A: a new IZG Security column (all `YES`) and six IZG Support cells `—` → `YES`. B: three
     IZG Operations cells `YES` → `—`.
   - `src/lib/security/policy.test.ts`: A moves IZG Support out of `NON_OPERATIONS_ROLES` and adds
     IZG Support and IZG Security blocks; B makes the admin seed table per role, so IZG Operations
@@ -161,12 +165,12 @@ None.
     Security allowed; IZG Support, IZG Program and IZG Operations denied with one `AccessDenied`
     event naming `adminoperations.canManagePasswordEncryption`; the page handler not run for a
     denied user.
-  - `src/lib/security/accessregistry.test.ts` (or `pageAccessGate`'s own test): a guard that the
-    entry override is used only by pages with no navigation link, so the nav predicate and the gate
-    cannot disagree (B).
+  - `src/lib/security/accessregistry.test.ts`: `ROUTE_ENTRY` invariants, and `canEnterPage`
+    applies the row, so the nav predicate and the gate cannot disagree (B).
 - **Users:**
   - A: IZG Support users get the Admin Operations nav item and page, with the reset and refresh
-    cards. IZG Security members get every Console feature.
+    cards, and on Manage Connections the per-connection circuit breaker reset and maintenance
+    scheduling actions and the change request's Jira ticket link. IZG Security members get every Console feature.
   - B: IZG Operations users who are not also in IZG Security lose editing Access Groups and
     Password Encryption. Approve change request has no reader yet, so nothing visible changes
     there. Every role except IZG Security gets Access Denied at `/passwordencryption`.

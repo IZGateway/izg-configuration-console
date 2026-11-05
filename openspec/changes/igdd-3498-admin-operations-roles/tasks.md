@@ -45,9 +45,9 @@
 
 ## 8. Commit B — gate `/passwordencryption` on `canManagePasswordEncryption`
 
-- [x] 8.1 `pageAccessGate.ts`: add optional third parameter `options?: { entry?: keyof PageControls[P] }`; decide on `{ page, capability: options?.entry ?? PAGE_ENTRY[page] }` through `decideCapability`; use the same capability in the `AccessDenied` event's `permission`
+- [x] 8.1 (superseded by 11.2) `pageAccessGate.ts`: add optional third parameter `options?: { entry?: keyof PageControls[P] }`; decide on `{ page, capability: options?.entry ?? PAGE_ENTRY[page] }` through `decideCapability`; use the same capability in the `AccessDenied` event's `permission`
 - [x] 8.2 Reword the `withPageAccess` docblock: the override exists only for pages with no navigation link, because the nav predicate reads `PAGE_ENTRY`
-- [x] 8.3 `pages/passwordencryption/index.tsx`: pass `{ entry: 'canManagePasswordEncryption' }`; update the comment above `getServerSideProps`
+- [x] 8.3 `pages/passwordencryption/index.tsx`: pass `{ entry: 'canManagePasswordEncryption' }`; update the comment above `getServerSideProps` (superseded by 11.2)
 - [x] 8.4 `accesslevel.ts`: update the comment on the `adminoperations` key (the page shares the block, with a stricter entry capability)
 
 ## 9. Commit B — tests
@@ -55,7 +55,7 @@
 - [x] 9.1 `policy.test.ts`: replace "IZG Operations holds $page.$capability" with an IZG Security table over all `ADMIN_CAPABILITIES`, and an IZG Operations table asserting `canManageAccessGroups` and `canManagePasswordEncryption` are denied and the other eight are granted; assert IZG Operations lacks `edit.canApproveChangeRequest`
 - [x] 9.2 `api-middleware-helper.test.ts`: change the `rotatekey` "calls next() for an authorized caller" case from IZG Operations to IZG Security; add a case that IZG Operations is now refused with `403`
 - [x] 9.3 `adminPageGates.test.ts`: add `/passwordencryption` cases — IZG Security allowed with `hasKeyName` in props; IZG Operations, IZG Support and IZG Program each denied in place with one `AccessDenied` event whose permission is `adminoperations.canManagePasswordEncryption` and the handler not run; unauthenticated redirects to sign-in with no event
-- [x] 9.4 Add the entry-override guard test (in `accessregistry.test.ts` beside the page-coverage tests): every page file passing `entry` to `withPageAccess` is linked from nowhere in `src` outside the page and tests, comments excluded; verified it fails when a link is added under `src/components`, `src/pages` and `src/lib`; `entryCapabilityOf(page, entry?)` builds the entry capability for both the gate and `canEnterPage`
+- [x] 9.4 (superseded by 11.2) Add the entry-override guard test (in `accessregistry.test.ts` beside the page-coverage tests): every page file passing `entry` to `withPageAccess` is linked from nowhere in `src` outside the page and tests, comments excluded; verified it fails when a link is added under `src/components`, `src/pages` and `src/lib`; `entryCapabilityOf(page, entry?)` builds the entry capability for both the gate and `canEnterPage`
 - [x] 9.5 Check the existing registry tests still pass unchanged ("gates exactly the seven pages", "gating a page and handling the denial are checked separately")
 - [x] 9.6 Regenerate the role matrix snapshot; confirm the diff is exactly three IZG Operations cells `YES` → `—` (`accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption`, `edit.canApproveChangeRequest`)
 - [x] 9.7 Run the security suites, `npm run code-quality-check` and `npm run test` (record jsdom suites that fail for the pre-existing reason); all others pass
@@ -65,5 +65,14 @@
 
 - [x] 10.1 Open one PR against `develop` with both commits; description has a section per commit (snapshot diff, user-visible effect), the IGDD-3552 limitation for IZG Security (multi-environment API keys, full deep health check), and the list of suites run. The IZG Security group membership work is rollout, coordinated outside the PR, and does not block merging
 - [ ] 10.2 Identify current IZG Operations users of the removed features from `logApiRequest` logs (`/api/accessgroups` POST/PUT/DELETE, `/api/encrypt`, `/api/rotatekey`, `/api/encryptionStatus`) and hand the list to the Product Owner
-- [ ] 10.3 After deploy to dev, verify manually with the dev test users: IZG Support resets circuit breakers and refreshes the DB; IZG Security opens `/passwordencryption` and edits Access Groups; IZG Operations views all Access Control tabs, changes Deny List and ADS File Types, cannot edit Access Groups, has no Password Encryption card and gets Access Denied at `/passwordencryption`; IZG Program gets Access Denied at `/passwordencryption`
+- [ ] 10.3 After deploy to dev, verify manually with the dev test users: IZG Support resets circuit breakers (hub-wide and per connection), schedules maintenance, sees the change request Jira link and refreshes the DB; IZG Security opens `/passwordencryption` and edits Access Groups; IZG Operations views all Access Control tabs, changes Deny List and ADS File Types, cannot edit Access Groups, has no Password Encryption card and gets Access Denied at `/passwordencryption`; IZG Program gets Access Denied at `/passwordencryption`
 - [x] 10.4 Run `openspec validate igdd-3498-admin-operations-roles --strict` before requesting review
+
+## 11. Review follow-ups (PR #767)
+
+- [x] 11.1 `api-middleware-helper.ts`: hoist `middlewareMap` and type `withMiddleware`'s names as its keys, so a removed middleware such as `checkAdmin` is a compile error at every caller
+- [x] 11.2 Move the `/passwordencryption` entry override into `accessregistry.ts` as `ROUTE_ENTRY`; `withPageAccess` and `canEnterPage` take a `GatedRoute`; drop the `entry` option and the source-search link guard; add `ROUTE_ENTRY` invariant tests and a `canEnterPage` case
+- [x] 11.3 `adminPageGates.test.ts`: restore `DB_ENCRYPTION_KEYNAME` by deleting it when it was unset; denial event `page` is now `passwordencryption`
+- [x] 11.4 `menuItems.test.tsx`: IZG Security sees every menu item
+- [x] 11.5 Stale comments naming `accessutils.ts` / `isOperationsRole`; `/passwordencryption` container title
+- [x] 11.6 `_IZGSupportAccess.ts`: grant the remaining matrix v13 Support cells — `manageconnections.canResetCircuitBreaker`, `manageconnections.canScheduleMaintainance`, `changerequest.canViewJiraTicket`; `policy.test.ts` asserts each in any jurisdiction; snapshot diff is exactly those three Support cells `—` → `YES`

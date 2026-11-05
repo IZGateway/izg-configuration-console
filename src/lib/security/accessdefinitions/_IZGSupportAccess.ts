@@ -34,6 +34,13 @@ const IZGSupportAccess: RoleAccess = {
     canRunConnectionTest: true,
     canViewHistory: true,
     canViewChangeRequest: true,
+    // [IGDD-3498] Target matrix (v13) grants IZG Support per-connection
+    // circuit breaker reset and maintenance scheduling, for the same reason as
+    // the hub-wide reset below: a stuck breaker should not need escalation.
+    // Both are decided per destination (reset in-handler with `can()`,
+    // maintenance through `checkAccessToDestIdSlug`); this role is global.
+    canScheduleMaintainance: true,
+    canResetCircuitBreaker: true,
   } as ManageConnectionsPageAccessControl,
   test: {
     ...defaultTestPageAccessControl,
@@ -46,6 +53,8 @@ const IZGSupportAccess: RoleAccess = {
     ...defaultChangeRequestPageAccessControl,
     canRunHealthCheck: true,
     canViewDetails: true,
+    // [IGDD-3498] Target matrix (v13): the change request's Jira ticket link.
+    canViewJiraTicket: true,
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,

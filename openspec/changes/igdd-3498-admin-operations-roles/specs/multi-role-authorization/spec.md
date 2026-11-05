@@ -41,7 +41,9 @@ role-matrix decisions, recorded as such.
 - **THEN** their page permissions and jurisdiction scope SHALL match the behaviour prior to this
   change
 - **AND** the only exceptions SHALL be the ratified role-matrix decisions applied by IGDD-3498:
-  `IZG Support` gains the three hub-wide Admin Operations capabilities, and `IZG Operations` loses
+  `IZG Support` gains the three hub-wide Admin Operations capabilities,
+  `manageconnections.canResetCircuitBreaker`, `manageconnections.canScheduleMaintainance` and
+  `changerequest.canViewJiraTicket`, and `IZG Operations` loses
   `accesscontrol.canManageAccessGroups`, `adminoperations.canManagePasswordEncryption` and
   `edit.canApproveChangeRequest`
 
