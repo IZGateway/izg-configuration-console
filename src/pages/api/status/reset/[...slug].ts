@@ -4,7 +4,9 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import logger from '../../../../../logger'
-import withMiddleware from '../../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../../lib/api/api-middleware-helper'
 import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../../lib/IZGHubStatusHistoryEndpoint'
 import { asyncRequestContext } from '../../../../lib/Context'
@@ -197,5 +199,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // make this route's own in-handler `can()` call the only correct gate.
 export default withMiddleware({
   capability: { page: 'manageconnections', capability: 'canResetCircuitBreaker' },
-  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+  scope: destIdFromSlug,
 })(handler)

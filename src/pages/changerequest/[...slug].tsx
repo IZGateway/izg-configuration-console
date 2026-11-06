@@ -7,9 +7,10 @@ import Close from '../../components/Close'
 import AccessDenied from '../../components/AccessDenied'
 import { InferGetServerSidePropsType } from 'next'
 import _ from 'lodash'
-import hasAccessToDestId from '../../lib/accesshelper'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { withPageAccess } from '../../lib/security/pageAccessGate'
+import { can } from '../../lib/security/policy'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 const Changerequest = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -36,9 +37,14 @@ const Changerequest = (
 export default Changerequest
 
 // withPageAccess gates entry on changerequest.canViewDetails (a role-level
-// question, not a data path). hasAccessToDestId below is a SEPARATE, still
-// necessary check: which destination's data this specific request may read,
-// per IGDD-3545's design — the page gate does not replace it.
+// question, not a data path, checked with ANY_JURISDICTION). The `can()`
+// check below is a SEPARATE, still necessary check: which destination's data
+// this specific request may read — the page gate does not replace it. Uses
+// the combined capability+reach primitive (role-local), not
+// `hasAccessToDestId` (reach-only, any held role): a caller could otherwise
+// supply the page-entry capability from one role and reach from a different
+// one. Latent today, same split-decision class this PR closed on the API
+// routes. Anusha, PR #771.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getServerSideProps = withPageAccess<
   'changerequest',
@@ -52,7 +58,9 @@ export const getServerSideProps = withPageAccess<
   if (!destId || Number.isNaN(destTypeId)) {
     return { notFound: true }
   }
-  if (hasAccessToDestId(destId, session)) {
+  if (
+    can(subjectOf(session), 'changerequest', 'canViewDetails', destId).allowed
+  ) {
     const dbClient = await DbClientFactory.getDbClient()
     const result =
       await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(

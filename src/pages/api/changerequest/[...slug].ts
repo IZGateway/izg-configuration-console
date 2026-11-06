@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
@@ -86,22 +88,32 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // `inHandler` entry in this file's `withMiddleware` declaration) and
       // does the combined capability+reach check itself, via `can()`, the
       // same primitive `decideRouteCapability` uses declaratively elsewhere.
-      const decision = can(
-        subjectOf(session),
-        'changerequest',
-        'canCancelRequest',
-        changeRequest.destId
-      )
+      //
+      // Deleting a draft (the "Reset Draft" button) and canceling a real,
+      // scheduled change request (the "Cancel Request" dialog) are two
+      // different actions for two different audiences, not one action with
+      // an extra condition stacked on — same shape as the configured-vs-draft
+      // connection test split. A draft delete is gated solely on
+      // `edit.canResetDraft`; a non-draft delete stays gated solely on
+      // `changerequest.canCancelRequest`, unchanged. Anusha, PR #771.
+      const subject = subjectOf(session)
+      const decision = changeRequest.isDraft
+        ? can(subject, 'edit', 'canResetDraft', changeRequest.destId)
+        : can(subject, 'changerequest', 'canCancelRequest', changeRequest.destId)
+      const page = changeRequest.isDraft ? 'edit' : 'changerequest'
+      const capability = changeRequest.isDraft
+        ? 'canResetDraft'
+        : 'canCancelRequest'
       if (!decision.allowed) {
         logAccessDenied({
           reason: 'insufficient role for route access',
           deniedAt: 'api',
-          page: 'changerequest',
-          permission: 'changerequest.canCancelRequest',
+          page,
+          permission: `${page}.${capability}`,
           url: req.url,
           method: req.method,
           user: session.user.email,
-          roles: subjectOf(session).roles,
+          roles: subject.roles,
           destId: changeRequest.destId,
         })
         return res.status(403).send('forbidden')
@@ -146,7 +158,7 @@ export default withMiddleware(
       GET: {
         page: 'changerequest',
         capability: 'canViewDetails',
-        scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+        scope: destIdFromSlug,
       },
       DELETE: {
         inHandler:

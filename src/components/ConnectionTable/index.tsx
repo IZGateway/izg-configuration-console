@@ -1012,21 +1012,23 @@ const ConnectionsTable = (props) => {
               />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Button
-                color="secondary"
-                onClick={handleTestReportsClick}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderRadius: '24px',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                {showCheckbox ? 'Cancel Selection' : 'Test Report(s)'}
-              </Button>
-            </Box>
+            {accessLevels.canRunConnectionTest && (
+              <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Button
+                  color="secondary"
+                  onClick={handleTestReportsClick}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    borderRadius: '24px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  {showCheckbox ? 'Cancel Selection' : 'Test Report(s)'}
+                </Button>
+              </Box>
+            )}
           </Box>
 
           {/* Mobile Cards */}

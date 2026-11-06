@@ -7,7 +7,8 @@ import TestReportTable from '../../components/TestReport'
 import AccessDenied from '../../components/AccessDenied'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { withPageAccess } from '../../lib/security/pageAccessGate'
-import hasAccessToDestId from '../../lib/accesshelper'
+import { can } from '../../lib/security/policy'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
@@ -76,8 +77,15 @@ export const getServerSideProps = withPageAccess<
     // reach. Each one is a live connection test against a real endpoint,
     // so silently drop any destination the caller has no reach to rather
     // than testing (and reporting results for) one outside their
-    // jurisdiction.
-    .filter((dest) => dest.destId && hasAccessToDestId(dest.destId, session))
+    // jurisdiction. Combined capability+reach, role-local, not
+    // `hasAccessToDestId` (reach-only) — same split-decision fix as
+    // test/[...slug].tsx. Anusha, PR #771.
+    .filter(
+      (dest) =>
+        dest.destId &&
+        can(subjectOf(session), 'test', 'canRunConnectionTest', dest.destId)
+          .allowed
+    )
   const results = await Promise.all(
     destinations.map(async (dest) => {
       const dbClient = await DbClientFactory.getDbClient()

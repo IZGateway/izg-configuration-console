@@ -414,13 +414,12 @@ describe('the acknowledged-gap ratchet', () => {
       .map((f) => fs.readFileSync(f, 'utf8'))
       .join('\n')
     for (const subject of debtSubjects('unwired-flag')) {
-      // Match the page-qualified ref, not the bare capability name. Two of
-      // these rows name a capability that also exists on another page block
-      // (`test.canRunConnectionTest` and `history.canViewChangeRequest` both
-      // have twins on `manageconnections`), so a bare-name match would fail
-      // for a still-unwired row the moment a route declared the *other* page's
-      // flag — which the debt note for tests/connectiontest explicitly plans.
-      // The fix under that red build would look like deleting the row.
+      // Match the page-qualified ref, not the bare capability name. Some
+      // capability names exist on more than one page block (e.g.
+      // `canRunConnectionTest` on both `manageconnections` and `test`), so a
+      // bare-name match would false-positive "wired" the moment a route
+      // declared the *other* page's identically-named flag, even though this
+      // row's own page still had nothing reading it.
       const [page, capability] = subject.split('.')
       const declared = new RegExp(
         `page: '${page}',\\s*capability: '${capability}'`

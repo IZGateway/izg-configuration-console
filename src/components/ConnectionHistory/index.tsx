@@ -16,11 +16,21 @@ type connectionHistoryProps = {
 }
 const ConnectionHistory = (props: connectionHistoryProps) => {
   const accessLevels = useRoleAccess('history')
+  // Gates the change-request panel on the SAME capability the GET this panel
+  // depends on (`/api/changerequest/[...slug].ts`) and the page it links to
+  // both already enforce — `history.canViewChangeRequest` used to be a
+  // separate, always-identical flag that could never mean anything different
+  // (removed in the IGDD-3545/3548 review, PR #771, Anusha).
+  const changerequestAccess = useRoleAccess('changerequest')
   const {
     data: changeRequestData,
     error: changeRequestError,
     isLoading: ischangeRequestLoading,
-  } = useSWR(`/api/changerequest/${props.destTypeId}/${props.destId}`)
+  } = useSWR(
+    changerequestAccess.canViewDetails
+      ? `/api/changerequest/${props.destTypeId}/${props.destId}`
+      : null
+  )
   // Thrown, not returned as a div: TestHistory and ChangeHistory in this same
   // directory already throw on their own fetch errors specifically so the
   // ErrorBoundary already mounted around this component (history/[...slug].tsx)
@@ -77,7 +87,7 @@ const ConnectionHistory = (props: connectionHistoryProps) => {
             status={props.status}
           />
           {!_.isEmpty(changeRequestData) &&
-            accessLevels.canViewChangeRequest && (
+            changerequestAccess.canViewDetails && (
               <ViewChangeRequest
                 destId={props.destId}
                 destTypeId={props.destTypeId}

@@ -224,11 +224,11 @@ export function decideRouteCapability(
  * capability is a compile error**, and naming a capability that does not exist
  * on that page's block is too.
  *
- * Listing a page here does **not** gate it. `edit`, `history`, `test` and
- * `changerequest` appear only because the mapped type requires every key; their
- * page files do not call `withPageAccess`, so they carry an `AUTHZ_DEBT` row of
- * kind `ungated-page`. Their entries are inert until someone adds the gate, at
- * which point the capability is already agreed.
+ * Listing a page here does **not** gate it on its own — that's `withPageAccess`
+ * calling it. `api-doc` is the one entry still inert: it carries an
+ * `AUTHZ_DEBT` row of kind `ungated-page` because it structurally cannot be
+ * SSR-gated (see that row's note), not because the capability isn't agreed.
+ * Every other `PageKey` here is gated by its own page file.
  */
 export const PAGE_ENTRY: { [K in PageKey]: keyof PageControls[K] } = {
   manageconnections: 'canViewConnections',

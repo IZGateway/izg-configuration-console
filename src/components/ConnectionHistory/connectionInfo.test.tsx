@@ -2,13 +2,16 @@ import React from 'react'
 import { render } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import useSWR from 'swr'
+import { useRouter } from 'next/router'
 
 jest.mock('swr')
+jest.mock('next/router', () => ({ useRouter: jest.fn() }))
 jest.mock('next-auth/react', () => ({ useSession: jest.fn() }))
 import { useSession } from 'next-auth/react'
 import ConnectionInfo from './connectionInfo'
 
 const mockedSession = useSession as jest.Mock
+const mockedRouter = useRouter as jest.Mock
 
 const destData = {
   destinationType: { type: 'prod' },
@@ -21,8 +24,12 @@ describe('Connection info component', () => {
     jest.clearAllMocks()
     // protect-connection-pages-and-endpoints (IGDD-3545): ConnectionInfo now
     // calls useRoleAccess, which calls useSession - mocked so a bare render
-    // doesn't depend on a real SessionProvider.
+    // doesn't depend on a real SessionProvider. useRoleAccess also calls
+    // useRouter() unconditionally (Rules of Hooks), so next/router needs a
+    // mock too even though this call site passes an explicit page key and
+    // never reads router.pathname.
     mockedSession.mockReturnValue({ data: null, status: 'unauthenticated' })
+    mockedRouter.mockReturnValue({ pathname: '/history' })
     ;(useSWR as jest.Mock).mockReturnValue({
       data: destData,
       error: undefined,

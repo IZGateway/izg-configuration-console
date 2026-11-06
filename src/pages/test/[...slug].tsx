@@ -8,7 +8,8 @@ import _ from 'lodash'
 import connectionTest from '../../lib/connectiontests'
 import DbClientFactory from '../../lib/db/DbClientFactory'
 import { withPageAccess } from '../../lib/security/pageAccessGate'
-import hasAccessToDestId from '../../lib/accesshelper'
+import { can } from '../../lib/security/policy'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 // The whole read runs inside the request context (via withPageAccess, which
 // wraps withRequestContext) so its logs — and the connection test's logs —
@@ -34,7 +35,16 @@ export const getServerSideProps = withPageAccess<
   if (!destId || Number.isNaN(destTypeId)) {
     return { notFound: true }
   }
-  if (!hasAccessToDestId(destId, session)) {
+  // Combined capability+reach, role-local — same primitive the API routes
+  // use, not `hasAccessToDestId` (reach-only). One role can supply
+  // `canRunConnectionTest` in any jurisdiction and a DIFFERENT role supply
+  // reach to this destId; `hasAccessToDestId` would let that split decision
+  // through. Latent today (no caller holds both a global and a
+  // jurisdiction-scoped role at once), reachable once one does. Anusha, PR
+  // #771.
+  if (
+    !can(subjectOf(session), 'test', 'canRunConnectionTest', destId).allowed
+  ) {
     return { notFound: true }
   }
   const dbClient = await DbClientFactory.getDbClient()

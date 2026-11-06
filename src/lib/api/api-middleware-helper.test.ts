@@ -52,54 +52,6 @@ describe('withMiddleware request context population (IGDD-2223)', () => {
   })
 })
 
-describe('RBAC rejection audit logging', () => {
-  afterEach(() => {
-    jest.restoreAllMocks()
-  })
-
-  it('logs a structured AccessDenied event when checkAccessToDestId rejects an out-of-jurisdiction caller', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({
-      user: {
-        email: 'jurops@example.com',
-        role: 'Jurisdiction Operations',
-        jurisdictions: ['ainq'],
-      },
-    })
-    ;(getToken as jest.Mock).mockResolvedValue({ sub: '00uABC' })
-    const warnSpy = jest.spyOn(logger, 'warn')
-
-    const handler = jest.fn()
-    const wrapped = withMiddleware(
-      { inHandler: 'IGDD-3472: test fixture' },
-      'checkAccessToDestId'
-    )(handler)
-
-    const req: any = {
-      url: '/api/destinations/other-jurisdiction',
-      method: 'GET',
-      headers: {},
-      socket: { remoteAddress: '203.0.113.7' },
-      query: { id: 'other-jurisdiction' },
-    }
-    const res: any = { status: jest.fn(() => res), json: jest.fn(), send: jest.fn() }
-
-    await wrapped(req, res)
-
-    expect(handler).not.toHaveBeenCalled()
-    expect(res.status).toHaveBeenCalledWith(401)
-
-    const deniedCall: any = warnSpy.mock.calls.find(
-      (call: any) => call[1]?.eventType === 'AccessDenied'
-    )
-    expect(deniedCall).toBeDefined()
-    expect(deniedCall[1]).toMatchObject({
-      eventType: 'AccessDenied',
-      reason: 'caller has no access to destination',
-      destId: 'other-jurisdiction',
-    })
-  })
-})
-
 // ---------------------------------------------------------------------------
 // IGDD-3472 — enforceRouteAuthz
 // ---------------------------------------------------------------------------
@@ -175,7 +127,7 @@ describe('enforceRouteAuthz: capability rules', () => {
       deniedAt: 'api',
       page: 'adminoperations',
       // Page-qualified: a bare capability is ambiguous, since
-      // canViewChangeRequest exists on two page blocks.
+      // canRunConnectionTest exists on two page blocks.
       permission: 'adminoperations.canManagePasswordEncryption',
       // The ECS object, never a string, or Elastic rejects it (IGDD-3541).
       url: { path: '/api/rotatekey' },

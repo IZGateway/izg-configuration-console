@@ -12,6 +12,8 @@ import { DestinationChangeRequest } from '../../../lib/type/DestinationChangeReq
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import { assertSafeDestinationUri } from '../../../lib/security/assertSafeDestinationUri'
 import { UnsafeDestinationUriError } from '../../../lib/security/destinationUriGuard'
+import { can } from '../../../lib/security/policy'
+import { subjectOf } from '../../../lib/security/authzsubject'
 /**
  * @swagger
  * /api/changerequest:
@@ -143,6 +145,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'POST') {
     if (isDraft === true) {
+      // The route's declared capability (edit.canCreateChangeRequest) covers
+      // both a real submission and a draft save with no distinction. A
+      // draft save is a separate action with its own capability — matches
+      // the "edit" FAB buttons' canSaveDraft/canResetDraft/
+      // canRunDraftConnectionTest, which already gate on it client-side with
+      // nothing server-side reading it until now. Anusha, PR #771.
+      if (
+        !can(subjectOf(session), 'edit', 'canSaveDraft', requestBody.destId)
+          .allowed
+      ) {
+        res.status(403).json({ error: 'forbidden' })
+        return
+      }
       const draft = await upsertChangeRequest(requestBody)
       if (draft) {
         logger.info('Change request draft saved successfully', {
@@ -226,18 +241,34 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const { scheduleupdate } = req.query
     if (scheduleupdate) {
       try {
+        // id and jiraId are read from the stored record, not the body: a
+        // client-supplied id is just a deterministic hash of destType+destId
+        // with no reach check of its own, so trusting it (or the jiraId that
+        // travels with it) let a caller authorized for one destination target
+        // another jurisdiction's record and comment on its Jira ticket.
+        const id = dbClient.getChangeRequestId(
+          requestBody.destId,
+          requestBody.destType.typeId
+        )
+        const changeRequest = await dbClient.fetchDestinationChangeRequestById(
+          id
+        )
+        if (!changeRequest) {
+          res.status(404).json({ error: 'Change request not found' })
+          return
+        }
         await changeRequestTicketComment(
-          requestBody.jiraId,
+          changeRequest.jiraId,
           requestBody.requestedAt,
           requestBody.scheduledAt,
           requestBody.isAsap
         )
 
         await dbClient.upsertDestinationChangeRequest({
-          id: requestBody.id,
+          id,
           destId: requestBody.destId,
           destType: requestBody.destType,
-          jiraId: requestBody.jiraId,
+          jiraId: changeRequest.jiraId,
           requestedBy: requestBody.requestedBy,
           requestedAt: new Date(),
           scheduledAt: requestBody.scheduledAt,
@@ -261,7 +292,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           },
         })
         logger.info(
-          `Change Request schedule with Jira ticket id ${requestBody.jiraId} was updated.`
+          `Change Request schedule with Jira ticket id ${changeRequest.jiraId} was updated.`
         )
         res.status(200).json('Change Request is updated')
       } catch (error) {
@@ -270,7 +301,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     } else {
       try {
-        await dbClient.upsertDestinationChangeRequest(requestBody)
+        // id is never trusted from the body — see the comment on
+        // upsertChangeRequest below; dynamo.ts derives it from destId+destType,
+        // which the route's `scope` extractor has already checked reach for.
+        const { id: _ignoredId, ...rest } = requestBody
+        await dbClient.upsertDestinationChangeRequest(rest)
         logger.info(
           `Change Request with Jira ticket id ${requestBody.jiraId} was updated.`
         )
@@ -279,19 +314,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         logger.debug(error)
         res.status(500).json({ error: 'Unable to update Change request' })
       }
-    }
-  } else if (req.method === 'DELETE') {
-    try {
-      await dbClient.deleteDestinationChangeRequest(requestBody.id) // Log deleter info
-      logger.info('Change request deleted successfully', {
-        changeRequestId: requestBody.id,
-        userId: session?.user?.email,
-        operation: 'delete_change_request',
-      })
-      res.status(200).json('Change Request is deleted')
-    } catch (error) {
-      logger.debug(error)
-      res.status(500).json({ error: 'Unable to delete Change request' })
     }
   } else {
     throw new Error(
@@ -304,8 +326,15 @@ const upsertChangeRequest = async (
   changeRequestDetails: DestinationChangeRequest
 ) => {
   const dbClient = await DbClientFactory.getDbClient()
+  // No `id` passed here, even when the client-side `changeRequestDetails` has
+  // one: `upsertDestinationChangeRequest` (dynamo.ts) derives it itself from
+  // `destId`+`destType.typeId`, which the route's `scope` extractor has
+  // already checked the caller's reach against. Trusting a client-supplied
+  // `id` instead let a caller authorized for one destination target another
+  // jurisdiction's record, since the id is just a deterministic hash of
+  // destType+destId with no reach check of its own — see IGDD-3545/3548
+  // review (PR #771, Anusha).
   const response = await dbClient.upsertDestinationChangeRequest({
-    id: changeRequestDetails.id,
     isDraft: changeRequestDetails.isDraft,
     jiraId: changeRequestDetails.jiraId,
     destId: changeRequestDetails.destId,
@@ -367,10 +396,14 @@ export default withMiddleware({
       capability: 'canRescheduleRequest',
       scope: destIdFromBody,
     },
-    DELETE: {
-      page: 'changerequest',
-      capability: 'canCancelRequest',
-      scope: destIdFromBody,
-    },
+    // No DELETE here: no UI caller ever sends DELETE to this bare route (both
+    // real delete flows — Reset Draft, Cancel Request — use the path-param
+    // route `[...slug].ts`, which fetches the record by id and checks `can()`
+    // against its *stored* destId). This route's own DELETE branch used to
+    // trust a client-supplied `id` with no check that it belonged to the
+    // caller's validated `destId`, which let a caller authorized for one
+    // destination delete another jurisdiction's change request — removed
+    // rather than fixed, since `[...slug].ts` already does this correctly and
+    // nothing needs a second implementation.
   },
 })(handler)

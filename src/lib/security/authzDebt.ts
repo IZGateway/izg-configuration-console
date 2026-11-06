@@ -148,6 +148,18 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
       'capability+reach check itself via can(), the same primitive decideRouteCapability uses ' +
       'declaratively for every other route this change touches.',
   },
+  {
+    kind: 'in-handler',
+    subject: 'tests/connectiontest/[...slug].ts',
+    ticket: 'IGDD-3545',
+    note:
+      'protect-connection-pages-and-endpoints (PR #771 review, Anusha): two different tests for ' +
+      'two different audiences share this route - testing configured/live settings ' +
+      '(test.canRunConnectionTest, view-or-edit tier) vs testing unsaved draft content, present as ' +
+      '`values` in the body (edit.canRunDraftConnectionTest, edit-only). Which capability applies ' +
+      'depends on the request body, which no declarative `capability`/`scope` can express ahead of ' +
+      'time, same shape as changerequest/[...slug].ts DELETE above.',
+  },
 
   // ---------------------------------------------------------------------
   // Declared capabilities that no code reads.

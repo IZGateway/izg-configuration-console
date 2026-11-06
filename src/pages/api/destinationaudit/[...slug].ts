@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 
 
@@ -54,5 +56,5 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 }
 export default withMiddleware({
   capability: { page: 'history', capability: 'canViewChangeHistory' },
-  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+  scope: destIdFromSlug,
 })(handler)

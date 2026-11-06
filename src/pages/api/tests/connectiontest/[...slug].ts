@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { constants } from 'http2'
 import { APIResponse } from '../../../../lib/connectiontests/types/APIResponse'
@@ -9,6 +9,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { Destination } from '../../../../lib/type/Destination'
+import { can } from '../../../../lib/security/policy'
+import { subjectOf } from '../../../../lib/security/authzsubject'
+import { logAccessDenied } from '../../../../lib/security/accessDeniedAudit'
 /**
  * @swagger
  * /api/tests/connectiontest/{destTypeId}/{destId}:
@@ -142,6 +145,50 @@ const handler = async (
     let destTypeValue
     let jurisdictionDescriptionValue
     const session = await getServerSession(req, res, authOptions)
+    const subject = subjectOf(session)
+    // Two different tests for two different audiences, not one test with an
+    // extra condition stacked on: testing the destination's configured/live
+    // settings (no `values` in the body — health-check from DeployConnection,
+    // or the standalone Test page) stays open to the broader view-or-edit
+    // audience already checked by `test.canRunConnectionTest`. Testing
+    // UNSAVED DRAFT content (`values` present — the "Run Draft Connection
+    // Test" FAB on Edit Connection) runs a live test against caller-supplied
+    // data and is edit-only: gated on `edit.canRunDraftConnectionTest`
+    // instead, not in addition. Which capability applies depends on the
+    // request body, which the declarative `capability`/`scope` vocabulary
+    // cannot express — same shape of gap `changerequest/[...slug].ts`'s
+    // DELETE already has for a fetched record's `isDraft`, so this route
+    // moves to `inHandler` too (see `authzDebt.ts`). Anusha, PR #771 — the
+    // `test.canRunConnectionTest`-only declaration let IZG Support and
+    // Jurisdiction Support, who hold no `edit.*` capability at all, run a
+    // live connection test with arbitrary caller-supplied `values` for any
+    // destination they reach.
+    const page = values ? 'edit' : 'test'
+    const capability = values ? 'canRunDraftConnectionTest' : 'canRunConnectionTest'
+    const decision = values
+      ? can(subject, 'edit', 'canRunDraftConnectionTest', destId?.toString())
+      : can(subject, 'test', 'canRunConnectionTest', destId?.toString())
+    if (!decision.allowed) {
+      logAccessDenied({
+        reason: 'insufficient role for route access',
+        deniedAt: 'api',
+        page,
+        permission: `${page}.${capability}`,
+        url: req.url,
+        method: req.method,
+        user: session?.user?.email,
+        roles: subject.roles,
+        destId,
+      })
+      res.status(403).json({
+        destId: destId || 'unknown',
+        destUrl: 'unknown',
+        destType: '',
+        jurisdictionDescription: '',
+        testResults: [],
+      })
+      return
+    }
     try {
       const result = await getFetchedDestination(
         destId?.toString(),
@@ -191,6 +238,6 @@ const handler = async (
 }
 
 export default withMiddleware({
-  capability: { page: 'test', capability: 'canRunConnectionTest' },
-  scope: (req) => (req.query.slug as string[] | undefined)?.[1],
+  inHandler:
+    'IGDD-3545/3548: which capability applies (test.canRunConnectionTest vs edit.canRunDraftConnectionTest) depends on whether the request body carries draft `values`',
 })(handler)

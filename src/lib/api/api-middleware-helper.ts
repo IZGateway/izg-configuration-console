@@ -1,6 +1,5 @@
 import { Middleware } from 'next-api-middleware'
 import logger from '../../../logger'
-import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
@@ -36,6 +35,15 @@ import {
  */
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
+
+/**
+ * Shared `scope` extractor for the `/{destTypeId}/{destId}` slug shape used
+ * by seven route declarations. Security-relevant and previously copied
+ * inline into each: a fix to one copy (e.g. rejecting a non-string or array
+ * slug) would not have reached the others. PR #771 review (Anusha).
+ */
+export const destIdFromSlug = (req: NextApiRequest): string | undefined =>
+  (req.query.slug as string[] | undefined)?.[1]
 
 export type HttpMethod =
   | 'GET'
@@ -164,61 +172,6 @@ const logApiRequest: Middleware = async (req, res, next) => {
     })
   }
   await next()
-}
-
-// check access to destination
-const checkAccessToDestId: Middleware = async (req, res, next) => {
-  const destId = req.query.id.toString()
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || 'unknown'
-  const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, context?.session)
-  if (hasAccess) {
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
-      user,
-      sub,
-    })
-    await next()
-  } else {
-    logAccessDenied({
-      reason: 'caller has no access to destination',
-      url: req.url,
-      method: req.method,
-      user,
-      roles: subjectOf(context?.session).roles,
-      destId,
-    })
-    res.status(401).send('unauthorized')
-  }
-}
-const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
-  const { slug } = req.query
-  const destId = slug[1]
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || 'unknown'
-  const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, context?.session)
-  if (hasAccess) {
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
-      user,
-      sub,
-    })
-    await next()
-  } else {
-    logAccessDenied({
-      reason: 'caller has no access to destination',
-      url: req.url,
-      method: req.method,
-      user,
-      roles: subjectOf(context?.session).roles,
-      destId,
-    })
-    res.status(401).send('unauthorized')
-  }
 }
 
 /**
@@ -387,8 +340,6 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 const middlewareMap = {
   logApiRequest,
   captureErrors,
-  checkAccessToDestId,
-  checkAccessToDestIdSlug,
 } satisfies Record<string, Middleware>
 
 type MiddlewareName = keyof typeof middlewareMap
