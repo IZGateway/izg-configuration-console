@@ -90,13 +90,12 @@ The role→capability values introduced by this change SHALL grant precisely the
 
 ### Requirement: Admin pages deny users who lack the entry capability
 
-`/accesscontrol`, `/adminoperations`, `/console` and `/passwordencryption` SHALL be gated
-server-side. Reaching them by typing the URL SHALL be denied for a user without the capability,
+`/accesscontrol`, `/adminoperations` and `/console` SHALL be gated server-side. Reaching them by typing the URL SHALL be denied for a user without the capability,
 not merely hidden from navigation.
 
 #### Scenario: Direct URL access is denied
 
-- **WHEN** a signed-in user without the relevant entry capability requests any of those four
+- **WHEN** a signed-in user without the relevant entry capability requests any of those three
   pages by URL
 - **THEN** an access-denied message SHALL be rendered in place
 - **AND** exactly one `AccessDenied` audit event SHALL be written
@@ -106,12 +105,6 @@ not merely hidden from navigation.
 
 - **WHEN** a user without `canViewAdminOperations` requests `/adminoperations`
 - **THEN** the hub-environment lookup SHALL NOT be performed
-
-#### Scenario: The password-encryption page shares the Admin Operations capability
-
-- **WHEN** access to `/passwordencryption` is evaluated
-- **THEN** it SHALL use the `adminoperations` page key rather than a page key of its own, because
-  it duplicates the Admin Operations password card
 
 #### Scenario: `/api-doc` hides its interface but is not a secured page
 
