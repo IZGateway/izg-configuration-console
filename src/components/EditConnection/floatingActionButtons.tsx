@@ -14,6 +14,9 @@ const FloatingActionButtons = (props: {
   saveDraft: any
   isResetButtonDisabled: boolean
   resetDraft: any
+  canRunDraftConnectionTest?: boolean
+  canSaveDraft?: boolean
+  canResetDraft?: boolean
 }) => {
   const [openReset, setOpenReset] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -42,93 +45,99 @@ const FloatingActionButtons = (props: {
 
   return (
     <Box>
-      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Test">
-        <Fab
-          size="small"
-          sx={{
-            position: 'fixed',
-            ...(isMobile
-              ? {
-                  bottom: 16,
-                  right: 16,
-                  zIndex: 1000,
-                }
-              : {
-                  bottom: 160,
-                  right: 16,
-                }),
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="test"
-          onClick={props.toggleTestDrawer}
-          disabled={!props.isFormChanged}
-        >
-          <MonitorHeartOutlinedIcon color="primary" fontSize="small" />
-        </Fab>
-      </Tooltip>
-      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Save">
-        <Fab
-          size="small"
-          sx={{
-            position: 'fixed',
-            ...(isMobile
-              ? {
-                  bottom: 16,
-                  right: 66,
-                  zIndex: 1000,
-                }
-              : {
-                  bottom: 96,
-                  right: 16,
-                }),
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="save"
-          onClick={props.saveDraft}
-          disabled={!props.isFormChanged}
-        >
-          <SaveIcon color="primary" fontSize="small" />
-        </Fab>
-      </Tooltip>
-      <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Reset">
-        <Fab
-          size="small"
-          sx={{
-            position: 'fixed',
-            ...(isMobile
-              ? {
-                  bottom: 16,
-                  right: 116,
-                  zIndex: 1000,
-                }
-              : {
-                  bottom: 32,
-                  right: 16,
-                }),
-            backgroundColor: palette.white,
-            border: `1px solid ${palette.white}`,
-            '&:hover': {
-              border: `1.5px solid ${palette.primary}`,
-              transition: '200ms',
-            },
-          }}
-          aria-label="reset"
-          onClick={handleClickOpenReset}
-          disabled={props.isResetButtonDisabled}
-        >
-          <CachedIcon color="primary" fontSize="small" />
-        </Fab>
-      </Tooltip>
+      {props.canRunDraftConnectionTest && (
+        <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Test">
+          <Fab
+            size="small"
+            sx={{
+              position: 'fixed',
+              ...(isMobile
+                ? {
+                    bottom: 16,
+                    right: 16,
+                    zIndex: 1000,
+                  }
+                : {
+                    bottom: 160,
+                    right: 16,
+                  }),
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="test"
+            onClick={props.toggleTestDrawer}
+            disabled={!props.isFormChanged}
+          >
+            <MonitorHeartOutlinedIcon color="primary" fontSize="small" />
+          </Fab>
+        </Tooltip>
+      )}
+      {props.canSaveDraft && (
+        <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Save">
+          <Fab
+            size="small"
+            sx={{
+              position: 'fixed',
+              ...(isMobile
+                ? {
+                    bottom: 16,
+                    right: 66,
+                    zIndex: 1000,
+                  }
+                : {
+                    bottom: 96,
+                    right: 16,
+                  }),
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="save"
+            onClick={props.saveDraft}
+            disabled={!props.isFormChanged}
+          >
+            <SaveIcon color="primary" fontSize="small" />
+          </Fab>
+        </Tooltip>
+      )}
+      {props.canResetDraft && (
+        <Tooltip arrow placement={isMobile ? 'top' : 'left'} title="Reset">
+          <Fab
+            size="small"
+            sx={{
+              position: 'fixed',
+              ...(isMobile
+                ? {
+                    bottom: 16,
+                    right: 116,
+                    zIndex: 1000,
+                  }
+                : {
+                    bottom: 32,
+                    right: 16,
+                  }),
+              backgroundColor: palette.white,
+              border: `1px solid ${palette.white}`,
+              '&:hover': {
+                border: `1.5px solid ${palette.primary}`,
+                transition: '200ms',
+              },
+            }}
+            aria-label="reset"
+            onClick={handleClickOpenReset}
+            disabled={props.isResetButtonDisabled}
+          >
+            <CachedIcon color="primary" fontSize="small" />
+          </Fab>
+        </Tooltip>
+      )}
 
       <ResetDialog
         open={openReset}

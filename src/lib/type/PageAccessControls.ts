@@ -41,7 +41,6 @@ type ChangeRequestPageAccessControl = {
 }
 
 type HistoryPageAccessControl = {
-  canViewChangeRequest: boolean
   canViewConnectionInfo: boolean
   canViewConnectionInfoDetails: boolean
   canViewHubStatusHistory: boolean

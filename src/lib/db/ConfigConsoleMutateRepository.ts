@@ -8,8 +8,11 @@ import type { AllowedUseType } from '../type/AllowedUseType'
 import type { ApiKeyCredential } from '../type/ApiKeyCredential'
 
 export default interface ConfigConsoleMutateRepository {
+  // Deterministic hash of destType+destId, used so a caller never has to
+  // supply (or be trusted on) the record id for a write - see dynamo.ts.
+  getChangeRequestId(destId: string, destType: number): number
   upsertDestinationChangeRequest(
-    changeRequestData: DestinationChangeRequest
+    changeRequestData: Omit<DestinationChangeRequest, 'id'> & { id?: number }
   ): Promise<DestinationChangeRequest>
   deleteDestinationChangeRequest(id: number): Promise<boolean>
   createDestinationChangeRequestDeploymentAudit(

@@ -4,12 +4,17 @@ import connectionTest from '../../lib/connectiontests'
 import { InferGetServerSidePropsType } from 'next'
 import ErrorBoundary from '../../components/ErrorBoundary'
 import TestReportTable from '../../components/TestReport'
+import AccessDenied from '../../components/AccessDenied'
 import DbClientFactory from '../../lib/db/DbClientFactory'
-import { withRequestContext } from '../../lib/requestContext'
+import { withPageAccess } from '../../lib/security/pageAccessGate'
+import { can } from '../../lib/security/policy'
+import { subjectOf } from '../../lib/security/authzsubject'
 
 const TestReport = (
   props: InferGetServerSidePropsType<typeof getServerSideProps>
 ) => {
+  if (props.accessDenied) return <AccessDenied title="Test Report" />
+
   return (
     <Container maxWidth="xl">
       <ErrorBoundary>
@@ -24,28 +29,36 @@ const TestReport = (
 }
 
 export default TestReport
-export const getServerSideProps = withRequestContext(
-  async (context, requestContext) => {
-    const session = requestContext.session
-    if (!session?.user) {
-      return { redirect: { destination: '/api/auth/signin', permanent: false } }
-    }
-    // Parse the `destination` selection cookie defensively: a malformed or
-    // user-tampered value must not crash the server render with a 500.
-    let destArray: unknown[] = []
-    const destCookie = context.req.cookies['destination']
-    if (destCookie) {
-      try {
-        const parsed = JSON.parse(destCookie)
-        if (Array.isArray(parsed)) {
-          destArray = parsed
-        }
-      } catch {
-        // Invalid JSON — fall back to no selected destinations.
+// Reuses the `test` page key rather than a capability of its own: this page
+// is reached only from the Test action's own Generate Report button on
+// Manage Connections, for the same audience — same precedent as
+// /passwordencryption reusing `adminoperations`.
+export const getServerSideProps = withPageAccess<
+  'test',
+  {
+    destinations: unknown[]
+    connectionTestResults: unknown[]
+    destinationDetails: unknown[]
+  }
+>('test', async (context, requestContext) => {
+  const session = requestContext.session
+  // Parse the `destination` selection cookie defensively: a malformed or
+  // user-tampered value must not crash the server render with a 500.
+  let destArray: unknown[] = []
+  const destCookie = context.req.cookies['destination']
+  if (destCookie) {
+    try {
+      const parsed = JSON.parse(destCookie)
+      if (Array.isArray(parsed)) {
+        destArray = parsed
       }
+    } catch {
+      // Invalid JSON — fall back to no selected destinations.
     }
-    let destinations = []
-    destinations = destArray.map((item) => {
+  }
+  let destinations = []
+  destinations = destArray
+    .map((item) => {
       if (typeof item !== 'string' || item.length < 2) {
         return { destId: '', destTypeId: null }
       }
@@ -58,106 +71,120 @@ export const getServerSideProps = withRequestContext(
         destTypeId: isNaN(destTypeId) ? null : destTypeId,
       }
     })
-    const results = await Promise.all(
-      destinations.map(async (dest) => {
-        const dbClient = await DbClientFactory.getDbClient()
-        const destinationToTest = await dbClient.fetchDestination(
-          dest.destId,
-          dest.destTypeId
-        )
-        const testResult = await connectionTest(destinationToTest, {
-          name: session.user.name,
-          email: session.user.email,
-          id: session.user.id,
-        })
-        return {
-          type: destinationToTest?.destinationType.type || 'N/A',
-          destId: destinationToTest?.destId || 'N/A',
-          jurisdiction: destinationToTest?.jurisdiction.description || 'N/A',
-          testResults: testResult?.connectionTestResult?.testResults || [],
-        }
-      })
+    // The `destination` cookie is client-set. canRunConnectionTest is a
+    // page-entry capability, checked with ANY_JURISDICTION like every page
+    // gate - it says nothing about which destinations this caller may
+    // reach. Each one is a live connection test against a real endpoint,
+    // so silently drop any destination the caller has no reach to rather
+    // than testing (and reporting results for) one outside their
+    // jurisdiction. Combined capability+reach, role-local, not
+    // `hasAccessToDestId` (reach-only) — same split-decision fix as
+    // test/[...slug].tsx. Anusha, PR #771.
+    .filter(
+      (dest) =>
+        dest.destId &&
+        can(subjectOf(session), 'test', 'canRunConnectionTest', dest.destId)
+          .allowed
     )
-
-    const connectionTestResults = results.map((result) => {
-      const getTestStatus = (testNames) => {
-        const names = Array.isArray(testNames) ? testNames : [testNames]
-
-        const test = names
-          .map((name) => {
-            return result.testResults.find((t) => {
-              const testNameLower = t.name.toLowerCase()
-              const targetNameLower = name.toLowerCase()
-
-              if (targetNameLower === 'connectivity') {
-                return (
-                  testNameLower.includes('connectivity') &&
-                  !testNameLower.includes('tcp')
-                )
-              }
-
-              return testNameLower.includes(targetNameLower)
-            })
-          })
-          .find(Boolean)
-
-        return test ? test.status : 'N/A'
-      }
-      const getTestDetail = (testNames) => {
-        const names = Array.isArray(testNames) ? testNames : [testNames]
-
-        const test = names
-          .map((name) => {
-            return result.testResults.find((t) => {
-              const testNameLower = t.name.toLowerCase()
-              const targetNameLower = name.toLowerCase()
-
-              if (targetNameLower === 'connectivity') {
-                return (
-                  testNameLower.includes('connectivity') &&
-                  !testNameLower.includes('tcp')
-                )
-              }
-
-              return testNameLower.includes(targetNameLower)
-            })
-          })
-          .find(Boolean)
-
-        return test ? test.detail : 'N/A'
-      }
-
+  const results = await Promise.all(
+    destinations.map(async (dest) => {
+      const dbClient = await DbClientFactory.getDbClient()
+      const destinationToTest = await dbClient.fetchDestination(
+        dest.destId,
+        dest.destTypeId
+      )
+      const testResult = await connectionTest(destinationToTest, {
+        name: session.user.name,
+        email: session.user.email,
+        id: session.user.id,
+      })
       return {
-        destId: result.destId,
-        destType: result.type,
-        dns: getTestStatus('DNS'),
-        dnsDetail: getTestDetail('DNS'),
-        tcp: getTestStatus('TCP'),
-        tcpDetail: getTestDetail('TCP'),
-        tls: getTestStatus('TLS'),
-        tlsDetail: getTestDetail('TLS'),
-        cipher: getTestStatus(['NIST', 'cipher']),
-        cipherDetail: getTestDetail(['NIST', 'cipher']),
-        connectivity: getTestStatus('Connectivity'),
-        connectivityDetail: getTestDetail('Connectivity'),
-        wsdl: getTestStatus('WSDL'),
-        wsdlDetail: getTestDetail('WSDL'),
-        hl7: getTestStatus(['HL7', 'qbp']),
-        hl7Detail: getTestDetail(['HL7', 'qbp']),
+        type: destinationToTest?.destinationType.type || 'N/A',
+        destId: destinationToTest?.destId || 'N/A',
+        jurisdiction: destinationToTest?.jurisdiction.description || 'N/A',
+        testResults: testResult?.connectionTestResult?.testResults || [],
       }
     })
-    const destinationDetails = results.map((result) => ({
-      type: result.type,
-      jurisdiction: result.jurisdiction,
-      destId: result.destId,
-    }))
+  )
+
+  const connectionTestResults = results.map((result) => {
+    const getTestStatus = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
+      return test ? test.status : 'N/A'
+    }
+    const getTestDetail = (testNames) => {
+      const names = Array.isArray(testNames) ? testNames : [testNames]
+
+      const test = names
+        .map((name) => {
+          return result.testResults.find((t) => {
+            const testNameLower = t.name.toLowerCase()
+            const targetNameLower = name.toLowerCase()
+
+            if (targetNameLower === 'connectivity') {
+              return (
+                testNameLower.includes('connectivity') &&
+                !testNameLower.includes('tcp')
+              )
+            }
+
+            return testNameLower.includes(targetNameLower)
+          })
+        })
+        .find(Boolean)
+
+      return test ? test.detail : 'N/A'
+    }
 
     return {
-      props: {
-        destinations,
-        connectionTestResults,
-        destinationDetails,
-      },
+      destId: result.destId,
+      destType: result.type,
+      dns: getTestStatus('DNS'),
+      dnsDetail: getTestDetail('DNS'),
+      tcp: getTestStatus('TCP'),
+      tcpDetail: getTestDetail('TCP'),
+      tls: getTestStatus('TLS'),
+      tlsDetail: getTestDetail('TLS'),
+      cipher: getTestStatus(['NIST', 'cipher']),
+      cipherDetail: getTestDetail(['NIST', 'cipher']),
+      connectivity: getTestStatus('Connectivity'),
+      connectivityDetail: getTestDetail('Connectivity'),
+      wsdl: getTestStatus('WSDL'),
+      wsdlDetail: getTestDetail('WSDL'),
+      hl7: getTestStatus(['HL7', 'qbp']),
+      hl7Detail: getTestDetail(['HL7', 'qbp']),
     }
+  })
+  const destinationDetails = results.map((result) => ({
+    type: result.type,
+    jurisdiction: result.jurisdiction,
+    destId: result.destId,
+  }))
+
+  return {
+    props: {
+      destinations,
+      connectionTestResults,
+      destinationDetails,
+    },
   }
-)
+})

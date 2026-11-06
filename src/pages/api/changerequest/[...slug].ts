@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import changeRequestTicketComment from '../../../lib/changerequestticketcomment'
 import logger from '../../../../logger'
-import hasAccessToDestId from '../../../lib/accesshelper'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../../lib/security/authzsubject'
+import { can } from '../../../lib/security/policy'
 import { asyncRequestContext } from '../../../lib/Context'
 /**
  * @swagger
@@ -61,18 +63,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const destId = slug[1]
     const destTypeId = _.toNumber(slug[0])
 
-    if (!hasAccessToDestId(destId, session)) {
-      logAccessDenied({
-        reason: 'caller has no access to destination',
-        url: req.url,
-        method: req.method,
-        user: session.user.email,
-        roles: subjectOf(session).roles,
-        destId,
-      })
-      return res.status(401).send('unauthorized')
-    }
-
+    // Capability and reach are now evaluated combined, role-local, by
+    // enforceRouteAuthz before this handler runs — see this file's
+    // `withMiddleware` declaration (`scope` reads `slug[1]`).
     const result =
       await dbClient.fetchDestinationChangeRequestByDestIdAndDestType(
         destId,
@@ -84,18 +77,46 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     try {
       const changeRequest = await dbClient.fetchDestinationChangeRequestById(id)
 
-      if (!changeRequest || !hasAccessToDestId(changeRequest.destId, session)) {
-        if (changeRequest) {
-          logAccessDenied({
-            reason: 'caller has no access to destination',
-            url: req.url,
-            method: req.method,
-            user: session.user.email,
-            roles: subjectOf(session).roles,
-            destId: changeRequest.destId,
-          })
-        }
+      if (!changeRequest) {
         return res.status(401).send('unauthorized')
+      }
+
+      // The destination id this request acts on is not known until the
+      // change request itself has been fetched — there is nothing a
+      // declarative `scope` extractor could point at before this lookup
+      // runs. So, unlike GET above, this method stays in-handler (see the
+      // `inHandler` entry in this file's `withMiddleware` declaration) and
+      // does the combined capability+reach check itself, via `can()`, the
+      // same primitive `decideRouteCapability` uses declaratively elsewhere.
+      //
+      // Deleting a draft (the "Reset Draft" button) and canceling a real,
+      // scheduled change request (the "Cancel Request" dialog) are two
+      // different actions for two different audiences, not one action with
+      // an extra condition stacked on — same shape as the configured-vs-draft
+      // connection test split. A draft delete is gated solely on
+      // `edit.canResetDraft`; a non-draft delete stays gated solely on
+      // `changerequest.canCancelRequest`, unchanged. Anusha, PR #771.
+      const subject = subjectOf(session)
+      const decision = changeRequest.isDraft
+        ? can(subject, 'edit', 'canResetDraft', changeRequest.destId)
+        : can(subject, 'changerequest', 'canCancelRequest', changeRequest.destId)
+      const page = changeRequest.isDraft ? 'edit' : 'changerequest'
+      const capability = changeRequest.isDraft
+        ? 'canResetDraft'
+        : 'canCancelRequest'
+      if (!decision.allowed) {
+        logAccessDenied({
+          reason: 'insufficient role for route access',
+          deniedAt: 'api',
+          page,
+          permission: `${page}.${capability}`,
+          url: req.url,
+          method: req.method,
+          user: session.user.email,
+          roles: subject.roles,
+          destId: changeRequest.destId,
+        })
+        return res.status(403).send('forbidden')
       }
 
       if (!changeRequest.isDraft) {
@@ -123,11 +144,26 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // Same shape as changerequest/index.ts before IGDD-3472: error capture plus an
 // in-handler reach check only, so reach was checked and capability never was.
 // See the note there.
+//
+// protect-connection-pages-and-endpoints (IGDD-3545/3548): GET's `scope`
+// reads `slug[1]`, closing its `split-decision` row via the same combined,
+// role-local check `decideRouteCapability` runs declaratively elsewhere.
+// DELETE stays `inHandler` — its destination id only exists after the
+// in-handler database lookup above, which no declarative `scope` extractor
+// can express — so this one row converts to `in-handler` rather than
+// disappearing; see authzDebt.ts.
 export default withMiddleware(
   {
     byMethod: {
-      GET: { page: 'changerequest', capability: 'canViewDetails' },
-      DELETE: { page: 'changerequest', capability: 'canCancelRequest' },
+      GET: {
+        page: 'changerequest',
+        capability: 'canViewDetails',
+        scope: destIdFromSlug,
+      },
+      DELETE: {
+        inHandler:
+          'IGDD-3545/3548: destination id only known after fetching the change request by id',
+      },
     },
   },
   'captureErrors'

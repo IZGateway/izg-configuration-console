@@ -16,15 +16,22 @@ import ConnectionInfoDetail from './connectionInfoDetail'
 import useSWR from 'swr'
 import desttypehelper from '../../lib/desttypehelper'
 import palette from '../../styles/theme/palette'
+import useRoleAccess from '../../lib/security/useRoleAccess'
 
 const ConnectionInfo = (props) => {
+  const accessLevels = useRoleAccess('history')
   const [open, setOpen] = React.useState(false)
   const {
     data: destData,
     error: destError,
     isLoading: isDestLoading,
   } = useSWR(`/api/destinations/${props.destTypeId}/${props.destId}`)
-  if (destError) return <div>failed to load</div>
+  // Thrown, not returned as a div - see the matching comment in
+  // ConnectionHistory/index.tsx: this lets the ErrorBoundary already mounted
+  // around this component catch it, log it, and render the real ErrorPage,
+  // matching the convention changeHistory.tsx/testHistory.tsx already use in
+  // this same directory.
+  if (destError) throw new Error(destError.message)
   if (isDestLoading) return <div>loading...</div>
   if (!destData) return <div>no destination data found</div>
 
@@ -40,22 +47,24 @@ const ConnectionInfo = (props) => {
         <CardHeader
           title="Connection Info"
           action={
-            <Tooltip
-              placement="top"
-              arrow
-              title="View all connection information"
-            >
-              <IconButton color="primary" onClick={toggleDrawer} id="detail">
-                <VisibilityIcon
-                  sx={{
-                    display: 'flex',
-                  }}
-                />
-              </IconButton>
-            </Tooltip>
+            accessLevels.canViewConnectionInfoDetails && (
+              <Tooltip
+                placement="top"
+                arrow
+                title="View all connection information"
+              >
+                <IconButton color="primary" onClick={toggleDrawer} id="detail">
+                  <VisibilityIcon
+                    sx={{
+                      display: 'flex',
+                    }}
+                  />
+                </IconButton>
+              </Tooltip>
+            )
           }
         />
-        {open && (
+        {open && accessLevels.canViewConnectionInfoDetails && (
           <ConnectionInfoDetail
             destination={destData}
             open={open}
