@@ -33,6 +33,8 @@ const mockUpsertDestinationChangeRequest = jest.fn()
 // Base-repository read (no decrypt) vs the decrypting wrapper's read.
 const mockFetchDestination = jest.fn()
 const mockDecryptingFetchDestination = jest.fn()
+const mockGetChangeRequestId = jest.fn()
+const mockFetchDestinationChangeRequestById = jest.fn()
 jest.mock('../../../lib/db/DbClientFactory', () => ({
   __esModule: true,
   default: {
@@ -46,8 +48,18 @@ jest.mock('../../../lib/db/DbClientFactory', () => ({
         mockDecryptingFetchDestination(...args),
       fetchDestinationPassword: jest.fn().mockResolvedValue('stored-password'),
       deleteDestinationChangeRequest: jest.fn(),
+      getChangeRequestId: (...args: unknown[]) =>
+        mockGetChangeRequestId(...args),
+      fetchDestinationChangeRequestById: (...args: unknown[]) =>
+        mockFetchDestinationChangeRequestById(...args),
     }),
   },
+}))
+
+const mockChangeRequestTicketComment = jest.fn()
+jest.mock('../../../lib/changerequestticketcomment', () => ({
+  __esModule: true,
+  default: (...args: unknown[]) => mockChangeRequestTicketComment(...args),
 }))
 
 import { getServerSession } from 'next-auth'
@@ -56,12 +68,15 @@ import hasAccessToDestId from '../../../lib/accesshelper'
 import handler from '../../../pages/api/changerequest/index'
 import { ChangeRequestTicketError } from '../../../lib/createchangerequestticket'
 
-const buildReqRes = (body: Record<string, unknown>) => {
+const buildReqRes = (
+  body: Record<string, unknown>,
+  options: { method?: string; query?: Record<string, string> } = {}
+) => {
   const req: any = {
-    method: 'POST',
+    method: options.method || 'POST',
     url: '/api/changerequest',
     headers: {},
-    query: {},
+    query: options.query || {},
     body: JSON.stringify(body),
   }
   const res: any = {
@@ -285,5 +300,176 @@ describe('POST /api/changerequest failure reporting (IGDD-3566)', () => {
       .join(' ')
     expect(logged).toContain('Bad Jira response: 404')
     expect(logged).not.toContain("reading 'id'")
+  })
+})
+
+/**
+ * PR #771 review (Anusha): the route's declarative scope check validates
+ * requestBody.destId, but every write site used to trust a SEPARATE,
+ * client-supplied requestBody.id / requestBody.jiraId with no check that they
+ * belonged to the same record as the validated destId. Since a change request
+ * id is a deterministic hash of destType+destId, a caller authorized for one
+ * destination could target another jurisdiction's record. These tests assert
+ * the client-supplied id/jiraId are never trusted.
+ */
+describe('PUT/POST /api/changerequest id is never trusted from the body (IGDD-3545/3548 review)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
+    })
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
+    mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
+    mockGetChangeRequestId.mockReturnValue(999)
+    mockFetchDestinationChangeRequestById.mockResolvedValue({
+      id: 999,
+      jiraId: 'REAL-JIRA-999',
+      destId: 'dest1',
+    })
+  })
+
+  it('POST draft save ignores a client-supplied id, letting dynamo.ts derive it from destId+destType', async () => {
+    const { req, res } = buildReqRes({
+      destId: 'dest1',
+      destType: { typeId: 1, type: 'PROD' },
+      isDraft: true,
+      id: 424242, // forged: some other destination's change request id
+      requested: {},
+    })
+
+    await handler(req, res)
+
+    const [writtenArgs] = mockUpsertDestinationChangeRequest.mock.calls[0]
+    expect(writtenArgs).not.toHaveProperty('id')
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('PUT (plain) strips a client-supplied id before writing', async () => {
+    const { req, res } = buildReqRes(
+      {
+        destId: 'dest1',
+        destType: { typeId: 1, type: 'PROD' },
+        id: 424242, // forged
+        jiraId: 'SOME-JIRA-1',
+        requested: {},
+      },
+      { method: 'PUT' }
+    )
+
+    await handler(req, res)
+
+    const [writtenArgs] = mockUpsertDestinationChangeRequest.mock.calls[0]
+    expect(writtenArgs).not.toHaveProperty('id')
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('PUT scheduleupdate computes id from destId+destType and uses the STORED jiraId, not the body\'s', async () => {
+    const { req, res } = buildReqRes(
+      {
+        destId: 'dest1',
+        destType: { typeId: 1, type: 'PROD' },
+        id: 424242, // forged
+        jiraId: 'FORGED-JIRA', // forged
+        requestedAt: new Date().toISOString(),
+        requested: {},
+      },
+      { method: 'PUT', query: { scheduleupdate: 'true' } }
+    )
+
+    await handler(req, res)
+
+    expect(mockGetChangeRequestId).toHaveBeenCalledWith('dest1', 1)
+    expect(mockFetchDestinationChangeRequestById).toHaveBeenCalledWith(999)
+    expect(mockChangeRequestTicketComment.mock.calls[0][0]).toBe(
+      'REAL-JIRA-999'
+    )
+    const [writtenArgs] = mockUpsertDestinationChangeRequest.mock.calls[0]
+    expect(writtenArgs).toMatchObject({ id: 999, jiraId: 'REAL-JIRA-999' })
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('PUT scheduleupdate 404s when the computed id has no stored record', async () => {
+    mockFetchDestinationChangeRequestById.mockResolvedValue(undefined)
+    const { req, res } = buildReqRes(
+      {
+        destId: 'dest1',
+        destType: { typeId: 1, type: 'PROD' },
+        requestedAt: new Date().toISOString(),
+        requested: {},
+      },
+      { method: 'PUT', query: { scheduleupdate: 'true' } }
+    )
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+    expect(mockChangeRequestTicketComment).not.toHaveBeenCalled()
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+  })
+
+  it('no longer offers DELETE on this route — the path-param route is the only delete path', async () => {
+    const { req, res } = buildReqRes(
+      { destId: 'dest1', destType: { typeId: 1, type: 'PROD' }, id: 1 },
+      { method: 'DELETE' }
+    )
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(405)
+  })
+})
+
+/**
+ * PR #771 review (Anusha): the route's declared capability
+ * (edit.canCreateChangeRequest) covered both a real submission and a draft
+ * save with no distinction, so a role seeded with canSaveDraft: false but
+ * canCreateChangeRequest: true could still save a draft by calling the API.
+ */
+describe('POST /api/changerequest draft save requires edit.canSaveDraft', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
+    mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
+  })
+
+  it('saves a draft for a role holding canSaveDraft', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'u@example.com', roles: ['IZG Operations'] },
+    })
+    const { req, res } = buildReqRes({
+      destId: 'dest1',
+      destType: { typeId: 1, type: 'PROD' },
+      isDraft: true,
+      requested: {},
+    })
+
+    await handler(req, res)
+
+    expect(mockUpsertDestinationChangeRequest).toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('refuses a draft save for a role holding neither canCreateChangeRequest nor canSaveDraft', async () => {
+    // No role in the current matrix holds canCreateChangeRequest without
+    // canSaveDraft (both are provisional-true together on the same two
+    // roles), so this exercises the route's declarative gate and the new
+    // in-handler check together rather than isolating the latter. Still a
+    // real regression guard: if either gate were loosened, this would catch it.
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'u@example.com', roles: ['Jurisdiction Support'] },
+    })
+    const { req, res } = buildReqRes({
+      destId: 'dest1',
+      destType: { typeId: 1, type: 'PROD' },
+      isDraft: true,
+      requested: {},
+    })
+
+    await handler(req, res)
+
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(403)
   })
 })

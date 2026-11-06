@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import _ from 'lodash'
-import withMiddleware from '../../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../../lib/api/api-middleware-helper'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 
 /**
@@ -67,7 +69,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // The only route whose effective access NARROWS in IGDD-3472: it had no
 // session, capability or tenancy check at all. Both halves are required -
 // the capability, and reach over the target destination.
-export default withMiddleware(
-  { capability: { page: 'manageconnections', capability: 'canScheduleMaintainance' } },
-  'checkAccessToDestIdSlug'
-)(handler)
+//
+// protect-connection-pages-and-endpoints (IGDD-3545/3548): `scope` replaces
+// the separately-attached `checkAccessToDestIdSlug` middleware, so capability
+// and reach are now evaluated combined, role-local, via `decideRouteCapability`
+// (REQUIRES_DESTINATION_SCOPE) instead of as two independently-satisfiable
+// checks — closing this route's `split-decision` debt row. This also changes
+// a reach-only denial's status from 401 (the old middleware) to 403 (the
+// enforcer's `forbid()`); no client code branches on that distinction for
+// this route.
+export default withMiddleware({
+  capability: { page: 'manageconnections', capability: 'canScheduleMaintainance' },
+  scope: destIdFromSlug,
+})(handler)

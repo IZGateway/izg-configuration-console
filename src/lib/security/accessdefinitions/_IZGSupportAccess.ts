@@ -59,7 +59,6 @@ const IZGSupportAccess: RoleAccess = {
   history: {
     ...defaultHistoryPageAccessControl,
     canViewChangeHistory: true,
-    canViewChangeRequest: true,
     canViewConnectionInfo: true,
     canViewConnectionInfoDetails: true,
     canViewHubStatusHistory: true,
