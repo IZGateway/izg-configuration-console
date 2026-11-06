@@ -4,6 +4,7 @@
   "version": "1.21.0",
   "scripts": {
     "dev": "next",
+    "prebuild": "npm run swagger:generate-spec",
     "build": "next build",
     "start": "next start",
     "start:local-dev": "docker-compose -f ./local-docker/docker-compose.yml up -d && npm run dev && docker-compose -f ./local-docker/docker-compose.yml down",
@@ -18,6 +19,7 @@
     "test:scan-workflow": "jest --runInBand --runTestsByPath .github/scripts/scan-ecr-image.test.ts",
     "fix-vulnerabilities": "fix-vulnerabilities && npm install && npm audit",
     "swagger:generate-doc": "ts-node -T -P scripts/tsconfig.json scripts/generate-swagger-doc.ts",
+    "swagger:generate-spec": "npm run swagger:generate-doc -- generated/api-doc-spec.json",
     "test:dev": "cross-env BASE_URL=https://dev.console.izgateway.org npx playwright test --project=Chrome --headed",
     "test:rbac": "playwright test -c playwright.rbac.config.ts"
   },
