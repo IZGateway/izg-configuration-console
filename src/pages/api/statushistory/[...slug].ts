@@ -4,7 +4,9 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import logger from '../../../../logger'
-import withMiddleware from '../../../lib/api/api-middleware-helper'
+import withMiddleware, {
+  destIdFromSlug,
+} from '../../../lib/api/api-middleware-helper'
 import _ from 'lodash'
 import IZGHubStatusHistoryEndpoint from '../../../lib/IZGHubStatusHistoryEndpoint'
 /**
@@ -86,7 +88,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-export default withMiddleware(
-  { inHandler: 'IGDD-3472: maps to history.canViewHubStatusHistory, currently unwired' },
-  'checkAccessToDestIdSlug'
-)(handler)
+export default withMiddleware({
+  capability: { page: 'history', capability: 'canViewHubStatusHistory' },
+  scope: destIdFromSlug,
+})(handler)

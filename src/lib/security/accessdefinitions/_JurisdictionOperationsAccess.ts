@@ -57,7 +57,6 @@ const JurisdictionOperationsAccess: RoleAccess = {
   } as ChangeRequestPageAccessControl,
   history: {
     ...defaultHistoryPageAccessControl,
-    canViewChangeRequest: true,
     canViewConnectionInfo: true,
     canViewConnectionInfoDetails: true,
     canViewHubStatusHistory: true,

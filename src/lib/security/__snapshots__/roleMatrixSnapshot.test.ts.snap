@@ -33,7 +33,6 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | edit | canRunDraftConnectionTest | YES | — | YES | — | YES | — | — |
 | edit | canSaveDraft | YES | — | YES | — | YES | — | — |
 | history | canViewChangeHistory | YES | — | YES | YES | YES | YES | — |
-| history | canViewChangeRequest | YES | — | YES | YES | YES | YES | — |
 | history | canViewConnectionInfo | YES | — | YES | YES | YES | YES | — |
 | history | canViewConnectionInfoDetails | YES | — | YES | YES | YES | YES | — |
 | history | canViewHubStatusHistory | YES | — | YES | YES | YES | YES | — |

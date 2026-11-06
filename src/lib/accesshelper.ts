@@ -5,8 +5,8 @@ import { hasGlobalTenancy } from './security/policy'
 /**
  * "Where"-only tenancy check: may this session touch `destId`'s data?
  *
- * There is no permission dimension here — callers (the `checkAccessToDestId`
- * middleware, `fetchEndpointStatus`) have already established *what* is being
+ * There is no permission dimension here — callers (`fetchEndpointStatus`,
+ * `destinationuri/validate.ts`) have already established *what* is being
  * done by virtue of which route is running. Because no capability is involved,
  * a plain union across held roles is correct: if any role reaches this
  * destination, the user reaches it.
@@ -30,10 +30,10 @@ export default function hasAccessToDestId(destId: string, session: unknown) {
     // Deny cleanly rather than throw. A scoped role with no jurisdictions
     // assigned is a reachable state — e.g. Okta's userinfo call failing, or a
     // user not yet assigned one — not an invariant violation, and none of
-    // this function's callers (changerequest routes, the changerequest SSR
-    // page, api-middleware-helper's destination-scoped routes) wrap it in a
-    // try/catch. Throwing here turned what should be a clean 401/404 into an
-    // uncaught 500 for that case (PR #666 review).
+    // this function's callers (fetchEndpointStatus, destinationuri/validate.ts,
+    // ApiKeyManagement) wrap it in a try/catch. Throwing here turned what
+    // should be a clean 401/404 into an uncaught 500 for that case (PR #666
+    // review).
     logger.warn('Denied: scoped role has no assigned jurisdictions', { destId })
     return false
   }

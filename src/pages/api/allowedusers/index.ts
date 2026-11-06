@@ -6,8 +6,6 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { subjectOf } from '../../../lib/security/authzsubject'
 import { hasGlobalTenancy } from '../../../lib/security/policy'
-import hasAccessToDestId from '../../../lib/accesshelper'
-import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { serializeAllowedUser } from '../../../lib/type/AllowedUser'
 
 /**
@@ -229,33 +227,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
-      // Reach check on the write, not just the capability (IGDD-3546 review).
-      // `canManageSenders` says *whether* a role may mutate; it says nothing
-      // about *which* destinationId. Without this, a Jurisdiction Operations
-      // caller could POST any jurisdiction's destinationId, not just its own.
-      //
-      // `hasAccessToDestId` unions reach across every held role, same as the
-      // `canManageSenders` capability check the middleware already ran unions
-      // capability across every held role — so a caller holding Jurisdiction
-      // Operations (scoped, grants canManageSenders) plus IZG Support (global
-      // reach, grants no onboarding write) could still combine the two into a
-      // global write. See authzDebt.ts for this residual, which matches the
-      // existing changerequest/index.ts entry for the same shape.
-      if (!hasAccessToDestId(body.destinationId, session)) {
-        logAccessDenied({
-          reason: 'Destination outside caller reach',
-          url: req.url,
-          method: req.method,
-          user: session.user.email,
-          roles: subjectOf(session).roles,
-          destId: body.destinationId,
-          page: 'onboarding',
-          permission: 'onboarding.canManageSenders',
-        })
-        return res.status(403).json({
-          error: 'Forbidden - destination outside your jurisdiction',
-        })
-      }
+      // Capability and reach are now evaluated combined, role-local, by
+      // enforceRouteAuthz before this handler runs — see this file's
+      // `withMiddleware` declaration (`scope` reads `body.destinationId`).
+      // Previously this block re-checked reach alone, independently of the
+      // capability the middleware had already checked with ANY_JURISDICTION,
+      // which is the split-decision gap protect-connection-pages-and-endpoints
+      // (IGDD-3545/3548) closes.
 
       const dbClient = await DbClientFactory.getDbClient()
 
@@ -404,23 +382,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         })
       }
 
-      // Reach check on the write, not just the capability — see the matching
-      // comment on the POST branch above (IGDD-3546 review).
-      if (!hasAccessToDestId(body.destinationId, session)) {
-        logAccessDenied({
-          reason: 'Destination outside caller reach',
-          url: req.url,
-          method: req.method,
-          user: session.user.email,
-          roles: subjectOf(session).roles,
-          destId: body.destinationId,
-          page: 'onboarding',
-          permission: 'onboarding.canManageSenders',
-        })
-        return res.status(403).json({
-          error: 'Forbidden - destination outside your jurisdiction',
-        })
-      }
+      // Capability and reach are evaluated combined, role-local, by
+      // enforceRouteAuthz before this handler runs — see the matching comment
+      // on the POST branch above.
 
       const dbClient = await DbClientFactory.getDbClient()
 
@@ -531,17 +495,28 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // capability across every method. IGDD-3546 narrows further: GET (view) and
 // POST/DELETE (mutate) now require separate capabilities, so a view-only role
 // can see the list without being able to change it. GET is also row-scoped by
-// jurisdiction (fetchAllowedUsersByDestination), and POST/DELETE each check
-// hasAccessToDestId on body.destinationId before writing — both added after
-// PR review found this route split *who* may write without ever restricting
-// *which* jurisdiction's rows. See authzDebt.ts for the residual risk from
-// unioning capability and reach checks independently across held roles.
+// jurisdiction (fetchAllowedUsersByDestination).
+//
+// protect-connection-pages-and-endpoints (IGDD-3545/3548): POST/DELETE's
+// `scope` reads `body.destinationId`, so capability and reach are now
+// evaluated combined, role-local, by `decideRouteCapability`
+// (REQUIRES_DESTINATION_SCOPE) — closing the `split-decision` debt row that
+// used to track this route's independent capability+reach checks. GET needs
+// no `scope`: it has no single destination, only jurisdiction-filtered rows.
 export default withMiddleware(
   {
     byMethod: {
       GET: { page: 'onboarding', capability: 'canViewOnboarding' },
-      POST: { page: 'onboarding', capability: 'canManageSenders' },
-      DELETE: { page: 'onboarding', capability: 'canManageSenders' },
+      POST: {
+        page: 'onboarding',
+        capability: 'canManageSenders',
+        scope: (req) => req.body?.destinationId,
+      },
+      DELETE: {
+        page: 'onboarding',
+        capability: 'canManageSenders',
+        scope: (req) => req.body?.destinationId,
+      },
     },
   },
   'captureErrors'

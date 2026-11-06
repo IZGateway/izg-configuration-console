@@ -1,6 +1,5 @@
 import { Middleware } from 'next-api-middleware'
 import logger from '../../../logger'
-import hasAccessToDestId from '../../lib/accesshelper'
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next'
 import { asyncRequestContext } from '../../lib/Context'
 import { buildRequestContext } from '../../lib/requestContext'
@@ -36,6 +35,15 @@ import {
  */
 
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info'
+
+/**
+ * Shared `scope` extractor for the `/{destTypeId}/{destId}` slug shape used
+ * by seven route declarations. Security-relevant and previously copied
+ * inline into each: a fix to one copy (e.g. rejecting a non-string or array
+ * slug) would not have reached the others. PR #771 review (Anusha).
+ */
+export const destIdFromSlug = (req: NextApiRequest): string | undefined =>
+  (req.query.slug as string[] | undefined)?.[1]
 
 export type HttpMethod =
   | 'GET'
@@ -83,8 +91,26 @@ export type RouteAuthz =
    * Per-method capability. Required, not a nicety: several route files handle
    * a read and a write in one handler, and one capability per file would
    * conflate view with mutate. A method absent from the map is `405`.
+   *
+   * A method entry carries its own `scope` extractor, same meaning as the
+   * top-level `capability` variant's - read only for capabilities in
+   * `REQUIRES_DESTINATION_SCOPE`. A method entry may instead be
+   * `{ inHandler: string }` for the rare case where the destination can't be
+   * named without a database lookup the declaration site can't do; the string
+   * must name a follow-up ticket, same as the top-level escape hatch, and is
+   * counted by the same `inHandler:` ratchet.
    */
-  | { byMethod: Partial<Record<HttpMethod, CapabilityRef>> }
+  | {
+      byMethod: Partial<
+        Record<
+          HttpMethod,
+          | (CapabilityRef & {
+              scope?: (req: NextApiRequest) => string | undefined
+            })
+          | { inHandler: string }
+        >
+      >
+    }
   /** Authenticated session required; the handler does its own row filtering. */
   | { session: true }
   /**
@@ -148,61 +174,6 @@ const logApiRequest: Middleware = async (req, res, next) => {
   await next()
 }
 
-// check access to destination
-const checkAccessToDestId: Middleware = async (req, res, next) => {
-  const destId = req.query.id.toString()
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || 'unknown'
-  const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, context?.session)
-  if (hasAccess) {
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
-      user,
-      sub,
-    })
-    await next()
-  } else {
-    logAccessDenied({
-      reason: 'caller has no access to destination',
-      url: req.url,
-      method: req.method,
-      user,
-      roles: subjectOf(context?.session).roles,
-      destId,
-    })
-    res.status(401).send('unauthorized')
-  }
-}
-const checkAccessToDestIdSlug: Middleware = async (req, res, next) => {
-  const { slug } = req.query
-  const destId = slug[1]
-  const context = asyncRequestContext.getStore()
-  const user = context?.user || 'unknown'
-  const sub = context?.sub || null
-  const hasAccess = hasAccessToDestId(destId, context?.session)
-  if (hasAccess) {
-    logger.debug('Api request ' + req.url, {
-      req,
-      res,
-      user,
-      sub,
-    })
-    await next()
-  } else {
-    logAccessDenied({
-      reason: 'caller has no access to destination',
-      url: req.url,
-      method: req.method,
-      user,
-      roles: subjectOf(context?.session).roles,
-      destId,
-    })
-    res.status(401).send('unauthorized')
-  }
-}
-
 /**
  * Enforcer 2 of 2: the generic route authorization middleware (IGDD-3472).
  *
@@ -232,14 +203,14 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       }
     }
 
-    const deny = (ref: CapabilityRef) => {
+    const deny = (ref: CapabilityRef, s: string | undefined = scope) => {
       // A caller who holds the capability somewhere but not for this
       // destination is a reach denial; say so, and name the destination.
       const reachDenial =
         requiresDestinationScope(ref) && decideCapability(subject, ref)
       logAccessDenied({
         reason: reachDenial
-          ? scope
+          ? s
             ? 'Destination outside caller reach'
             : 'destination-scoped capability used without a destination'
           : 'insufficient role for route access',
@@ -250,7 +221,7 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
         method: req.method,
         user,
         roles: subject.roles,
-        ...(scope ? { destId: scope } : {}),
+        ...(s ? { destId: s } : {}),
       })
       forbid()
     }
@@ -289,8 +260,8 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // `decideRouteCapability` adds the REQUIRES_DESTINATION_SCOPE rule on top
     // (PR #756): a destination-scoped capability is decided for `scope`, per
     // role, and without one only global-reach roles pass.
-    const satisfies = (ref: CapabilityRef): boolean =>
-      decideRouteCapability(subject, ref, scope)
+    const satisfies = (ref: CapabilityRef, s: string | undefined = scope): boolean =>
+      decideRouteCapability(subject, ref, s)
 
     if ('public' in authz) return next()
 
@@ -331,7 +302,18 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
         res.status(405).send('method not allowed')
         return
       }
-      if (!satisfies(ref)) return deny(ref)
+      // The handler owns this method's decision, same meaning as the
+      // top-level escape hatch — declared, ticketed, counted, not enforced here.
+      if ('inHandler' in ref) return next()
+      let methodScope: string | undefined
+      if (ref.scope) {
+        try {
+          methodScope = ref.scope(req) || undefined
+        } catch {
+          methodScope = undefined
+        }
+      }
+      if (!satisfies(ref, methodScope)) return deny(ref, methodScope)
       return next()
     }
 
@@ -346,7 +328,7 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // across the array. /api/organizations accepts three capabilities, two of
     // which are guarded; a caller holding only the unguarded third must still
     // pass, or Jurisdiction Operations and Support lose the route silently.
-    if (authz.capability.some(satisfies)) return next()
+    if (authz.capability.some((ref) => satisfies(ref))) return next()
     return denyAnyOf(authz.capability)
   }
 }
@@ -358,8 +340,6 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 const middlewareMap = {
   logApiRequest,
   captureErrors,
-  checkAccessToDestId,
-  checkAccessToDestIdSlug,
 } satisfies Record<string, Middleware>
 
 type MiddlewareName = keyof typeof middlewareMap
