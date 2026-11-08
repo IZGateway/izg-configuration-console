@@ -14,11 +14,11 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | adminoperations | canResetHubCircuitBreakers | YES | YES | YES | YES | — | — | — |
 | adminoperations | canViewAdminOperations | YES | YES | YES | YES | — | — | — |
 | api-doc | canViewApiDoc | YES | — | YES | — | — | — | — |
-| apikeys | canCancelApiKey | YES | — | YES | — | YES | — | YES |
-| apikeys | canCreateApiKey | YES | — | YES | — | YES | — | YES |
-| apikeys | canListApiKeys | YES | — | YES | — | YES | — | YES |
-| apikeys | canRenewApiKey | YES | — | YES | — | YES | — | YES |
-| apikeys | canRevokeApiKey | YES | — | YES | — | YES | — | YES |
+| apikeys | canCancelApiKey | — | — | YES | — | YES | — | YES |
+| apikeys | canCreateApiKey | — | — | YES | — | YES | — | YES |
+| apikeys | canListApiKeys | — | — | YES | — | YES | — | YES |
+| apikeys | canRenewApiKey | — | — | YES | — | YES | — | YES |
+| apikeys | canRevokeApiKey | — | — | YES | — | YES | — | YES |
 | changerequest | canCancelRequest | YES | — | YES | — | YES | — | — |
 | changerequest | canDeployChange | YES | — | YES | — | — | — | — |
 | changerequest | canRescheduleRequest | YES | — | YES | — | YES | — | — |

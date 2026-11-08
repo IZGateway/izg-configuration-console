@@ -3,9 +3,11 @@
  */
 import fs from 'fs'
 import path from 'path'
+import ts from 'typescript'
 import {
   PAGE_ENTRY,
   ROUTE_ENTRY,
+  REQUIRES_DESTINATION_SCOPE,
   canEnterPage,
   derivePageKey,
   entryCapabilityOf,
@@ -451,5 +453,185 @@ describe('the acknowledged-gap ratchet', () => {
         ).join('\n')
     )
     expect(AUTHZ_DEBT.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * IGDD-3549 — the `hasScope` ratchet (design.md Decision 2).
+ *
+ * Omitting `scope` on a `REQUIRES_DESTINATION_SCOPE` declaration is now a
+ * deliberate, valid choice (capability alone governs — see the doc comment on
+ * `REQUIRES_DESTINATION_SCOPE`), not automatically a bug. So this cannot just
+ * assert "every declaration has a scope" — `apikeys/index.ts` GET and
+ * `apikeysaudit/index.ts` GET intentionally have none, while `domains.ts` and
+ * `apikeysaudit/[sortKey].ts` declare the same `canListApiKeys` WITH a scope.
+ *
+ * Instead: every no-scope declaration of a `REQUIRES_DESTINATION_SCOPE`
+ * capability must be named in `NO_SCOPE_ALLOWLIST` below, with a reason. A
+ * future route that lands in the any-jurisdiction branch by omission — rather
+ * than by deliberate choice — fails this test until someone either adds a
+ * `scope` extractor or adds a reasoned allowlist entry, which is exactly the
+ * acknowledgment-not-silence pattern `AUTHZ_DEBT` already uses elsewhere in
+ * this file.
+ *
+ * Parsed with the TypeScript compiler API rather than regex: `scope` is a
+ * sibling of `page`/`capability` for a `byMethod` entry, but a sibling of the
+ * *parent* `capability:` key for the top-level form, and regex has no way to
+ * track that nesting correctly across arbitrarily-formatted source.
+ */
+describe('REQUIRES_DESTINATION_SCOPE: a no-scope declaration must be named, not silent (IGDD-3549)', () => {
+  const NO_SCOPE_ALLOWLIST: ReadonlyArray<{
+    file: string
+    page: string
+    capability: string
+    reason: string
+  }> = [
+    {
+      file: 'src/pages/api/organizations/index.ts',
+      page: 'console',
+      capability: 'canViewConsole',
+      reason:
+        'pre-existing any-of alternative with no scope (predates IGDD-3549). Verified safe: ' +
+        'every role holding console.canViewConsole also holds onboarding.canViewOnboarding, ' +
+        'the unguarded alternative in the same any-of, so this changes which alternative ' +
+        "admits a role, never the route's outcome for any role defined today.",
+    },
+    {
+      file: 'src/pages/api/apikeys/index.ts',
+      page: 'apikeys',
+      capability: 'canListApiKeys',
+      reason:
+        'lists every jurisdiction the caller reaches; scopeToOwnedJurisdictions ' +
+        'row-filters the result after the capability check, same as an unguarded ' +
+        'REQUIRES_GLOBAL_TENANCY route but scoped to the caller instead of global',
+    },
+    {
+      file: 'src/pages/api/apikeysaudit/index.ts',
+      page: 'apikeys',
+      capability: 'canListApiKeys',
+      reason: 'same shape as apikeys/index.ts GET, row-filtered after the capability check',
+    },
+  ]
+
+  type Ref = { page: string; capability: string }
+  const destScoped = new Set(
+    REQUIRES_DESTINATION_SCOPE.map((r) => `${r.page}.${r.capability}`)
+  )
+  const allowed = new Set(
+    NO_SCOPE_ALLOWLIST.map((a) => `${a.file}::${a.page}.${a.capability}`)
+  )
+
+  /** Every `{ page: '...', capability: '...' }` object literal, with whether a `scope` property is a sibling of it (byMethod form) or of its parent `capability:` key (top-level form). */
+  function findCapabilityRefs(
+    source: string,
+    file: string
+  ): Array<Ref & { hasScope: boolean }> {
+    const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true)
+    const refs: Array<Ref & { hasScope: boolean }> = []
+
+    const stringProp = (obj: ts.ObjectLiteralExpression, name: string): string | undefined => {
+      for (const prop of obj.properties) {
+        if (
+          ts.isPropertyAssignment(prop) &&
+          ts.isIdentifier(prop.name) &&
+          prop.name.text === name &&
+          ts.isStringLiteral(prop.initializer)
+        ) {
+          return prop.initializer.text
+        }
+      }
+      return undefined
+    }
+    const hasProp = (obj: ts.ObjectLiteralExpression, name: string): boolean =>
+      obj.properties.some(
+        (prop) =>
+          ts.isPropertyAssignment(prop) &&
+          ts.isIdentifier(prop.name) &&
+          prop.name.text === name
+      )
+
+    const visit = (node: ts.Node) => {
+      if (ts.isObjectLiteralExpression(node)) {
+        const page = stringProp(node, 'page')
+        const capability = stringProp(node, 'capability')
+        if (page && capability) {
+          // byMethod form: `scope` (if any) sits on this same object.
+          if (hasProp(node, 'scope')) {
+            refs.push({ page, capability, hasScope: true })
+          } else {
+            // Top-level form: `scope` (if any) is a sibling of the
+            // `capability:` PropertyAssignment that points at this object —
+            // possibly through an any-of array first.
+            let up: ts.Node = node
+            if (ts.isArrayLiteralExpression(up.parent)) up = up.parent
+            const asCapabilityValue =
+              ts.isPropertyAssignment(up.parent) &&
+              ts.isIdentifier(up.parent.name) &&
+              up.parent.name.text === 'capability'
+            const grandparent = asCapabilityValue
+              ? up.parent.parent
+              : undefined
+            const hasScope =
+              !!grandparent &&
+              ts.isObjectLiteralExpression(grandparent) &&
+              hasProp(grandparent, 'scope')
+            refs.push({ page, capability, hasScope })
+          }
+        }
+      }
+      ts.forEachChild(node, visit)
+    }
+    visit(sf)
+    return refs
+  }
+
+  const API = path.join(process.cwd(), 'src', 'pages', 'api')
+  function walkFiles(dir: string): string[] {
+    const out: string[] = []
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) out.push(...walkFiles(full))
+      else if (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))
+        out.push(full)
+    }
+    return out
+  }
+  const relPosix = (file: string) =>
+    path.relative(process.cwd(), file).split(path.sep).join(path.posix.sep)
+
+  it('every no-scope REQUIRES_DESTINATION_SCOPE declaration is on the allowlist', () => {
+    const unnamed: string[] = []
+    for (const file of walkFiles(API)) {
+      const rel = relPosix(file)
+      const src = fs.readFileSync(file, 'utf8')
+      for (const ref of findCapabilityRefs(src, file)) {
+        const key = `${ref.page}.${ref.capability}`
+        if (!destScoped.has(key)) continue
+        if (ref.hasScope) continue
+        if (allowed.has(`${rel}::${key}`)) continue
+        unnamed.push(`${rel} declares ${key} with no scope and no allowlist entry`)
+      }
+    }
+    expect(unnamed).toEqual([])
+  })
+
+  it('every allowlist entry still names a real route that still declares that capability with no scope', () => {
+    for (const entry of NO_SCOPE_ALLOWLIST) {
+      const full = path.join(process.cwd(), entry.file)
+      const exists = fs.existsSync(full)
+      const stillNoScope =
+        exists &&
+        findCapabilityRefs(fs.readFileSync(full, 'utf8'), full).some(
+          (ref) =>
+            ref.page === entry.page &&
+            ref.capability === entry.capability &&
+            !ref.hasScope
+        )
+      expect({ file: entry.file, exists, stillNoScope }).toEqual({
+        file: entry.file,
+        exists: true,
+        stillNoScope: true,
+      })
+    }
   })
 })

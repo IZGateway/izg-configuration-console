@@ -6,10 +6,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import { getJwtSigningSecret, issueApiKeyJwt } from '../../../lib/apikeys/jwt'
 import {
-  hasApiKeyPermission,
-  requireApiKeyAccess,
+  isApiKeyManagementEnabled,
+  scopeFromCredentialSortKeyInBody,
 } from '../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
+import { asyncRequestContext } from '../../../lib/Context'
+
+const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
 
 // Reveals an API key's JWT exactly once. The token is never persisted —
 // its claims (jti, upn, env, iat, exp) are fixed when the credential was
@@ -28,10 +31,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    // Revealing the token hands out a live bearer credential, so it is gated on
-    // the mint capability (`canCreateApiKey`), not merely list/read access.
-    if (!hasApiKeyPermission(session, 'canCreateApiKey')) {
-      return res.status(403).json({ error: 'Forbidden - insufficient role' })
+    if (!isApiKeyManagementEnabled()) {
+      return res.status(403).json({ error: 'Forbidden - feature disabled' })
     }
 
     const { sortKey } = req.body
@@ -40,17 +41,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     const dbClient = await DbClientFactory.getDbClient()
+    // Role + tenancy (fix IDOR: caller must own the credential's jurisdiction
+    // before its token can be reconstructed) already happened declaratively,
+    // in the route's `scope` extractor, before this handler ran at all —
+    // this is a second, independent read for the business logic below
+    // (accepted two-reads trade-off, IGDD-3549 design.md Risks).
     const credential = await dbClient.getApiKeyCredential(String(sortKey))
     if (!credential) {
       return res.status(404).json({ error: 'API key not found' })
-    }
-    // Role + tenancy (fix IDOR): the caller must own the credential's
-    // jurisdiction — otherwise any authorized user could reveal another
-    // jurisdiction's token. Authoritative gate, evaluated right before the
-    // token is reconstructed.
-    const authz = await requireApiKeyAccess(session, 'canCreateApiKey', credential.jurisdictionId)
-    if (!authz.ok) {
-      return res.status(authz.status).json({ error: authz.error })
     }
     if (credential.status !== 'active') {
       return res.status(400).json({ error: 'Only active keys have a retrievable token' })
@@ -108,7 +106,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         jurisdictionId: credential.jurisdictionId,
         jti: credential.jti,
         domain: credential.domain,
-        grantedBy: authz.grantedBy,
+        grantedBy: grantedBy(),
         viewedAt,
       },
     })
@@ -116,7 +114,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('API key token viewed', {
       sortKey: credential.sortKey,
       viewedBy,
-      grantedBy: authz.grantedBy,
+      grantedBy: grantedBy(),
       operation: 'viewApiKeyToken',
     })
 
@@ -131,6 +129,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
+// IGDD-3549: declarative capability + reach, closing this route's
+// `in-handler` debt row. Reads the credential's *stored* jurisdictionId
+// (never one the caller could supply directly) — the same IDOR protection
+// as before, now expressed as the route's declared reach requirement.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: handler resolves the caller reach per credential',
+  capability: { page: 'apikeys', capability: 'canCreateApiKey' },
+  scope: scopeFromCredentialSortKeyInBody(),
 })(handler)
