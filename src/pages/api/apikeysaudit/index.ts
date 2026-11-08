@@ -4,7 +4,7 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
-import { hasApiKeyPermission } from '../../../lib/security/apiKeyAuthz'
+import { isApiKeyManagementEnabled } from '../../../lib/security/apiKeyAuthz'
 import { scopeToOwnedJurisdictions } from '../../../lib/apikeys/scope'
 
 /**
@@ -33,8 +33,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!hasApiKeyPermission(session, 'canListApiKeys')) {
-      return res.status(403).json({ error: 'Forbidden - insufficient role' })
+    if (!isApiKeyManagementEnabled()) {
+      return res.status(403).json({ error: 'Forbidden - feature disabled' })
     }
 
     const dbClient = await DbClientFactory.getDbClient()
@@ -72,13 +72,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Declared { inHandler } to match the five existing apikeys/* routes: this
-// handler checks canListApiKeys itself and then scopes rows to the caller's
-// owned jurisdictions, so the decision is per-row and cannot be expressed as
-// a single route-level capability. Arrived on develop after IGDD-3472 was
-// branched, with no declaration at all - the required argument is what
-// stopped the build and forced this line to be written.
+// IGDD-3549: declarative capability, no `scope` — this list narrows to the
+// caller's owned jurisdictions afterward (scopeToOwnedJurisdictions), the
+// same capability-only shape as apikeys/index.ts GET. `canListApiKeys` is
+// destination-scoped on domains.ts (one jurisdiction named in the request);
+// declaring no `scope` here is the deliberate other half of that capability
+// (see the `hasScope` doc on `decideRouteCapability`), not an omission.
 export default withMiddleware({
-  inHandler:
-    'IGDD-3472: handler checks canListApiKeys, then scopes rows to owned jurisdictions',
+  capability: { page: 'apikeys', capability: 'canListApiKeys' },
 })(handler)
