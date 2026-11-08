@@ -87,15 +87,16 @@ export type RouteAuthz =
    * it authorizes the capability alone, any role, any jurisdiction — correct
    * for a route whose data path narrows to the caller's own reach afterward
    * rather than naming one destination up front. A declared `scope` that
-   * resolves to nothing (or throws) is different: that still falls back to
-   * roles with global reach only, same as today. Run before the handler, so
-   * it must not trust or mutate the request beyond reading the identifier.
+   * resolves to `undefined` falls back to roles with global reach only; `null`
+   * means the named destination is invalid and denies all roles. A thrown
+   * extractor is an infrastructure failure. Run before the handler, so it
+   * must not trust or mutate the request beyond reading the identifier.
    */
   | {
       capability: CapabilityRef | CapabilityRef[]
       scope?: (
         req: NextApiRequest
-      ) => string | undefined | Promise<string | undefined>
+      ) => string | null | undefined | Promise<string | null | undefined>
     }
   /**
    * Per-method capability. Required, not a nicety: several route files handle
@@ -118,7 +119,7 @@ export type RouteAuthz =
           | (CapabilityRef & {
               scope?: (
                 req: NextApiRequest
-              ) => string | undefined | Promise<string | undefined>
+              ) => string | null | undefined | Promise<string | null | undefined>
             })
           | { inHandler: string }
         >
@@ -224,30 +225,32 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // The destination the request acts on, for REQUIRES_DESTINATION_SCOPE
     // capabilities. `hasScope` records whether a `scope` extractor was
     // declared at all — independent of whether it resolved anything — so
-    // `decideRouteCapability` can tell "declared, but unresolved" (fail
-    // closed) apart from "not declared" (capability alone governs; see the
-    // type's own doc comment).
-    let scope: string | undefined
+    // `decideRouteCapability` can tell "declared, but no destination named"
+    // (global-reach fallback) from "declared destination did not resolve"
+    // (deny all roles) and "not declared" (capability alone governs).
+    let scope: string | null | undefined
     let hasScope = false
     if ('capability' in authz && authz.scope) {
       hasScope = true
       try {
-        scope = (await authz.scope(req)) || undefined
+        scope = await authz.scope(req)
       } catch (error) {
         return scopeResolutionFailed(error)
       }
     }
 
-    const deny = (ref: CapabilityRef, s: string | undefined = scope) => {
+    const deny = (ref: CapabilityRef, s: string | null | undefined = scope) => {
       // A caller who holds the capability somewhere but not for this
       // destination is a reach denial; say so, and name the destination.
       const reachDenial =
         requiresDestinationScope(ref) && decideCapability(subject, ref)
       logAccessDenied({
         reason: reachDenial
-          ? s
-            ? 'Destination outside caller reach'
-            : 'destination-scoped capability used without a destination'
+          ? s === null
+            ? 'destination could not be resolved'
+            : s
+              ? 'Destination outside caller reach'
+              : 'destination-scoped capability used without a destination'
           : 'insufficient role for route access',
         deniedAt: 'api',
         page: ref.page,
@@ -294,12 +297,13 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     //
     // `decideRouteCapability` adds the REQUIRES_DESTINATION_SCOPE rule on top
     // (PR #756): a destination-scoped capability is decided for `scope`, per
-    // role; a declared-but-unresolved `scope` falls back to global-reach
-    // roles only; a capability declared with no `scope` at all (`hasScope`
-    // false) is decided by capability alone, any jurisdiction (IGDD-3549).
+    // role; a missing destination falls back to global-reach roles only, while
+    // an invalid destination denies all roles; a capability declared with no
+    // `scope` at all (`hasScope` false) is decided by capability alone, any
+    // jurisdiction (IGDD-3549).
     const satisfies = (
       ref: CapabilityRef,
-      s: string | undefined = scope,
+      s: string | null | undefined = scope,
       hs: boolean = hasScope
     ): boolean => decideRouteCapability(subject, ref, s, hs)
 
@@ -308,7 +312,11 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // reads it from the request context instead of re-deciding authorization
     // a second time just to find out. Allowed path only — nothing reads this
     // after a denial.
-    const grant = (ref: CapabilityRef, s: string | undefined = scope, hs: boolean = hasScope) => {
+    const grant = (
+      ref: CapabilityRef,
+      s: string | null | undefined = scope,
+      hs: boolean = hasScope
+    ) => {
       if (context) context.grantedBy = grantingRoleForRoute(subject, ref, s, hs)
       return next()
     }
@@ -355,12 +363,12 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       // The handler owns this method's decision, same meaning as the
       // top-level escape hatch — declared, ticketed, counted, not enforced here.
       if ('inHandler' in ref) return next()
-      let methodScope: string | undefined
+      let methodScope: string | null | undefined
       let methodHasScope = false
       if (ref.scope) {
         methodHasScope = true
         try {
-          methodScope = (await ref.scope(req)) || undefined
+          methodScope = await ref.scope(req)
         } catch (error) {
           return scopeResolutionFailed(error)
         }

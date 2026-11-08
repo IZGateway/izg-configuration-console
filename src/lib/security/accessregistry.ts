@@ -219,9 +219,10 @@ export function decideCapability(
  * independent of whether that extractor resolved anything:
  *  - `scope` given: `can()` for that destination, which is role-local — one
  *    role must hold the capability AND reach the destination.
- *  - `scope` absent, `hasScope` true (declared, but this request named none):
+ *  - `scope` undefined, `hasScope` true (declared, but this request named none):
  *    only a role that holds the capability AND reaches every jurisdiction
  *    passes. The safety net for a malformed or unexpected request shape.
+ *  - `scope` null: the named destination did not resolve, so no role passes.
  *  - `hasScope` false (no `scope` declared at all): the destination-scope
  *    rule does not apply to this declaration — decided by `decideCapability`
  *    alone, same as a capability outside `REQUIRES_DESTINATION_SCOPE`. Lets
@@ -237,7 +238,7 @@ export function decideCapability(
 export function decideRouteCapability(
   subject: AuthzSubject,
   ref: CapabilityRef,
-  scope?: string,
+  scope?: string | null,
   hasScope = true
 ): boolean {
   return grantingRoleForRoute(subject, ref, scope, hasScope) !== undefined
@@ -255,10 +256,11 @@ export function decideRouteCapability(
 export function grantingRoleForRoute(
   subject: AuthzSubject,
   ref: CapabilityRef,
-  scope?: string,
+  scope?: string | null,
   hasScope = true
 ): CcRole | undefined {
   if (!requiresDestinationScope(ref)) return findGrantingRole(subject, ref)
+  if (scope === null) return undefined
   if (scope) {
     return can(subject, ref.page, ref.capability as never, scope).grantedBy
   }

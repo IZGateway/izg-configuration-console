@@ -61,21 +61,20 @@ export async function prefixOf(jurisdictionId: string): Promise<string | null> {
  * supply directly — the IDOR protection these routes already had in-handler,
  * now expressed once here instead of five separate copies.
  *
- * Returns `undefined` (never throws) for a missing/unowned credential, so a
- * declarative `scope` extractor built on this resolves to "no destination"
- * for that — a real, absent row — fails closed to global-reach roles only.
- * An actual infrastructure failure (the DB read itself throwing) is left to
- * propagate: `enforceRouteAuthz` treats a thrown `scope` extractor as a 500,
- * not a denial, which is what keeps "credential doesn't exist" and
- * "infrastructure failure" distinguishable (IGDD-3549 review follow-up).
+ * Returns `undefined` for a missing credential and `null` for an existing
+ * credential whose jurisdiction no longer resolves. The former can be handled
+ * by the route (e.g. return 404) while still allowing global-reach roles
+ * through; the latter is an invalid destination and must be denied. An actual
+ * infrastructure failure (the DB read itself throwing) is left to propagate:
+ * `enforceRouteAuthz` treats a thrown `scope` extractor as a 500, not a denial.
  */
 export async function prefixFromCredentialSortKey(
   sortKey: string
-): Promise<string | undefined> {
+): Promise<string | null | undefined> {
   const dbClient = await DbClientFactory.getDbClient()
   const credential = await dbClient.getApiKeyCredential(sortKey)
   if (!credential) return undefined
-  return (await prefixOf(credential.jurisdictionId)) ?? undefined
+  return (await prefixOf(credential.jurisdictionId)) ?? null
 }
 
 /** Reads `field` from the body, coercing a truthy value to a string — body
@@ -105,7 +104,7 @@ function stringFromQuery(req: NextApiRequest, field: string): string | undefined
  */
 export function scopeFromCredentialSortKeyInBody(
   field = 'sortKey'
-): (req: NextApiRequest) => Promise<string | undefined> {
+): (req: NextApiRequest) => Promise<string | null | undefined> {
   return async (req) => {
     const sortKey = stringFromBody(req, field)
     return sortKey ? prefixFromCredentialSortKey(sortKey) : undefined
@@ -114,7 +113,7 @@ export function scopeFromCredentialSortKeyInBody(
 
 export function scopeFromCredentialSortKeyInQuery(
   field = 'sortKey'
-): (req: NextApiRequest) => Promise<string | undefined> {
+): (req: NextApiRequest) => Promise<string | null | undefined> {
   return async (req) => {
     const sortKey = stringFromQuery(req, field)
     return sortKey ? prefixFromCredentialSortKey(sortKey) : undefined
@@ -123,19 +122,19 @@ export function scopeFromCredentialSortKeyInQuery(
 
 export function scopeFromJurisdictionIdInBody(
   field = 'jurisdictionId'
-): (req: NextApiRequest) => Promise<string | undefined> {
+): (req: NextApiRequest) => Promise<string | null | undefined> {
   return async (req) => {
     const jurisdictionId = stringFromBody(req, field)
-    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? undefined : undefined
+    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? null : undefined
   }
 }
 
 export function scopeFromJurisdictionIdInQuery(
   field = 'jurisdictionId'
-): (req: NextApiRequest) => Promise<string | undefined> {
+): (req: NextApiRequest) => Promise<string | null | undefined> {
   return async (req) => {
     const jurisdictionId = stringFromQuery(req, field)
-    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? undefined : undefined
+    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? null : undefined
   }
 }
 

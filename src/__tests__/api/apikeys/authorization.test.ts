@@ -394,6 +394,25 @@ describe('apikeys/token.ts — real declarative gate (IGDD-3549)', () => {
     expect(markApiKeyCredentialViewed).not.toHaveBeenCalled()
   })
 
+  it('403s an orphaned credential even for a global-reach role', async () => {
+    signIn(['IZG Security'])
+    const markApiKeyCredentialViewed = jest.fn()
+    mockGetDbClient.mockResolvedValue({
+      getJurisdiction: jest.fn().mockResolvedValue(undefined),
+      getApiKeyCredential: jest.fn().mockResolvedValue({
+        status: 'active',
+        jurisdictionId: 'deleted-jurisdiction',
+      }),
+      markApiKeyCredentialViewed,
+    })
+
+    const res = createRes()
+    await tokenHandler(createReq('POST', { sortKey: 'orphan-jti' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(markApiKeyCredentialViewed).not.toHaveBeenCalled()
+  })
+
   it('allows a reveal of a credential the caller\'s jurisdiction owns', async () => {
     signIn(['Jurisdiction Operations'], ['az'])
     mockGetDbClient.mockResolvedValue({

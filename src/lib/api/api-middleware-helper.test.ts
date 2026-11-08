@@ -405,6 +405,20 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
       expect(handler).toHaveBeenCalled()
     })
 
+    it('an unresolved destination denies even a global-reach role', async () => {
+      signIn(['IZG Operations'])
+      const res = response()
+      const handler = await run(
+        { capability: CONSOLE, scope: () => null },
+        post({ destId: 'missing' }),
+        res
+      )
+
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(deniedEvent(warnSpy)[0][1].reason).toBe('destination could not be resolved')
+    })
+
     it('the denial says the destination is missing', async () => {
       signIn(['Jurisdiction Operations'], ['az'])
       await run(SCOPED, post({}), response())
