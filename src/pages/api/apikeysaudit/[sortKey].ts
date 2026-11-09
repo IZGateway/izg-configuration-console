@@ -46,10 +46,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
-    }
-
     const { sortKey } = req.query
     if (!sortKey || typeof sortKey !== 'string') {
       return res.status(400).json({ error: 'sortKey is required' })
@@ -95,6 +91,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // case for the shared-capability design decision (see the `hasScope` doc on
 // `decideRouteCapability`).
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   capability: { page: 'apikeys', capability: 'canListApiKeys' },
   scope: scopeFromCredentialSortKeyInQuery(),
 })(handler)

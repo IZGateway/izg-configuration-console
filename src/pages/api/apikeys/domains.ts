@@ -20,9 +20,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
-    }
     const { envId, jurisdictionId } = req.query
     if (!envId || typeof envId !== 'string') {
       return res.status(400).json({ error: 'envId is required' })
@@ -74,6 +71,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // jurisdiction named in the query) — the other shape of the same capability
 // used capability-only on apikeys/index.ts GET and apikeysaudit/index.ts GET.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   capability: { page: 'apikeys', capability: 'canListApiKeys' },
   scope: scopeFromJurisdictionIdInQuery(),
 })(handler)

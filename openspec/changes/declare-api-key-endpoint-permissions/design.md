@@ -13,6 +13,23 @@ created:
     prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~043440be-796c-4c07-b032-cd073468842c
   summary: Write design.md for declare-api-key-endpoint-permissions (IGDD-3549)
 updated:
+  - date: '2026-11-09T19:48:13.786Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: >-
+      prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~4e0c8420-55d6-481c-9b2b-a7a689be0ac2
+    summary: >-
+      Correct Decision 4: the feature flag moved from in-handler to a
+      first-class featureFlag option on the declarative gate, per PR #778 review
+      (Anusha) and the user's standing rule that PR findings on an open CR
+      return to that CR.; Add Decision 7 documenting the scope-resolution
+      reordering and capability prefilter added in enforceRouteAuthz per PR #778
+      review (Anusha comment #3).
   - date: '2026-11-08T16:45:39.432Z'
     user: boonek
     agent:
@@ -52,6 +69,8 @@ updated:
     summary: >-
       Fix design.md Decision 3 mapping table: add missing apikeys/index.ts
       PATCH/DELETE rows
+ticket: IGDD-3549
+change_request: declare-api-key-endpoint-permissions
 ---
 # Design
 
@@ -177,8 +196,19 @@ cannot make, since it decides once per request, not once per credential. It stay
 comment clarified to say so (corrected during implementation — grep confirmed a real remaining
 caller before deleting it).
 
-`isApiKeyManagementEnabled()` is a release flag, not an authorization decision, and stays as a
-plain in-handler check in every route — it has nothing to do with `RouteAuthz` or `authzDebt.ts`.
+`isApiKeyManagementEnabled()` is a release flag, not an authorization decision — originally kept as
+a plain in-handler check in every route, with nothing to do with `RouteAuthz` or `authzDebt.ts`.
+
+**Corrected during PR #778 review (Anusha):** the in-handler placement ran the flag check AFTER
+`enforceRouteAuthz`, not before, so any caller without the relevant apikeys capability (any role,
+in any environment where the feature is simply off) produced an `AccessDenied` audit event for a
+state that is not an RBAC decision at all. Moved to a new `featureFlag?: () => boolean` option on
+`RouteAuthz`'s `capability`/`byMethod` shapes, checked in `enforceRouteAuthz` right after the
+session check and ahead of any capability/scope work — a disabled feature now answers 403 directly,
+before the capability decision and before any `AccessDenied` log. Still not `RouteAuthz`'s policy
+layer in the `authzDebt.ts` sense (it carries no capability/role semantics of its own), but it now
+lives in the one place that decides whether a request reaches a route's business logic, instead of
+nine separate in-handler copies.
 
 ### 5. Role narrowing
 
@@ -214,6 +244,31 @@ Alternative considered: un-mock `withMiddleware` for the whole `lifecycle.test.t
 creating a new one. Rejected — ties ~40 unrelated business-logic tests to both a new mock
 dependency and the Decision 5 role change, for a file whose own header states its purpose is
 testing handlers in isolation from the middleware.
+
+### 7. Scope resolves after the session check, and only when some held role could ever hold the capability
+
+**Added during PR #778 review (Anusha).** `enforceRouteAuthz` resolved a route's `scope` extractor
+(which may read the DB — e.g. `scopeFromCredentialSortKeyInBody` loading the credential) before
+checking whether the request even had a valid session, and unconditionally, with no prefilter on
+whether any held role could ever be granted the capability regardless of scope. So an expired
+session, a caller with no apikeys role at all (e.g. IZG Support), or a request mid-DynamoDB-outage
+all triggered 1-3 DynamoDB reads before being refused — and an outage during that read surfaced as
+a 500 for a caller who was always going to be denied anyway.
+
+Fixed by reordering `enforceRouteAuthz`: the session check (401) now runs before any `scope`
+resolution, for both the top-level `capability` shape and the `byMethod` shape. Before resolving
+`scope`, a new prefilter — `decideCapability(subject, ref)` for the single-ref case,
+`refs.some(...)` for an any-of array, `decideCapability(subject, ref)` per method under
+`byMethod` — asks whether ANY held role could grant the capability at all, ignoring destination
+scope entirely (the same question `ANY_JURISDICTION` already answers via `findGrantingRole`). A
+`false` answer denies immediately without ever calling `scope`. A `true` answer still resolves
+`scope` and runs the full `grantingRoleForRoute` decision unchanged — the prefilter only
+short-circuits the deny path, never the allow path, so it cannot grant anything the full decision
+would have refused.
+
+This mirrors the "skip the DynamoDB read for a caller that no held role could ever allow" guarantee
+the removed in-handler `requireApiKeyAccess` used to provide (Decision 4), now expressed in the
+shared gate instead of per-route.
 
 ## Risks / Trade-offs
 

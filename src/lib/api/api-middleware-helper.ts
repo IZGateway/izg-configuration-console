@@ -97,6 +97,17 @@ export type RouteAuthz =
       scope?: (
         req: NextApiRequest
       ) => string | null | undefined | Promise<string | null | undefined>
+      /**
+       * A release/kill-switch flag, checked right after authentication and
+       * ahead of any capability/scope decision. `false` answers 403 directly
+       * and never reaches `scope`, the capability check, or the
+       * `AccessDenied` audit log — a disabled feature is not an RBAC
+       * decision, so it must not produce one (review follow-up, IGDD-3549:
+       * nine in-handler copies of this check across apikeys' seven routes
+       * were producing `AccessDenied` events for callers who simply lacked
+       * an apikeys role, in any environment where the feature is off).
+       */
+      featureFlag?: () => boolean
     }
   /**
    * Per-method capability. Required, not a nicety: several route files handle
@@ -124,6 +135,8 @@ export type RouteAuthz =
           | { inHandler: string }
         >
       >
+      /** Same meaning as the top-level `capability` shape's `featureFlag`, shared across every method. */
+      featureFlag?: () => boolean
     }
   /** Authenticated session required; the handler does its own row filtering. */
   | { session: true }
@@ -228,16 +241,12 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // `decideRouteCapability` can tell "declared, but no destination named"
     // (global-reach fallback) from "declared destination did not resolve"
     // (deny all roles) and "not declared" (capability alone governs).
+    //
+    // Declared here (mutated further down, after the early-exit checks
+    // below) so the `deny`/`decide` closures that default to it can be
+    // defined once, ahead of every branch that calls them.
     let scope: string | null | undefined
     let hasScope = false
-    if ('capability' in authz && authz.scope) {
-      hasScope = true
-      try {
-        scope = await authz.scope(req)
-      } catch (error) {
-        return scopeResolutionFailed(error)
-      }
-    }
 
     const deny = (ref: CapabilityRef, s: string | null | undefined = scope) => {
       // A caller who holds the capability somewhere but not for this
@@ -368,6 +377,21 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 
     if ('session' in authz) return next()
 
+    // A release/kill-switch flag, not an authorization decision — checked
+    // here, ahead of any capability/scope work, so a disabled feature
+    // answers directly and never reaches a (possibly DB-reading) `scope`
+    // extractor or produces an `AccessDenied` audit event for an unrelated
+    // role gap. Review follow-up, IGDD-3549 (Anusha, PR #778): this used to
+    // be nine in-handler copies of the same check across apikeys' seven
+    // routes, running after this enforcer, so every caller without an
+    // apikeys role was audited as denied in any environment where the
+    // feature is simply off.
+    const featureFlag = 'featureFlag' in authz ? authz.featureFlag : undefined
+    if (featureFlag && !featureFlag()) {
+      res.status(403).json({ error: 'Forbidden - feature disabled' })
+      return
+    }
+
     if ('byMethod' in authz) {
       const method = (req.method || 'GET').toUpperCase() as HttpMethod
       const ref = authz.byMethod[method]
@@ -381,6 +405,12 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       // The handler owns this method's decision, same meaning as the
       // top-level escape hatch — declared, ticketed, counted, not enforced here.
       if ('inHandler' in ref) return next()
+      // Skip the (possibly DB-reading) `scope` extractor entirely when no
+      // held role could ever grant this method's capability — the same
+      // prefilter the removed in-handler `requireApiKeyAccess` used ("skip
+      // the DynamoDB read for a caller no held role could ever allow").
+      // Review follow-up, IGDD-3549 (Anusha, PR #778).
+      if (!decideCapability(subject, ref)) return deny(ref)
       let methodScope: string | null | undefined
       let methodHasScope = false
       if (ref.scope) {
@@ -394,6 +424,31 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       const methodRole = decide(ref, methodScope, methodHasScope)
       if (!methodRole) return deny(ref, methodScope)
       return grant(methodRole)
+    }
+
+    // Same prefilter as the `byMethod` branch above, for the top-level
+    // `capability` shape (a single ref, or an any-of array): skip `scope`
+    // entirely — and the session-expensive DB read it may do — when no held
+    // role could ever grant any declared alternative. Previously this
+    // extractor ran unconditionally, and before the session check above even
+    // existed in this function at all, so an expired session or a role with
+    // no apikeys capability still triggered 1-3 DynamoDB reads per request.
+    // Review follow-up, IGDD-3549 (Anusha, PR #778).
+    if (authz.scope) {
+      const refs = Array.isArray(authz.capability)
+        ? authz.capability
+        : [authz.capability]
+      if (!refs.some((ref) => decideCapability(subject, ref))) {
+        return Array.isArray(authz.capability)
+          ? denyAnyOf(authz.capability)
+          : deny(authz.capability)
+      }
+      hasScope = true
+      try {
+        scope = await authz.scope(req)
+      } catch (error) {
+        return scopeResolutionFailed(error)
+      }
     }
 
     // A single declared capability keeps the precise `permission` field; an

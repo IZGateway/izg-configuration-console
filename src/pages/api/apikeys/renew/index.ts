@@ -36,10 +36,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
-    }
-
     // Note: neither `upn` (DNS domain) nor the environment(s) are read from the
     // request body. A renewal must keep the same domain AND the same
     // environment(s) as the credential being renewed, so both are sourced from
@@ -235,6 +231,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // (never one the caller could supply directly) — the same IDOR protection
 // as before, now expressed as the route's declared reach requirement.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   capability: { page: 'apikeys', capability: 'canRenewApiKey' },
   scope: scopeFromCredentialSortKeyInBody('oldSortKey'),
 })(handler)

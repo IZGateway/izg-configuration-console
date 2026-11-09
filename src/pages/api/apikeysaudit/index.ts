@@ -33,10 +33,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
-    }
-
     const dbClient = await DbClientFactory.getDbClient()
 
     // Tenancy: scope by the CREDENTIAL's jurisdiction, resolved from the
@@ -79,5 +75,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // declaring no `scope` here is the deliberate other half of that capability
 // (see the `hasScope` doc on `decideRouteCapability`), not an omission.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   capability: { page: 'apikeys', capability: 'canListApiKeys' },
 })(handler)

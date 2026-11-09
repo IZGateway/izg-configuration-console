@@ -42,9 +42,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!isApiKeyManagementEnabled()) {
-        return res.status(403).json({ error: 'Forbidden - feature disabled' })
-      }
       const { sortKey } = req.query
       if (!sortKey || typeof sortKey !== 'string') {
         return res.status(400).json({ error: 'sortKey is required' })
@@ -113,9 +110,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const session = await getServerSession(req, res, authOptions)
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
-    }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
     }
     const { domain, envId, jurisdictionId, sortKey: credentialSortKey } = req.body
     if (!domain || !jurisdictionId) {
@@ -457,6 +451,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // body's `jurisdictionId` directly, matching today's code — it separately
 // validates the named domain belongs to that jurisdiction before acting.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   byMethod: {
     GET: {
       page: 'apikeys',

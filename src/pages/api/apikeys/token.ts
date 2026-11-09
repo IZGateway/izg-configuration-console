@@ -29,10 +29,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!isApiKeyManagementEnabled()) {
-      return res.status(403).json({ error: 'Forbidden - feature disabled' })
-    }
-
     const { sortKey } = req.body
     if (!sortKey) {
       return res.status(400).json({ error: 'sortKey is required' })
@@ -132,6 +128,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // (never one the caller could supply directly) — the same IDOR protection
 // as before, now expressed as the route's declared reach requirement.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   capability: { page: 'apikeys', capability: 'canCreateApiKey' },
   scope: scopeFromCredentialSortKeyInBody(),
 })(handler)

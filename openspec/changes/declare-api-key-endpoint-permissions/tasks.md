@@ -13,6 +13,25 @@ created:
     prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~6e558c72-6ecb-42ec-93d5-6fdafc23fe15
   summary: Write tasks.md for declare-api-key-endpoint-permissions (IGDD-3549)
 updated:
+  - date: '2026-11-09T19:50:01.499Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: >-
+      prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~4e0c8420-55d6-481c-9b2b-a7a689be0ac2
+    summary: >-
+      Fix comments 12.3 and 12.4: per the user's standing rule, PR findings on
+      an open CR go back into that CR rather than a separate follow-up piece of
+      work. Implemented both fixes directly in enforceRouteAuthz (design.md
+      Decision 7, Decision 4 correction) with new regression tests.; Add
+      verification task 12.10 for the 12.3/12.4 fixes and drop the now-resolved
+      follow-up item from Workflow follow-up.; Fix an arithmetic error in
+      12.10's test-count description (recompute: 7 tests added, 4 removed, net
+      +3, not the originally stated 5 net of 1).
   - date: '2026-11-09T19:25:35.341Z'
     user: boonek
     agent:
@@ -335,16 +354,31 @@ sandbox couldn't run tests itself) before this round started.
       changing the shared middleware's response format, which would touch every other
       declaratively-gated route for uncertain benefit.
 - [x] 12.3 *Scope resolves before the session check, no role-prefilter* — confirmed real
-      (`authz.scope`/`ref.scope` runs before the `!session?.user` 401 check, and with no "does any
+      (`authz.scope`/`ref.scope` ran before the `!session?.user` 401 check, and with no "does any
       held role have this capability at all" cheap prefilter, unlike the old `requireApiKeyAccess`).
-      Discussed with Keith — holding for a dedicated follow-up; not fixed in this PR.
+      **Correction: fixed in this PR, not held for a follow-up** — PR findings on an open CR belong
+      in that CR, not spun off. `enforceRouteAuthz` now checks the session before resolving `scope`
+      (both the top-level `capability` shape and `byMethod`), and a new `decideCapability(...)`
+      prefilter — per-ref for the single/any-of case, per-method under `byMethod` — skips `scope`
+      entirely when no held role could ever grant the capability regardless of destination. See
+      design.md Decision 7. New tests in `authorization.test.ts`: "skips the scope extractor's DB
+      read for a role with no apikeys capability at all" (token.ts, renew/index.ts) and "401s
+      before the scope extractor's DB read when there is no session" (token.ts).
 - [x] 12.4 *Feature flag moved from the auth gate into in-handler checks* — confirmed real: the
-      declarative gate denies (and logs AccessDenied) based on the real role matrix regardless of
-      `isApiKeyManagementEnabled()`, so an environment where the feature hasn't launched now
-      produces AccessDenied noise for roles that would otherwise be authorized — the exact
+      declarative gate denied (and logged AccessDenied) based on the real role matrix regardless of
+      `isApiKeyManagementEnabled()`, so an environment where the feature hasn't launched produced
+      AccessDenied noise for roles that would otherwise be authorized — the exact
       "feature-availability state logged as an RBAC rejection" `hasApiKeyPermission`'s own removed
-      comment warned against. Discussed with Keith — holding for the same dedicated follow-up as
-      12.3; not fixed in this PR.
+      comment warned against. **Correction: fixed in this PR, not held for a follow-up** — same
+      reason as 12.3. Added `featureFlag?: () => boolean` to `RouteAuthz`'s `capability`/`byMethod`
+      shapes, checked in `enforceRouteAuthz` right after the session check, ahead of any
+      capability/scope work and before any `AccessDenied` log; all seven routes now declare
+      `featureFlag: isApiKeyManagementEnabled` and their nine in-handler copies of the check are
+      removed. See design.md's corrected Decision 4. Moved the three kill-switch tests from
+      `lifecycle.test.ts` (whose `withMiddleware` mock no longer exercises this, since the check
+      left the handler) to a new `feature flag: FEATURE_API_KEY_MANAGEMENT_ENABLED` describe block
+      in `authorization.test.ts`, against the real gate, plus the `AccessDenied`-suppression
+      regression test carried forward.
 - [x] 12.5 *Efficiency, `grant()` re-deriving `satisfies()`'s answer* — same finding as the first
       `/review` round's #5 (declined then as "likely not worth worrying about"), raised
       independently by Anusha with a simpler suggested fix (have the decision return the granting
@@ -395,6 +429,14 @@ sandbox couldn't run tests itself) before this round started.
       real tests pass (489 + 2 new regression tests) across `accessregistry.test.ts`,
       `api-middleware-helper.test.ts`, the two `authorization.test.ts` files; same 3 pre-existing,
       unrelated crypto-suite failures as every prior run.
+- [x] 12.10 Re-verification after 12.3/12.4's correction (scope-ordering fix + featureFlag option):
+      `tsc --noEmit` and `eslint` clean (0 errors; same pre-existing warnings as before, unrelated).
+      260/260 real tests pass across `apikeys/*`, `api-middleware-helper.test.ts`,
+      `accessregistry.test.ts`, `accessDeniedAudit` — net +3 tests in the apikeys suite: 7 added to
+      `authorization.test.ts` (2 DB-read-skip tests for token.ts/renew/index.ts, 1
+      session-before-scope test, 4 in the new feature-flag describe block), 4 removed from
+      `lifecycle.test.ts` (the in-handler feature-flag coverage that check's removal made
+      unreachable through that file's middleware mock — superseded by the real-gate coverage above).
 
 ## Workflow follow-up
 
@@ -409,6 +451,4 @@ sandbox couldn't run tests itself) before this round started.
   action item.
 - **New:** reply to Anusha's 7 inline PR comments individually (resolution recorded in 12.1-12.8
   above) and resolve each review thread.
-- **New:** follow up on 12.3/12.4 (scope-before-session-check, feature-flag timing) as a dedicated
-  piece of work — discussed but deliberately not fixed in this PR.
 - Archive this OpenSpec change once the PR merges.

@@ -25,10 +25,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!isApiKeyManagementEnabled()) {
-        return res.status(403).json({ error: 'Forbidden - feature disabled' })
-      }
-
       const dbClient = await DbClientFactory.getDbClient()
       const result = await dbClient.fetchApiKeyCredentials()
 
@@ -69,10 +65,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!isApiKeyManagementEnabled()) {
-        return res.status(403).json({ error: 'Forbidden - feature disabled' })
-      }
-
       const { jurisdictionId, environments, upn, description, dnsChoice, useTypes, reissuedFrom } = req.body
       if (!jurisdictionId || !Array.isArray(environments) || environments.length === 0 || !upn) {
         return res.status(400).json({ error: 'jurisdictionId, environments (non-empty array), and upn are required' })
@@ -433,10 +425,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!isApiKeyManagementEnabled()) {
-        return res.status(403).json({ error: 'Forbidden - feature disabled' })
-      }
-
       const { sortKey, reason } = req.body
       if (!sortKey) {
         return res.status(400).json({ error: 'sortKey is required' })
@@ -541,10 +529,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!isApiKeyManagementEnabled()) {
-        return res.status(403).json({ error: 'Forbidden - feature disabled' })
-      }
-
       const { sortKey } = req.body
       if (!sortKey) {
         return res.status(400).json({ error: 'sortKey is required' })
@@ -626,6 +610,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 // `scopeToOwnedJurisdictions` row-filters the result afterward, rather than
 // naming one destination up front.
 export default withMiddleware({
+  featureFlag: isApiKeyManagementEnabled,
   byMethod: {
     GET: { page: 'apikeys', capability: 'canListApiKeys' },
     POST: {

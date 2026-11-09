@@ -9,17 +9,17 @@
 // The request-context/logging middleware is stubbed to a pass-through so the
 // raw handlers can be exercised directly.
 
-// Role + tenancy authorization now lives in the declarative gate
-// (withMiddleware/enforceRouteAuthz), which this file's own middleware mock
-// disables by design — see authorization.test.ts for that coverage
-// (design.md Decision 6, IGDD-3549). These tests exercise each handler's
-// remaining in-handler checks (the feature flag, state-machine guards,
-// business logic), so the feature-wide kill switch (apiKeyAuthz.ts
-// isApiKeyManagementEnabled, default false) must be enabled or every route
-// would 403 regardless of fixtures. It is set in jest.setup.js, NOT here:
-// this file sits under `src/pages/`, so Next.js compiles it into a real
-// route and a module-scope `process.env.… = 'true'` would ship in the
-// production server bundle and flip the kill switch on in the container.
+// Role + tenancy authorization, and the feature-wide kill switch
+// (apiKeyAuthz.ts isApiKeyManagementEnabled), both live in the declarative
+// gate (withMiddleware/enforceRouteAuthz) now — see authorization.test.ts
+// for that coverage (design.md Decision 6, IGDD-3549; the kill switch moved
+// there from nine in-handler copies as a review follow-up). This file's own
+// middleware mock disables that gate entirely, so these tests exercise only
+// each handler's remaining in-handler logic (state-machine guards, business
+// logic) — the mock ignores whatever `featureFlag`/`capability`/`scope` the
+// real route declares, so the kill switch's actual env var value is
+// irrelevant here. jest.setup.js still sets it 'true' for the whole run,
+// for authorization.test.ts's sake, NOT this file's.
 
 const mockGetServerSession = jest.fn()
 const mockGetDbClient = jest.fn()
@@ -1027,67 +1027,13 @@ describe('API key lifecycle guards', () => {
   })
 })
 
-// IGDD-3444: the feature-wide kill switch must deny even a fully-authorized
-// role. jest.setup.js sets it 'true' for the whole run so every other test in
-// this file is unaffected; these tests flip it off temporarily to prove each
-// handler's own `isApiKeyManagementEnabled()` check enforces it — this is
-// in-handler by design (IGDD-3549 design.md Decision 4), unrelated to RBAC,
-// so it stays here rather than moving to authorization.test.ts.
-describe('feature flag: FEATURE_API_KEY_MANAGEMENT_ENABLED', () => {
-  const originalFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
-    mockGetServerSession.mockResolvedValue(authedSession) // IZG Operations — fully authorized
-  })
-
-  afterEach(() => {
-    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = originalFlag
-  })
-
-  it('403s POST create even for a fully-authorized role', async () => {
-    const createApiKeyCredential = jest.fn()
-    mockGetDbClient.mockResolvedValue({ createApiKeyCredential })
-
-    const res = createRes()
-    await apikeysHandler(
-      createReq('POST', {
-        jurisdictionId: '1',
-        environments: [5],
-        upn: 'immunize.example.gov',
-        dnsChoice: 'existing',
-        useTypes: ['PATIENT'],
-      }),
-      res
-    )
-
-    expect(res.statusCode).toBe(403)
-    expect(createApiKeyCredential).not.toHaveBeenCalled()
-  })
-
-  it('403s GET domains even for a fully-authorized role', async () => {
-    const fetchAuthorizedApiKeyDomains = jest.fn()
-    mockGetDbClient.mockResolvedValue({ fetchAuthorizedApiKeyDomains })
-
-    const res = createRes()
-    await domainsHandler(createReq('GET', {}, { envId: '5', jurisdictionId: '1' }), res)
-
-    expect(res.statusCode).toBe(403)
-    expect(fetchAuthorizedApiKeyDomains).not.toHaveBeenCalled()
-  })
-
-  it('403s GET list even for a fully-authorized role', async () => {
-    const fetchApiKeyCredentials = jest.fn()
-    mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
-
-    const res = createRes()
-    await apikeysHandler(createReq('GET'), res)
-
-    expect(res.statusCode).toBe(403)
-    expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
-  })
-})
+// The feature-wide kill switch (IGDD-3444) moved from nine in-handler
+// `isApiKeyManagementEnabled()` copies into the declarative gate itself
+// (IGDD-3549 review follow-up, Anusha PR #778: the in-handler placement let
+// an `AccessDenied` audit event fire for an unrelated role gap in any
+// environment where the feature is simply off). This file's `withMiddleware`
+// mock disables that gate (design.md Decision 6), so kill-switch coverage
+// lives in authorization.test.ts now, against the real middleware.
 
 // Server-side authorization (IGDD-2707 P1): the routes must enforce BOTH a role
 // gate (does this role manage API keys at all?) and a tenancy gate (does this
@@ -1111,49 +1057,11 @@ describe('API key authorization (role + tenancy)', () => {
     },
   }
 
-  describe('role gate — a role without API-key permissions is forbidden', () => {
-    // apikeys/index.ts's POST/PATCH/GET role-gate cases moved to
-    // src/__tests__/api/apikeys/authorization.test.ts (IGDD-3549): that check
-    // is now the declarative gate, which this file's withMiddleware mock
-    // disables — see design.md Decision 6. The remaining cases below (token
-    // reveal, the feature kill switch) still test in-handler logic that
-    // hasn't moved yet.
-    it('403s GET list while the feature kill switch is off WITHOUT logging AccessDenied, even for a role with full access', async () => {
-      // Regression test for the PR #672 review (IGDD-3444 interaction): the
-      // kill switch being off is a feature-availability state, not an RBAC
-      // rejection, and must not be logged as one — otherwise every
-      // /api/apikeys/* call in any environment where the feature hasn't
-      // launched yet spams a false AccessDenied event, including for roles
-      // (like IZG Operations here) that would otherwise have full access.
-      const previousFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
-      process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
-      try {
-        mockGetServerSession.mockResolvedValue(authedSession)
-        const fetchApiKeyCredentials = jest.fn()
-        mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
-
-        const res = createRes()
-        await apikeysHandler(createReq('GET'), res)
-
-        expect(res.statusCode).toBe(403)
-        expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
-
-        const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
-          (call: any) => call[1]?.eventType === 'AccessDenied'
-        )
-        expect(deniedCalls).toHaveLength(0)
-      } finally {
-        process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = previousFlag
-      }
-    })
-
-    // token.ts's role-gate case moved to authorization.test.ts (IGDD-3549):
-    // the declarative gate's `scope` extractor now reads the credential
-    // unconditionally (to resolve its jurisdiction) before the capability
-    // decision runs, so "before any DB read" is no longer the right
-    // assertion — see the `prefixFromCredentialSortKey` note in design.md
-    // Risks (two-reads trade-off).
-  })
+  // apikeys/index.ts's POST/PATCH/GET role-gate cases, token.ts's role-gate
+  // case, and the feature kill-switch cases all moved to
+  // src/__tests__/api/apikeys/authorization.test.ts (IGDD-3549): all three
+  // are now in the declarative gate, which this file's withMiddleware mock
+  // disables — see design.md Decision 6.
 
   // Regression coverage for the identifier-space mismatch between the session and
   // the credential. `session.user.jurisdictions` holds lowercased jurisdiction

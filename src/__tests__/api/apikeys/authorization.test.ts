@@ -400,6 +400,38 @@ describe('apikeys/token.ts — real declarative gate (IGDD-3549)', () => {
     expect(markApiKeyCredentialViewed).not.toHaveBeenCalled()
   })
 
+  // Review follow-up (IGDD-3549, Anusha PR #778): the `scope` extractor reads
+  // the credential from the DB to resolve its jurisdiction — a role that
+  // holds no apikeys capability at all could never pass regardless of that
+  // read's result, so the gate must deny before running it, not after.
+  it('skips the scope extractor\'s DB read for a role with no apikeys capability at all', async () => {
+    signIn(['IZG Support'])
+    const getApiKeyCredential = jest.fn().mockResolvedValue({ status: 'active', jurisdictionId: '1' })
+    mockGetDbClient.mockResolvedValue({ getJurisdiction, getApiKeyCredential })
+
+    const res = createRes()
+    await tokenHandler(createReq('POST', { sortKey: 'jti-1' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(getApiKeyCredential).not.toHaveBeenCalled()
+  })
+
+  // Review follow-up (IGDD-3549, Anusha PR #778): the session check must run
+  // BEFORE the `scope` extractor, not after — an expired/missing session
+  // must never trigger the credential read (previously it did, since `scope`
+  // resolved first).
+  it('401s before the scope extractor\'s DB read when there is no session', async () => {
+    mockGetServerSession.mockResolvedValue(null)
+    const getApiKeyCredential = jest.fn().mockResolvedValue({ status: 'active', jurisdictionId: '1' })
+    mockGetDbClient.mockResolvedValue({ getJurisdiction, getApiKeyCredential })
+
+    const res = createRes()
+    await tokenHandler(createReq('POST', { sortKey: 'jti-1' }), res)
+
+    expect(res.statusCode).toBe(401)
+    expect(getApiKeyCredential).not.toHaveBeenCalled()
+  })
+
   it('403s a token reveal for a credential in a non-owned jurisdiction (IDOR)', async () => {
     signIn(['Jurisdiction Operations'], ['az'])
     const markApiKeyCredentialViewed = jest.fn()
@@ -477,6 +509,21 @@ describe('apikeys/renew/index.ts — real declarative gate (IGDD-3549)', () => {
 
     expect(res.statusCode).toBe(403)
     expect(supersedeApiKeyCredential).not.toHaveBeenCalled()
+  })
+
+  // Review follow-up (IGDD-3549, Anusha PR #778): same prefilter as token.ts
+  // above — a role with no apikeys capability at all must never trigger the
+  // `scope` extractor's credential read.
+  it('skips the scope extractor\'s DB read for a role with no apikeys capability at all', async () => {
+    signIn(['IZG Support'])
+    const getApiKeyCredential = jest.fn().mockResolvedValue({ status: 'active', jurisdictionId: '1' })
+    mockGetDbClient.mockResolvedValue({ getJurisdiction, getApiKeyCredential })
+
+    const res = createRes()
+    await renewHandler(createReq('POST', { oldSortKey: 'jti-1', jurisdictionId: '1' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(getApiKeyCredential).not.toHaveBeenCalled()
   })
 
   it('403s a renewal of a credential in a non-owned jurisdiction — body jurisdictionId is ignored', async () => {
@@ -646,5 +693,89 @@ describe('apikeys/verify-domain/index.ts — real declarative gate (IGDD-3549)',
 
       expect(res.statusCode).toBe(200)
     })
+  })
+})
+
+// IGDD-3444: the feature-wide kill switch must deny even a fully-authorized
+// role. Moved here from lifecycle.test.ts's in-handler checks (IGDD-3549
+// review follow-up, Anusha PR #778): the kill switch is now `featureFlag` on
+// the route's own declarative gate, checked ahead of the capability/scope
+// decision — so this is the file that exercises it, against the real
+// middleware. jest.setup.js sets the flag 'true' for the whole run; these
+// tests flip it off temporarily.
+describe('feature flag: FEATURE_API_KEY_MANAGEMENT_ENABLED (declarative gate, IGDD-3549)', () => {
+  const originalFlag = process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED
+
+  beforeEach(() => {
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
+  })
+
+  afterEach(() => {
+    process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = originalFlag
+  })
+
+  it('403s GET list even for a fully-authorized role, without reading the DB', async () => {
+    signIn(['IZG Security'])
+    const fetchApiKeyCredentials = jest.fn()
+    mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+    const res = createRes()
+    await apikeysHandler(createReq('GET'), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+  })
+
+  it('403s POST create even for a fully-authorized role, without resolving scope', async () => {
+    signIn(['IZG Security'])
+    const createApiKeyCredential = jest.fn()
+    const getJurisdiction = jest.fn()
+    mockGetDbClient.mockResolvedValue({ getJurisdiction, createApiKeyCredential })
+
+    const res = createRes()
+    await apikeysHandler(
+      createReq('POST', {
+        jurisdictionId: '1',
+        environments: [1],
+        upn: 'example.org',
+        dnsChoice: 'existing',
+        useTypes: ['PATIENT'],
+      }),
+      res
+    )
+
+    expect(res.statusCode).toBe(403)
+    expect(createApiKeyCredential).not.toHaveBeenCalled()
+    expect(getJurisdiction).not.toHaveBeenCalled()
+  })
+
+  it('403s a token reveal even for a fully-authorized role, without reading the credential', async () => {
+    signIn(['IZG Security'])
+    const getApiKeyCredential = jest.fn()
+    mockGetDbClient.mockResolvedValue({ getApiKeyCredential })
+
+    const res = createRes()
+    await tokenHandler(createReq('POST', { sortKey: 'jti-1' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(getApiKeyCredential).not.toHaveBeenCalled()
+  })
+
+  // Regression test for the PR #672 review (IGDD-3444 interaction), carried
+  // forward from lifecycle.test.ts: the kill switch being off is a
+  // feature-availability state, not an RBAC rejection, and must not be
+  // logged as one — otherwise every /api/apikeys/* call in any environment
+  // where the feature hasn't launched yet spams a false AccessDenied event,
+  // including for roles that would otherwise have full access.
+  it('does not log an AccessDenied event when the feature is simply off', async () => {
+    signIn(['IZG Security'])
+    mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials: jest.fn() })
+
+    await apikeysHandler(createReq('GET'), createRes())
+
+    const deniedCalls = (logger.warn as jest.Mock).mock.calls.filter(
+      (call) => call[1]?.eventType === 'AccessDenied'
+    )
+    expect(deniedCalls).toHaveLength(0)
   })
 })
