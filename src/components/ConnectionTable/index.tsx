@@ -209,11 +209,13 @@ interface CustomToolbarProps extends GridToolbarProps {
     React.SetStateAction<HTMLButtonElement | null>
   >
   onTestReportsClick: () => void
+  canRunConnectionTest: boolean
 }
 
 const CustomToolbar = ({
   setFilterButtonEl,
   onTestReportsClick,
+  canRunConnectionTest,
 }: CustomToolbarProps) => {
   return (
     <GridToolbarContainer>
@@ -229,23 +231,25 @@ const CustomToolbar = ({
           },
         }}
       >
-        <Button
-          color="secondary"
-          onClick={onTestReportsClick}
-          variant="outlined"
-          sx={{
-            borderRadius: '24px',
-            padding: '8px 16px',
-            textTransform: 'none',
-            fontWeight: 500,
-            '@media (max-width: 768px)': {
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-            },
-          }}
-        >
-          Test Report(s)
-        </Button>
+        {canRunConnectionTest && (
+          <Button
+            color="secondary"
+            onClick={onTestReportsClick}
+            variant="outlined"
+            sx={{
+              borderRadius: '24px',
+              padding: '8px 16px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '@media (max-width: 768px)': {
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+              },
+            }}
+          >
+            Test Report(s)
+          </Button>
+        )}
         <GridToolbarFilterButton ref={setFilterButtonEl} />
       </Box>
     </GridToolbarContainer>
@@ -407,18 +411,20 @@ const ConnectionsTable = (props) => {
                   </Typography>
                   <Typography variant="body2">For Test Report</Typography>
                 </Box>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleGenerateReport(selectedRow)}
-                  disabled={selectedRowCount === 0}
-                  sx={{
-                    color: '#fff',
-                    '&:hover': { backgroundColor: '#5a6268' },
-                  }}
-                >
-                  Generate Report
-                </Button>
+                {accessLevels.canRunConnectionTest && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleGenerateReport(selectedRow)}
+                    disabled={selectedRowCount === 0}
+                    sx={{
+                      color: '#fff',
+                      '&:hover': { backgroundColor: '#5a6268' },
+                    }}
+                  >
+                    Generate Report
+                  </Button>
+                )}
               </GridFooterContainer>
             </Slide>
           )}
@@ -1006,21 +1012,23 @@ const ConnectionsTable = (props) => {
               />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <Button
-                color="secondary"
-                onClick={handleTestReportsClick}
-                variant="outlined"
-                size="small"
-                sx={{
-                  borderRadius: '24px',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                {showCheckbox ? 'Cancel Selection' : 'Test Report(s)'}
-              </Button>
-            </Box>
+            {accessLevels.canRunConnectionTest && (
+              <Box sx={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Button
+                  color="secondary"
+                  onClick={handleTestReportsClick}
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    borderRadius: '24px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  {showCheckbox ? 'Cancel Selection' : 'Test Report(s)'}
+                </Button>
+              </Box>
+            )}
           </Box>
 
           {/* Mobile Cards */}
@@ -1062,15 +1070,17 @@ const ConnectionsTable = (props) => {
                 >
                   {selectedRows.length} Connections Selected
                 </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleGenerateReport(selectedRows)}
-                  disabled={selectedRows.length === 0}
-                  size="small"
-                >
-                  Generate Report
-                </Button>
+                {accessLevels.canRunConnectionTest && (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleGenerateReport(selectedRows)}
+                    disabled={selectedRows.length === 0}
+                    size="small"
+                  >
+                    Generate Report
+                  </Button>
+                )}
               </Box>
             </Box>
           )}
@@ -1129,6 +1139,7 @@ const ConnectionsTable = (props) => {
               quickFilterProps: { debounceMs: 500 },
               columns: { field: 'action', filterable: false },
               onTestReportsClick: handleTestReportsClick,
+              canRunConnectionTest: accessLevels.canRunConnectionTest,
             } as CustomToolbarProps,
             panel: {
               anchorEl: filterButtonEl,

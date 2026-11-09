@@ -95,6 +95,7 @@ class EncryptedRepository implements DbClient {
     destTypeId: number
   ) => Promise<DestinationAudit[]>
   deleteDestinationChangeRequest!: (id: number) => Promise<boolean>
+  getChangeRequestId!: (destId: string, destType: number) => number
   fetchDestinationChangeRequestById!: (
     id: number
   ) => Promise<DestinationChangeRequest>
@@ -170,6 +171,7 @@ class EncryptedRepository implements DbClient {
     this.repository = repository
     this.deleteDestinationChangeRequest =
       repository.deleteDestinationChangeRequest.bind(repository)
+    this.getChangeRequestId = repository.getChangeRequestId.bind(repository)
     this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository)
     this.fetchDestinationAuditHistory =
       repository.fetchDestinationAuditHistory.bind(repository)
@@ -224,7 +226,7 @@ class EncryptedRepository implements DbClient {
     return destPassword !== crPassword
   }
   async upsertDestinationChangeRequest(
-    changeRequestData: DestinationChangeRequest
+    changeRequestData: Omit<DestinationChangeRequest, 'id'> & { id?: number }
   ): Promise<DestinationChangeRequest> {
     // Encrypt password if present
     const dataCopy = { ...changeRequestData }

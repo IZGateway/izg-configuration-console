@@ -145,9 +145,9 @@ describe('page coverage: an ungated page is a test failure', () => {
     '404': 'framework file, not a route',
     index: 'the landing page, deliberately reachable by any session',
     // `api-doc` used to sit here, on the reasoning that the spec endpoint
-    // behind it was gated. That reasoning was wrong — the page embeds the spec
-    // in its own static payload and never calls the endpoint — so it is an
-    // AUTHZ_DEBT row now rather than a page we claim is fine. PR #700.
+    // behind it was gated. That reasoning was wrong — the page embedded the
+    // spec in its own static payload and never called the endpoint (PR #700).
+    // It is gated with withPageAccess now (IGDD-3550), so needs no entry.
   }
 
   // Excluding src/pages/api/** matters: without it the .tsx API route is
@@ -201,10 +201,13 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('gates exactly the six pages this change is responsible for', () => {
+  it('gates exactly the twelve pages this change is responsible for', () => {
     // manageconnections and apikeys already checked the right capability
     // before this change; what they did on failure was a silent redirect, so
     // they were migrated to the shared gate for the outcome, not the check.
+    // edit, history, test, changerequest and testreport were added by
+    // protect-connection-pages-and-endpoints (IGDD-3545/3548). api-doc
+    // joined in IGDD-3550, once it stopped exporting getStaticProps.
     const gated = pageFiles
       .filter((f) => fs.readFileSync(f, 'utf8').includes('withPageAccess'))
       .map(pageKeyOf)
@@ -212,10 +215,16 @@ describe('page coverage: an ungated page is a test failure', () => {
     expect(gated).toEqual([
       'accesscontrol',
       'adminoperations',
+      'api-doc',
       'apikeys',
+      'changerequest',
       'console',
+      'edit',
+      'history',
       'manageconnections',
       'onboarding',
+      'test',
+      'testreport',
     ])
   })
 
@@ -381,13 +390,12 @@ describe('the acknowledged-gap ratchet', () => {
       .map((f) => fs.readFileSync(f, 'utf8'))
       .join('\n')
     for (const subject of debtSubjects('unwired-flag')) {
-      // Match the page-qualified ref, not the bare capability name. Two of
-      // these rows name a capability that also exists on another page block
-      // (`test.canRunConnectionTest` and `history.canViewChangeRequest` both
-      // have twins on `manageconnections`), so a bare-name match would fail
-      // for a still-unwired row the moment a route declared the *other* page's
-      // flag — which the debt note for tests/connectiontest explicitly plans.
-      // The fix under that red build would look like deleting the row.
+      // Match the page-qualified ref, not the bare capability name. Some
+      // capability names exist on more than one page block (e.g.
+      // `canRunConnectionTest` on both `manageconnections` and `test`), so a
+      // bare-name match would false-positive "wired" the moment a route
+      // declared the *other* page's identically-named flag, even though this
+      // row's own page still had nothing reading it.
       const [page, capability] = subject.split('.')
       const declared = new RegExp(
         `page: '${page}',\\s*capability: '${capability}'`

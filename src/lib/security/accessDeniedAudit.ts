@@ -22,9 +22,8 @@ export interface AccessDeniedEvent {
    * The capability that was missing, **dotted and page-qualified** —
    * `'accesscontrol.canViewAccessControl'`.
    *
-   * A bare capability name is genuinely ambiguous: `canViewChangeRequest`
-   * exists on both the `manageconnections` and `history` blocks, and
-   * `canRunConnectionTest` on both `manageconnections` and `test`. Without the
+   * A bare capability name is genuinely ambiguous: `canRunConnectionTest`
+   * exists on both the `manageconnections` and `test` blocks. Without the
    * page an operator cannot tell which grant would have allowed the request.
    */
   permission?: string

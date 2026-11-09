@@ -255,11 +255,7 @@ export const MATRIX: readonly MatrixRow[] = [
     // The page and its nav link open for any view row; they sit here.
     nav: ['/accesscontrol'],
     pages: ['/accesscontrol'],
-    api: [
-      { method: 'GET', path: '/api/accessgroups', refusal: 403 },
-      // Sender data behind the same view flag; no tab calls it.
-      { method: 'GET', path: '/api/accesscontrol', refusal: 403 },
-    ],
+    api: [{ method: 'GET', path: '/api/accessgroups', refusal: 403 }],
   },
   {
     id: 'accesscontrol.accessgroups.write',
@@ -286,10 +282,7 @@ export const MATRIX: readonly MatrixRow[] = [
     id: 'accesscontrol.adsfiletypes.view',
     feature: 'Access Control — view ADS File Types',
     allow: IZG_SEC_AND_OPS,
-    api: [
-      { method: 'GET', path: '/api/adsfiletypes', refusal: 403 },
-      { method: 'GET', path: '/api/filetype', refusal: 403 },
-    ],
+    api: [{ method: 'GET', path: '/api/adsfiletypes', refusal: 403 }],
   },
   {
     id: 'accesscontrol.adsfiletypes.write',

@@ -15,6 +15,9 @@ describe('FloatingActionButtons', () => {
         saveDraft={mockSaveDraft}
         isResetButtonDisabled={false}
         resetDraft={mockResetDraft}
+        canRunDraftConnectionTest
+        canSaveDraft
+        canResetDraft
       />
     )
     expect(screen.getByLabelText('test')).toBeInTheDocument()
@@ -34,6 +37,9 @@ describe('FloatingActionButtons', () => {
         saveDraft={mockSaveDraft}
         isResetButtonDisabled={false}
         resetDraft={mockResetDraft}
+        canRunDraftConnectionTest
+        canSaveDraft
+        canResetDraft
       />
     )
     fireEvent.click(screen.getByLabelText('test'))
@@ -54,10 +60,49 @@ describe('FloatingActionButtons', () => {
         saveDraft={mockSaveDraft}
         isResetButtonDisabled={true}
         resetDraft={mockResetDraft}
+        canRunDraftConnectionTest
+        canSaveDraft
+        canResetDraft
       />
     )
     expect(screen.getByLabelText('test')).toBeDisabled()
     expect(screen.getByLabelText('save')).toBeDisabled()
     expect(screen.getByLabelText('reset')).toBeDisabled()
+  })
+
+  // protect-connection-pages-and-endpoints (IGDD-3545): each Fab is gated on
+  // its own capability, independently of the others.
+  it('renders no Fab for a capability the caller does not hold', () => {
+    render(
+      <FloatingActionButtons
+        toggleTestDrawer={jest.fn()}
+        isFormChanged={true}
+        saveDraft={jest.fn()}
+        isResetButtonDisabled={false}
+        resetDraft={jest.fn()}
+        canRunDraftConnectionTest={false}
+        canSaveDraft={false}
+        canResetDraft={false}
+      />
+    )
+    expect(screen.queryByLabelText('test')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('save')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('reset')).not.toBeInTheDocument()
+  })
+
+  it('renders only the Fab whose capability is held', () => {
+    render(
+      <FloatingActionButtons
+        toggleTestDrawer={jest.fn()}
+        isFormChanged={true}
+        saveDraft={jest.fn()}
+        isResetButtonDisabled={false}
+        resetDraft={jest.fn()}
+        canSaveDraft
+      />
+    )
+    expect(screen.getByLabelText('save')).toBeInTheDocument()
+    expect(screen.queryByLabelText('test')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('reset')).not.toBeInTheDocument()
   })
 })

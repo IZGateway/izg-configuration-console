@@ -11,6 +11,15 @@
  * IGDD-3472's single permission-plus-reach decision and is unchanged here; the
  * `destination-circuit-breaker-reset` spec covers it. What IGDD-3599 changes,
  * and what this file asserts, is the response body.
+ *
+ * protect-connection-pages-and-endpoints (IGDD-3545/3548): the gate itself
+ * moved from an in-handler `can()` check to a declarative `capability`+`scope`
+ * on this route's `withMiddleware` call, enforced by `enforceRouteAuthz`
+ * before the handler runs. This file mocks `api-middleware-helper` as a
+ * no-op passthrough, so that enforcement point never executes here — the
+ * denial scenario is covered in `api-middleware-helper.test.ts` instead. The
+ * `can()` call that remains in the handler is attribution-only (who gets
+ * credited in the success log), not a gate; see the comment at its call site.
  */
 // Each test file is its own module: without an import or export at the top
 // level, TypeScript treats the file as a script and its consts collide with
@@ -177,15 +186,6 @@ describe('POST /api/status/reset/{destTypeId}/{destId}', () => {
     const res = await reset()
 
     expect(res.statusCode).toBe(502)
-  })
-
-  it('denies a caller the policy rejects, and calls no hub', async () => {
-    mockCan.mockReturnValue({ allowed: false })
-
-    const res = await reset()
-
-    expect(res.statusCode).toBe(401)
-    expect(mockPost).not.toHaveBeenCalled()
   })
 
   describe('redaction', () => {

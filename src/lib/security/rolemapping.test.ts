@@ -195,10 +195,10 @@ describe('role resolution', () => {
   })
 
   it('ignores unmapped groups without displacing a working role', () => {
-    expect(rolesFromGroups(['CDC Program', 'Jurisdiction Operations'])).toEqual([
+    expect(rolesFromGroups(['Unmapped Group', 'Jurisdiction Operations'])).toEqual([
       'Jurisdiction Operations',
     ])
-    expect(rolesFromGroups(['IZG Program', 'CDC CISO'])).toEqual(['IZG Program'])
+    expect(rolesFromGroups(['IZG Program', 'Another Unmapped Group'])).toEqual(['IZG Program'])
   })
 
   it('returns [] for a user in no recognized group', () => {

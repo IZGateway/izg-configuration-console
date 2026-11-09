@@ -834,8 +834,11 @@ class Dynamo implements DbClient {
     return h
   }
 
+  // `id` is optional on write (derived from destId+destType when absent) but
+  // always present once read back, hence the narrower input type here rather
+  // than loosening `DestinationChangeRequest` itself.
   async upsertDestinationChangeRequest(
-    changeRequestData: DestinationChangeRequest
+    changeRequestData: Omit<DestinationChangeRequest, 'id'> & { id?: number }
   ): Promise<DestinationChangeRequest> {
     const id =
       changeRequestData.id ||

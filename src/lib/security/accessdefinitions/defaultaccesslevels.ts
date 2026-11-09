@@ -51,7 +51,6 @@ const defaultChangeRequestPageAccessControl: ChangeRequestPageAccessControl = {
 }
 
 const defaultHistoryPageAccessControl: HistoryPageAccessControl = {
-  canViewChangeRequest: false,
   canViewConnectionInfo: false,
   canViewConnectionInfoDetails: false,
   canViewHubStatusHistory: false,
