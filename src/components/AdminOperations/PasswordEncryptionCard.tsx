@@ -12,7 +12,7 @@ import {
 } from '@mui/material'
 import KeyIcon from '@mui/icons-material/Key'
 import SecurityIcon from '@mui/icons-material/Security'
-import ConfirmationDialog from '../PasswordEncryptionConsole/confirmationDialog'
+import ConfirmationDialog from './confirmationDialog'
 import Loader from '../Loader'
 
 interface PasswordEncryptionCardProps {
