@@ -81,11 +81,8 @@ const GROUP_ROLE_MAPPING: Record<string, CcRole[]> = {
   // tolerates capitalization/punctuation choices, so confirming this later is
   // not a breaking change.
   'Sender Operations': ['Sender Operations'],
-  // [CONFIRM] IGDD-3600 (Okta directory work) has not yet recorded whether
-  // this group exists, its exact spelling, or its membership — see that
-  // ticket's "Group to confirm" row. normalizeGroupName tolerates
-  // capitalization/punctuation, so correcting the spelling later is not
-  // breaking; a wrong name simply grants nothing until then.
+  // IGDD-3547. Okta group name confirmed via live dev testing on IGDD-3600
+  // (resolves correctly as 'IZG Program').
   'IZG Program': ['IZG Program'],
 }
 
