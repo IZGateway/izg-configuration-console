@@ -27,11 +27,15 @@
  * call with copied cookies has no proof; the middleware redirects it to
  * sign-in before the route's ownership check ever runs.
  *
- * Accounts (.env.test). The spec skips with a reason if any are unset:
- *   E2E_RBAC_IZG_SEC_USERNAME / _PASSWORD / _FULLNAME
+ * Accounts (.env.test locally; the same names are already wired as GitHub
+ * Actions secrets for the nightly CI run — see playwright-nightly.yml and
+ * e2e/rbac/README.md). The spec skips with a reason if any are unset:
+ *   E2E_RBAC_IZG_SECURITY_USERNAME / _PASSWORD
  *     IZG Security — the global-reach role for API keys (IGDD-3549; IZG
  *     Operations lost this access). NOT the same as OKTA_USERNAME, which
- *     other specs still use as the IZG Operations admin account.
+ *     other specs still use as the IZG Operations admin account. No
+ *     `_FULLNAME` variant exists for this role (per e2e/rbac/README.md):
+ *     the sign-in call passes `null` and skips the app header name check.
  *   E2E_RBAC_JURIS_OPS_USERNAME / _PASSWORD / _FULLNAME
  *     Jurisdiction Operations for Jurisdiction A. Must own at least one key.
  *   E2E_RBAC_NO_ROLE_USERNAME / _PASSWORD / _FULLNAME
@@ -51,9 +55,8 @@ import {
 } from '../helpers/apiKeyHelpers'
 
 const REQUIRED_ENV = [
-  'E2E_RBAC_IZG_SEC_USERNAME',
-  'E2E_RBAC_IZG_SEC_PASSWORD',
-  'E2E_RBAC_IZG_SEC_FULLNAME',
+  'E2E_RBAC_IZG_SECURITY_USERNAME',
+  'E2E_RBAC_IZG_SECURITY_PASSWORD',
   'E2E_RBAC_JURIS_OPS_USERNAME',
   'E2E_RBAC_JURIS_OPS_PASSWORD',
   'E2E_RBAC_JURIS_OPS_FULLNAME',
@@ -247,7 +250,7 @@ const signIn = async (
   browser: Browser,
   username: string,
   password: string,
-  fullName?: string
+  fullName?: string | null
 ) => {
   // A context made here does not inherit test.use(), so the viewport is set
   // on it directly. See API_KEYS_VIEWPORT.
@@ -296,9 +299,11 @@ test.describe('API key RBAC scoping', () => {
     reachOfA = sessionA.jurisdictions
     ;({ context: adminContext, page: admin } = await signIn(
       browser,
-      env('E2E_RBAC_IZG_SEC_USERNAME'),
-      env('E2E_RBAC_IZG_SEC_PASSWORD'),
-      env('E2E_RBAC_IZG_SEC_FULLNAME')
+      env('E2E_RBAC_IZG_SECURITY_USERNAME'),
+      env('E2E_RBAC_IZG_SECURITY_PASSWORD'),
+      // No _FULLNAME secret exists for this role (e2e/rbac/README.md): the
+      // role check, not the header name, proves who signed in.
+      null
     ))
     await openApiKeyManagement(admin)
     target = await createTargetKey(

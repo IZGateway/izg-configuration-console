@@ -13,6 +13,25 @@ created:
     prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~6e558c72-6ecb-42ec-93d5-6fdafc23fe15
   summary: Write tasks.md for declare-api-key-endpoint-permissions (IGDD-3549)
 updated:
+  - date: '2026-11-09T19:25:35.341Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: >-
+      prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~636809c6-8a42-4e99-9010-ea586d3bf607
+    summary: >-
+      Correct invented E2E_RBAC_IZG_SEC_* env var names to the real
+      E2E_RBAC_IZG_SECURITY_* convention already wired into
+      playwright-nightly.yml and documented in e2e/rbac/README.md; drop the
+      nonexistent _FULLNAME variant; correct the framing from a personal action
+      item to a CI secret-value/Okta-provisioning gap tracked under IGDD-3600.;
+      Correct the Okta test account follow-up item: the CI secret plumbing
+      already exists, the open item is the underlying Okta account (IGDD-3600)
+      and the secret values, not a personal .env.test action for the user.
   - date: '2026-11-09T18:51:19.421Z'
     user: boonek
     agent:
@@ -87,6 +106,8 @@ updated:
       Mark tasks.md group 1 complete for declare-api-key-endpoint-permissions;
       Extend tasks.md group 2 with the missing PATCH/DELETE conversions for
       apikeys/index.ts
+ticket: IGDD-3549
+change_request: declare-api-key-endpoint-permissions
 ---
 # Tasks
 
@@ -352,16 +373,24 @@ sandbox couldn't run tests itself) before this round started.
 - [x] 12.8 *Two e2e files break, not in this PR's diff* — `e2e/tests/apiKeyRbacScoping.spec.ts`
       created its target key as IZG Operations (now 403) and asserted on
       `requireApiKeyAccess`/`hasApiKeyPermission`'s exact removed message strings (now a non-JSON
-      body). Fixed: target key now created via new `E2E_RBAC_IZG_SEC_USERNAME/_PASSWORD/_FULLNAME`
-      env vars (IZG Security — **not yet present in any `.env.test`; a real Okta test account for
-      this role needs provisioning before this spec can run**), and `expectAllDenied` asserts
-      status 403 only, not a message. `e2e/rbac/matrix.ts`: removed the now-stale `'IZG
-      Operations'` entry from `API_KEYS_MOVE_TO_SECURITY` (no longer a gap); corrected the
-      `apikeys.write` probe's comment, which described a check order that no longer exists, and
-      documented the probe's real remaining limitation (cannot distinguish "no capability" from
-      "has capability, empty-body scope" for Jurisdiction Operations). **Neither e2e file could be
-      run in this environment** (need live Okta accounts + a deployed console) — fixes are
-      source-level only, unverified end to end.
+      body). Fixed: target key now created via `E2E_RBAC_IZG_SECURITY_USERNAME`/`_PASSWORD` (IZG
+      Security). **Correction (caught after the user questioned the original framing):** the first
+      pass invented the env var names (`E2E_RBAC_IZG_SEC_*` plus a `_FULLNAME` variant) instead of
+      checking for an existing convention. `playwright-nightly.yml` and `e2e/rbac/README.md` already
+      define `E2E_RBAC_IZG_SECURITY_USERNAME`/`_PASSWORD` as the real convention, with no
+      `_FULLNAME` for this role (the sign-in call passes `null` and skips the header name check,
+      per README). Fixed to match; `expectAllDenied` asserts status 403 only, not a message.
+      `e2e/rbac/matrix.ts`: removed the now-stale `'IZG Operations'` entry from
+      `API_KEYS_MOVE_TO_SECURITY` (no longer a gap); corrected the `apikeys.write` probe's comment,
+      which described a check order that no longer exists, and documented the probe's real
+      remaining limitation (cannot distinguish "no capability" from "has capability, empty-body
+      scope" for Jurisdiction Operations). **Neither e2e file could be run in this environment**
+      (need live Okta accounts + a deployed console) — fixes are source-level only, unverified end
+      to end. The GitHub Actions secret *names* for IZG Security already exist in
+      `playwright-nightly.yml`; what's still open is the underlying Okta account itself
+      (`e2e/rbac/roles.ts` lists it `status: 'pending'`, `tracking: IGDD-3600`) and populating the
+      secret *values* once that account exists — a CI/ops task, not something requiring the user's
+      personal Okta credentials.
 - [x] 12.9 Full re-verification after all of 12.1-12.8: `tsc --noEmit` and `eslint` clean; 491/491
       real tests pass (489 + 2 new regression tests) across `accessregistry.test.ts`,
       `api-middleware-helper.test.ts`, the two `authorization.test.ts` files; same 3 pre-existing,
@@ -372,9 +401,12 @@ sandbox couldn't run tests itself) before this round started.
 - Push the branch, open a PR against `develop`, request a Copilot review.
 - Comment on IGDD-3549 with the PR link; move it through workflow statuses as CI and review
   complete.
-- **New:** provision a real Okta test account for IZG Security and add
-  `E2E_RBAC_IZG_SEC_USERNAME`/`_PASSWORD`/`_FULLNAME` to `.env.test` before
-  `apiKeyRbacScoping.spec.ts` can run again (task 12.8).
+- **New:** `apiKeyRbacScoping.spec.ts` now reads `E2E_RBAC_IZG_SECURITY_USERNAME`/`_PASSWORD` (task
+  12.8, corrected from an invented name). The GitHub Actions secret *names* already exist in
+  `playwright-nightly.yml`; CI will fail the spec, not silently skip it, until the underlying Okta
+  account exists and the secret *values* are set — tracked as part of IGDD-3600
+  (`e2e/rbac/roles.ts` lists IZG Security `status: 'pending'`), not a per-developer `.env.test`
+  action item.
 - **New:** reply to Anusha's 7 inline PR comments individually (resolution recorded in 12.1-12.8
   above) and resolve each review thread.
 - **New:** follow up on 12.3/12.4 (scope-before-session-check, feature-flag timing) as a dedicated
