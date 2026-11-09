@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'async_hooks'
 import { Session } from 'next-auth'
+import type { CcRole } from './security/rolemapping'
 
 export interface Context {
   user: string
@@ -11,6 +12,11 @@ export interface Context {
   sessionId?: string // CC-generated opaque login-session identifier
   jti?: string // Okta ID-token `jti` (token reference) for audit logging
   authTime?: number // Okta `auth_time` (Unix seconds) for Okta log correlation
+  // Which role `enforceRouteAuthz` decided the request on (IGDD-3549). Set
+  // only on an allowed capability/byMethod decision; a handler that records
+  // an audit trail's "which role authorized this?" reads it from here
+  // instead of re-deciding authorization a second time just to find out.
+  grantedBy?: CcRole
 }
 
 export const asyncRequestContext = new AsyncLocalStorage<Context>()

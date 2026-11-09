@@ -85,13 +85,20 @@ export function requiresGlobalTenancy(ref: CapabilityRef): boolean {
  * filtered to **one destination per request**.
  *
  * Holding one of these means "may act on a destination you reach", never "may
- * act on every destination". So an API route that declares one must also name
- * which destination the request acts on, through `scope` on its `RouteAuthz`
+ * act on every destination" — for a route whose declaration names which
+ * destination the request acts on, through `scope` on its `RouteAuthz`
  * declaration; the route enforcer then decides that destination per role with
- * `can()`. A declaration with **no** `scope` fails closed: only a role that
- * reaches every jurisdiction passes. Forgetting the scope on a new route
- * therefore locks scoped roles out instead of handing them every
- * jurisdiction's data. Raised by review on PR #756.
+ * `can()`. A `scope` that is declared but resolves nothing for a given
+ * request fails closed: only a role that reaches every jurisdiction passes.
+ * That is the safety net for a malformed or unexpected request shape, not a
+ * ceiling on the capability's possible declarations — raised by review on PR
+ * #756.
+ *
+ * A declaration with **no** `scope` property at all is different, and
+ * deliberate (IGDD-3549): it means this particular route's data path does not
+ * narrow to one destination (e.g. it lists everything the caller reaches and
+ * filters afterward), so the capability alone governs, any jurisdiction. See
+ * `decideRouteCapability`'s `hasScope` parameter.
  *
  * Read by the route enforcer only. The page gate and the nav decide page
  * entry, which is not a data path, through `decideCapability`, so JO/JS still
@@ -114,6 +121,17 @@ export const REQUIRES_DESTINATION_SCOPE: ReadonlyArray<CapabilityRef> = [
   { page: 'changerequest', capability: 'canCancelRequest' },
   { page: 'changerequest', capability: 'canViewDetails' },
   { page: 'onboarding', capability: 'canManageSenders' },
+  // Added by declare-api-key-endpoint-permissions (IGDD-3549). canListApiKeys
+  // is the one capability declared both ways: scoped on domains.ts (one
+  // jurisdiction named in the request) and capability-only on apikeys/
+  // index.ts GET and apikeysaudit/index.ts GET (a list, row-filtered to the
+  // caller's reach afterward) — see the `hasScope` parameter on
+  // `decideRouteCapability` below.
+  { page: 'apikeys', capability: 'canListApiKeys' },
+  { page: 'apikeys', capability: 'canCreateApiKey' },
+  { page: 'apikeys', capability: 'canRenewApiKey' },
+  { page: 'apikeys', capability: 'canRevokeApiKey' },
+  { page: 'apikeys', capability: 'canCancelApiKey' },
 ]
 
 /** True if `ref`'s API data path must be scoped to one destination per request. */
@@ -156,13 +174,20 @@ const roleHasGlobalTenancy = (role: CcRole): boolean =>
  * holding the capability, which may be a scoped one even when a later global
  * role would legitimately allow the request.
  */
-export function decideCapability(
+/**
+ * Which single held role grants `ref`, if any. `decideCapability` is just
+ * "is this defined?" on top of this — factored out (IGDD-3549) so a caller
+ * that needs to know *which* role, not just whether one exists (an audit
+ * trail question, see `grantingRoleForRoute`), shares the same reasoning
+ * rather than re-deriving an approximation.
+ */
+function findGrantingRole(
   subject: AuthzSubject,
   ref: CapabilityRef,
   isGlobal: (role: CcRole) => boolean = roleHasGlobalTenancy
-): boolean {
+): CcRole | undefined {
   const needsGlobal = requiresGlobalTenancy(ref)
-  return subject.roles.some((role) => {
+  return subject.roles.find((role) => {
     if (needsGlobal && !isGlobal(role)) return false
     return can(
       { ...subject, roles: [role] },
@@ -176,30 +201,71 @@ export function decideCapability(
   })
 }
 
+export function decideCapability(
+  subject: AuthzSubject,
+  ref: CapabilityRef,
+  isGlobal: (role: CcRole) => boolean = roleHasGlobalTenancy
+): boolean {
+  return findGrantingRole(subject, ref, isGlobal) !== undefined
+}
+
 /**
  * Decide one `CapabilityRef` for an **API route**: `decideCapability`, plus the
  * `REQUIRES_DESTINATION_SCOPE` rule.
  *
  * For a destination-scoped capability, `scope` is the destination the request
- * acts on, as the route's declaration extracted it:
- *  - given: `can()` for that destination, which is role-local — one role must
- *    hold the capability AND reach the destination.
- *  - absent (no `scope` declared, or the request names none): only a role that
- *    holds the capability AND reaches every jurisdiction passes.
+ * acts on, as the route's declaration extracted it, and `hasScope` says
+ * whether the route declared a `scope` extractor at all (IGDD-3549) —
+ * independent of whether that extractor resolved anything:
+ *  - `scope` given: `can()` for that destination, which is role-local — one
+ *    role must hold the capability AND reach the destination.
+ *  - `scope` undefined, `hasScope` true (declared, but this request named none):
+ *    only a role that holds the capability AND reaches every jurisdiction
+ *    passes. The safety net for a malformed or unexpected request shape.
+ *  - `scope` null: the named destination did not resolve, so no role passes.
+ *  - `hasScope` false (no `scope` declared at all): the destination-scope
+ *    rule does not apply to this declaration — decided by `decideCapability`
+ *    alone, same as a capability outside `REQUIRES_DESTINATION_SCOPE`. Lets
+ *    the same capability be destination-scoped on one route (a single
+ *    credential/connection) and capability-only on another (a list the route
+ *    itself row-filters to the caller's reach afterward), without splitting
+ *    it into two capability names.
  *
- * Every other capability is `decideCapability` unchanged, and `scope` is
- * ignored for it.
+ * Every other capability is `decideCapability` unchanged, and `scope`/
+ * `hasScope` are ignored for it. `hasScope` defaults to `true` so any caller
+ * that omits it keeps today's behavior (a missing `scope` value fails closed).
  */
 export function decideRouteCapability(
   subject: AuthzSubject,
   ref: CapabilityRef,
-  scope?: string
+  scope?: string | null,
+  hasScope = true
 ): boolean {
-  if (!requiresDestinationScope(ref)) return decideCapability(subject, ref)
+  return grantingRoleForRoute(subject, ref, scope, hasScope) !== undefined
+}
+
+/**
+ * Which single role authorized a route decision, if any — the same question
+ * `decideRouteCapability` answers as a boolean. Exported (IGDD-3549) for a
+ * handler that needs to record *which* role granted a mutating action on an
+ * audit trail (e.g. "which role let this caller revoke this API key?"). The
+ * route enforcer stashes this on the request context when it allows a
+ * request, so handlers read it from there rather than re-deciding — see
+ * `enforceRouteAuthz` in `api-middleware-helper.ts`.
+ */
+export function grantingRoleForRoute(
+  subject: AuthzSubject,
+  ref: CapabilityRef,
+  scope?: string | null,
+  hasScope = true
+): CcRole | undefined {
+  if (!requiresDestinationScope(ref)) return findGrantingRole(subject, ref)
+  if (scope === null) return undefined
   if (scope) {
-    return can(subject, ref.page, ref.capability as never, scope).allowed
+    return can(subject, ref.page, ref.capability as never, scope).grantedBy
   }
-  return subject.roles.some(
+  if (!hasScope) return findGrantingRole(subject, ref)
+  return subject.roles.find(
     (role) =>
       roleHasGlobalTenancy(role) &&
       can(

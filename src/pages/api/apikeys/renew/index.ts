@@ -5,12 +5,15 @@ import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import {
-  hasApiKeyPermission,
-  requireApiKeyAccess,
+  isApiKeyManagementEnabled,
+  scopeFromCredentialSortKeyInBody,
 } from '../../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
 import type { ApiKeyCredential } from '../../../../lib/type/ApiKeyCredential'
+import { asyncRequestContext } from '../../../../lib/Context'
 import crypto from 'crypto'
+
+const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
 
 /** Add N business days (Mon–Fri) to a date, excluding the start date. */
 function addBusinessDays(date: Date, days: number): Date {
@@ -35,8 +38,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!hasApiKeyPermission(session, 'canRenewApiKey')) {
-      return res.status(403).json({ error: 'Forbidden - insufficient role' })
+    if (!isApiKeyManagementEnabled()) {
+      return res.status(403).json({ error: 'Forbidden - feature disabled' })
     }
 
     // Note: neither `upn` (DNS domain) nor the environment(s) are read from the
@@ -52,16 +55,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const dbClient = await DbClientFactory.getDbClient()
 
     // Renewal is valid only from an active credential (per the state machine).
+    //
+    // The role + tenancy check (fix IDOR: caller must own the jurisdiction of
+    // the credential being renewed) already happened declaratively, in the
+    // route's `scope` extractor, before this handler ran at all — this is a
+    // second, independent read for the business logic below (accepted
+    // two-reads trade-off, IGDD-3549 design.md Risks).
     const oldCredential = await dbClient.getApiKeyCredential(String(oldSortKey))
     if (!oldCredential) {
       return res.status(404).json({ error: 'Credential to renew was not found' })
-    }
-    // Role + tenancy (fix IDOR): the caller must own the jurisdiction of the
-    // credential being renewed. Authoritative gate, checked before the status
-    // check so a non-owner learns nothing about the target credential's state.
-    const authz = await requireApiKeyAccess(session, 'canRenewApiKey', oldCredential.jurisdictionId)
-    if (!authz.ok) {
-      return res.status(authz.status).json({ error: authz.error })
     }
     if (oldCredential.status !== 'active') {
       return res.status(409).json({ error: 'Only active credentials can be renewed' })
@@ -188,7 +190,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       },
       context: {
         jurisdictionId: renewedJurisdictionId,
-        grantedBy: authz.grantedBy,
+        grantedBy: grantedBy(),
         supersededBy: newJti,
         successorSortKey: newSortKey,
         graceExpiresAt: graceExpiresAt.toISOString(),
@@ -201,7 +203,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       newValues: newCredential as unknown as ApiKeyCredential,
       context: {
         jurisdictionId: renewedJurisdictionId,
-        grantedBy: authz.grantedBy,
+        grantedBy: grantedBy(),
         // Marks this Create as the product of a renewal, and points back at
         // the credential it replaced.
         renewedFrom: String(oldSortKey),
@@ -215,7 +217,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       newSortKey,
       renewedBy,
       graceExpiresAt: graceExpiresAt.toISOString(),
-      grantedBy: authz.grantedBy,
+      grantedBy: grantedBy(),
       operation: 'renewApiKeyCredential',
     })
 
@@ -230,6 +232,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
+// IGDD-3549: declarative capability + reach, closing this route's
+// `in-handler` debt row. Reads the OLD credential's stored `jurisdictionId`
+// (never one the caller could supply directly) — the same IDOR protection
+// as before, now expressed as the route's declared reach requirement.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: handler resolves the caller reach per credential',
+  capability: { page: 'apikeys', capability: 'canRenewApiKey' },
+  scope: scopeFromCredentialSortKeyInBody('oldSortKey'),
 })(handler)
