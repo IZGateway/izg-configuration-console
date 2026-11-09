@@ -10,9 +10,7 @@ import {
   scopeFromCredentialSortKeyInBody,
 } from '../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
-import { asyncRequestContext } from '../../../lib/Context'
-
-const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
+import { currentGrantedBy } from '../../../lib/Context'
 
 // Reveals an API key's JWT exactly once. The token is never persisted —
 // its claims (jti, upn, env, iat, exp) are fixed when the credential was
@@ -106,7 +104,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         jurisdictionId: credential.jurisdictionId,
         jti: credential.jti,
         domain: credential.domain,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         viewedAt,
       },
     })
@@ -114,7 +112,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('API key token viewed', {
       sortKey: credential.sortKey,
       viewedBy,
-      grantedBy: grantedBy(),
+      grantedBy: currentGrantedBy(),
       operation: 'viewApiKeyToken',
     })
 

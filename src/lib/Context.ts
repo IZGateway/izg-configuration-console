@@ -20,3 +20,12 @@ export interface Context {
 }
 
 export const asyncRequestContext = new AsyncLocalStorage<Context>()
+
+/**
+ * Which role `enforceRouteAuthz` granted the current request on, if any.
+ * Factored out (IGDD-3549 review follow-up) — was copied verbatim into four
+ * route files (`apikeys/index.ts`, `token.ts`, `renew/index.ts`,
+ * `verify-domain/index.ts`) as `const grantedBy = () => ...`.
+ */
+export const currentGrantedBy = (): CcRole | undefined =>
+  asyncRequestContext.getStore()?.grantedBy

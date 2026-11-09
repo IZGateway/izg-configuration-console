@@ -155,7 +155,11 @@ const roleHasGlobalTenancy = (role: CcRole): boolean =>
   hasGlobalTenancy({ roles: [role], jurisdictions: [] })
 
 /**
- * Decide one `CapabilityRef`, with the tenancy guard applied **per role**.
+ * Which single held role grants `ref`, if any. `decideCapability` is just
+ * "is this defined?" on top of this — factored out (IGDD-3549) so a caller
+ * that needs to know *which* role, not just whether one exists (an audit
+ * trail question, see `grantingRoleForRoute`), shares the same reasoning
+ * rather than re-deriving an approximation.
  *
  * The rule this enforces is `∃r: (holds(r) ∧ reach(r))` — one role must supply
  * both halves. Never `(∃r: holds) ∧ (∃r: reach)`, which is what evaluating
@@ -173,13 +177,6 @@ const roleHasGlobalTenancy = (role: CcRole): boolean =>
  * not work, because `can()` with `ANY_JURISDICTION` returns the *first* role
  * holding the capability, which may be a scoped one even when a later global
  * role would legitimately allow the request.
- */
-/**
- * Which single held role grants `ref`, if any. `decideCapability` is just
- * "is this defined?" on top of this — factored out (IGDD-3549) so a caller
- * that needs to know *which* role, not just whether one exists (an audit
- * trail question, see `grantingRoleForRoute`), shares the same reasoning
- * rather than re-deriving an approximation.
  */
 function findGrantingRole(
   subject: AuthzSubject,
@@ -201,6 +198,7 @@ function findGrantingRole(
   })
 }
 
+/** Decide one `CapabilityRef`, with the tenancy guard applied per role — see `findGrantingRole`. */
 export function decideCapability(
   subject: AuthzSubject,
   ref: CapabilityRef,

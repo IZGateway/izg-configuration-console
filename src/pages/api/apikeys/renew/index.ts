@@ -10,10 +10,8 @@ import {
 } from '../../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
 import type { ApiKeyCredential } from '../../../../lib/type/ApiKeyCredential'
-import { asyncRequestContext } from '../../../../lib/Context'
+import { currentGrantedBy } from '../../../../lib/Context'
 import crypto from 'crypto'
-
-const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
 
 /** Add N business days (Mon–Fri) to a date, excluding the start date. */
 function addBusinessDays(date: Date, days: number): Date {
@@ -190,7 +188,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       },
       context: {
         jurisdictionId: renewedJurisdictionId,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         supersededBy: newJti,
         successorSortKey: newSortKey,
         graceExpiresAt: graceExpiresAt.toISOString(),
@@ -203,7 +201,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       newValues: newCredential as unknown as ApiKeyCredential,
       context: {
         jurisdictionId: renewedJurisdictionId,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         // Marks this Create as the product of a renewal, and points back at
         // the credential it replaced.
         renewedFrom: String(oldSortKey),
@@ -217,7 +215,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       newSortKey,
       renewedBy,
       graceExpiresAt: graceExpiresAt.toISOString(),
-      grantedBy: grantedBy(),
+      grantedBy: currentGrantedBy(),
       operation: 'renewApiKeyCredential',
     })
 

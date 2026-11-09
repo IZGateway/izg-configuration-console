@@ -10,10 +10,8 @@ import {
   scopeFromJurisdictionIdInBody,
 } from '../../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
-import { asyncRequestContext } from '../../../../lib/Context'
+import { currentGrantedBy } from '../../../../lib/Context'
 import dns from 'dns/promises'
-
-const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
 
 // DNS-verification bypass for local dev, automated tests, and the deployed
 // development environment ONLY. Requires an explicit opt-in flag AND a
@@ -252,7 +250,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           jurisdictionId: String(jurisdictionId),
           domain: String(domain),
           environments,
-          grantedBy: grantedBy(),
+          grantedBy: currentGrantedBy(),
           // 'bypass' means the real DNS TXT lookup was SKIPPED (non-production
           // only). Recorded so a bypassed activation remains distinguishable
           // from a genuinely verified one long after the log line ages out.
@@ -427,7 +425,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       environments,
       validatedBy: activatedBy,
       verificationMethod,
-      grantedBy: grantedBy(),
+      grantedBy: currentGrantedBy(),
       operation: 'verifyDomain',
     })
 

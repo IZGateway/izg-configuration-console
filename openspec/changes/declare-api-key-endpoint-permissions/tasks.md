@@ -13,6 +13,19 @@ created:
     prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~6e558c72-6ecb-42ec-93d5-6fdafc23fe15
   summary: Write tasks.md for declare-api-key-endpoint-permissions (IGDD-3549)
 updated:
+  - date: '2026-11-09T18:51:19.421Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '5'
+    prompt_uri: >-
+      prompt:/claude-code/539126f3-1379-44f7-9db4-3e73eeda397b/~21b5c7d5-d5cf-4b7e-b0a9-051d688cc922
+    summary: >-
+      Record PR #778 review round 2 (Anusha, 7 inline comments) triage and
+      resolutions in tasks.md group 12
   - date: '2026-11-08T17:38:32.442Z'
     user: boonek
     agent:
@@ -277,9 +290,93 @@ protection itself moved, it didn't disappear).
       `satisfies()` already computed. Declined — "likely not worth worrying about." 489/489 real
       tests pass after both fixes; `tsc`/`eslint` clean.
 
+## 12. PR #778 review — Anusha Kanuri (akanuri9), 7 inline comments
+
+Reviewed against IGDD-3549 and the RBAC matrix; confirmed the ticket's acceptance criteria are met.
+Also surfaced a Copilot bot-pushed fix (`ee872f5`, before this round): a credential whose stored
+jurisdiction no longer resolves (orphaned) now denies every role including global ones, via a third
+`scope` state (`null`, distinct from `undefined`) threaded through `decideRouteCapability`/
+`grantingRoleForRoute`/all four `scopeFrom*` builders. Pulled and independently verified (Copilot's
+sandbox couldn't run tests itself) before this round started.
+
+- [x] 12.1 *Safety-net regression* — omitting `scope` now means "capability-only, any
+      jurisdiction" for ANY `REQUIRES_DESTINATION_SCOPE` capability, not just apikeys'; a future
+      route could forget `scope` and silently admit non-global roles, and the old unit test
+      guarding that for `console.canViewConsole` was deleted. Resolved by reply, no code change:
+      the `NO_SCOPE_ALLOWLIST` ratchet test added in group 1 already requires an explicit, reviewed
+      allowlist entry for every such omission on disk today — arguably stronger than the deleted
+      test, since it checks every route on disk for every listed capability, not one hardcoded
+      scenario.
+- [x] 12.2 *Plain-text 403/500 breaks the UI* — `ApiKeyManagement/index.tsx` had 4 `res.json()`
+      call sites (lines 3123, 3163, 3992, 4055) with no `.catch()`, unlike every other call site in
+      the file; a non-JSON denial body threw a JSON-parse error shown to the user instead of a real
+      message. Fixed: added `.catch(() => ({}))` to match the existing pattern. Chose this over
+      changing the shared middleware's response format, which would touch every other
+      declaratively-gated route for uncertain benefit.
+- [x] 12.3 *Scope resolves before the session check, no role-prefilter* — confirmed real
+      (`authz.scope`/`ref.scope` runs before the `!session?.user` 401 check, and with no "does any
+      held role have this capability at all" cheap prefilter, unlike the old `requireApiKeyAccess`).
+      Discussed with Keith — holding for a dedicated follow-up; not fixed in this PR.
+- [x] 12.4 *Feature flag moved from the auth gate into in-handler checks* — confirmed real: the
+      declarative gate denies (and logs AccessDenied) based on the real role matrix regardless of
+      `isApiKeyManagementEnabled()`, so an environment where the feature hasn't launched now
+      produces AccessDenied noise for roles that would otherwise be authorized — the exact
+      "feature-availability state logged as an RBAC rejection" `hasApiKeyPermission`'s own removed
+      comment warned against. Discussed with Keith — holding for the same dedicated follow-up as
+      12.3; not fixed in this PR.
+- [x] 12.5 *Efficiency, `grant()` re-deriving `satisfies()`'s answer* — same finding as the first
+      `/review` round's #5 (declined then as "likely not worth worrying about"), raised
+      independently by Anusha with a simpler suggested fix (have the decision return the granting
+      role once, reuse it, rather than stashing via a second `grantingRoleForRoute` call). Fixed:
+      `satisfies`/`grant` collapsed into one `decide`/`firstGrantingRole` pair in
+      `api-middleware-helper.ts`; every call site now computes the role once. The separate
+      "credential read twice" trade-off (scope extractor + handler) remains accepted per
+      design.md's Risks section — not part of this fix.
+- [x] 12.6 *Doc/logging nits* — (a) the `findGrantingRole` extraction (group 1) had left
+      `decideCapability`'s original JSDoc orphaned above the wrong function; reattached. (b) the
+      `deny()` logger logged the resolved scope under `destId` even for `apikeys.*`, where it's a
+      jurisdiction prefix, not a destination id — misleading in a query by actual destination.
+      Investigated blast radius first (searched all of `eclipse-workspace` for any
+      dashboard-as-code referencing `destId` on `AccessDenied`; found none, and the field is only
+      days old) before fixing: `AccessDeniedEvent` already had an unused `jurisdictionId` field
+      (orphaned when `requireApiKeyAccess` was deleted) built for exactly this — `deny()` now logs
+      under `jurisdictionId` for `ref.page === 'apikeys'`, `destId` unchanged for every other
+      `REQUIRES_DESTINATION_SCOPE` page. New regression test in `authorization.test.ts` locks in
+      the field choice.
+- [x] 12.7 *`currentGrantedBy` duplicated 4x* — `const grantedBy = () => asyncRequestContext
+      .getStore()?.grantedBy` was copied verbatim into `apikeys/index.ts`, `token.ts`,
+      `renew/index.ts`, `verify-domain/index.ts`. Fixed: one `currentGrantedBy()` export added to
+      `Context.ts`, all four call sites updated. Declined the paired suggestion to also collapse
+      the four `scopeFrom*` builders into one with two switches — four named functions read better
+      at call sites than one with enum parameters.
+- [x] 12.8 *Two e2e files break, not in this PR's diff* — `e2e/tests/apiKeyRbacScoping.spec.ts`
+      created its target key as IZG Operations (now 403) and asserted on
+      `requireApiKeyAccess`/`hasApiKeyPermission`'s exact removed message strings (now a non-JSON
+      body). Fixed: target key now created via new `E2E_RBAC_IZG_SEC_USERNAME/_PASSWORD/_FULLNAME`
+      env vars (IZG Security — **not yet present in any `.env.test`; a real Okta test account for
+      this role needs provisioning before this spec can run**), and `expectAllDenied` asserts
+      status 403 only, not a message. `e2e/rbac/matrix.ts`: removed the now-stale `'IZG
+      Operations'` entry from `API_KEYS_MOVE_TO_SECURITY` (no longer a gap); corrected the
+      `apikeys.write` probe's comment, which described a check order that no longer exists, and
+      documented the probe's real remaining limitation (cannot distinguish "no capability" from
+      "has capability, empty-body scope" for Jurisdiction Operations). **Neither e2e file could be
+      run in this environment** (need live Okta accounts + a deployed console) — fixes are
+      source-level only, unverified end to end.
+- [x] 12.9 Full re-verification after all of 12.1-12.8: `tsc --noEmit` and `eslint` clean; 491/491
+      real tests pass (489 + 2 new regression tests) across `accessregistry.test.ts`,
+      `api-middleware-helper.test.ts`, the two `authorization.test.ts` files; same 3 pre-existing,
+      unrelated crypto-suite failures as every prior run.
+
 ## Workflow follow-up
 
 - Push the branch, open a PR against `develop`, request a Copilot review.
 - Comment on IGDD-3549 with the PR link; move it through workflow statuses as CI and review
   complete.
+- **New:** provision a real Okta test account for IZG Security and add
+  `E2E_RBAC_IZG_SEC_USERNAME`/`_PASSWORD`/`_FULLNAME` to `.env.test` before
+  `apiKeyRbacScoping.spec.ts` can run again (task 12.8).
+- **New:** reply to Anusha's 7 inline PR comments individually (resolution recorded in 12.1-12.8
+  above) and resolve each review thread.
+- **New:** follow up on 12.3/12.4 (scope-before-session-check, feature-flag timing) as a dedicated
+  piece of work — discussed but deliberately not fixed in this PR.
 - Archive this OpenSpec change once the PR merges.

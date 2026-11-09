@@ -9,7 +9,7 @@
  * jurisdiction's keys either way. A failure here is a security finding — log
  * it per test plan §8, cross-referenced to IGDD-3184.
  *
- * TARGET KEY: the probes aim at a throwaway key that IZG Operations creates
+ * TARGET KEY: the probes aim at a throwaway key that IZG Security creates
  * at the start of the run, never at a real one. If ownership enforcement is
  * broken, the probes really do reveal, renew, revoke or cancel their target.
  * Its organization ("Jurisdiction B") is pinned by TEST_ORG_NAME, so the keys
@@ -28,8 +28,10 @@
  * sign-in before the route's ownership check ever runs.
  *
  * Accounts (.env.test). The spec skips with a reason if any are unset:
- *   OKTA_USERNAME / OKTA_PASSWORD / OKTA_USER_FULLNAME
- *     IZG Operations.
+ *   E2E_RBAC_IZG_SEC_USERNAME / _PASSWORD / _FULLNAME
+ *     IZG Security — the global-reach role for API keys (IGDD-3549; IZG
+ *     Operations lost this access). NOT the same as OKTA_USERNAME, which
+ *     other specs still use as the IZG Operations admin account.
  *   E2E_RBAC_JURIS_OPS_USERNAME / _PASSWORD / _FULLNAME
  *     Jurisdiction Operations for Jurisdiction A. Must own at least one key.
  *   E2E_RBAC_NO_ROLE_USERNAME / _PASSWORD / _FULLNAME
@@ -41,7 +43,7 @@
 import { Browser, BrowserContext, Page, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
-import { ApiResult, callApi } from '../helpers/dpopFetch'
+import { callApi } from '../helpers/dpopFetch'
 import { apiKeyRow } from '../helpers/createApiKey'
 import {
   API_KEYS_VIEWPORT,
@@ -49,8 +51,9 @@ import {
 } from '../helpers/apiKeyHelpers'
 
 const REQUIRED_ENV = [
-  'OKTA_USERNAME',
-  'OKTA_PASSWORD',
+  'E2E_RBAC_IZG_SEC_USERNAME',
+  'E2E_RBAC_IZG_SEC_PASSWORD',
+  'E2E_RBAC_IZG_SEC_FULLNAME',
   'E2E_RBAC_JURIS_OPS_USERNAME',
   'E2E_RBAC_JURIS_OPS_PASSWORD',
   'E2E_RBAC_JURIS_OPS_FULLNAME',
@@ -78,11 +81,6 @@ const TEST_ORG_NAME = 'Utah Department of Health (sender + jurisdiction)'
 // Environment id of Development (DEST_TYPES in src/lib/desttypehelper.ts).
 const DEV_ENV_ID = 5
 
-// The two messages requireApiKeyAccess / hasApiKeyPermission return. Matching
-// the text, not just the status, proves which gate refused the request.
-const NOT_OWNER = 'Forbidden - not authorized for this jurisdiction'
-const NO_ROLE = 'Forbidden - insufficient role'
-
 type Jurisdiction = {
   jurisdictionId: number
   name?: string
@@ -100,11 +98,6 @@ type Credential = {
   cancelledAt?: string
 }
 type SessionUser = { isAdmin?: boolean; jurisdictions?: string[] }
-
-const errorOf = (res: ApiResult) =>
-  typeof res.body === 'object' && res.body !== null
-    ? (res.body as { error?: string }).error
-    : undefined
 
 // The caller's own session: its jurisdiction prefixes are exactly the reach
 // the server checks (policy.ts scopeAllows). /api/auth/* needs no DPoP proof.
@@ -156,19 +149,17 @@ const probes = (target: Credential) => [
   },
 ]
 
-const expectAllDenied = async (
-  page: Page,
-  target: Credential,
-  message: string
-) => {
+// Status only, not a message (IGDD-3549 review follow-up): the declarative
+// gate answers with a plain-text body ('forbidden'), not JSON, so there is
+// no longer a distinct message naming which gate refused — the status code
+// is the only signal this probe can check.
+const expectAllDenied = async (page: Page, target: Credential) => {
   for (const probe of probes(target)) {
     const res = await callApi(page, probe.method, probe.path, probe.body)
-    // Only {status, error}, never the raw body: a regressed view-token probe
-    // returns the live JWT, and a diff of the body would print it to the log.
     expect(
-      { status: res.status, error: errorOf(res) },
+      res.status,
       `${probe.name} on another jurisdiction's key must be refused`
-    ).toEqual({ status: 403, error: message })
+    ).toBe(403)
   }
 }
 
@@ -189,7 +180,7 @@ const senderOrgs = async (page: Page): Promise<Jurisdiction[]> => {
 const orgLabel = (j: Jurisdiction) =>
   String(j.description || j.name || j.jurisdictionId)
 
-// As IZG Operations, creates the target key in TEST_ORG_NAME. Prefers an
+// As IZG Security, creates the target key in TEST_ORG_NAME. Prefers an
 // Active key, on a domain already authorized there in Development (no DNS
 // challenge). Otherwise falls back to a pending key ("Ready for Validation")
 // on a throwaway domain, which needs no setup data. Either way a non-owner
@@ -236,7 +227,7 @@ const createTargetKey = async (
     const { sortKey } = created.body as { sortKey: string }
     onCreated(sortKey, created.status === 202)
     const key = (await listCredentials(page)).find((c) => c.sortKey === sortKey)
-    expect(key, 'new key missing from IZG Operations list').toBeDefined()
+    expect(key, 'new key missing from IZG Security list').toBeDefined()
     return key as Credential
   }
 
@@ -295,7 +286,7 @@ test.describe('API key RBAC scoping', () => {
       env('E2E_RBAC_JURIS_OPS_FULLNAME')
     ))
     const sessionA = await sessionOf(juris)
-    expect(sessionA.isAdmin, 'Jurisdiction A must not be IZG Operations').toBe(
+    expect(sessionA.isAdmin, 'Jurisdiction A must not be an admin account').toBe(
       false
     )
     expect(
@@ -305,9 +296,9 @@ test.describe('API key RBAC scoping', () => {
     reachOfA = sessionA.jurisdictions
     ;({ context: adminContext, page: admin } = await signIn(
       browser,
-      env('OKTA_USERNAME'),
-      env('OKTA_PASSWORD'),
-      process.env.OKTA_USER_FULLNAME
+      env('E2E_RBAC_IZG_SEC_USERNAME'),
+      env('E2E_RBAC_IZG_SEC_PASSWORD'),
+      env('E2E_RBAC_IZG_SEC_FULLNAME')
     ))
     await openApiKeyManagement(admin)
     target = await createTargetKey(
@@ -352,7 +343,7 @@ test.describe('API key RBAC scoping', () => {
     await adminContext.close()
   })
 
-  test('IZG Operations sees every jurisdiction', async () => {
+  test('IZG Security sees every jurisdiction', async () => {
     await openApiKeyManagement(admin)
 
     // The Create Key Organization dropdown is filtered to the organizations
@@ -390,7 +381,7 @@ test.describe('API key RBAC scoping', () => {
     await expect(apiKeyRow(juris, targetDescription)).toHaveCount(0)
 
     // Steps 2-3: direct calls on B's key are refused by the ownership gate.
-    await expectAllDenied(juris, target, NOT_OWNER)
+    await expectAllDenied(juris, target)
 
     // Not mutated: same status as created, never renewed, revoked or cancelled.
     const adminList = await listCredentials(admin)
@@ -399,7 +390,7 @@ test.describe('API key RBAC scoping', () => {
     expect(after?.revokedAt ?? null).toBeNull()
     expect(after?.supersededBy).toBeUndefined()
 
-    // Step 4: IZG Operations sees every key Jurisdiction A sees, plus B's.
+    // Step 4: IZG Security sees every key Jurisdiction A sees, plus B's.
     const adminKeys = adminList.map((c) => c.sortKey)
     for (const c of visible) expect(adminKeys).toContain(c.sortKey)
   })
@@ -428,11 +419,8 @@ test.describe('API key RBAC scoping', () => {
 
       // Direct route calls are refused by the role gate.
       const list = await callApi(page, 'GET', '/api/apikeys')
-      expect({ status: list.status, error: errorOf(list) }).toEqual({
-        status: 403,
-        error: NO_ROLE,
-      })
-      await expectAllDenied(page, target, NO_ROLE)
+      expect(list.status).toBe(403)
+      await expectAllDenied(page, target)
     } finally {
       await logout(page).catch(() => {})
       await context.close()

@@ -6,10 +6,10 @@ import { buildRequestContext } from '../../lib/requestContext'
 import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../lib/security/authzsubject'
 import { toEcsUrl } from '../../lib/utils/ecsUrl'
+import type { CcRole } from '../../lib/security/rolemapping'
 import {
   CapabilityRef,
   decideCapability,
-  decideRouteCapability,
   grantingRoleForRoute,
   requiresDestinationScope,
 } from '../../lib/security/accessregistry'
@@ -244,6 +244,14 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       // destination is a reach denial; say so, and name the destination.
       const reachDenial =
         requiresDestinationScope(ref) && decideCapability(subject, ref)
+      // `apikeys.*` is the one REQUIRES_DESTINATION_SCOPE page block whose
+      // resolved value is a jurisdiction prefix, not a destination id —
+      // logging it as `destId` would be misleading in a query by actual
+      // destination. `jurisdictionId` already exists on `AccessDeniedEvent`
+      // for exactly this (it was the old in-handler apikeys gate's field,
+      // orphaned when that gate was replaced by this one — IGDD-3549 review
+      // follow-up), so reuse it rather than adding a new field.
+      const scopeField = ref.page === 'apikeys' ? 'jurisdictionId' : 'destId'
       logAccessDenied({
         reason: reachDenial
           ? s === null
@@ -259,7 +267,7 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
         method: req.method,
         user,
         roles: subject.roles,
-        ...(s ? { destId: s } : {}),
+        ...(s ? { [scopeField]: s } : {}),
       })
       forbid()
     }
@@ -295,29 +303,39 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // passed from here, so this enforcer, the page gate and the nav predicate
     // cannot be edited into three different decisions.
     //
-    // `decideRouteCapability` adds the REQUIRES_DESTINATION_SCOPE rule on top
+    // `grantingRoleForRoute` adds the REQUIRES_DESTINATION_SCOPE rule on top
     // (PR #756): a destination-scoped capability is decided for `scope`, per
     // role; a missing destination falls back to global-reach roles only, while
     // an invalid destination denies all roles; a capability declared with no
     // `scope` at all (`hasScope` false) is decided by capability alone, any
-    // jurisdiction (IGDD-3549).
-    const satisfies = (
+    // jurisdiction (IGDD-3549). `decideRouteCapability` is the same question
+    // asked as a boolean — not used here, since this enforcer needs *which*
+    // role, not just whether one exists: call this once and reuse the answer
+    // for both the allow/deny decision and the audit-trail `grantedBy` a
+    // handler reads afterward, rather than deciding the same thing twice
+    // (review follow-up on IGDD-3549: `grant()` used to re-derive the role
+    // separately, right after this had already computed it).
+    const decide = (
       ref: CapabilityRef,
       s: string | null | undefined = scope,
       hs: boolean = hasScope
-    ): boolean => decideRouteCapability(subject, ref, s, hs)
+    ): CcRole | undefined => grantingRoleForRoute(subject, ref, s, hs)
+
+    // The first alternative (of possibly several, for an any-of declaration)
+    // that some held role grants, if any.
+    const firstGrantingRole = (refs: ReadonlyArray<CapabilityRef>): CcRole | undefined => {
+      for (const ref of refs) {
+        const role = decide(ref)
+        if (role) return role
+      }
+      return undefined
+    }
 
     // Stash which role the decision above actually used, so a handler that
     // records an audit trail's "which role authorized this?" (IGDD-3549)
-    // reads it from the request context instead of re-deciding authorization
-    // a second time just to find out. Allowed path only — nothing reads this
-    // after a denial.
-    const grant = (
-      ref: CapabilityRef,
-      s: string | null | undefined = scope,
-      hs: boolean = hasScope
-    ) => {
-      if (context) context.grantedBy = grantingRoleForRoute(subject, ref, s, hs)
+    // reads it from the request context instead of re-deciding authorization.
+    const grant = (role: CcRole) => {
+      if (context) context.grantedBy = role
       return next()
     }
 
@@ -373,23 +391,25 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
           return scopeResolutionFailed(error)
         }
       }
-      if (!satisfies(ref, methodScope, methodHasScope)) return deny(ref, methodScope)
-      return grant(ref, methodScope, methodHasScope)
+      const methodRole = decide(ref, methodScope, methodHasScope)
+      if (!methodRole) return deny(ref, methodScope)
+      return grant(methodRole)
     }
 
     // A single declared capability keeps the precise `permission` field; an
     // any-of cannot, so the two denials are reported differently.
     if (!Array.isArray(authz.capability)) {
-      if (satisfies(authz.capability)) return grant(authz.capability)
-      return deny(authz.capability)
+      const role = decide(authz.capability)
+      if (!role) return deny(authz.capability)
+      return grant(role)
     }
 
     // Any-of, and the tenancy guard is evaluated **per alternative**, not
     // across the array. /api/organizations accepts three capabilities, two of
     // which are guarded; a caller holding only the unguarded third must still
     // pass, or Jurisdiction Operations and Support lose the route silently.
-    const satisfiedAlternative = authz.capability.find((ref) => satisfies(ref))
-    if (satisfiedAlternative) return grant(satisfiedAlternative)
+    const anyOfRole = firstGrantingRole(authz.capability)
+    if (anyOfRole) return grant(anyOfRole)
     return denyAnyOf(authz.capability)
   }
 }

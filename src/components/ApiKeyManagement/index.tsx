@@ -3120,7 +3120,7 @@ function CreateKeyDialog({
           useTypes,
         }),
       })
-      const body = await res.json()
+      const body = await res.json().catch(() => ({}))
       if (res.status === 202) {
         setChallenge({
           sortKey: body.sortKey,
@@ -3160,7 +3160,7 @@ function CreateKeyDialog({
           jurisdictionId,
         }),
       })
-      const body = await res.json()
+      const body = await res.json().catch(() => ({}))
       mutate('/api/apikeys')
       if (!res.ok || !body.verified) {
         setError(body.error || "We couldn't find the expected record.")
@@ -3989,7 +3989,7 @@ export default function ApiKeyManagement() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sortKey }),
         })
-        const body = await res.json()
+        const body = await res.json().catch(() => ({}))
         if (!res.ok) {
           showSnackbar(
             'error',
@@ -4052,7 +4052,7 @@ export default function ApiKeyManagement() {
             jurisdictionId: key.jurisdictionId,
           }),
         })
-        const body = await res.json()
+        const body = await res.json().catch(() => ({}))
         mutate('/api/apikeys')
         if (!res.ok || !body.verified) {
           showSnackbar(

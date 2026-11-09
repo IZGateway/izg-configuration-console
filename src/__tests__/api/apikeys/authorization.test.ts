@@ -49,6 +49,7 @@ jest.mock('../../../lib/apikeys/jwt', () => ({
 }))
 
 import type { NextApiRequest, NextApiResponse } from 'next'
+import logger from '../../../../logger'
 import apikeysHandler from '../../../pages/api/apikeys/index'
 import domainsHandler from '../../../pages/api/apikeys/domains'
 import tokenHandler from '../../../pages/api/apikeys/token'
@@ -225,6 +226,27 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
 
       expect(res.statusCode).toBe(403)
       expect(revokeApiKeyCredential).not.toHaveBeenCalled()
+    })
+
+    // Review follow-up (IGDD-3549): the resolved scope for an apikeys denial
+    // is a jurisdiction prefix, not a destination id — must not be logged
+    // under destId, which would be misleading in a query by actual
+    // destination.
+    it('logs the denial under jurisdictionId, not destId', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      mockGetDbClient.mockResolvedValue({
+        getJurisdiction,
+        getApiKeyCredential: jest.fn().mockResolvedValue({ status: 'active', jurisdictionId: '2' }),
+        revokeApiKeyCredential: jest.fn(),
+      })
+
+      await apikeysHandler(createReq('PATCH', { sortKey: 'jti-2' }), createRes())
+
+      const deniedCall = (logger.warn as jest.Mock).mock.calls.find(
+        (call) => call[1]?.eventType === 'AccessDenied'
+      )
+      expect(deniedCall?.[1]).toMatchObject({ jurisdictionId: 'ma' })
+      expect(deniedCall?.[1]).not.toHaveProperty('destId')
     })
 
     it('403s DELETE cancel of a credential in a non-owned jurisdiction', async () => {

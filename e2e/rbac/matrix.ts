@@ -178,9 +178,12 @@ const MOVES_TO_IZG_SECURITY: KnownGap = {
   reason:
     'Target moves this to IZG Security. IZG Operations keeps it until IZG Security exists.',
 }
-/** API key access moves from the Operations roles to the Security roles. */
+// API key access moves from the Operations roles to the Security roles.
+// IZG Operations' half landed (IGDD-3549): it no longer holds apikeys.*,
+// matching the target matrix, so there is no longer a gap to name for it
+// here. Jurisdiction Operations keeps it until IGDD-3500 creates
+// Jurisdiction Security.
 const API_KEYS_MOVE_TO_SECURITY: Partial<Record<RoleName, KnownGap>> = {
-  'IZG Operations': MOVES_TO_IZG_SECURITY,
   'Jurisdiction Operations': {
     ticket: 'IGDD-3500',
     reason: 'Target moves API keys to Jurisdiction Security.',
@@ -343,9 +346,18 @@ export const MATRIX: readonly MatrixRow[] = [
     feature: 'API Key Management — create/renew/revoke',
     allow: [IZG_SEC, JUR_SEC],
     requiresFlag: 'apiKeyManagement',
-    // Revoke (PATCH) and cancel (DELETE) check the role before reading the
-    // body, then answer 400 for a missing sortKey. Create validates the body
-    // first, so it cannot tell a denial from bad input and is not probed.
+    // Revoke (PATCH) and cancel (DELETE) resolve their jurisdiction-scoped
+    // reach declaratively, from the body's sortKey, before the handler ever
+    // runs (IGDD-3549). An empty body resolves to no scope, which this probe
+    // relies on to always answer 403 for a role that lacks the capability —
+    // but a role that HOLDS the capability (a jurisdiction-scoped one, not a
+    // global one) also gets 403 for an empty body, since "no scope named"
+    // falls back to global-reach-only. So this probe cannot distinguish "no
+    // capability" from "has capability, empty body" for Jurisdiction
+    // Operations specifically: it will report `apikeys.write`'s known gap
+    // (IGDD-3500) as closed even though the role still holds the capability.
+    // Create validates the body first, so it cannot tell a denial from bad
+    // input either and is not probed.
     // Ownership across jurisdictions: e2e/tests/apiKeyRbacScoping.spec.ts.
     api: [
       { method: 'PATCH', path: '/api/apikeys', body: {}, refusal: 403 },

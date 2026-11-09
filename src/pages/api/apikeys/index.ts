@@ -15,10 +15,8 @@ import { scopeToOwnedJurisdictions } from '../../../lib/apikeys/scope'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
 import { subjectOf } from '../../../lib/security/authzsubject'
-import { asyncRequestContext } from '../../../lib/Context'
+import { currentGrantedBy } from '../../../lib/Context'
 import crypto from 'crypto'
-
-const grantedBy = () => asyncRequestContext.getStore()?.grantedBy
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -229,7 +227,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           context: {
             jurisdictionId: String(jurisdictionId),
             dnsChoice,
-            grantedBy: grantedBy(),
+            grantedBy: currentGrantedBy(),
             // The domain was already authorized, so no DNS challenge ran for
             // this credential — it was issued Active immediately.
             issuedImmediately: true,
@@ -253,7 +251,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           sortKey,
           createdBy,
           dnsChoice,
-          grantedBy: grantedBy(),
+          grantedBy: currentGrantedBy(),
           operation: 'createApiKeyCredential',
         })
 
@@ -345,7 +343,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         context: {
           jurisdictionId: String(jurisdictionId),
           dnsChoice,
-          grantedBy: grantedBy(),
+          grantedBy: currentGrantedBy(),
           issuedImmediately: false,
           ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
         },
@@ -402,7 +400,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         challengeUuid,
         jti,
         sortKey,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         operation: 'createApiKeyCredential',
       })
 
@@ -511,7 +509,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         },
         context: {
           jurisdictionId: credential.jurisdictionId,
-          grantedBy: grantedBy(),
+          grantedBy: currentGrantedBy(),
           previousStatus: credential.status,
           ...(reason ? { reason: String(reason) } : {}),
         },
@@ -521,7 +519,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         revokedBy,
         revokedAt,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         operation: 'revokeApiKeyCredential',
       })
 
@@ -592,7 +590,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         },
         context: {
           jurisdictionId: credential.jurisdictionId,
-          grantedBy: grantedBy(),
+          grantedBy: currentGrantedBy(),
           previousStatus: credential.status,
         },
       })
@@ -601,7 +599,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         cancelledBy,
         cancelledAt,
-        grantedBy: grantedBy(),
+        grantedBy: currentGrantedBy(),
         operation: 'cancelApiKeyCredential',
       })
 
