@@ -55,12 +55,17 @@ const ChangeRequestActionButtons = (props: {
   const { destId, destTypeId, hasChangeRequest, hasActiveDraft } = props
   const canEdit = !hasChangeRequest && !hasActiveDraft
   const accessLevels: ManageConnectionsPageAccessControl = useRoleAccess()
+  // Only fetch when draftData will actually be used (the "Draft Saved"
+  // tooltip below, gated the same way on canEditConnection) — the endpoint
+  // requires changerequest.canViewDetails, which every canEditConnection role
+  // also holds, but a role like IZG Program has neither, and fetching
+  // unconditionally 403'd and crashed the page for it (IGDD-3547 PR review).
   const {
     data: draftData,
     error: draftError,
     isLoading: isDraftLoading,
   } = useSWR(
-    hasActiveDraft
+    hasActiveDraft && accessLevels.canEditConnection
       ? `/api/changerequest/${props.destTypeId}/${props.destId}`
       : null
   )
