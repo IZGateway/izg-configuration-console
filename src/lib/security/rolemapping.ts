@@ -13,7 +13,7 @@
  *     login and then resolve to no permissions — and worse, displace a role that
  *     would have worked. Only roles that exist in the matrix can be named now.
  *     `IZG Program` gained a matrix entry and rejoined the mapping in IGDD-3547;
- *     `CDC Program` and `CDC CISO` remain unmapped.
+ *     `CDC Program` and `CDC CISO` were retired in IGDD-3501.
  *  2. Group names were matched exactly and case-sensitively, so an Okta group
  *     called `IZG-Operations` silently granted nothing, indistinguishable from
  *     the group not existing. Names are normalized now.
@@ -43,7 +43,7 @@ export type CcRole =
  * do. It only makes `session.user.roles` stable for logs and display, and makes
  * `Decision.grantedBy` deterministic when more than one role would allow an
  * action. Kept in the same order the old `roles.ts` used, minus the two
- * still-unmapped entries (`CDC Program`, `CDC CISO`), so nothing about
+ * roles retired in IGDD-3501, so nothing about
  * existing output order changes. `IZG Security` (IGDD-3498) goes first, matching
  * the target matrix's column order. A user already in the `IZG Security` Okta
  * group gains the role on their next session callback, and where they also hold
