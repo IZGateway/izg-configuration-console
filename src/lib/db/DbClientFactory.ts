@@ -7,7 +7,6 @@ import { DestinationType } from '../type/DestinationType'
 import { OrganizationRecord } from '../type/OrganizationRecord'
 import { DenyListItem } from '../type/DenyList'
 import { AccessGroupRecord } from '../type/AccessGroupRecord'
-import { SenderRecord } from '../type/SenderRecord'
 import { AllowedUser } from '../type/AllowedUser'
 import { AllowedUserAudit } from '../type/AllowedUserAudit'
 import {
@@ -310,11 +309,6 @@ class EncryptedRepository implements DbClient {
     if (result && typeof result === 'string') {
       return await decryptWithRetries(result)
     }
-    return result
-  }
-
-  async fetchSenderData(): Promise<SenderRecord> {
-    const result = await this.repository.fetchSenderData()
     return result
   }
 
