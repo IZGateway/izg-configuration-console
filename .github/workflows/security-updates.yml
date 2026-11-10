@@ -89,7 +89,6 @@ jobs:
           npm install -g npm-check-updates
           SCRIPTS_CHANNEL="${{ inputs.dependency_scripts_channel || 'latest' }}"
           npm install --no-save @izgateway/dependency-scripts@${SCRIPTS_CHANNEL}
-          npm audit fix || true
           DS_VERSION=$(node -p 'require("./node_modules/@izgateway/dependency-scripts/package.json").version')
           echo "Using @izgateway/dependency-scripts@${DS_VERSION}"
         env:
