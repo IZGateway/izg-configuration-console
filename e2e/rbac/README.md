@@ -127,7 +127,7 @@ Probes that are refused produce `AccessDenied` audit events in the target
 environment's logs. That is expected.
 
 Every API probe names its gate's `refusal` status: 403 for `capability` and
-`byMethod` routes and `checkAdmin`, 401 for the reach checks and for handlers
+`byMethod` routes, 401 for the reach checks and for handlers
 that refuse with 401 themselves. Only that status counts as a refusal, so a
 handler's own 401 after the gate let the request through (no such record,
 no destination) shows as a gate that let it through. Read the route before

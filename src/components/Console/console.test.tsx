@@ -87,7 +87,7 @@ import { mockDestinations } from './__mocks__/mockDestinations'
 const mockUseSession = useSession as jest.Mock
 
 const adminSession = {
-  data: { user: { name: 'Admin User', isAdmin: true } },
+  data: { user: { name: 'Admin User' } },
   status: 'authenticated',
 }
 
@@ -178,7 +178,7 @@ describe('Console – Destination Filter', () => {
       // Simulate loading state: clear mock data path by making session unauthenticated
       // (In authenticated+mock mode, destinations load instantly so test loading directly)
       mockUseSession.mockReturnValue({
-        data: { user: { isAdmin: true } },
+        data: { user: {} },
         status: 'loading',
       })
       render(<Console />)
@@ -635,7 +635,7 @@ describe('Console – Destination Filter', () => {
   describe('Access control', () => {
     it('shows a permission error for non-admin users', async () => {
       mockUseSession.mockReturnValue({
-        data: { user: { name: 'Regular User', isAdmin: false } },
+        data: { user: { name: 'Regular User' } },
         status: 'authenticated',
       })
 
@@ -662,7 +662,7 @@ describe('Console – Destination Filter', () => {
 
     it('does not render the filter UI for non-admin users', async () => {
       mockUseSession.mockReturnValue({
-        data: { user: { isAdmin: false } },
+        data: { user: {} },
         status: 'authenticated',
       })
 

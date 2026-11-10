@@ -13,6 +13,7 @@ exports[`role matrix snapshot matches the committed matrix 1`] = `
 | adminoperations | canRefreshHubDatabase | YES | YES | YES | YES | — | — | — |
 | adminoperations | canResetHubCircuitBreakers | YES | YES | YES | YES | — | — | — |
 | adminoperations | canViewAdminOperations | YES | YES | YES | YES | — | — | — |
+| adminoperations | canViewDeepHealthCheckDetail | YES | — | YES | — | — | — | — |
 | api-doc | canViewApiDoc | YES | — | YES | — | — | — | — |
 | apikeys | canCancelApiKey | — | — | YES | — | YES | — | YES |
 | apikeys | canCreateApiKey | — | — | YES | — | YES | — | YES |

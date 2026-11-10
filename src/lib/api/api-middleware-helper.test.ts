@@ -757,7 +757,7 @@ describe('enforceRouteAuthz: session, public and inHandler', () => {
 describe('a refused request always gets a response', () => {
   // Two instances of "resolves without responding" were found in this
   // change's scope — the middleware helper served as a route, and the deploy
-  // handler's unbalanced isAdmin conditional. Neither was caught by any
+  // handler's unbalanced inline admin conditional. Neither was caught by any
   // existing test, and both stall the caller with no audit record.
   it.each<[string, RouteAuthz, string, boolean]>([
     [
