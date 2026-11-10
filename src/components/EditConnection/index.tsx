@@ -824,81 +824,76 @@ const EditConnection = (props: editConnectionProps) => {
   return (
     <div>
       <Close buttonText="Cancel" />
-      {/* IGDD-3355: sticky Destination ID / Environment card. Zero height so
-          it reserves no space and the centered form below never shifts; the
-          card hangs from it into the right-hand margin and sticks while the
-          page scrolls. Hidden on narrow screens, where there is no margin to
-          float in. */}
-      <Box
-        sx={{
-          position: 'sticky',
-          top: 24,
-          height: 0,
-          zIndex: 10,
-          display: { xs: 'none', lg: 'block' },
-        }}
-      >
-        <Fade in={!destHeaderInView}>
+      {/* IGDD-3355: floating Destination ID / Environment card, pinned to the
+          right-hand margin while the in-page display is scrolled out of view.
+          position: fixed, not sticky: the Cancel button above pulls itself up
+          with a -64px margin and depends on the form's top margin collapsing
+          through the page root, so any in-flow element here blocks that
+          collapse and the button gets clipped at the viewport top. Hidden on
+          narrow screens, where there is no margin to float in. */}
+      <Fade in={!destHeaderInView}>
+        <Box
+          aria-hidden={destHeaderInView}
+          sx={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            width: 220,
+            zIndex: 10,
+            display: { xs: 'none', lg: 'block' },
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: 'white',
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+          }}
+        >
           <Box
-            aria-hidden={destHeaderInView}
             sx={{
-              width: 220,
-              ml: 'auto',
-              mr: 3,
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              backgroundColor: 'white',
-              boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+              background: '#005daa',
+              color: 'white',
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
             }}
           >
-            <Box
-              sx={{
-                background: '#005daa',
-                color: 'white',
-                padding: '8px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                fontSize: '0.75rem',
-              }}
-            >
-              DESTINATION ID
-            </Box>
-            <Box
-              sx={{
-                padding: '8px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                fontSize: '0.875rem',
-              }}
-            >
-              {destData?.destId} ({destData?.jurisdiction?.description})
-            </Box>
-            <Box
-              sx={{
-                background: '#005daa',
-                color: 'white',
-                padding: '8px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                fontSize: '0.75rem',
-              }}
-            >
-              ENVIRONMENT
-            </Box>
-            <Box
-              sx={{
-                padding: '8px',
-                textAlign: 'center',
-                fontWeight: 'bold',
-                fontSize: '0.875rem',
-              }}
-            >
-              {destData?.destinationType?.type}
-            </Box>
+            DESTINATION ID
           </Box>
-        </Fade>
-      </Box>
+          <Box
+            sx={{
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+            }}
+          >
+            {destData?.destId} ({destData?.jurisdiction?.description})
+          </Box>
+          <Box
+            sx={{
+              background: '#005daa',
+              color: 'white',
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+            }}
+          >
+            ENVIRONMENT
+          </Box>
+          <Box
+            sx={{
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+            }}
+          >
+            {destData?.destinationType?.type}
+          </Box>
+        </Box>
+      </Fade>
       <Container sx={{ mb: 16 }} maxWidth="sm">
         <Box sx={{ marginTop: 4 }}>
           <Typography
