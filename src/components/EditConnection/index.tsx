@@ -871,7 +871,7 @@ const EditConnection = (props: editConnectionProps) => {
                 fontSize: '0.875rem',
               }}
             >
-              {destData?.destId} ({destData?.jurisdiction.description})
+              {destData?.destId} ({destData?.jurisdiction?.description})
             </Box>
             <Box
               sx={{
@@ -893,7 +893,7 @@ const EditConnection = (props: editConnectionProps) => {
                 fontSize: '0.875rem',
               }}
             >
-              {destData?.destinationType.type}
+              {destData?.destinationType?.type}
             </Box>
           </Box>
         </Fade>
@@ -980,7 +980,7 @@ const EditConnection = (props: editConnectionProps) => {
                     borderRight: '1px solid #ddd',
                   }}
                 >
-                  {destData?.destId} ({destData?.jurisdiction.description})
+                  {destData?.destId} ({destData?.jurisdiction?.description})
                 </Box>
                 <Box
                   component="div"
@@ -991,7 +991,7 @@ const EditConnection = (props: editConnectionProps) => {
                     fontWeight: 'bold',
                   }}
                 >
-                  {destData.destinationType.type}
+                  {destData.destinationType?.type}
                 </Box>
               </Box>
             </Box>
@@ -1034,7 +1034,7 @@ const EditConnection = (props: editConnectionProps) => {
                     backgroundColor: 'white',
                   }}
                 >
-                  {destData?.destId} ({destData?.jurisdiction.description})
+                  {destData?.destId} ({destData?.jurisdiction?.description})
                 </Box>
               </Box>
 
@@ -1065,7 +1065,7 @@ const EditConnection = (props: editConnectionProps) => {
                     backgroundColor: 'white',
                   }}
                 >
-                  {destData?.destinationType.type}
+                  {destData?.destinationType?.type}
                 </Box>
               </Box>
             </Box>
@@ -1088,8 +1088,8 @@ const EditConnection = (props: editConnectionProps) => {
         )}
         {activeStep === 1 && (
           <Jurisdiction
-            jurisdictionName={destData?.jurisdiction.description}
-            destType={destData?.destinationType.type}
+            jurisdictionName={destData?.jurisdiction?.description}
+            destType={destData?.destinationType?.type}
           />
         )}
         {activeStep === 2 && (
