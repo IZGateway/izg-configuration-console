@@ -72,13 +72,13 @@ const IZGOperationsAccess: RoleAccess = {
   // Management" rows are IZG Security and Jurisdiction Security only. The
   // decision to remove IZG Operations' access belongs to IGDD-3549, so these
   // values are left as they are.
+  // Narrowed off entirely (IGDD-3549, Anusha's 2026-10-28 resolution): the
+  // target matrix is IZG Security and Jurisdiction Security only. IZG
+  // Operations held full access only because no narrower role existed yet —
+  // affected users are expected to already hold IZG Security before this
+  // lands (same shape of change as IGDD-3498's admin-operations narrowing).
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
-    canListApiKeys: true,
-    canCreateApiKey: true,
-    canRevokeApiKey: true,
-    canRenewApiKey: true,
-    canCancelApiKey: true,
   } as ApiKeyManagementPageAccessControl,
   onboarding: {
     ...defaultOnboardingPageAccessControl,

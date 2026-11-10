@@ -5,8 +5,8 @@ import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
 import {
-  hasApiKeyPermission,
-  requireApiKeyAccess,
+  isApiKeyManagementEnabled,
+  scopeFromCredentialSortKeyInQuery,
 } from '../../../lib/security/apiKeyAuthz'
 
 /**
@@ -46,10 +46,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!session || !session.user) {
       return res.status(401).json({ error: 'Unauthorized - Please login' })
     }
-    if (!hasApiKeyPermission(session, 'canListApiKeys')) {
-      return res.status(403).json({ error: 'Forbidden - insufficient role' })
-    }
-
     const { sortKey } = req.query
     if (!sortKey || typeof sortKey !== 'string') {
       return res.status(400).json({ error: 'sortKey is required' })
@@ -57,23 +53,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const dbClient = await DbClientFactory.getDbClient()
 
-    // Tenancy (fix IDOR): a credential's history is as sensitive as the
-    // credential row itself — it names the domain, use-type scope and every
-    // actor who touched it. The jurisdiction is derived from the STORED
-    // credential rather than trusted from the caller, matching token.ts and
-    // verify-domain, so a caller cannot pair another jurisdiction's sortKey
-    // with its own jurisdictionId to pass the ownership check.
+    // Tenancy (fix IDOR: jurisdiction comes from the STORED credential,
+    // never a client-supplied one, matching token.ts and verify-domain)
+    // already happened declaratively, in the route's `scope` extractor,
+    // before this handler ran at all — this is a second, independent read
+    // for the business logic below (accepted two-reads trade-off, IGDD-3549
+    // design.md Risks).
     const credential = await dbClient.getApiKeyCredential(sortKey)
     if (!credential) {
       return res.status(404).json({ error: 'API key not found' })
-    }
-    const authz = await requireApiKeyAccess(
-      session,
-      'canListApiKeys',
-      credential.jurisdictionId
-    )
-    if (!authz.ok) {
-      return res.status(authz.status).json({ error: authz.error })
     }
 
     const history = await dbClient.fetchApiKeyCredentialAuditHistory(sortKey)
@@ -96,13 +84,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// Declared { inHandler } to match the five existing apikeys/* routes: this
-// handler checks canListApiKeys itself and then scopes rows to the caller's
-// owned jurisdictions, so the decision is per-row and cannot be expressed as
-// a single route-level capability. Arrived on develop after IGDD-3472 was
-// branched, with no declaration at all - the required argument is what
-// stopped the build and forced this line to be written.
+// IGDD-3549: declarative capability + reach, closing this route's
+// `in-handler` debt row. `canListApiKeys` is destination-scoped here (one
+// credential's jurisdiction) — the same capability is capability-only on
+// apikeysaudit/index.ts GET (a list, row-filtered after) — the regression
+// case for the shared-capability design decision (see the `hasScope` doc on
+// `decideRouteCapability`).
 export default withMiddleware({
-  inHandler:
-    'IGDD-3472: handler checks canListApiKeys, then scopes rows to owned jurisdictions',
+  featureFlag: isApiKeyManagementEnabled,
+  capability: { page: 'apikeys', capability: 'canListApiKeys' },
+  scope: scopeFromCredentialSortKeyInQuery(),
 })(handler)
