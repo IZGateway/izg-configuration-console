@@ -838,7 +838,13 @@ const ConnectionsTable = (props) => {
               {row.destId}
             </Typography>
             <StatusDetailsTooltip row={row}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* tabIndex, because the diagnostics and retry strategy exist
+                  only inside this tooltip and MUI opens it on focus — without
+                  a focusable trigger, keyboard users could never reach them. */}
+              <Box
+                tabIndex={0}
+                sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
                 {isConnected ? (
                   <CheckIcon fontSize="small" />
                 ) : (

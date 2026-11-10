@@ -132,6 +132,74 @@ export type MenuItem = {
   isVisible?: (roles: string[] | undefined, session?: Session | null) => boolean
 }
 
+// One menu row. Its label shows only in the open drawer; a tooltip stands in
+// for it when the drawer is collapsed. The tooltip is controlled rather than
+// letting MUI listen on its child: it must anchor to the icon (the button runs
+// to 200% width under the drawer's hidden overflow, so a tooltip anchored to
+// it opens far past the drawer edge), but the icon is not focusable — keyboard
+// focus lands on the button — so the button's hover and focus drive it.
+const NavMenuItem = ({
+  item,
+  drawerOpen,
+  selected,
+  onSelect,
+}: {
+  item: MenuItem
+  drawerOpen: boolean
+  selected: boolean
+  onSelect: (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => void
+}) => {
+  const [tooltipOpen, setTooltipOpen] = React.useState(false)
+  return (
+    <ListItem
+      id={item.label}
+      sx={{
+        padding: '0 0',
+      }}
+    >
+      <NextLink
+        href={item.path}
+        style={{ textDecoration: 'none', color: 'white' }}
+        passHref
+      >
+        <ListItemButton
+          sx={{
+            padding: '1rem 1.5rem',
+            minWidth: '200%',
+            borderBottom: `1px solid ${palette.primaryLight}`,
+            '&& .Mui-selected , && .Mui-selected:hover': {
+              fontWeight: '700',
+            },
+          }}
+          selected={selected}
+          onClick={onSelect}
+          onMouseEnter={() => setTooltipOpen(true)}
+          onMouseLeave={() => setTooltipOpen(false)}
+          onFocus={() => setTooltipOpen(true)}
+          onBlur={() => setTooltipOpen(false)}
+          id={item.label + '_button'}
+        >
+          <Tooltip
+            title={item.label}
+            placement="right"
+            open={!drawerOpen && tooltipOpen}
+          >
+            <ListItemIcon
+              sx={{
+                color: 'white',
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+          </Tooltip>
+          <ListItemText primary={item.label} />
+        </ListItemButton>
+      </NextLink>
+      <Divider color={palette.primaryLight} />
+    </ListItem>
+  )
+}
+
 const MiniDrawer = () => {
   const { data: session } = useSession()
   // Was `session?.user.isAdmin`. Now the same PAGE_ENTRY constant the page's
@@ -215,53 +283,13 @@ const MiniDrawer = () => {
               !item.isVisible || item.isVisible(session.user.roles, session)
           )
           .map((item: MenuItem, index) => (
-            <ListItem
+            <NavMenuItem
               key={item.label}
-              id={item.label}
-              sx={{
-                padding: '0 0',
-              }}
-            >
-              <NextLink
-                key={item.label}
-                href={item.path}
-                style={{ textDecoration: 'none', color: 'white' }}
-                passHref
-              >
-                <ListItemButton
-                  sx={{
-                    padding: '1rem 1.5rem',
-                    minWidth: '200%',
-                    borderBottom: `1px solid ${palette.primaryLight}`,
-                    '&& .Mui-selected , && .Mui-selected:hover': {
-                      fontWeight: '700',
-                    },
-                  }}
-                  key={item.label}
-                  selected={selectedIndex === index}
-                  onClick={(event) => handleListItemClick(event, index)}
-                  id={item.label + '_button'}
-                >
-                  {/* Labels show only in the open drawer; the tooltip stands
-                      in for them when it's collapsed (an empty title disables
-                      it). Anchored to the icon, not the button: the button
-                      runs to 200% width under the drawer's hidden overflow,
-                      so a tooltip anchored to it opens far past the drawer
-                      edge. */}
-                  <Tooltip title={open ? '' : item.label} placement="right">
-                    <ListItemIcon
-                      sx={{
-                        color: 'white',
-                      }}
-                    >
-                      {item.icon}
-                    </ListItemIcon>
-                  </Tooltip>
-                  <ListItemText primary={item.label} />
-                </ListItemButton>
-              </NextLink>
-              <Divider color={palette.primaryLight} />
-            </ListItem>
+              item={item}
+              drawerOpen={open}
+              selected={selectedIndex === index}
+              onSelect={(event) => handleListItemClick(event, index)}
+            />
           ))}
       </List>
     </>

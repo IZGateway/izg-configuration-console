@@ -829,8 +829,10 @@ const EditConnection = (props: editConnectionProps) => {
           position: fixed, not sticky: the Cancel button above pulls itself up
           with a -64px margin and depends on the form's top margin collapsing
           through the page root, so any in-flow element here blocks that
-          collapse and the button gets clipped at the viewport top. Hidden on
-          narrow screens, where there is no margin to float in. */}
+          collapse and the button gets clipped at the viewport top. Shown only
+          from 1400px up: the sm form (600px) centered beside the expanded
+          300px drawer leaves (vw - 900) / 2 of right margin, and the card
+          needs 244px of it — below ~1390px it would overlap the form. */}
       <Fade in={!destHeaderInView}>
         <Box
           aria-hidden={destHeaderInView}
@@ -840,7 +842,8 @@ const EditConnection = (props: editConnectionProps) => {
             right: 24,
             width: 220,
             zIndex: 10,
-            display: { xs: 'none', lg: 'block' },
+            display: 'none',
+            '@media (min-width: 1400px)': { display: 'block' },
             border: '1px solid #ddd',
             borderRadius: '8px',
             overflow: 'hidden',
