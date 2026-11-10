@@ -826,7 +826,7 @@ const EditConnection = (props: editConnectionProps) => {
       <Close buttonText="Cancel" />
       {/* IGDD-3355: sticky Destination ID / Environment card. Zero height so
           it reserves no space and the centered form below never shifts; the
-          card hangs from it into the left-hand margin and sticks while the
+          card hangs from it into the right-hand margin and sticks while the
           page scrolls. Hidden on narrow screens, where there is no margin to
           float in. */}
       <Box
@@ -843,7 +843,8 @@ const EditConnection = (props: editConnectionProps) => {
             aria-hidden={destHeaderInView}
             sx={{
               width: 220,
-              ml: 3,
+              ml: 'auto',
+              mr: 3,
               border: '1px solid #ddd',
               borderRadius: '8px',
               overflow: 'hidden',
