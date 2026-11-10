@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Container, Typography, Box } from '@mui/material'
+import { Container, Typography, Box, Fade } from '@mui/material'
 import ServiceAgreement from './serviceAgreement'
 import Identify from './identify'
 import Verify from './verify'
@@ -104,6 +104,23 @@ const EditConnection = (props: editConnectionProps) => {
   const [isLoadingTest, setIsLoadingTest] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [isValidatingDestUri, setIsValidatingDestUri] = useState(false)
+
+  // IGDD-3355: the floating Destination ID / Environment card shows only while
+  // the in-page display is scrolled out of view, so the context is always on
+  // screen exactly once. A callback ref rather than an effect, because the
+  // observed node mounts after the loading early-return below.
+  const [destHeaderInView, setDestHeaderInView] = useState(true)
+  const destHeaderObserverRef = useRef<IntersectionObserver | null>(null)
+  const destHeaderRef = useCallback((node: HTMLElement | null) => {
+    destHeaderObserverRef.current?.disconnect()
+    destHeaderObserverRef.current = null
+    if (node && typeof IntersectionObserver !== 'undefined') {
+      destHeaderObserverRef.current = new IntersectionObserver(([entry]) =>
+        setDestHeaderInView(entry.isIntersecting)
+      )
+      destHeaderObserverRef.current.observe(node)
+    }
+  }, [])
 
   // IGDD-3566: the ref is the gate that blocks a second submission and the state
   // drives the pending UI. React batches state updates, so two fast activations
@@ -807,6 +824,76 @@ const EditConnection = (props: editConnectionProps) => {
   return (
     <div>
       <Close buttonText="Cancel" />
+      {/* IGDD-3355: floating Destination ID / Environment card, pinned to the
+          right-hand margin while the in-page display is scrolled out of view.
+          position: fixed, not sticky: the Cancel button above pulls itself up
+          with a -64px margin and depends on the form's top margin collapsing
+          through the page root, so any in-flow element here blocks that
+          collapse and the button gets clipped at the viewport top. Hidden on
+          narrow screens, where there is no margin to float in. */}
+      <Fade in={!destHeaderInView}>
+        <Box
+          aria-hidden={destHeaderInView}
+          sx={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            width: 220,
+            zIndex: 10,
+            display: { xs: 'none', lg: 'block' },
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            backgroundColor: 'white',
+            boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          <Box
+            sx={{
+              background: '#005daa',
+              color: 'white',
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+            }}
+          >
+            DESTINATION ID
+          </Box>
+          <Box
+            sx={{
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+            }}
+          >
+            {destData?.destId} ({destData?.jurisdiction?.description})
+          </Box>
+          <Box
+            sx={{
+              background: '#005daa',
+              color: 'white',
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.75rem',
+            }}
+          >
+            ENVIRONMENT
+          </Box>
+          <Box
+            sx={{
+              padding: '8px',
+              textAlign: 'center',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+            }}
+          >
+            {destData?.destinationType?.type}
+          </Box>
+        </Box>
+      </Fade>
       <Container sx={{ mb: 16 }} maxWidth="sm">
         <Box sx={{ marginTop: 4 }}>
           <Typography
@@ -820,6 +907,7 @@ const EditConnection = (props: editConnectionProps) => {
             Create Change Request
           </Typography>
           <Box
+            ref={destHeaderRef}
             sx={{
               width: '100%',
               border: '1px solid #ddd',
@@ -888,7 +976,7 @@ const EditConnection = (props: editConnectionProps) => {
                     borderRight: '1px solid #ddd',
                   }}
                 >
-                  {destData?.destId} ({destData?.jurisdiction.description})
+                  {destData?.destId} ({destData?.jurisdiction?.description})
                 </Box>
                 <Box
                   component="div"
@@ -899,7 +987,7 @@ const EditConnection = (props: editConnectionProps) => {
                     fontWeight: 'bold',
                   }}
                 >
-                  {destData.destinationType.type}
+                  {destData.destinationType?.type}
                 </Box>
               </Box>
             </Box>
@@ -942,7 +1030,7 @@ const EditConnection = (props: editConnectionProps) => {
                     backgroundColor: 'white',
                   }}
                 >
-                  {destData?.destId} ({destData?.jurisdiction.description})
+                  {destData?.destId} ({destData?.jurisdiction?.description})
                 </Box>
               </Box>
 
@@ -973,7 +1061,7 @@ const EditConnection = (props: editConnectionProps) => {
                     backgroundColor: 'white',
                   }}
                 >
-                  {destData?.destinationType.type}
+                  {destData?.destinationType?.type}
                 </Box>
               </Box>
             </Box>
@@ -996,8 +1084,8 @@ const EditConnection = (props: editConnectionProps) => {
         )}
         {activeStep === 1 && (
           <Jurisdiction
-            jurisdictionName={destData?.jurisdiction.description}
-            destType={destData?.destinationType.type}
+            jurisdictionName={destData?.jurisdiction?.description}
+            destType={destData?.destinationType?.type}
           />
         )}
         {activeStep === 2 && (
