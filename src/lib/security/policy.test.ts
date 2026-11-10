@@ -22,7 +22,10 @@ const subject = (roles: CcRole[], jurisdictions: string[] = []): AuthzSubject =>
 
 describe('policy: single-role behaviour is unchanged', () => {
   it.each<[CcRole, boolean]>([
-    ['IZG Operations', true],
+    // IZG Operations narrowed off apikeys.* entirely (IGDD-3549) — IZG
+    // Security is the global role with full access now.
+    ['IZG Operations', false],
+    ['IZG Security', true],
     ['IZG Support', false],
     ['Jurisdiction Operations', true],
     ['Jurisdiction Support', false],
@@ -32,7 +35,7 @@ describe('policy: single-role behaviour is unchanged', () => {
   })
 
   it('global roles reach any jurisdiction; scoped roles only their own', () => {
-    expect(can(subject(['IZG Operations']), 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
+    expect(can(subject(['IZG Security']), 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
     expect(
       can(subject(['Jurisdiction Operations'], ['az']), 'apikeys', 'canListApiKeys', 'az').allowed
     ).toBe(true)

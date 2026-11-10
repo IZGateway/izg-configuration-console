@@ -7,13 +7,15 @@ import { authOptions } from '../auth/[...nextauth]'
 import { isValidUseType } from '../../../lib/type/AllowedUseType'
 import type { ApiKeyCredential } from '../../../lib/type/ApiKeyCredential'
 import {
-  hasApiKeyPermission,
-  requireApiKeyAccess,
+  isApiKeyManagementEnabled,
+  scopeFromCredentialSortKeyInBody,
+  scopeFromJurisdictionIdInBody,
 } from '../../../lib/security/apiKeyAuthz'
 import { scopeToOwnedJurisdictions } from '../../../lib/apikeys/scope'
 import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
 import { recordApiKeyAudit } from '../../../lib/apikeys/audit'
 import { subjectOf } from '../../../lib/security/authzsubject'
+import { currentGrantedBy } from '../../../lib/Context'
 import crypto from 'crypto'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -23,10 +25,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!hasApiKeyPermission(session, 'canListApiKeys')) {
-        return res.status(403).json({ error: 'Forbidden - insufficient role' })
-      }
-
       const dbClient = await DbClientFactory.getDbClient()
       const result = await dbClient.fetchApiKeyCredentials()
 
@@ -67,15 +65,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-
       const { jurisdictionId, environments, upn, description, dnsChoice, useTypes, reissuedFrom } = req.body
       if (!jurisdictionId || !Array.isArray(environments) || environments.length === 0 || !upn) {
         return res.status(400).json({ error: 'jurisdictionId, environments (non-empty array), and upn are required' })
-      }
-      // Role + tenancy: a caller may only create keys for a jurisdiction they own.
-      const authz = await requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
-      if (!authz.ok) {
-        return res.status(authz.status).json({ error: authz.error })
       }
       if (dnsChoice !== 'existing' && dnsChoice !== 'other') {
         return res.status(400).json({ error: "dnsChoice must be 'existing' or 'other'" })
@@ -84,17 +76,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const envIds = [...new Set(environments.map(Number))]
       if (envIds.some((n) => isNaN(n) || n < 1 || n > 5)) {
         return res.status(400).json({ error: 'environments must each be a number between 1 and 5' })
-      }
-      // Multi-env credentials are an IZG Operations capability (server-enforced,
-      // not just UI-gated) — every other role is limited to a single environment.
-      if (envIds.length > 1 && !session.user.isAdmin) {
-        logAccessDenied({
-          reason: 'multi-environment key creation requires admin',
-          user: session.user.email,
-          roles: subjectOf(session).roles,
-          jurisdictionId,
-        })
-        return res.status(403).json({ error: 'Only administrators may create a multi-environment key' })
       }
 
       // useTypes scopes the credential to submitter categories; it is required
@@ -238,7 +219,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           context: {
             jurisdictionId: String(jurisdictionId),
             dnsChoice,
-            grantedBy: authz.grantedBy,
+            grantedBy: currentGrantedBy(),
             // The domain was already authorized, so no DNS challenge ran for
             // this credential — it was issued Active immediately.
             issuedImmediately: true,
@@ -262,7 +243,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           sortKey,
           createdBy,
           dnsChoice,
-          grantedBy: authz.grantedBy,
+          grantedBy: currentGrantedBy(),
           operation: 'createApiKeyCredential',
         })
 
@@ -354,7 +335,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         context: {
           jurisdictionId: String(jurisdictionId),
           dnsChoice,
-          grantedBy: authz.grantedBy,
+          grantedBy: currentGrantedBy(),
           issuedImmediately: false,
           ...(reissuedFrom ? { reissuedFrom: String(reissuedFrom) } : {}),
         },
@@ -411,7 +392,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         challengeUuid,
         jti,
         sortKey,
-        grantedBy: authz.grantedBy,
+        grantedBy: currentGrantedBy(),
         operation: 'createApiKeyCredential',
       })
 
@@ -444,10 +425,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!hasApiKeyPermission(session, 'canRevokeApiKey')) {
-        return res.status(403).json({ error: 'Forbidden - insufficient role' })
-      }
-
       const { sortKey, reason } = req.body
       if (!sortKey) {
         return res.status(400).json({ error: 'sortKey is required' })
@@ -460,17 +437,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // revoked; a revoked key is terminal. `grace_period` is the current grace
       // status (Hub-aligned, IGDD-2711); `grace`/`superseded` are older values
       // tolerated for backward compatibility with pre-existing records.
+      //
+      // The role + tenancy check (fix IDOR: caller must own the credential's
+      // jurisdiction) already happened declaratively, in the route's `scope`
+      // extractor, before this handler ran at all — this is a second,
+      // independent read of the same credential for the business logic below
+      // (accepted two-reads trade-off, IGDD-3549 design.md Risks).
       const credential = await dbClient.getApiKeyCredential(String(sortKey))
       if (!credential) {
         return res.status(404).json({ error: 'API key not found' })
-      }
-      // Role + tenancy (fix IDOR): the caller must own the credential's
-      // jurisdiction. This is the authoritative gate, evaluated right before
-      // acting on the credential — checked before the status check so a
-      // non-owner learns nothing about the target credential's state.
-      const authz = await requireApiKeyAccess(session, 'canRevokeApiKey', credential.jurisdictionId)
-      if (!authz.ok) {
-        return res.status(authz.status).json({ error: authz.error })
       }
       const revocableStatuses = ['active', 'grace_period', 'grace', 'superseded']
       if (!revocableStatuses.includes(credential.status)) {
@@ -522,7 +497,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         },
         context: {
           jurisdictionId: credential.jurisdictionId,
-          grantedBy: authz.grantedBy,
+          grantedBy: currentGrantedBy(),
           previousStatus: credential.status,
           ...(reason ? { reason: String(reason) } : {}),
         },
@@ -532,7 +507,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         revokedBy,
         revokedAt,
-        grantedBy: authz.grantedBy,
+        grantedBy: currentGrantedBy(),
         operation: 'revokeApiKeyCredential',
       })
 
@@ -554,10 +529,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (!session || !session.user) {
         return res.status(401).json({ error: 'Unauthorized - Please login' })
       }
-      if (!hasApiKeyPermission(session, 'canCancelApiKey')) {
-        return res.status(403).json({ error: 'Forbidden - insufficient role' })
-      }
-
       const { sortKey } = req.body
       if (!sortKey) {
         return res.status(400).json({ error: 'sortKey is required' })
@@ -569,15 +540,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       // pending DNS validation. The record is RETAINED (status 'cancelled')
       // for audit rather than deleted. Active/grace credentials must be
       // revoked instead.
+      //
+      // The role + tenancy check (fix IDOR: caller must own the credential's
+      // jurisdiction) already happened declaratively, in the route's `scope`
+      // extractor, before this handler ran at all — second, independent read
+      // below for the business logic (accepted two-reads trade-off).
       const credential = await dbClient.getApiKeyCredential(String(sortKey))
       if (!credential) {
         return res.status(404).json({ error: 'API key not found' })
-      }
-      // Role + tenancy (fix IDOR): the caller must own the credential's
-      // jurisdiction. Authoritative gate, evaluated right before acting on it.
-      const authz = await requireApiKeyAccess(session, 'canCancelApiKey', credential.jurisdictionId)
-      if (!authz.ok) {
-        return res.status(authz.status).json({ error: authz.error })
       }
       if (credential.status !== 'ready_for_validation') {
         return res.status(409).json({
@@ -604,7 +574,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         },
         context: {
           jurisdictionId: credential.jurisdictionId,
-          grantedBy: authz.grantedBy,
+          grantedBy: currentGrantedBy(),
           previousStatus: credential.status,
         },
       })
@@ -613,7 +583,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         sortKey,
         cancelledBy,
         cancelledAt,
-        grantedBy: authz.grantedBy,
+        grantedBy: currentGrantedBy(),
         operation: 'cancelApiKeyCredential',
       })
 
@@ -633,6 +603,30 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` })
 }
 
+// IGDD-3549: declarative capability + reach for all four methods, closing
+// this route's `in-handler` debt row. GET declares no `scope` — the
+// capability-only shape `canListApiKeys` shares with `apikeysaudit/index.ts`
+// GET — because it lists every jurisdiction the caller reaches and
+// `scopeToOwnedJurisdictions` row-filters the result afterward, rather than
+// naming one destination up front.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: per-row jurisdiction filtering plus a multi-environment isAdmin check, which is environment reach rather than a capability',
+  featureFlag: isApiKeyManagementEnabled,
+  byMethod: {
+    GET: { page: 'apikeys', capability: 'canListApiKeys' },
+    POST: {
+      page: 'apikeys',
+      capability: 'canCreateApiKey',
+      scope: scopeFromJurisdictionIdInBody(),
+    },
+    PATCH: {
+      page: 'apikeys',
+      capability: 'canRevokeApiKey',
+      scope: scopeFromCredentialSortKeyInBody(),
+    },
+    DELETE: {
+      page: 'apikeys',
+      capability: 'canCancelApiKey',
+      scope: scopeFromCredentialSortKeyInBody(),
+    },
+  },
 })(handler)
