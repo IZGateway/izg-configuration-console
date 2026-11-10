@@ -155,6 +155,18 @@ describe('enforceRouteAuthz: capability rules', () => {
     expect(res.status).toHaveBeenCalledWith(403)
     expect(deniedEvent(warnSpy)).toHaveLength(1)
   })
+
+  // IGDD-3549 — a handler recording an audit trail's "which role authorized
+  // this?" reads it off the request context rather than re-deciding.
+  it('stashes the granting role on the request context for an allowed capability', async () => {
+    signIn(['IZG Security'])
+    let captured: string | undefined
+    const wrapped = withMiddleware(ROTATEKEY)(async () => {
+      captured = asyncRequestContext.getStore()?.grantedBy
+    })
+    await wrapped(request('POST', '/api/rotatekey'), response())
+    expect(captured).toBe('IZG Security')
+  })
 })
 
 describe('enforceRouteAuthz: any-of', () => {
@@ -298,8 +310,9 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
     const { REQUIRES_DESTINATION_SCOPE, REQUIRES_GLOBAL_TENANCY } =
       require('../security/accessregistry')
     const key = (r: { page: string; capability: string }) => `${r.page}.${r.capability}`
-    // console.canViewConsole predates this change; the rest were added by
-    // protect-connection-pages-and-endpoints (IGDD-3545/3548).
+    // console.canViewConsole predates this change; the next eleven were added
+    // by protect-connection-pages-and-endpoints (IGDD-3545/3548); the five
+    // apikeys.* entries by declare-api-key-endpoint-permissions (IGDD-3549).
     expect(REQUIRES_DESTINATION_SCOPE.map(key).sort()).toEqual(
       [
         'console.canViewConsole',
@@ -314,6 +327,11 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
         'changerequest.canCancelRequest',
         'changerequest.canViewDetails',
         'onboarding.canManageSenders',
+        'apikeys.canListApiKeys',
+        'apikeys.canCreateApiKey',
+        'apikeys.canRenewApiKey',
+        'apikeys.canRevokeApiKey',
+        'apikeys.canCancelApiKey',
       ].sort()
     )
     const guarded = new Set(REQUIRES_GLOBAL_TENANCY.map(key))
@@ -364,28 +382,16 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
     expect(deniedEvent(warnSpy)[0][1].reason).toBe('insufficient role for route access')
   })
 
-  // The review concern: a future route that declares the capability and
-  // forgets the scope must lock scoped roles out, not hand them every
-  // jurisdiction.
-  describe('fails closed without a destination', () => {
-    it.each([
-      ['no scope declared', { capability: CONSOLE } as RouteAuthz, { destId: 'az' }],
-      ['a scope that names nothing', SCOPED, {}],
-      [
-        'a scope that throws',
-        {
-          capability: CONSOLE,
-          scope: () => {
-            throw new Error('bad body')
-          },
-        } as RouteAuthz,
-        { destId: 'az' },
-      ],
-      ['a byMethod declaration', { byMethod: { POST: CONSOLE } } as RouteAuthz, { destId: 'az' }],
-    ])('%s: Jurisdiction Operations is refused', async (_label, authz, body) => {
+  // The review concern this guards: a route that DECLARES a `scope`
+  // extractor but it resolves nothing for a given request must lock scoped
+  // roles out, not hand them every jurisdiction. Omitting `scope` entirely is
+  // a different, deliberate declaration (IGDD-3549) — see the describe block
+  // below.
+  describe('fails closed when a declared scope resolves nothing', () => {
+    it('a scope that names nothing: Jurisdiction Operations is refused', async () => {
       signIn(['Jurisdiction Operations'], ['az'])
       const res = response()
-      const handler = await run(authz, post(body), res)
+      const handler = await run(SCOPED, post({}), res)
       expect(handler).not.toHaveBeenCalled()
       expect(res.status).toHaveBeenCalledWith(403)
       expect(deniedEvent(warnSpy)[0][1]).toMatchObject({
@@ -393,18 +399,120 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
       })
     })
 
-    it('no scope declared: a global-reach role still passes', async () => {
+    it('a global-reach role still passes', async () => {
       signIn(['IZG Operations'])
-      const handler = await run({ capability: CONSOLE }, post({}), response())
+      const handler = await run(SCOPED, post({}), response())
       expect(handler).toHaveBeenCalled()
     })
 
-    it('no scope declared: the denial says the destination is missing', async () => {
+    it('an unresolved destination denies even a global-reach role', async () => {
+      signIn(['IZG Operations'])
+      const res = response()
+      const handler = await run(
+        { capability: CONSOLE, scope: () => null },
+        post({ destId: 'missing' }),
+        res
+      )
+
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(403)
+      expect(deniedEvent(warnSpy)[0][1].reason).toBe('destination could not be resolved')
+    })
+
+    it('the denial says the destination is missing', async () => {
       signIn(['Jurisdiction Operations'], ['az'])
-      await run({ capability: CONSOLE }, post({ destId: 'az' }), response())
+      await run(SCOPED, post({}), response())
       expect(deniedEvent(warnSpy)[0][1].reason).toBe(
         'destination-scoped capability used without a destination'
       )
+    })
+  })
+
+  // IGDD-3549, review follow-up: a scope extractor that THROWS is an
+  // infrastructure failure, not a permission decision — it must not be
+  // silently folded into "fails closed" (403) above, or an outage becomes
+  // indistinguishable from a legitimate deny in the audit trail. 500, logged
+  // at error level, no AccessDenied event.
+  describe('a scope extractor that throws is an infrastructure failure, not a denial', () => {
+    let errorSpy: jest.SpyInstance
+    beforeEach(() => {
+      errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined as never)
+    })
+    afterEach(() => errorSpy.mockRestore())
+
+    const THROWING: RouteAuthz = {
+      capability: CONSOLE,
+      scope: () => {
+        throw new Error('bad body')
+      },
+    }
+
+    it('500s rather than 403ing', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const res = response()
+      const handler = await run(THROWING, post({ destId: 'az' }), res)
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(500)
+    })
+
+    it('logs at error level and writes no AccessDenied event', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      await run(THROWING, post({ destId: 'az' }), response())
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Route scope extractor failed',
+        expect.objectContaining({ errorMessage: 'bad body' })
+      )
+      expect(deniedEvent(warnSpy)).toHaveLength(0)
+    })
+
+    it('same treatment for a byMethod scope extractor', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const res = response()
+      const handler = await run(
+        {
+          byMethod: {
+            POST: {
+              ...CONSOLE,
+              scope: () => {
+                throw new Error('bad body')
+              },
+            },
+          },
+        },
+        post({ destId: 'az' }),
+        res
+      )
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(500)
+    })
+  })
+
+  // IGDD-3549 — Decision 2: omitting `scope` entirely is not "forgetting" it;
+  // it is how a route declares "this capability alone governs here, any
+  // jurisdiction" (e.g. a list the route row-filters to the caller's reach
+  // afterward, rather than naming one destination up front).
+  describe('no scope extractor declared at all: capability alone governs', () => {
+    it.each([
+      ['top-level capability', { capability: CONSOLE } as RouteAuthz],
+      ['byMethod', { byMethod: { POST: CONSOLE } } as RouteAuthz],
+    ])('%s: a jurisdiction-scoped role holding the capability is admitted', async (_label, authz) => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const handler = await run(authz, post({}), response())
+      expect(handler).toHaveBeenCalled()
+    })
+
+    it('a role without the capability is still refused', async () => {
+      signIn(['Sender Operations'], ['azova'])
+      const res = response()
+      const handler = await run({ capability: CONSOLE }, post({}), res)
+      expect(handler).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(403)
+    })
+
+    it('a global-reach role is still admitted', async () => {
+      signIn(['IZG Operations'])
+      const handler = await run({ capability: CONSOLE }, post({}), response())
+      expect(handler).toHaveBeenCalled()
     })
   })
 
@@ -424,6 +532,38 @@ describe('enforceRouteAuthz: destination-scoped capabilities', () => {
     } finally {
       accessLevel['IZG Support'].console.canViewConsole = original
     }
+  })
+
+  // IGDD-3549 — `scope` may resolve asynchronously (e.g. a database lookup
+  // keyed by a value on the request), not only read a value already on `req`.
+  it('awaits an async scope extractor before deciding', async () => {
+    const ASYNC_SCOPED: RouteAuthz = {
+      capability: CONSOLE,
+      scope: async (req) => {
+        await Promise.resolve()
+        return (req.body as { destId?: string } | undefined)?.destId
+      },
+    }
+    signIn(['Jurisdiction Operations'], ['az'])
+    const handler = await run(ASYNC_SCOPED, post({ destId: 'az' }), response())
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('an async scope extractor that rejects is a 500, same as a sync throw', async () => {
+    const ASYNC_SCOPED: RouteAuthz = {
+      capability: CONSOLE,
+      scope: async () => {
+        await Promise.resolve()
+        throw new Error('db unavailable')
+      },
+    }
+    const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined as never)
+    signIn(['Jurisdiction Operations'], ['az'])
+    const res = response()
+    const handler = await run(ASYNC_SCOPED, post({ destId: 'az' }), res)
+    expect(handler).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(500)
+    errorSpy.mockRestore()
   })
 
   it('ignores scope for a capability that is not destination-scoped', async () => {

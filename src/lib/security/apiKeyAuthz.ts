@@ -1,21 +1,21 @@
+import type { NextApiRequest } from 'next'
 import DbClientFactory from '../db/DbClientFactory'
 import logger from '../../../logger'
-import { logAccessDenied } from './accessDeniedAudit'
-import { subjectOf, type AuthzSubject } from './authzsubject'
-import {
-  ANY_JURISDICTION,
-  can,
-  mergePageAccess,
-  type Decision,
-} from './policy'
+import type { AuthzSubject } from './authzsubject'
+import { can, type Decision } from './policy'
 import type { ApiKeyManagementPageAccessControl } from '../type/PageAccessControls'
 
 /**
- * Server-side authorization for the `/api/apikeys/*` routes.
+ * Server-side authorization support for the `/api/apikeys/*` routes.
  *
  * This module is the *impure adapter*: it resolves a jurisdiction id to its
- * prefix (a DynamoDB read) and shapes results into HTTP status/error pairs. The
- * decision itself is made by `can()` in `policy.ts`, which is pure.
+ * prefix (a DynamoDB read). The decision itself is made by `can()` in
+ * `policy.ts`, which is pure. Capability + reach for a single route's
+ * request is now declared on the route (`capability`/`scope` on
+ * `withMiddleware`, decided by `decideRouteCapability` — IGDD-3549); what
+ * remains here is the *per-row* reach check (`canActOnJurisdiction`, used by
+ * `scopeToOwnedJurisdictions` to filter a list) and the prefix resolvers that
+ * back both that and every route's `scope` extractor.
  *
  * The UI gates the API Key Management screen too, but UI gating is not a security
  * boundary — these routes are.
@@ -39,70 +39,112 @@ export function isApiKeyManagementEnabled(): boolean {
 }
 
 /**
- * Resolve the API-key flags for a session — the server-side equivalent of
- * `useRoleAccess()` for the `/apikeys` page.
+ * Resolve a jurisdiction id to its short prefix. Throws on infrastructure failure.
  *
- * This is a "what"-only check with no jurisdiction, so a plain union across held
- * roles is correct. It backs `hasApiKeyPermission`, which several routes call as
- * an early exit before the authoritative gate; unioning here is what stops a
- * multi-role user being rejected by that pre-check before ever reaching it.
- *
- * Also `undefined` for every role while the feature-wide kill switch
- * (`isApiKeyManagementEnabled`) is off.
+ * Exported (IGDD-3549) so every `scope` extractor declared on the seven
+ * `apikeys`/`apikeysaudit` routes shares this one lookup rather than each
+ * route file copying it.
  */
-export function getApiKeyAccess(
-  session: unknown
-): Partial<ApiKeyManagementPageAccessControl> | undefined {
-  if (!isApiKeyManagementEnabled()) return undefined
-  const subject = subjectOf(session)
-  if (subject.roles.length === 0) return undefined
-  return mergePageAccess(subject, 'apikeys')
-}
-
-/**
- * True if any held role grants the permission, ignoring tenancy.
- *
- * Deny-by-default: a missing session, no recognized role, or an unset flag all
- * return false. NOT sufficient on its own for anything that touches a specific
- * credential — pair it with `canActOnJurisdiction`, or just use
- * `requireApiKeyAccess`.
- */
-// Emits an AccessDenied audit event on denial — only call this as a
-// per-request gate. Never call it inside a loop/row-filter (like
-// `canActOnJurisdiction` below), or an authorized caller's normal request
-// will emit a phantom "denied" event per row it doesn't own.
-export function hasApiKeyPermission(
-  session: unknown,
-  permission: ApiKeyPermission
-): boolean {
-  const allowed = Boolean(getApiKeyAccess(session)?.[permission])
-  // The feature-wide kill switch being off is not an RBAC rejection — it's a
-  // feature-availability state that applies to every caller regardless of
-  // role, so it must not be logged as one (would otherwise spam an
-  // AccessDenied event on every /api/apikeys/* call in any environment where
-  // the feature hasn't launched yet).
-  if (!allowed && isApiKeyManagementEnabled()) {
-    logAccessDenied({
-      reason: `insufficient role for ${permission}`,
-      user: (session as { user?: { email?: string } } | null | undefined)
-        ?.user?.email,
-      roles: subjectOf(session).roles,
-      permission,
-    })
-  }
-  return allowed
-}
-
-/** Resolve a jurisdiction id to its short prefix. Throws on infrastructure failure. */
-async function prefixOf(jurisdictionId: string): Promise<string | null> {
+export async function prefixOf(jurisdictionId: string): Promise<string | null> {
   const dbClient = await DbClientFactory.getDbClient()
   const jurisdiction = await dbClient.getJurisdiction(String(jurisdictionId))
   return jurisdiction?.prefix ?? null
 }
 
 /**
+ * Resolve a credential's prefix from its `sortKey` — the shared shape of a
+ * `scope` extractor for every route whose reach requirement is "the
+ * jurisdiction that owns the credential named in this request" (IGDD-3549):
+ * `token.ts`, `renew/index.ts`, `verify-domain.ts`'s GET,
+ * `apikeys/index.ts`'s PATCH/DELETE, and `apikeysaudit/[sortKey].ts`. Reads
+ * the credential's *stored* `jurisdictionId`, never one the caller could
+ * supply directly — the IDOR protection these routes already had in-handler,
+ * now expressed once here instead of five separate copies.
+ *
+ * Returns `undefined` for a missing credential and `null` for an existing
+ * credential whose jurisdiction no longer resolves. The former can be handled
+ * by the route (e.g. return 404) while still allowing global-reach roles
+ * through; the latter is an invalid destination and must be denied. An actual
+ * infrastructure failure (the DB read itself throwing) is left to propagate:
+ * `enforceRouteAuthz` treats a thrown `scope` extractor as a 500, not a denial.
+ */
+export async function prefixFromCredentialSortKey(
+  sortKey: string
+): Promise<string | null | undefined> {
+  const dbClient = await DbClientFactory.getDbClient()
+  const credential = await dbClient.getApiKeyCredential(sortKey)
+  if (!credential) return undefined
+  return (await prefixOf(credential.jurisdictionId)) ?? null
+}
+
+/** Reads `field` from the body, coercing a truthy value to a string — body
+ * fields are `unknown` and may legitimately arrive as a number (e.g. a
+ * numeric `jurisdictionId`), unlike a query param. */
+function stringFromBody(req: NextApiRequest, field: string): string | undefined {
+  const value = (req.body as Record<string, unknown> | undefined)?.[field]
+  return value ? String(value) : undefined
+}
+
+/** Reads `field` from the query string. `req.query[field]` is
+ * `string | string[] | undefined` — only a plain string is a valid
+ * identifier here, so an array is treated the same as absent. */
+function stringFromQuery(req: NextApiRequest, field: string): string | undefined {
+  const value = req.query[field]
+  return typeof value === 'string' ? value : undefined
+}
+
+/**
+ * Shared `scope`-extractor builders (IGDD-3549 review follow-up): the nine
+ * declarations across the seven `apikeys`/`apikeysaudit` routes resolve to
+ * exactly four shapes — a credential's sortKey or a bare jurisdictionId,
+ * read from either the body or the query string. Factored out so a fix to
+ * one (e.g. how a malformed field is rejected) reaches every route that
+ * reads that shape, the same reasoning `destIdFromSlug` in
+ * `api-middleware-helper.ts` was factored out for.
+ */
+export function scopeFromCredentialSortKeyInBody(
+  field = 'sortKey'
+): (req: NextApiRequest) => Promise<string | null | undefined> {
+  return async (req) => {
+    const sortKey = stringFromBody(req, field)
+    return sortKey ? prefixFromCredentialSortKey(sortKey) : undefined
+  }
+}
+
+export function scopeFromCredentialSortKeyInQuery(
+  field = 'sortKey'
+): (req: NextApiRequest) => Promise<string | null | undefined> {
+  return async (req) => {
+    const sortKey = stringFromQuery(req, field)
+    return sortKey ? prefixFromCredentialSortKey(sortKey) : undefined
+  }
+}
+
+export function scopeFromJurisdictionIdInBody(
+  field = 'jurisdictionId'
+): (req: NextApiRequest) => Promise<string | null | undefined> {
+  return async (req) => {
+    const jurisdictionId = stringFromBody(req, field)
+    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? null : undefined
+  }
+}
+
+export function scopeFromJurisdictionIdInQuery(
+  field = 'jurisdictionId'
+): (req: NextApiRequest) => Promise<string | null | undefined> {
+  return async (req) => {
+    const jurisdictionId = stringFromQuery(req, field)
+    return jurisdictionId ? (await prefixOf(jurisdictionId)) ?? null : undefined
+  }
+}
+
+/**
  * The single authorization decision for "may this caller do X to this
- * jurisdiction's data?".
+ * jurisdiction's data?" — a *per-row* check, not a per-request gate: the
+ * route-level capability + reach decision now happens declaratively before
+ * the handler runs (IGDD-3549), but a list endpoint still needs to filter
+ * individual rows to the caller's own reach, which is what
+ * `scopeToOwnedJurisdictions` uses this for.
  *
  * Every tenancy-paired caller goes through here, so the one-role-at-a-time rule
  * in `policy.ts` is implemented once rather than re-derived per route. The
@@ -115,6 +157,9 @@ async function prefixOf(jurisdictionId: string): Promise<string | null> {
  * logs at error level — previously a swallowed `catch { return false }` made a
  * DynamoDB outage indistinguishable from a legitimate deny, so the symptom was
  * an empty list with nothing alerting.
+ *
+ * Never call this as a per-request gate (it has no feature-flag check and
+ * emits no AccessDenied event) — only inside a row-filter loop.
  */
 export async function canActOnJurisdiction(
   subject: AuthzSubject,
@@ -142,64 +187,4 @@ export async function canActOnJurisdiction(
   }
 
   return can(subject, 'apikeys', permission, prefix)
-}
-
-// Flat shape (not a discriminated union) so `status`/`error` are unconditionally
-// typed and readable at call sites without relying on control-flow narrowing.
-export type ApiKeyAuthzResult = {
-  ok: boolean
-  status: number
-  error: string
-  /** Role that authorized the request, when ok. Log this on mutating routes. */
-  grantedBy?: string
-}
-
-/**
- * The combined role + tenancy gate. Call this immediately before touching a
- * credential or domain, so the two checks cannot drift apart as routes are added.
- *
- * Checks the feature-wide kill switch itself, rather than relying on every
- * caller to have already gone through `hasApiKeyPermission()` (which is the
- * only other place that checks it, via `getApiKeyAccess`). `domains.ts` calls
- * this function directly with no `hasApiKeyPermission` pre-check, so without
- * this line an authorized role could still read real data while the feature
- * is supposed to be fully disabled.
- */
-export async function requireApiKeyAccess(
-  session: unknown,
-  permission: ApiKeyPermission,
-  jurisdictionId: string
-): Promise<ApiKeyAuthzResult> {
-  if (!isApiKeyManagementEnabled()) {
-    return { ok: false, status: 403, error: 'Forbidden - feature disabled' }
-  }
-
-  const subject = subjectOf(session)
-
-  // Cheap prefilter: skip the DynamoDB read for a caller that no held role could
-  // ever allow. Valid because the union is a superset of any single role's
-  // permissions, so this can only reject callers the real check would also
-  // reject. ANY_JURISDICTION states plainly that tenancy is skipped on purpose.
-  if (!can(subject, 'apikeys', permission, ANY_JURISDICTION).allowed) {
-    return { ok: false, status: 403, error: 'Forbidden - insufficient role' }
-  }
-
-  const decision = await canActOnJurisdiction(subject, permission, jurisdictionId)
-  if (!decision.allowed) {
-    logAccessDenied({
-      reason: 'not authorized for this jurisdiction',
-      user: (session as { user?: { email?: string } } | null | undefined)
-        ?.user?.email,
-      roles: subject.roles,
-      permission,
-      jurisdictionId,
-    })
-    return {
-      ok: false,
-      status: 403,
-      error: 'Forbidden - not authorized for this jurisdiction',
-    }
-  }
-
-  return { ok: true, status: 200, error: '', grantedBy: decision.grantedBy }
 }

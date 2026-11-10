@@ -6,10 +6,11 @@ import { buildRequestContext } from '../../lib/requestContext'
 import { logAccessDenied } from '../../lib/security/accessDeniedAudit'
 import { subjectOf } from '../../lib/security/authzsubject'
 import { toEcsUrl } from '../../lib/utils/ecsUrl'
+import type { CcRole } from '../../lib/security/rolemapping'
 import {
   CapabilityRef,
   decideCapability,
-  decideRouteCapability,
+  grantingRoleForRoute,
   requiresDestinationScope,
 } from '../../lib/security/accessregistry'
 
@@ -76,16 +77,37 @@ export type RouteAuthz =
    * Authorized by capability. An array means **any-of** — the caller needs one
    * of them, which is right for a lookup route shared by several surfaces.
    *
-   * `scope` names the destination the request acts on. It is read only for
+   * `scope` names the destination the request acts on, and may resolve it
+   * asynchronously (e.g. a database lookup keyed by a value on the request),
+   * not only read one already present on `req`. It is read only for
    * capabilities in `REQUIRES_DESTINATION_SCOPE`, which are then decided for
-   * that destination, per role. Without it (or when it returns nothing, or
-   * throws) those capabilities pass only for roles reaching every
-   * jurisdiction. Run before the handler, so it must not trust or mutate the
-   * request beyond reading the identifier.
+   * that destination, per role.
+   *
+   * Omitting `scope` entirely is a deliberate declaration, not an oversight:
+   * it authorizes the capability alone, any role, any jurisdiction — correct
+   * for a route whose data path narrows to the caller's own reach afterward
+   * rather than naming one destination up front. A declared `scope` that
+   * resolves to `undefined` falls back to roles with global reach only; `null`
+   * means the named destination is invalid and denies all roles. A thrown
+   * extractor is an infrastructure failure. Run before the handler, so it
+   * must not trust or mutate the request beyond reading the identifier.
    */
   | {
       capability: CapabilityRef | CapabilityRef[]
-      scope?: (req: NextApiRequest) => string | undefined
+      scope?: (
+        req: NextApiRequest
+      ) => string | null | undefined | Promise<string | null | undefined>
+      /**
+       * A release/kill-switch flag, checked right after authentication and
+       * ahead of any capability/scope decision. `false` answers 403 directly
+       * and never reaches `scope`, the capability check, or the
+       * `AccessDenied` audit log — a disabled feature is not an RBAC
+       * decision, so it must not produce one (review follow-up, IGDD-3549:
+       * nine in-handler copies of this check across apikeys' seven routes
+       * were producing `AccessDenied` events for callers who simply lacked
+       * an apikeys role, in any environment where the feature is off).
+       */
+      featureFlag?: () => boolean
     }
   /**
    * Per-method capability. Required, not a nicety: several route files handle
@@ -94,7 +116,8 @@ export type RouteAuthz =
    *
    * A method entry carries its own `scope` extractor, same meaning as the
    * top-level `capability` variant's - read only for capabilities in
-   * `REQUIRES_DESTINATION_SCOPE`. A method entry may instead be
+   * `REQUIRES_DESTINATION_SCOPE`, optional with the same deliberate-omission
+   * meaning, and may resolve asynchronously. A method entry may instead be
    * `{ inHandler: string }` for the rare case where the destination can't be
    * named without a database lookup the declaration site can't do; the string
    * must name a follow-up ticket, same as the top-level escape hatch, and is
@@ -105,11 +128,15 @@ export type RouteAuthz =
         Record<
           HttpMethod,
           | (CapabilityRef & {
-              scope?: (req: NextApiRequest) => string | undefined
+              scope?: (
+                req: NextApiRequest
+              ) => string | null | undefined | Promise<string | null | undefined>
             })
           | { inHandler: string }
         >
       >
+      /** Same meaning as the top-level `capability` shape's `featureFlag`, shared across every method. */
+      featureFlag?: () => boolean
     }
   /** Authenticated session required; the handler does its own row filtering. */
   | { session: true }
@@ -191,28 +218,56 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 
     const forbid = () => res.status(403).send('forbidden')
 
-    // The destination the request acts on, for REQUIRES_DESTINATION_SCOPE
-    // capabilities. A throwing extractor is treated as naming no destination,
-    // which fails closed to global-reach roles only.
-    let scope: string | undefined
-    if ('capability' in authz && authz.scope) {
-      try {
-        scope = authz.scope(req) || undefined
-      } catch {
-        scope = undefined
-      }
+    // A throwing `scope` extractor is an infrastructure failure (e.g. a
+    // DynamoDB outage inside `prefixOf`), not a permission decision —
+    // swallowing it and falling through to "no destination" would make an
+    // outage indistinguishable from a legitimate deny in the audit trail,
+    // with nothing alerting (the exact failure mode `canActOnJurisdiction`'s
+    // own doc comment in `apiKeyAuthz.ts` was written to avoid). Logged at
+    // error level and answered with 500, not 403 — this is a 50x, not a 40x.
+    const scopeResolutionFailed = (error: unknown) => {
+      logger.error('Route scope extractor failed', {
+        url: toEcsUrl(req.url),
+        method: req.method,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+      res.status(500).send('internal server error')
     }
 
-    const deny = (ref: CapabilityRef, s: string | undefined = scope) => {
+    // The destination the request acts on, for REQUIRES_DESTINATION_SCOPE
+    // capabilities. `hasScope` records whether a `scope` extractor was
+    // declared at all — independent of whether it resolved anything — so
+    // `decideRouteCapability` can tell "declared, but no destination named"
+    // (global-reach fallback) from "declared destination did not resolve"
+    // (deny all roles) and "not declared" (capability alone governs).
+    //
+    // Declared here (mutated further down, after the early-exit checks
+    // below) so the `deny`/`decide` closures that default to it can be
+    // defined once, ahead of every branch that calls them.
+    let scope: string | null | undefined
+    let hasScope = false
+
+    const deny = (ref: CapabilityRef, s: string | null | undefined = scope) => {
       // A caller who holds the capability somewhere but not for this
       // destination is a reach denial; say so, and name the destination.
       const reachDenial =
         requiresDestinationScope(ref) && decideCapability(subject, ref)
+      // `apikeys.*` is the one REQUIRES_DESTINATION_SCOPE page block whose
+      // resolved value is a jurisdiction prefix, not a destination id —
+      // logging it as `destId` would be misleading in a query by actual
+      // destination. `jurisdictionId` already exists on `AccessDeniedEvent`
+      // for exactly this (it was the old in-handler apikeys gate's field,
+      // orphaned when that gate was replaced by this one — IGDD-3549 review
+      // follow-up), so reuse it rather than adding a new field.
+      const scopeField = ref.page === 'apikeys' ? 'jurisdictionId' : 'destId'
       logAccessDenied({
         reason: reachDenial
-          ? s
-            ? 'Destination outside caller reach'
-            : 'destination-scoped capability used without a destination'
+          ? s === null
+            ? 'destination could not be resolved'
+            : s
+              ? 'Destination outside caller reach'
+              : 'destination-scoped capability used without a destination'
           : 'insufficient role for route access',
         deniedAt: 'api',
         page: ref.page,
@@ -221,7 +276,7 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
         method: req.method,
         user,
         roles: subject.roles,
-        ...(s ? { destId: s } : {}),
+        ...(s ? { [scopeField]: s } : {}),
       })
       forbid()
     }
@@ -257,11 +312,41 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
     // passed from here, so this enforcer, the page gate and the nav predicate
     // cannot be edited into three different decisions.
     //
-    // `decideRouteCapability` adds the REQUIRES_DESTINATION_SCOPE rule on top
+    // `grantingRoleForRoute` adds the REQUIRES_DESTINATION_SCOPE rule on top
     // (PR #756): a destination-scoped capability is decided for `scope`, per
-    // role, and without one only global-reach roles pass.
-    const satisfies = (ref: CapabilityRef, s: string | undefined = scope): boolean =>
-      decideRouteCapability(subject, ref, s)
+    // role; a missing destination falls back to global-reach roles only, while
+    // an invalid destination denies all roles; a capability declared with no
+    // `scope` at all (`hasScope` false) is decided by capability alone, any
+    // jurisdiction (IGDD-3549). `decideRouteCapability` is the same question
+    // asked as a boolean — not used here, since this enforcer needs *which*
+    // role, not just whether one exists: call this once and reuse the answer
+    // for both the allow/deny decision and the audit-trail `grantedBy` a
+    // handler reads afterward, rather than deciding the same thing twice
+    // (review follow-up on IGDD-3549: `grant()` used to re-derive the role
+    // separately, right after this had already computed it).
+    const decide = (
+      ref: CapabilityRef,
+      s: string | null | undefined = scope,
+      hs: boolean = hasScope
+    ): CcRole | undefined => grantingRoleForRoute(subject, ref, s, hs)
+
+    // The first alternative (of possibly several, for an any-of declaration)
+    // that some held role grants, if any.
+    const firstGrantingRole = (refs: ReadonlyArray<CapabilityRef>): CcRole | undefined => {
+      for (const ref of refs) {
+        const role = decide(ref)
+        if (role) return role
+      }
+      return undefined
+    }
+
+    // Stash which role the decision above actually used, so a handler that
+    // records an audit trail's "which role authorized this?" (IGDD-3549)
+    // reads it from the request context instead of re-deciding authorization.
+    const grant = (role: CcRole) => {
+      if (context) context.grantedBy = role
+      return next()
+    }
 
     if ('public' in authz) return next()
 
@@ -292,6 +377,21 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
 
     if ('session' in authz) return next()
 
+    // A release/kill-switch flag, not an authorization decision — checked
+    // here, ahead of any capability/scope work, so a disabled feature
+    // answers directly and never reaches a (possibly DB-reading) `scope`
+    // extractor or produces an `AccessDenied` audit event for an unrelated
+    // role gap. Review follow-up, IGDD-3549 (Anusha, PR #778): this used to
+    // be nine in-handler copies of the same check across apikeys' seven
+    // routes, running after this enforcer, so every caller without an
+    // apikeys role was audited as denied in any environment where the
+    // feature is simply off.
+    const featureFlag = 'featureFlag' in authz ? authz.featureFlag : undefined
+    if (featureFlag && !featureFlag()) {
+      res.status(403).json({ error: 'Forbidden - feature disabled' })
+      return
+    }
+
     if ('byMethod' in authz) {
       const method = (req.method || 'GET').toUpperCase() as HttpMethod
       const ref = authz.byMethod[method]
@@ -305,30 +405,66 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       // The handler owns this method's decision, same meaning as the
       // top-level escape hatch — declared, ticketed, counted, not enforced here.
       if ('inHandler' in ref) return next()
-      let methodScope: string | undefined
+      // Skip the (possibly DB-reading) `scope` extractor entirely when no
+      // held role could ever grant this method's capability — the same
+      // prefilter the removed in-handler `requireApiKeyAccess` used ("skip
+      // the DynamoDB read for a caller no held role could ever allow").
+      // Review follow-up, IGDD-3549 (Anusha, PR #778).
+      if (!decideCapability(subject, ref)) return deny(ref)
+      let methodScope: string | null | undefined
+      let methodHasScope = false
       if (ref.scope) {
+        methodHasScope = true
         try {
-          methodScope = ref.scope(req) || undefined
-        } catch {
-          methodScope = undefined
+          methodScope = await ref.scope(req)
+        } catch (error) {
+          return scopeResolutionFailed(error)
         }
       }
-      if (!satisfies(ref, methodScope)) return deny(ref, methodScope)
-      return next()
+      const methodRole = decide(ref, methodScope, methodHasScope)
+      if (!methodRole) return deny(ref, methodScope)
+      return grant(methodRole)
+    }
+
+    // Same prefilter as the `byMethod` branch above, for the top-level
+    // `capability` shape (a single ref, or an any-of array): skip `scope`
+    // entirely — and the session-expensive DB read it may do — when no held
+    // role could ever grant any declared alternative. Previously this
+    // extractor ran unconditionally, and before the session check above even
+    // existed in this function at all, so an expired session or a role with
+    // no apikeys capability still triggered 1-3 DynamoDB reads per request.
+    // Review follow-up, IGDD-3549 (Anusha, PR #778).
+    if (authz.scope) {
+      const refs = Array.isArray(authz.capability)
+        ? authz.capability
+        : [authz.capability]
+      if (!refs.some((ref) => decideCapability(subject, ref))) {
+        return Array.isArray(authz.capability)
+          ? denyAnyOf(authz.capability)
+          : deny(authz.capability)
+      }
+      hasScope = true
+      try {
+        scope = await authz.scope(req)
+      } catch (error) {
+        return scopeResolutionFailed(error)
+      }
     }
 
     // A single declared capability keeps the precise `permission` field; an
     // any-of cannot, so the two denials are reported differently.
     if (!Array.isArray(authz.capability)) {
-      if (satisfies(authz.capability)) return next()
-      return deny(authz.capability)
+      const role = decide(authz.capability)
+      if (!role) return deny(authz.capability)
+      return grant(role)
     }
 
     // Any-of, and the tenancy guard is evaluated **per alternative**, not
     // across the array. /api/organizations accepts three capabilities, two of
     // which are guarded; a caller holding only the unguarded third must still
     // pass, or Jurisdiction Operations and Support lose the route silently.
-    if (authz.capability.some((ref) => satisfies(ref))) return next()
+    const anyOfRole = firstGrantingRole(authz.capability)
+    if (anyOfRole) return grant(anyOfRole)
     return denyAnyOf(authz.capability)
   }
 }
