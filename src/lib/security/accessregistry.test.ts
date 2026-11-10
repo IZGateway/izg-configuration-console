@@ -8,7 +8,6 @@ import {
   PAGE_ENTRY,
   ROUTE_ENTRY,
   REQUIRES_DESTINATION_SCOPE,
-  canEnterPage,
   derivePageKey,
   entryCapabilityOf,
 } from './accessregistry'
@@ -69,32 +68,9 @@ describe('entryCapabilityOf (IGDD-3498)', () => {
     })
   })
 
-  it('reads a ROUTE_ENTRY route from its row', () => {
-    expect(entryCapabilityOf('passwordencryption')).toEqual({
-      page: 'adminoperations',
-      capability: 'canManagePasswordEncryption',
-    })
-  })
-
   it('no ROUTE_ENTRY key shadows a PAGE_ENTRY key', () => {
     const shadowed = Object.keys(ROUTE_ENTRY).filter((key) => key in PAGE_ENTRY)
     expect(shadowed).toEqual([])
-  })
-
-  // The nav predicate and the page gate now read the same override, so a link
-  // to /passwordencryption would render for exactly the roles the page admits.
-  it('canEnterPage applies the ROUTE_ENTRY override', () => {
-    expect(canEnterPage('passwordencryption', ['IZG Security'])).toBe(true)
-    for (const role of ['IZG Operations', 'IZG Support', 'IZG Program']) {
-      expect({ role, enters: canEnterPage('passwordencryption', [role]) }).toEqual({
-        role,
-        enters: false,
-      })
-      expect({ role, enters: canEnterPage('adminoperations', [role]) }).toEqual({
-        role,
-        enters: true,
-      })
-    }
   })
 })
 
@@ -170,8 +146,6 @@ describe('page coverage: an ungated page is a test failure', () => {
     _error: 'framework file, not a route',
     '404': 'framework file, not a route',
     index: 'the landing page, deliberately reachable by any session',
-    add: 'orphan with zero inbound links, proposed for deletion',
-    user: 'orphan with zero inbound links, proposed for deletion',
     // `api-doc` used to sit here, on the reasoning that the spec endpoint
     // behind it was gated. That reasoning was wrong — the page embedded the
     // spec in its own static payload and never called the endpoint (PR #700).
@@ -184,8 +158,8 @@ describe('page coverage: an ungated page is a test failure', () => {
     (f) => !f.startsWith(API + path.sep)
   )
 
-  it('accounts for all 20 pages, so a new page cannot appear unnoticed', () => {
-    expect(pageFiles.length).toBe(20)
+  it('accounts for all 17 pages, so a new page cannot appear unnoticed', () => {
+    expect(pageFiles.length).toBe(17)
   })
 
   it.each(pageFiles.map((f) => [relPosix(f), f]))(
@@ -229,7 +203,7 @@ describe('page coverage: an ungated page is a test failure', () => {
     }
   })
 
-  it('gates exactly the thirteen pages this change is responsible for', () => {
+  it('gates exactly the twelve pages this change is responsible for', () => {
     // manageconnections and apikeys already checked the right capability
     // before this change; what they did on failure was a silent redirect, so
     // they were migrated to the shared gate for the outcome, not the check.
@@ -251,7 +225,6 @@ describe('page coverage: an ungated page is a test failure', () => {
       'history',
       'manageconnections',
       'onboarding',
-      'passwordencryption',
       'test',
       'testreport',
     ])
@@ -301,14 +274,15 @@ describe('route coverage: a route that bypasses the wrapper is a test failure', 
   // test exists to catch.
   const routeFiles = walk(API, ['.ts', '.tsx'])
 
-  it('enumerates at least the 43 files known at the time of this change', () => {
+  it('enumerates at least the 42 files known at the time of this change', () => {
     // A lower bound, so a future glob change cannot silently empty the test by
-    // matching nothing. 41 routes + the 2 next-auth files. It was 39 + 2 when
+    // matching nothing. 40 routes + the 2 next-auth files. It was 39 + 2 when
     // this change was branched; `apikeysaudit/index.ts` and
     // `apikeysaudit/[sortKey].ts` landed on develop in between, declaring
     // nothing at all, and the required RouteAuthz argument is what stopped the
-    // build rather than a reviewer noticing.
-    expect(routeFiles.length).toBeGreaterThanOrEqual(43)
+    // build rather than a reviewer noticing. IGDD-3645 then deleted the
+    // uncalled `accesscontrol/index.ts` and `filetype/index.ts`.
+    expect(routeFiles.length).toBeGreaterThanOrEqual(42)
   })
 
   it.each(routeFiles.map((f) => [relPosix(f), f]))(
