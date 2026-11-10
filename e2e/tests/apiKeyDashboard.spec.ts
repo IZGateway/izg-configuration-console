@@ -7,7 +7,13 @@ import {
   getStatCardValue,
 } from '../helpers/apiKeyHelpers'
 
-const requiredEnvs = ['OKTA_USERNAME', 'OKTA_PASSWORD', 'BASE_URL'] as const
+// IZG Security: IZG Operations lost API key access in IGDD-3549, so
+// OKTA_USERNAME can no longer open /apikeys.
+const requiredEnvs = [
+  'E2E_RBAC_IZG_SECURITY_USERNAME',
+  'E2E_RBAC_IZG_SECURITY_PASSWORD',
+  'BASE_URL',
+] as const
 
 let context
 let page: Page
@@ -26,9 +32,10 @@ test.describe('API Key Management dashboard', () => {
 
     await loginToOkta(
       page,
-      process.env.OKTA_USERNAME as string,
-      process.env.OKTA_PASSWORD as string,
-      process.env.OKTA_USER_FULLNAME
+      process.env.E2E_RBAC_IZG_SECURITY_USERNAME as string,
+      process.env.E2E_RBAC_IZG_SECURITY_PASSWORD as string,
+      // No _FULLNAME secret exists for this role: skip the header name check.
+      null
     )
 
     await openApiKeyManagement(page)

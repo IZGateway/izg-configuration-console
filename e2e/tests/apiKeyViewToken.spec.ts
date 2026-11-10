@@ -47,7 +47,10 @@ test.describe.configure({ timeout: 120000 })
 test.use({ viewport: API_KEYS_VIEWPORT })
 
 test.beforeAll(() => {
-  const missing = ['OKTA_USERNAME', 'OKTA_PASSWORD'].filter(
+  const missing = [
+    'E2E_RBAC_IZG_SECURITY_USERNAME',
+    'E2E_RBAC_IZG_SECURITY_PASSWORD',
+  ].filter(
     (name) => !process.env[name]
   )
   if (missing.length > 0) {
@@ -65,7 +68,12 @@ test('Unviewed active key can be revealed once; view icon disappears after', asy
   const domain = newDomain()
   const description = newDescription('view-token')
 
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginToOkta(
+    page,
+    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
+    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
+    null
+  )
   await page.goto('/apikeys', { waitUntil: 'networkidle' })
   await expect(
     page.getByRole('button', { name: 'Create Key' }),
