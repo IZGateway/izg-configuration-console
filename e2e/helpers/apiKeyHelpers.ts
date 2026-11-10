@@ -42,5 +42,7 @@ export const getStatCardValue = async (
   const labelEl = page.getByText(label, { exact: true })
   const statBox = labelEl.locator('xpath=..')
   const text = await statBox.locator('p').first().innerText()
-  return parseInt(text, 10)
+  // The card shows a thousands separator ("1,231"); parseInt would stop at
+  // the comma and return 1.
+  return parseInt(text.replace(/,/g, ''), 10)
 }
