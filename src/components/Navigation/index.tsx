@@ -242,13 +242,21 @@ const MiniDrawer = () => {
                   onClick={(event) => handleListItemClick(event, index)}
                   id={item.label + '_button'}
                 >
-                  <ListItemIcon
-                    sx={{
-                      color: 'white',
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
+                  {/* Labels show only in the open drawer; the tooltip stands
+                      in for them when it's collapsed (an empty title disables
+                      it). Anchored to the icon, not the button: the button
+                      runs to 200% width under the drawer's hidden overflow,
+                      so a tooltip anchored to it opens far past the drawer
+                      edge. */}
+                  <Tooltip title={open ? '' : item.label} placement="right">
+                    <ListItemIcon
+                      sx={{
+                        color: 'white',
+                      }}
+                    >
+                      {item.icon}
+                    </ListItemIcon>
+                  </Tooltip>
                   <ListItemText primary={item.label} />
                 </ListItemButton>
               </NextLink>
@@ -279,20 +287,28 @@ const MiniDrawer = () => {
           sx={{ justifyContent: 'space-between', mt: 0, pl: 2, pt: 0, pb: 2 }}
         >
           <IZGLogo />
-          <IconButton
-            onClick={handleClick}
-            name="toggle navigation drawer"
-            aria-label="toggle navigation drawer"
+          <Tooltip
+            title={open ? 'Collapse navigation' : 'Expand navigation'}
+            placement="right"
           >
-            {!open ? (
-              <ChevronRightIcon
-                fontSize="large"
-                sx={{ color: palette.white }}
-              />
-            ) : (
-              <ChevronLeftIcon fontSize="large" sx={{ color: palette.white }} />
-            )}
-          </IconButton>
+            <IconButton
+              onClick={handleClick}
+              name="toggle navigation drawer"
+              aria-label="toggle navigation drawer"
+            >
+              {!open ? (
+                <ChevronRightIcon
+                  fontSize="large"
+                  sx={{ color: palette.white }}
+                />
+              ) : (
+                <ChevronLeftIcon
+                  fontSize="large"
+                  sx={{ color: palette.white }}
+                />
+              )}
+            </IconButton>
+          </Tooltip>
         </DrawerHeader>
         <Divider color={palette.primaryLight} />
         {list()}
