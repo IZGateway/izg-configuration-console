@@ -4,9 +4,10 @@ import logger from '../../../../logger'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../auth/[...nextauth]'
-import { requireApiKeyAccess } from '../../../lib/security/apiKeyAuthz'
-import { logAccessDenied } from '../../../lib/security/accessDeniedAudit'
-import { subjectOf } from '../../../lib/security/authzsubject'
+import {
+  isApiKeyManagementEnabled,
+  scopeFromJurisdictionIdInQuery,
+} from '../../../lib/security/apiKeyAuthz'
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -26,17 +27,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!jurisdictionId || typeof jurisdictionId !== 'string') {
       return res.status(400).json({ error: 'jurisdictionId is required' })
     }
-    // Role + tenancy: only list authorized domains for a jurisdiction the
-    // caller owns.
-    const authz = await requireApiKeyAccess(session, 'canListApiKeys', jurisdictionId)
-    if (!authz.ok) {
-      return res.status(authz.status).json({ error: authz.error })
-    }
 
     // envId may be a single id ("5") or, for a multi-env credential, a
-    // comma-separated list ("4,5") — requesting multiple is an admin-only
-    // capability (server-enforced, matching the create route), since it's
-    // only meaningful for the multi-env select on the Create form.
+    // comma-separated list ("4,5"). Querying multiple is no longer
+    // admin-only (IGDD-3549) — any role holding `canListApiKeys` for this
+    // jurisdiction may, matching the create route's own relaxed rule.
     const envIds = envId
       .split(',')
       .map((s) => Number(s.trim()))
@@ -46,15 +41,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
     if (envIds.some((n) => n < 1 || n > 5)) {
       return res.status(400).json({ error: 'envId must each be a number between 1 and 5' })
-    }
-    if (envIds.length > 1 && !session.user.isAdmin) {
-      logAccessDenied({
-        reason: 'multi-environment domain query requires admin',
-        user: session.user.email,
-        roles: subjectOf(session).roles,
-        jurisdictionId,
-      })
-      return res.status(403).json({ error: 'Only administrators may query multiple environments' })
     }
 
     const dbClient = await DbClientFactory.getDbClient()
@@ -80,6 +66,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
+// IGDD-3549: declarative capability + reach, closing this route's
+// `in-handler` debt row. `canListApiKeys` is destination-scoped here (one
+// jurisdiction named in the query) — the other shape of the same capability
+// used capability-only on apikeys/index.ts GET and apikeysaudit/index.ts GET.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: same multi-environment isAdmin check as apikeys/index.ts',
+  featureFlag: isApiKeyManagementEnabled,
+  capability: { page: 'apikeys', capability: 'canListApiKeys' },
+  scope: scopeFromJurisdictionIdInQuery(),
 })(handler)
