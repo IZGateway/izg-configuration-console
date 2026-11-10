@@ -79,6 +79,7 @@ const defaultAdminOperationsPageAccessControl: AdminOperationsPageAccessControl 
     canManagePasswordEncryption: false,
     canResetHubCircuitBreakers: false,
     canRefreshHubDatabase: false,
+    canViewDeepHealthCheckDetail: false,
   }
 
 const defaultConsolePageAccessControl: ConsolePageAccessControl = {

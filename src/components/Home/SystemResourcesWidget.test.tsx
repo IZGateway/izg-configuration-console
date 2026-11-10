@@ -41,8 +41,8 @@ describe('SystemResourcesWidget (IGDD-3474: open to every signed-in user)', () =
   })
 
   it.each([
-    ['a non-admin jurisdiction user', { isAdmin: false, roles: ['Jurisdiction Support'] }],
-    ['an admin', { isAdmin: true, roles: ['IZG Operations'] }],
+    ['a jurisdiction user', { roles: ['Jurisdiction Support'] }],
+    ['an IZG Operations user', { roles: ['IZG Operations'] }],
   ])('renders and fetches for %s', async (_label, user) => {
     mockUseSession.mockReturnValue({ data: { user }, status: 'authenticated' })
 

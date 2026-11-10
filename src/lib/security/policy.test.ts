@@ -320,6 +320,7 @@ const ADMIN_CAPABILITIES: CapabilityRef[] = [
   { page: 'adminoperations', capability: 'canManagePasswordEncryption' },
   { page: 'adminoperations', capability: 'canResetHubCircuitBreakers' },
   { page: 'adminoperations', capability: 'canRefreshHubDatabase' },
+  { page: 'adminoperations', capability: 'canViewDeepHealthCheckDetail' },
   { page: 'console', capability: 'canViewConsole' },
   { page: 'api-doc', capability: 'canViewApiDoc' },
 ]
@@ -382,6 +383,19 @@ describe('admin capability holders follow the ratified matrix (IGDD-3472, IGDD-3
           .allowed
     )
     expect(holders).toEqual(['IZG Security'])
+  })
+
+  // IGDD-3552: replaced Okta OPERATIONS_GROUP membership (`isAdmin`). IZG
+  // Operations keeps it and IZG Security holds every capability. The route
+  // skips DPoP, so a wider grant needs that fixed first (see
+  // _IZGOperationsAccess.ts).
+  it('the deep health check detail is held by IZG Operations and IZG Security only', () => {
+    const holders = ROLE_PRECEDENCE.filter(
+      (role) =>
+        can(subject([role]), 'adminoperations', 'canViewDeepHealthCheckDetail', ANY_JURISDICTION)
+          .allowed
+    )
+    expect(holders.sort()).toEqual(['IZG Operations', 'IZG Security'])
   })
 
   // console.canViewConsole (Admin Log Search) is the one admin-tier grant

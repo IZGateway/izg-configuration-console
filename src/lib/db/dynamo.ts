@@ -581,11 +581,11 @@ class Dynamo implements DbClient {
   }
 
   async fetchLoggedInUsersDestinations(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     destinations: Array<string>
   ): Promise<Destination[]> {
     // DONE
-    if (!isAdmin && destinations.length === 0) {
+    if (!hasGlobalReach && destinations.length === 0) {
       // Fail closed rather than build `destId IN ()`, which DynamoDB rejects.
       // A scoped caller with no jurisdictions assigned is a reachable state
       // (Okta userinfo failure, or a user not yet assigned one) and not an
@@ -603,7 +603,7 @@ class Dynamo implements DbClient {
         ':entityType': 'Destination',
       },
     }
-    if (!isAdmin) {
+    if (!hasGlobalReach) {
       let filter = '('
       for (let i = 0; i < destinations.length; i++) {
         filter += ':d' + i + ','
@@ -2473,14 +2473,14 @@ class Dynamo implements DbClient {
   }
 
   async fetchAllowedUsersByDestination(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     destinations: Array<string>
   ): Promise<AllowedUser[]> {
     // NOTE: Query cannot filter on sortKey fragments using FilterExpression referencing primary key.
-    // For non-admin with destination restrictions we fall back to Scan + FilterExpression on destinationId attribute.
+    // For a caller without global reach we fall back to Scan + FilterExpression on destinationId attribute.
     // Optimization: add a GSI on destinationId to allow efficient queries later.
-    if (!isAdmin && destinations.length === 0) {
-      // Fail closed rather than fall into the admin branch below, which would
+    if (!hasGlobalReach && destinations.length === 0) {
+      // Fail closed rather than fall into the global-reach branch below, which would
       // run an unfiltered query. A scoped caller with no jurisdictions
       // assigned is a reachable state (Okta userinfo failure, or a user not
       // yet assigned one), not an invariant violation — same guard as
@@ -2492,7 +2492,7 @@ class Dynamo implements DbClient {
       )
       return []
     }
-    if (isAdmin) {
+    if (hasGlobalReach) {
       const params: QueryCommandInput = {
         TableName: TABLE_NAME,
         KeyConditionExpression: 'entityType = :entityType',
@@ -2539,7 +2539,7 @@ class Dynamo implements DbClient {
         logger.error(
           'Error scanning allowed users by destination from DynamoDB',
           {
-            isAdmin,
+            hasGlobalReach,
             destinations,
             tableName: TABLE_NAME,
             entityType: 'AllowedUser',
