@@ -30,9 +30,9 @@ export const menuItems: MenuItem[] = [
     label: 'Admin Operations',
     icon: <AdminPanelSettingsIcon sx={iconSx} />,
     path: '/adminoperations',
-    // Was adminOnly: true (the Okta OPERATIONS_GROUP axis). Now a matrix
-    // capability, which is what the page gate reads. Held by IZG Security,
-    // IZG Operations, IZG Support and IZG Program (IGDD-3498, IGDD-3547).
+    // A matrix capability, which is what the page gate reads. Held by IZG
+    // Security, IZG Operations, IZG Support and IZG Program (IGDD-3498,
+    // IGDD-3547).
     isVisible: (roles) => canEnterPage('adminoperations', roles),
   },
   {
@@ -57,10 +57,10 @@ export const menuItems: MenuItem[] = [
     label: 'API Key Management',
     icon: <VpnKeyIcon sx={iconSx} />,
     path: '/apikeys',
-    // Not admin-only: Jurisdiction Operations also has full server-side
+    // Not global-only: Jurisdiction Operations also has full server-side
     // apikeys access (its own jurisdiction's keys), so gate on the actual
-    // permission rather than the narrower IZG-Operations-only isAdmin flag —
-    // otherwise those users could use the page but never find it in the nav.
+    // permission — otherwise those users could use the page but never find it
+    // in the nav.
     // Also requires the apiKeyManagementEnabled release flag (IGDD-3444),
     // set server-side per request in the session callback, so the link
     // disappears for every role while the feature is disabled.

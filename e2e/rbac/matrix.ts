@@ -65,7 +65,7 @@ export interface ApiProbe {
   denyOnly?: string
   /**
    * The status the route's gate refuses with: 403 for `capability` and
-   * `byMethod` declarations and `checkAdmin`, 401 for the reach checks
+   * `byMethod` declarations, 401 for the reach checks
    * (`checkAccessToDestId*`) and for handlers that answer 401 themselves.
    * Read the route before setting it.
    */

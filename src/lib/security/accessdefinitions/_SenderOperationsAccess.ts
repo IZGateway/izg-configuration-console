@@ -68,9 +68,7 @@ const SenderOperationsAccess: RoleAccess = {
 
   // [PROVISIONAL — IGDD-3472] Every admin surface is denied outright. Spreading
   // the all-false defaults and adding nothing is what makes that deny
-  // deliberate rather than incidental. These reproduce today's access exactly:
-  // all four surfaces are `isAdmin`-gated and Sender Operations is not in
-  // OPERATIONS_GROUP.
+  // deliberate rather than incidental.
   // The target matrix has no column for Sender Operations at all — it is
   // slated for retirement, folded into `Jurisdiction Security`. Do not invest
   // in its admin values.

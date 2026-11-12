@@ -742,6 +742,50 @@ describe('enforceRouteAuthz: session, public and inHandler', () => {
     expect(handler).toHaveBeenCalled()
   })
 
+  describe('{ public, detail }', () => {
+    const DETAIL: RouteAuthz = {
+      public: 'load balancer probe with a fuller body for some callers',
+      detail: { page: 'adminoperations', capability: 'canViewDeepHealthCheckDetail' },
+    }
+    // What the handler would read, captured inside the request context.
+    const detailSeenBy = async (authz: RouteAuthz) => {
+      let seen: boolean | undefined
+      const handler = jest.fn(async () => {
+        seen = asyncRequestContext.getStore()?.detailGranted
+      })
+      await withMiddleware(authz)(handler)(request('GET', '/api/deephealthcheck'), response())
+      return { handler, seen }
+    }
+
+    it('decides detail true for a holder', async () => {
+      signIn(['IZG Operations'])
+      const { handler, seen } = await detailSeenBy(DETAIL)
+      expect(handler).toHaveBeenCalled()
+      expect(seen).toBe(true)
+    })
+
+    it('decides detail false for a signed-in caller without it, and still admits them', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const { handler, seen } = await detailSeenBy(DETAIL)
+      expect(handler).toHaveBeenCalled()
+      expect(seen).toBe(false)
+      expect(deniedEvent(warnSpy)).toHaveLength(0)
+    })
+
+    it('decides detail false for an unauthenticated caller, and still admits them', async () => {
+      signIn(null)
+      const { handler, seen } = await detailSeenBy(DETAIL)
+      expect(handler).toHaveBeenCalled()
+      expect(seen).toBe(false)
+    })
+
+    it('leaves detail unset on a public route that declares none', async () => {
+      signIn(['IZG Operations'])
+      const { seen } = await detailSeenBy({ public: 'load balancer probe' })
+      expect(seen).toBeUndefined()
+    })
+  })
+
   it('{ inHandler } runs the handler without a capability check', async () => {
     signIn(['Sender Operations'], ['azova'])
     const handler = await run(
@@ -757,7 +801,7 @@ describe('enforceRouteAuthz: session, public and inHandler', () => {
 describe('a refused request always gets a response', () => {
   // Two instances of "resolves without responding" were found in this
   // change's scope — the middleware helper served as a route, and the deploy
-  // handler's unbalanced isAdmin conditional. Neither was caught by any
+  // handler's unbalanced inline admin conditional. Neither was caught by any
   // existing test, and both stall the caller with no audit record.
   it.each<[string, RouteAuthz, string, boolean]>([
     [

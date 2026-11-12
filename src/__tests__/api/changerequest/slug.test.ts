@@ -45,7 +45,7 @@ import { getToken } from 'next-auth/jwt'
 
 const signIn = (roles: string[], jurisdictions: string[] = []) => {
   ;(getServerSession as jest.Mock).mockResolvedValue({
-    user: { email: 'u@example.com', roles, isAdmin: false, jurisdictions },
+    user: { email: 'u@example.com', roles, jurisdictions },
   })
   ;(getToken as jest.Mock).mockResolvedValue({ sub: '00uABC' })
 }

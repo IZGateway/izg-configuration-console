@@ -151,8 +151,18 @@ export type RouteAuthz =
    * closed, never added.
    */
   | { inHandler: string }
-  /** Deliberately unauthenticated. The string is the reason. */
-  | { public: string }
+  /**
+   * Deliberately unauthenticated. The string is the reason.
+   *
+   * `detail` is for a public route that returns more to some callers: the
+   * capability that unlocks the fuller response. It is decided here, like
+   * every other declared capability, and the answer is left on the request
+   * context for the handler to read through `currentDetailGranted()`. It never
+   * refuses a request. The handler must not decide it again itself, so the
+   * decision stays visible at the declaration, and removing `detail` fails
+   * closed: every caller gets the public response (IGDD-3552, PR #786 review).
+   */
+  | { public: string; detail?: CapabilityRef }
 
 // Catch any errors
 const captureErrors: Middleware = async (req, res, next) => {
@@ -348,7 +358,12 @@ const enforceRouteAuthz = (authz: RouteAuthz): Middleware => {
       return next()
     }
 
-    if ('public' in authz) return next()
+    if ('public' in authz) {
+      if (authz.detail && context) {
+        context.detailGranted = decideCapability(subject, authz.detail)
+      }
+      return next()
+    }
 
     // The handler owns the decision. Declared, ticketed and counted, but not
     // enforced here.
