@@ -31,6 +31,9 @@ jest.mock('fs', () => ({ readFileSync: jest.fn(() => 'pem-bytes') }))
 import { getServerSession } from 'next-auth'
 import { getToken } from 'next-auth/jwt'
 import handler from '../../../pages/api/deephealthcheck/index'
+import { decideCapability } from '../../../lib/security/accessregistry'
+import { subjectOf } from '../../../lib/security/authzsubject'
+import { ROLE_PRECEDENCE } from '../../../lib/security/rolemapping'
 
 /**
  * Stand-in addresses, not real ones. This repo is public, so the actual ALB DNS
@@ -70,6 +73,19 @@ const bodyOf = (res: never): unknown =>
 const statusOf = (res: never): number =>
   (res as unknown as { status: jest.Mock }).status.mock.calls[0][0]
 
+/**
+ * Split every role by what the matrix grants, so a role added or re-granted by
+ * a data change is exercised here without editing this file. Which roles hold
+ * it is asserted once, in policy.test.ts and the role-matrix snapshot.
+ */
+const holdsDetail = (role: string) =>
+  decideCapability(subjectOf({ user: { roles: [role], jurisdictions: ['az'] } }), {
+    page: 'adminoperations',
+    capability: 'canViewDeepHealthCheckDetail',
+  })
+const DETAIL_ROLES = ROLE_PRECEDENCE.filter(holdsDetail)
+const NON_DETAIL_ROLES = ROLE_PRECEDENCE.filter((role) => !holdsDetail(role))
+
 describe('GET /api/deephealthcheck disclosure by caller', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -97,24 +113,23 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
   const anonymous = () =>
     (getServerSession as jest.Mock).mockResolvedValue(null)
 
-  /** Member of OPERATIONS_GROUP — the only caller entitled to the full result. */
-  const admin = () =>
+  /**
+   * Holds adminoperations.canViewDeepHealthCheckDetail through the role matrix
+   * (IGDD-3552) — the only kind of caller entitled to the full result.
+   */
+  const detailHolder = (role = 'IZG Operations') =>
     (getServerSession as jest.Mock).mockResolvedValue({
-      user: {
-        email: 'ops@example.com',
-        roles: ['IZG Operations'],
-        isAdmin: true,
-      },
+      user: { email: 'ops@example.com', roles: [role] },
     })
 
   /**
-   * Signed in but outside OPERATIONS_GROUP. There is no `signIn` callback, so any
-   * Okta tenant user who completes the flow lands here — including one holding no
-   * CC roles at all.
+   * Signed in without the permission. There is no `signIn` callback, so any Okta
+   * tenant user who completes the flow lands here — including one holding no CC
+   * roles at all.
    */
-  const signedInNonAdmin = (roles: string[] = []) =>
+  const signedInWithoutDetail = (roles: string[] = [], jurisdictions: string[] = []) =>
     (getServerSession as jest.Mock).mockResolvedValue({
-      user: { email: 'viewer@example.com', roles, isAdmin: false },
+      user: { email: 'viewer@example.com', roles, jurisdictions },
     })
 
   /**
@@ -176,8 +191,8 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
     expect(body.every((c) => typeof c.statusAt === 'string')).toBe(true)
   })
 
-  it('gives a caller in OPERATIONS_GROUP the full result', async () => {
-    admin()
+  it('gives a caller holding canViewDeepHealthCheckDetail the full result', async () => {
+    detailHolder()
     const { req, res } = buildReqRes()
 
     await handler(req, res)
@@ -189,12 +204,34 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
     expect(serialized).toContain('status.okta.com')
   })
 
+  it('has roles on both sides of the permission', () => {
+    expect(DETAIL_ROLES.length).toBeGreaterThan(0)
+    expect(NON_DETAIL_ROLES.length).toBeGreaterThan(0)
+  })
+
   /**
-   * The reason the gate is `isAdmin` and not merely `session.user`: authenticating
-   * to the console is not by itself a claim to see where its dependencies live.
+   * The handler reads the matrix, so a role gains the detail by a data change
+   * alone, with no code change (IGDD-3552).
    */
-  it('withholds detail from a signed-in caller outside OPERATIONS_GROUP', async () => {
-    signedInNonAdmin()
+  it.each(DETAIL_ROLES)(
+    'gives %s the full result',
+    async (role) => {
+      detailHolder(role)
+      const { req, res } = buildReqRes()
+
+      await handler(req, res)
+
+      expect(JSON.stringify(bodyOf(res))).toContain(IZG_URL)
+    }
+  )
+
+  /**
+   * The reason the gate is a permission and not merely `session.user`:
+   * authenticating to the console is not by itself a claim to see where its
+   * dependencies live.
+   */
+  it('withholds detail from a signed-in caller holding no role', async () => {
+    signedInWithoutDetail()
     const { req, res } = buildReqRes()
 
     await handler(req, res)
@@ -212,12 +249,36 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
   })
 
   /**
-   * A role on the CcRole axis is not the admin axis. `isAdmin` tracks
-   * OPERATIONS_GROUP membership and is deliberately separate from `roles`, so a
-   * caller holding a real role but not that group still gets the public view.
+   * Holding a real role is not enough: only a role granted the permission gets
+   * the full result.
    */
-  it('withholds detail from a signed-in caller holding a non-admin role', async () => {
-    signedInNonAdmin(['IZG Support'])
+  it.each(NON_DETAIL_ROLES)(
+    'withholds detail from %s, which does not hold the permission',
+    async (role) => {
+      signedInWithoutDetail([role], ['az'])
+      const { req, res } = buildReqRes()
+
+      await handler(req, res)
+
+      const body = bodyOf(res) as Record<string, unknown>[]
+      expect(JSON.stringify(body)).not.toContain('izg.example')
+      expect(Object.keys(body[0]).sort()).toEqual([
+        'component',
+        'status',
+        'statusAt',
+      ])
+    }
+  )
+
+  /**
+   * Okta group membership no longer widens the body: the session no longer
+   * carries `isAdmin` (IGDD-3552), and one left on a stale or hand-built
+   * session is ignored, because this handler reads only the matrix.
+   */
+  it('ignores a stale isAdmin flag on a session without the permission', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'viewer@example.com', roles: [], isAdmin: true },
+    })
     const { req, res } = buildReqRes()
 
     await handler(req, res)
@@ -254,8 +315,8 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
     expect(JSON.stringify(body)).not.toContain('10.0.3.44')
   })
 
-  it('reports the upstream error message to a caller in OPERATIONS_GROUP', async () => {
-    admin()
+  it('reports the upstream error message to a caller holding the permission', async () => {
+    detailHolder()
     mockAxiosGet.mockRejectedValue(
       new Error('connect ECONNREFUSED 10.0.3.44:444')
     )
@@ -294,7 +355,7 @@ describe('GET /api/deephealthcheck disclosure by caller', () => {
     const anon = buildReqRes()
     await handler(anon.req, anon.res)
 
-    admin()
+    detailHolder()
     const auth = buildReqRes()
     await handler(auth.req, auth.res)
 

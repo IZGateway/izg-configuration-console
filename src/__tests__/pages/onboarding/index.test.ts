@@ -80,7 +80,7 @@ describe('onboarding getServerSideProps: reach decision', () => {
   })
 
   // A scoped role with no jurisdictions assigned must be passed through as
-  // isAdmin=false with an empty list, never silently promoted to global reach
+  // hasGlobalReach=false with an empty list, never silently promoted to global reach
   // — that promotion is exactly what the dynamo.ts empty-list guard
   // (dynamo.allowedUsersByDestination.test.ts) relies on this route NOT doing.
   it('a scoped role with no jurisdictions assigned is still passed as scoped, not promoted to global', async () => {

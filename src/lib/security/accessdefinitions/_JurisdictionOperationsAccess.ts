@@ -83,9 +83,7 @@ const JurisdictionOperationsAccess: RoleAccess = {
 
   // [PROVISIONAL — IGDD-3472] accesscontrol, adminoperations and api-doc are
   // denied outright. Spreading the all-false defaults and adding nothing is
-  // what makes that deny deliberate rather than incidental. These reproduce
-  // today's access exactly: those surfaces are `isAdmin`-gated and
-  // Jurisdiction Operations is not in OPERATIONS_GROUP.
+  // what makes that deny deliberate rather than incidental.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
   },

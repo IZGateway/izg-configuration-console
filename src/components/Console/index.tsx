@@ -320,8 +320,8 @@ const Console = () => {
 
   // Defence in depth, kept deliberately: the page is now gated server-side by
   // withPageAccess('console'), so a denied user never renders this component
-  // at all. This reads the same matrix flag rather than the isAdmin axis, and
-  // renders the same denial surface — a second, differently-worded message for
+  // at all. This reads the same matrix flag as that gate, and renders the
+  // same denial surface — a second, differently-worded message for
   // the same page is a thing that drifts.
   if (!canViewConsole) {
     return <AccessDenied title="Operations Console" />
