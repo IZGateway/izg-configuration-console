@@ -17,6 +17,10 @@ export interface Context {
   // an audit trail's "which role authorized this?" reads it from here
   // instead of re-deciding authorization a second time just to find out.
   grantedBy?: CcRole
+  // Whether the caller holds a `{ public, detail }` route's `detail`
+  // capability, decided by `enforceRouteAuthz` (IGDD-3552). Unset on every
+  // other kind of route.
+  detailGranted?: boolean
 }
 
 export const asyncRequestContext = new AsyncLocalStorage<Context>()
@@ -29,3 +33,11 @@ export const asyncRequestContext = new AsyncLocalStorage<Context>()
  */
 export const currentGrantedBy = (): CcRole | undefined =>
   asyncRequestContext.getStore()?.grantedBy
+
+/**
+ * Whether the current request may see a `{ public, detail }` route's fuller
+ * response. Strictly `true` only, so a missing context or declaration fails
+ * closed.
+ */
+export const currentDetailGranted = (): boolean =>
+  asyncRequestContext.getStore()?.detailGranted === true

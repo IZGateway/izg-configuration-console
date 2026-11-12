@@ -7,9 +7,7 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
-import { asyncRequestContext } from '../../../lib/Context'
-import { decideCapability } from '../../../lib/security/accessregistry'
-import { subjectOf } from '../../../lib/security/authzsubject'
+import { currentDetailGranted } from '../../../lib/Context'
 
 /** The result of probing one dependency. */
 interface ComponentHealth {
@@ -75,16 +73,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   // `signIn` callback, so anyone who completes the Okta flow holds a session;
   // gating the detail on `session.user` alone would disclose dependency addresses
   // to a tenant user with no roles and no capabilities anywhere else in the
-  // console. The context is populated by `withMiddleware` for public routes too,
-  // so reading it here needs no extra session plumbing; with no session the
-  // subject holds no roles and the decision denies. `decideCapability`, not a
-  // raw `can()`, so this in-handler read applies the same per-role
-  // global-tenancy guard as every declared gate if the flag is ever added to
-  // REQUIRES_GLOBAL_TENANCY.
-  const canViewDetail = decideCapability(
-    subjectOf(asyncRequestContext.getStore()?.session),
-    { page: 'adminoperations', capability: 'canViewDeepHealthCheckDetail' }
-  )
+  // console. Decided by the route declaration's `detail` below, not here, so
+  // the decision is visible where every other route declares its access, and
+  // removing it fails closed. With no session the middleware decides false.
+  const canViewDetail = currentDetailGranted()
   const publicDeepHealthCheckResults = () =>
     deepHealthCheckResults.map(publicView)
 
@@ -271,6 +263,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 export default withMiddleware({
   public:
     'Readiness probe for the load balancer; reports dependency reachability, not data. ' +
-    'Callers get component/status/statusAt only — the handler widens the body for ' +
-    'adminoperations.canViewDeepHealthCheckDetail, but never narrows access.',
+    'Callers get component/status/statusAt only; holders of `detail` get the full ' +
+    'result. It never narrows access.',
+  detail: { page: 'adminoperations', capability: 'canViewDeepHealthCheckDetail' },
 })(handler)
