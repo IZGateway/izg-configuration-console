@@ -33,7 +33,12 @@ test.beforeAll(async ({ browser }) => {
   // on it directly. See API_KEYS_VIEWPORT.
   context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginToOkta(
+    page,
+    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
+    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
+    null
+  )
 })
 
 test.beforeEach(async () => {
