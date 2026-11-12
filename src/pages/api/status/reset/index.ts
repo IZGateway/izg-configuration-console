@@ -133,12 +133,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// IGDD-3547: 'checkAdmin' dropped. It required Okta OPERATIONS_GROUP
-// membership (today, IZG Operations only), a second axis invisible to the
-// matrix. IZG Program holds canResetHubCircuitBreakers but is not in
-// OPERATIONS_GROUP, so the matrix grant 403'd behind this check — exactly the
-// pure subtraction the removed comment anticipated: the capability check
-// above already authorizes this route correctly.
+// Authorized by the matrix capability alone. IGDD-3547 dropped a second,
+// Okta-group check that the matrix could not see, which refused roles granted
+// canResetHubCircuitBreakers.
 export default withMiddleware({
   capability: { page: 'adminoperations', capability: 'canResetHubCircuitBreakers' },
 })(handler)

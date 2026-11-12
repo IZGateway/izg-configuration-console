@@ -291,8 +291,8 @@ function HomeComponent() {
               <Slide in={true} timeout={1400} direction="up">
                 <Box>
                   {/* [IGDD-3474] Console — status report: every signed-in
-                      role (target matrix). Was isAdmin-only. The API returns
-                      hub-wide host metrics only, never tenant data. */}
+                      role (target matrix). The API returns hub-wide host
+                      metrics only, never tenant data. */}
                   <SystemResourcesWidget />
                 </Box>
               </Slide>

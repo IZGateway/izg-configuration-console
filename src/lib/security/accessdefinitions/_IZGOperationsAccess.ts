@@ -111,6 +111,12 @@ const IZGOperationsAccess: RoleAccess = {
     canViewAdminOperations: true,
     canResetHubCircuitBreakers: true,
     canRefreshHubDatabase: true,
+    // IGDD-3552: IZG Operations is who saw the full body under the Okta
+    // operations-group check this replaced; IZG Security holds it because it
+    // holds every capability. /api/deephealthcheck is exempt from DPoP for the
+    // load balancer, so each further holder also widens what a stolen session
+    // cookie discloses. Widen only with that addressed.
+    canViewDeepHealthCheckDetail: true,
   },
 
   // Target matrix (v13) row "Admin Log Search (current /console route)"

@@ -118,11 +118,9 @@ export type MenuItem = {
   label: string
   icon: any
   path: string
-  // The only visibility mechanism. An `adminOnly?: boolean` field used to sit
-  // beside this and gate on the coarse `isAdmin` flag; IGDD-3472 moved its
-  // three remaining users onto matrix capabilities and removed the field
-  // rather than leaving it dead, because a dead authorization field invites
-  // someone to set it again and reintroduce an axis `can()` cannot see.
+  // The only visibility mechanism. Do not add a second one (an `adminOnly`
+  // flag, an Okta-group check): visibility must come from matrix
+  // capabilities, or it reintroduces an axis `can()` cannot see.
   //
   // Receives ALL roles the user holds (so an item is visible when any held
   // role grants it) and the full session, for flags that live outside the
@@ -134,9 +132,8 @@ export type MenuItem = {
 
 const MiniDrawer = () => {
   const { data: session } = useSession()
-  // Was `session?.user.isAdmin`. Now the same PAGE_ENTRY constant the page's
-  // own gate reads, so the Swagger API link and /api-doc cannot disagree —
-  // which they did before IGDD-3472.
+  // The same PAGE_ENTRY constant the page's own gate reads, so the Swagger API
+  // link and /api-doc cannot disagree — which they did before IGDD-3472.
   const canSeeApiDoc = canEnterPage('api-doc', session?.user.roles)
   const [isMobile, setIsMobile] = React.useState(false)
   // Initialize drawer state based on screen size

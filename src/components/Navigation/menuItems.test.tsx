@@ -80,7 +80,7 @@ describe('nav visibility: no held roles', () => {
 // IGDD-3472 — the three admin items moved from adminOnly to matrix capabilities
 // ---------------------------------------------------------------------------
 
-describe('nav visibility: admin items read the matrix, not isAdmin', () => {
+describe('nav visibility: admin items read the matrix', () => {
   const ADMIN_ITEMS = ['Admin Operations', 'Access Control', 'Console']
 
   it.each(ADMIN_ITEMS)('%s is visible for IZG Operations', (label) => {
