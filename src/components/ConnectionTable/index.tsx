@@ -43,6 +43,94 @@ import { useRouter } from 'next/router'
 import Slide from '@mui/material/Slide'
 import PageHeader from '../PageHeader'
 
+// One tooltip for both status surfaces — the desktop STATUS column and the
+// mobile card's indicator — so they can't drift apart on what details they
+// show. enterTouchDelay 0 lets a tap open it where the mobile cards render,
+// since touch screens have no hover.
+const StatusDetailsTooltip = ({
+  row,
+  children,
+}: {
+  row: {
+    status?: string
+    statusAt?: string
+    detail?: string
+    diagnostics?: string
+    retryStrategy?: string
+  }
+  children: React.ReactElement
+}) => {
+  const isConnected = row.status?.toLowerCase() === 'connected'
+  const asOfDate = row.statusAt
+    ? new Date(row.statusAt).toLocaleString()
+    : 'Unknown'
+  return (
+    <Tooltip
+      arrow
+      placement="top"
+      enterTouchDelay={0}
+      leaveTouchDelay={5000}
+      componentsProps={{
+        tooltip: {
+          sx: {
+            backgroundColor: palette.white,
+            boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
+            border: `1px solid ${palette.border}`,
+            '& .MuiTooltip-arrow': {
+              color: palette.border,
+            },
+          },
+        },
+      }}
+      title={
+        <Card elevation={0}>
+          <CardHeader
+            title={
+              <Typography
+                sx={{
+                  fontWeight: 'bold',
+                  color: palette.greyDarkTypography,
+                }}
+              >
+                {row.status?.toUpperCase()}
+              </Typography>
+            }
+            subheader={
+              <Typography
+                sx={{
+                  fontWeight: 'regular',
+                  color: palette.greyDarkTypography,
+                }}
+                variant="body2"
+              >
+                {asOfDate}
+              </Typography>
+            }
+          />
+          {!isConnected && (
+            <CardContent>
+              <Box sx={{ fontWeight: 'bold', marginTop: '-16px' }}>
+                Details:
+              </Box>
+              <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
+                {row.detail}
+              </Box>
+              <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
+              <Box sx={{ fontWeight: 'regular', marginBottom: '8px' }}>
+                {row.diagnostics}
+              </Box>
+              <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
+              <Box sx={{ fontWeight: 'regular' }}>{row.retryStrategy}</Box>
+            </CardContent>
+          )}
+        </Card>
+      }
+    >
+      {children}
+    </Tooltip>
+  )
+}
+
 // ConnectionTable column width persistence
 // Storage: localStorage key 'izg-cc-connectiontable-columns'
 // Format: { destId: 150, destType: 100, ... }
@@ -528,77 +616,8 @@ const ConnectionsTable = (props) => {
             params.row.status?.toLowerCase() === 'connected' ? true : false
           const isCircuitBreakerTripped =
             params.row.status?.toLowerCase() === 'circuit breaker thrown'
-          const asOfDate = params.row.statusAt
-            ? new Date(params.row.statusAt).toLocaleString()
-            : 'Unknown'
           return (
-            <Tooltip
-              arrow
-              placement="top"
-              componentsProps={{
-                tooltip: {
-                  sx: {
-                    backgroundColor: palette.white,
-                    boxShadow: '0px 3px 5px rgb(0 0 0 / 25%)',
-                    border: `1px solid ${palette.border}`,
-                    '& .MuiTooltip-arrow': {
-                      color: palette.border,
-                    },
-                  },
-                },
-              }}
-              title={
-                <React.Fragment>
-                  <Card elevation={0}>
-                    <CardHeader
-                      title={
-                        <Typography
-                          sx={{
-                            fontWeight: 'bold',
-                            color: palette.greyDarkTypography,
-                          }}
-                        >
-                          {params.row.status?.toUpperCase()}
-                        </Typography>
-                      }
-                      subheader={
-                        <Typography
-                          sx={{
-                            fontWeight: 'regular',
-                            color: palette.greyDarkTypography,
-                          }}
-                          variant="body2"
-                        >
-                          {asOfDate}
-                        </Typography>
-                      }
-                    />
-                    {!isConnected && (
-                      <CardContent>
-                        <Box sx={{ fontWeight: 'bold', marginTop: '-16px' }}>
-                          Details:
-                        </Box>
-                        <Box
-                          sx={{ fontWeight: 'regular', marginBottom: '8px' }}
-                        >
-                          {params.row.detail}
-                        </Box>
-                        <Box sx={{ fontWeight: 'bold' }}>Diagnostics:</Box>
-                        <Box
-                          sx={{ fontWeight: 'regular', marginBottom: '8px' }}
-                        >
-                          {params.row.diagnostics}
-                        </Box>
-                        <Box sx={{ fontWeight: 'bold' }}>Retry Strategy:</Box>
-                        <Box sx={{ fontWeight: 'regular' }}>
-                          {params.row.retryStrategy}
-                        </Box>
-                      </CardContent>
-                    )}
-                  </Card>
-                </React.Fragment>
-              }
-            >
+            <StatusDetailsTooltip row={params.row}>
               {/* Rows are auto-height, so long maintenance messages wrap
                   instead of being clipped by the cell. */}
               <Typography
@@ -695,7 +714,7 @@ const ConnectionsTable = (props) => {
                     </Box>
                   )}
               </Typography>
-            </Tooltip>
+            </StatusDetailsTooltip>
           )
         },
       },
@@ -763,6 +782,9 @@ const ConnectionsTable = (props) => {
         destTypeId: number
         status?: string
         statusAt?: string
+        detail?: string
+        diagnostics?: string
+        retryStrategy?: string
         jurisdictionName?: string
         destType?: string
         destUri?: string
@@ -815,21 +837,29 @@ const ConnectionsTable = (props) => {
             >
               {row.destId}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {isConnected ? (
-                <CheckIcon fontSize="small" />
-              ) : (
-                <ErrorOutlineIcon fontSize="small" />
-              )}
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 'bold',
-                }}
+            <StatusDetailsTooltip row={row}>
+              {/* tabIndex, because the diagnostics and retry strategy exist
+                  only inside this tooltip and MUI opens it on focus — without
+                  a focusable trigger, keyboard users could never reach them. */}
+              <Box
+                tabIndex={0}
+                sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                {isConnected ? 'Connected' : 'Not Connected'}
-              </Typography>
-            </Box>
+                {isConnected ? (
+                  <CheckIcon fontSize="small" />
+                ) : (
+                  <ErrorOutlineIcon fontSize="small" />
+                )}
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {isConnected ? 'Connected' : 'Not Connected'}
+                </Typography>
+              </Box>
+            </StatusDetailsTooltip>
           </Box>
           {/* Content */}
           <Box sx={{ marginBottom: '12px' }}>
