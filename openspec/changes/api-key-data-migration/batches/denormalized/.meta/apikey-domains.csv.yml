@@ -1,0 +1,17 @@
+schema_version: '1.0'
+updated:
+  - date: '2026-09-10T18:10:41.805Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: prompt:/claude-code/4f96b5e4-3b73-481a-b286-a39b0bc937d1/~7adb371e-af7b-461f-a3cf-486d3df596ed
+    summary: >-
+      Correct hco.optimoz.com env in apikey-domains.csv from production,1 to onboarding,3, consistent with
+      allowed-users-iis.csv fix
+created:
+  date: '2026-08-18T20:40:08.000Z'
+  user: Keith W. Boone

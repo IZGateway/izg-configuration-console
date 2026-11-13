@@ -1,0 +1,27 @@
+schema_version: '1.0'
+created:
+  date: '2026-08-14T02:47:59.540Z'
+  user: boonek
+  agent:
+    name: GitHub Copilot CLI
+    version: 1.0.79
+  llm:
+    name: claude-sonnet-4.6
+    version: '4.6'
+  prompt_uri: prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
+  summary: >-
+    Unique provider sender organizations derived from Salesforce Pro-to-IIS column; VA consolidated from 3 variants to 1
+    record
+updated:
+  - date: '2026-08-14T03:22:38.565Z'
+    user: boonek
+    agent:
+      name: GitHub Copilot CLI
+      version: 1.0.79
+    llm:
+      name: claude-sonvent-4.6
+      version: '4.6'
+    prompt_uri: prompt:/claude-code/9edee8ca-3f1c-48f5-91cc-295c416b89e4/~d27b3e0a-7f0a-40de-8691-268ddfb7f2ad
+    summary: Add Docket as PATIENT-only sender
+change_request: api-key-data-migration
+ticket: IGDD-3258

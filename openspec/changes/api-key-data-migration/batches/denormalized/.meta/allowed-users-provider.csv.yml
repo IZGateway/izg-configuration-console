@@ -1,0 +1,17 @@
+schema_version: '1.0'
+updated:
+  - date: '2026-09-10T18:38:39.895Z'
+    user: boonek
+    agent:
+      name: claude-code
+      version: '1.0'
+    llm:
+      name: claude-sonnet-5
+      version: '1.0'
+    prompt_uri: prompt:/claude-code/4f96b5e4-3b73-481a-b286-a39b0bc937d1/~79777bf1-f535-4c6d-adee-e4664541a402
+    summary: >-
+      Append 26 new Provider-to-IIS AllowedUser pairs derived from user-supplied Salesforce list, resolved against
+      existing sender/receiver data
+created:
+  date: '2026-08-18T20:40:08.000Z'
+  user: Keith W. Boone
