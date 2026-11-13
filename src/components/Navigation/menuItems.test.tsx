@@ -52,6 +52,29 @@ describe('nav visibility: existing roles are unchanged', () => {
   })
 })
 
+// IGDD-3500: API Key Management moved from Jurisdiction Operations to
+// Jurisdiction Security; neither sees an admin item.
+describe('nav visibility: Jurisdiction Security and Jurisdiction Operations', () => {
+  it('Jurisdiction Security sees Manage Connections, Onboarding Senders and API Key Management', () => {
+    const roles = ['Jurisdiction Security']
+    expect(item('Manage Connections').isVisible?.(roles)).toBe(true)
+    expect(item('Onboarding Senders').isVisible?.(roles)).toBe(true)
+    expect(item('API Key Management').isVisible?.(roles, enabledSession)).toBe(true)
+    for (const label of ['Admin Operations', 'Access Control', 'Console']) {
+      expect({ label, visible: item(label).isVisible?.(roles) }).toEqual({
+        label,
+        visible: false,
+      })
+    }
+  })
+
+  it('Jurisdiction Operations no longer sees API Key Management', () => {
+    expect(
+      item('API Key Management').isVisible?.(['Jurisdiction Operations'], enabledSession)
+    ).toBe(false)
+  })
+})
+
 // IGDD-3547: IZG Program holds canViewConnections and canViewOnboarding.
 describe('nav visibility: IZG Program', () => {
   it('sees Manage Connections and Onboarding Senders', () => {

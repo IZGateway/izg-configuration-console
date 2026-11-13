@@ -33,7 +33,7 @@ const mockGetDbClient = jest.fn()
 // individual tests only supply their own when the prefix mapping is the thing
 // under test.
 //
-// Fixture mapping: jurisdiction '1' -> 'AINQ' (the one `jurOpsSession` owns);
+// Fixture mapping: jurisdiction '1' -> 'AINQ' (the one `jurSecSession` owns);
 // every other id gets a distinct `JUR<id>` prefix so it is deterministically NOT
 // owned by a scoped caller.
 const testJurisdictionPrefix = (jurisdictionId: string) =>
@@ -1043,16 +1043,16 @@ describe('API key authorization (role + tenancy)', () => {
     jest.clearAllMocks()
   })
 
-  // Jurisdiction Operations scoped to jurisdiction '1' only. Note this holds the
+  // Jurisdiction Security scoped to jurisdiction '1' only. Note this holds the
   // jurisdiction's PREFIX ('ainq', lowercased), not its numeric id — that is the
   // shape Okta actually puts in the session (see the `jwt` callback in
   // pages/api/auth/[...nextauth].ts), and `testJurisdictionPrefix` maps
   // jurisdiction '1' to 'AINQ'. Targets below use jurisdictionId '99', which maps
   // to 'JUR99' and is therefore not owned.
-  const jurOpsSession = {
+  const jurSecSession = {
     user: {
-      email: 'jurops@example.com',
-      role: 'Jurisdiction Operations',
+      email: 'jursec@example.com',
+      role: 'Jurisdiction Security',
       jurisdictions: ['ainq'],
     },
   }
@@ -1077,7 +1077,7 @@ describe('API key authorization (role + tenancy)', () => {
     const prefixOwnerSession = {
       user: {
         email: 'sender@example.com',
-        role: 'Jurisdiction Operations',
+        role: 'Jurisdiction Security',
         jurisdictions: ['ainq'],
       },
     }
@@ -1136,8 +1136,8 @@ describe('API key authorization (role + tenancy)', () => {
   })
 
   describe('tenancy gate — Sender Operations is scoped to its own organization', () => {
-    // Full lifecycle permissions (AC-equivalent to Jurisdiction Operations), but
-    // reach is limited to jurisdiction '1' ('ainq'), exactly like jurOpsSession.
+    // Full lifecycle permissions (AC-equivalent to Jurisdiction Security), but
+    // reach is limited to jurisdiction '1' ('ainq'), exactly like jurSecSession.
     const senderSession = {
       user: {
         email: 'sender@example.com',
@@ -1169,7 +1169,7 @@ describe('API key authorization (role + tenancy)', () => {
 
   describe('GET list scoping — only owned jurisdictions are returned', () => {
     it("filters the list to the caller's jurisdictions without logging phantom AccessDenied events", async () => {
-      mockGetServerSession.mockResolvedValue(jurOpsSession)
+      mockGetServerSession.mockResolvedValue(jurSecSession)
       const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
         { sortKey: '5#a', jurisdictionId: '1', status: 'active' },
         { sortKey: '5#b', jurisdictionId: '99', status: 'active' },

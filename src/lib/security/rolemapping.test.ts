@@ -63,6 +63,21 @@ describe('group name normalization', () => {
       'IZG Operations',
     ])
   })
+
+  it.each([
+    'Jurisdiction Security',
+    'jurisdiction security',
+    'jurisdiction-security',
+    '  JURISDICTION_SECURITY  ',
+  ])('resolves %p to the Jurisdiction Security role', (groupName) => {
+    expect(rolesFromGroups([groupName])).toEqual(['Jurisdiction Security'])
+  })
+
+  it('holds Jurisdiction Security alongside Jurisdiction Operations, Security first', () => {
+    expect(
+      rolesFromGroups(['Jurisdiction Operations', 'Jurisdiction Security'])
+    ).toEqual(['Jurisdiction Security', 'Jurisdiction Operations'])
+  })
 })
 
 describe('tolerant claim shapes', () => {
