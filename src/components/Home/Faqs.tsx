@@ -364,7 +364,7 @@ const Faq = () => {
             </AccordionSummary>
             <AccordionDetails>
               <Typography gutterBottom>
-                Users with Jurisdiction Operations access can open{' '}
+                Users with Jurisdiction Security access can open{' '}
                 <strong>API Key Management</strong> from the navigation menu
                 and click <strong>Create Key</strong>, providing:
               </Typography>
