@@ -7,7 +7,7 @@ role SHALL contribute nothing and SHALL NOT prevent another group from granting 
 
 #### Scenario: Unmapped group alongside a working group
 
-- **WHEN** a user belongs to both `CDC Program` (which maps to no role) and
+- **WHEN** a user belongs to both an unmapped group (which maps to no role) and
   `Jurisdiction Operations`
 - **THEN** the user SHALL receive the full `Jurisdiction Operations` permissions
 
