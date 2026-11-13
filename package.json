@@ -24,9 +24,9 @@
     "test:rbac": "playwright test -c playwright.rbac.config.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1167.0",
-    "@aws-sdk/client-secrets-manager": "^3.1167.0",
-    "@aws-sdk/lib-dynamodb": "^3.1167.0",
+    "@aws-sdk/client-dynamodb": "^3.1168.0",
+    "@aws-sdk/client-secrets-manager": "^3.1168.0",
+    "@aws-sdk/lib-dynamodb": "^3.1168.0",
     "@axe-core/react": "^4.14.0",
     "@babel/types": "^7.29.14",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -106,7 +106,7 @@
       "ajv": "^6.14.0"
     },
     "fast-uri": "4.2.3",
-    "glob": "14.0.5",
+    "glob": "14.0.6",
     "js-yaml": "4.3.2",
     "jsdom": "^28.1.0",
     "swagger-ui-react": {
