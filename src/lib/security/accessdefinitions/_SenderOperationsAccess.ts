@@ -47,7 +47,7 @@ const SenderOperationsAccess: RoleAccess = {
   } as HistoryPageAccessControl,
   // Full lifecycle over its own credentials, scoped by the same per-role
   // jurisdiction check every other role goes through (see policy.ts) — this
-  // is not a wider capability than Jurisdiction Operations, only a narrower
+  // is not a wider capability than Jurisdiction Security, only a narrower
   // reach.
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,

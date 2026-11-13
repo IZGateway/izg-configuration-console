@@ -118,6 +118,43 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
       expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
     })
 
+    // IGDD-3500: API key management moved to Jurisdiction Security.
+    it('403s GET list for Jurisdiction Operations', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const fetchApiKeyCredentials = jest.fn()
+      mockGetDbClient.mockResolvedValue({ fetchApiKeyCredentials })
+
+      const res = createRes()
+      await apikeysHandler(createReq('GET'), res)
+
+      expect(res.statusCode).toBe(403)
+      expect(fetchApiKeyCredentials).not.toHaveBeenCalled()
+    })
+
+    it('403s POST create for Jurisdiction Operations, even for its own jurisdiction', async () => {
+      signIn(['Jurisdiction Operations'], ['az'])
+      const createApiKeyCredential = jest.fn()
+      mockGetDbClient.mockResolvedValue({
+        getJurisdiction: jest.fn().mockResolvedValue({ prefix: 'az' }),
+        createApiKeyCredential,
+      })
+
+      const res = createRes()
+      await apikeysHandler(
+        createReq('POST', {
+          jurisdictionId: '1',
+          environments: [1],
+          upn: 'example.org',
+          dnsChoice: 'existing',
+          useTypes: ['PATIENT'],
+        }),
+        res
+      )
+
+      expect(res.statusCode).toBe(403)
+      expect(createApiKeyCredential).not.toHaveBeenCalled()
+    })
+
     it('403s POST create for IZG Support', async () => {
       signIn(['IZG Support'])
       const createApiKeyCredential = jest.fn()
@@ -177,7 +214,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     })
   })
 
-  // Jurisdiction Operations owns 'az' (prefix). Jurisdiction '1' resolves to
+  // Jurisdiction Security owns 'az' (prefix). Jurisdiction '1' resolves to
   // 'az' (owned); jurisdiction '2' resolves to 'ma' (not owned) — the IDOR
   // protection that used to be `requireApiKeyAccess` in-handler, now in the
   // route's `scope` extractor.
@@ -192,7 +229,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     )
 
     it('403s POST create for a jurisdiction the caller does not reach', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const createApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({ getJurisdiction, createApiKeyCredential })
 
@@ -213,7 +250,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     })
 
     it('403s PATCH revoke of a credential in a non-owned jurisdiction', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const revokeApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
@@ -233,7 +270,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     // under destId, which would be misleading in a query by actual
     // destination.
     it('logs the denial under jurisdictionId, not destId', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
         getApiKeyCredential: jest.fn().mockResolvedValue({ status: 'active', jurisdictionId: '2' }),
@@ -250,7 +287,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     })
 
     it('403s DELETE cancel of a credential in a non-owned jurisdiction', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const cancelApiKeyCredential = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
@@ -268,7 +305,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
     })
 
     it('allows PATCH revoke of a credential the caller\'s jurisdiction owns', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const revokeApiKeyCredential = jest.fn().mockResolvedValue(undefined)
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
@@ -286,7 +323,7 @@ describe('apikeys/index.ts — real declarative gate (IGDD-3549)', () => {
 
   describe('multi-environment credentials — no longer admin-only (IGDD-3549)', () => {
     it('allows a non-admin, non-isAdmin role holding canCreateApiKey to create a multi-environment key', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const createApiKeyCredential = jest.fn().mockResolvedValue(undefined)
       const authorizedDomain = {
         status: 'authorized',
@@ -337,7 +374,7 @@ describe('apikeys/domains.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('403s a jurisdiction the caller does not reach', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const fetchAuthorizedApiKeyDomains = jest.fn()
     mockGetDbClient.mockResolvedValue({ getJurisdiction, fetchAuthorizedApiKeyDomains })
 
@@ -349,7 +386,7 @@ describe('apikeys/domains.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('allows a jurisdiction the caller reaches', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const fetchAuthorizedApiKeyDomains = jest.fn().mockResolvedValue([{ domain: 'a.example.gov' }])
     mockGetDbClient.mockResolvedValue({ getJurisdiction, fetchAuthorizedApiKeyDomains })
 
@@ -361,7 +398,7 @@ describe('apikeys/domains.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('allows a non-admin role to query multiple environments (no longer admin-only)', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const fetchAuthorizedApiKeyDomains = jest.fn().mockImplementation((envId: number) =>
       Promise.resolve(
         envId === 4
@@ -433,7 +470,7 @@ describe('apikeys/token.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('403s a token reveal for a credential in a non-owned jurisdiction (IDOR)', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const markApiKeyCredentialViewed = jest.fn()
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
@@ -468,7 +505,7 @@ describe('apikeys/token.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('allows a reveal of a credential the caller\'s jurisdiction owns', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
       getApiKeyCredential: jest.fn().mockResolvedValue({
@@ -527,7 +564,7 @@ describe('apikeys/renew/index.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('403s a renewal of a credential in a non-owned jurisdiction — body jurisdictionId is ignored', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const supersedeApiKeyCredential = jest.fn()
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
@@ -545,7 +582,7 @@ describe('apikeys/renew/index.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('allows a renewal of a credential the caller\'s jurisdiction owns', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
       getApiKeyCredential: jest.fn().mockResolvedValue({
@@ -592,7 +629,7 @@ describe('apikeys/verify-domain/index.ts — real declarative gate (IGDD-3549)',
     })
 
     it('403s a credential in a non-owned jurisdiction', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const getApiKeyDomain = jest.fn()
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
@@ -610,7 +647,7 @@ describe('apikeys/verify-domain/index.ts — real declarative gate (IGDD-3549)',
     })
 
     it('allows a credential the caller\'s jurisdiction owns', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
         getApiKeyCredential: jest.fn().mockResolvedValue({
@@ -649,7 +686,7 @@ describe('apikeys/verify-domain/index.ts — real declarative gate (IGDD-3549)',
     })
 
     it('403s a jurisdiction the caller does not reach', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       const getApiKeyDomain = jest.fn()
       mockGetDbClient.mockResolvedValue({ getJurisdiction, getApiKeyDomain })
 
@@ -664,7 +701,7 @@ describe('apikeys/verify-domain/index.ts — real declarative gate (IGDD-3549)',
     })
 
     it('allows a jurisdiction the caller reaches (already-authorized fast path)', async () => {
-      signIn(['Jurisdiction Operations'], ['az'])
+      signIn(['Jurisdiction Security'], ['az'])
       mockGetDbClient.mockResolvedValue({
         getJurisdiction,
         getApiKeyCredential: jest.fn().mockResolvedValue({

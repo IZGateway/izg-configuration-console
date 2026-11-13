@@ -27,7 +27,10 @@ describe('policy: single-role behaviour is unchanged', () => {
     ['IZG Operations', false],
     ['IZG Security', true],
     ['IZG Support', false],
-    ['Jurisdiction Operations', true],
+    // API key management moved from Jurisdiction Operations to Jurisdiction
+    // Security (IGDD-3500).
+    ['Jurisdiction Security', true],
+    ['Jurisdiction Operations', false],
     ['Jurisdiction Support', false],
   ])('%s canListApiKeys === %s', (role, expected) => {
     const s = subject([role], ['az'])
@@ -37,19 +40,19 @@ describe('policy: single-role behaviour is unchanged', () => {
   it('global roles reach any jurisdiction; scoped roles only their own', () => {
     expect(can(subject(['IZG Security']), 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
     expect(
-      can(subject(['Jurisdiction Operations'], ['az']), 'apikeys', 'canListApiKeys', 'az').allowed
+      can(subject(['Jurisdiction Security'], ['az']), 'apikeys', 'canListApiKeys', 'az').allowed
     ).toBe(true)
     expect(
-      can(subject(['Jurisdiction Operations'], ['az']), 'apikeys', 'canListApiKeys', 'vha').allowed
+      can(subject(['Jurisdiction Security'], ['az']), 'apikeys', 'canListApiKeys', 'vha').allowed
     ).toBe(false)
   })
 })
 
 describe('policy: THE escalation guard (permission and reach must come from one role)', () => {
   // IZG Support has globalTenancy but no apikeys permissions.
-  // Jurisdiction Operations has apikeys permissions but is scoped to `az`.
+  // Jurisdiction Security has apikeys permissions but is scoped to `az`.
   // Naively unioning the halves would grant listing over EVERY jurisdiction.
-  const mixed = subject(['IZG Support', 'Jurisdiction Operations'], ['az'])
+  const mixed = subject(['IZG Support', 'Jurisdiction Security'], ['az'])
 
   it('allows the scoped role only within its own jurisdiction', () => {
     expect(can(mixed, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(true)
@@ -63,7 +66,7 @@ describe('policy: THE escalation guard (permission and reach must come from one 
 
   it('attributes the decision to the role that actually granted it', () => {
     expect(can(mixed, 'apikeys', 'canListApiKeys', 'az').grantedBy).toBe(
-      'Jurisdiction Operations'
+      'Jurisdiction Security'
     )
   })
 
@@ -76,14 +79,14 @@ describe('policy: THE escalation guard (permission and reach must come from one 
 
 describe('policy: prefix matching is exact, never substring', () => {
   // Real data contains both `az` (Arizona) and `azova` (a sender org).
-  const arizona = subject(['Jurisdiction Operations'], ['az'])
+  const arizona = subject(['Jurisdiction Security'], ['az'])
 
   it('az must not match azova', () => {
     expect(can(arizona, 'apikeys', 'canListApiKeys', 'azova').allowed).toBe(false)
   })
 
   it('azova must not match az', () => {
-    const azova = subject(['Jurisdiction Operations'], ['azova'])
+    const azova = subject(['Jurisdiction Security'], ['azova'])
     expect(can(azova, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(false)
   })
 
@@ -93,8 +96,8 @@ describe('policy: prefix matching is exact, never substring', () => {
 })
 
 describe('policy: union grants what neither role alone would', () => {
-  it('Jurisdiction Support + Jurisdiction Operations gets the latter permissions', () => {
-    const s = subject(['Jurisdiction Support', 'Jurisdiction Operations'], ['az'])
+  it('Jurisdiction Support + Jurisdiction Security gets the latter permissions', () => {
+    const s = subject(['Jurisdiction Support', 'Jurisdiction Security'], ['az'])
     expect(can(s, 'apikeys', 'canRevokeApiKey', 'az').allowed).toBe(true)
   })
 
@@ -103,7 +106,7 @@ describe('policy: union grants what neither role alone would', () => {
     expect(supportOnly.canListApiKeys).toBeFalsy()
 
     const both = mergePageAccess(
-      subject(['Jurisdiction Support', 'Jurisdiction Operations']),
+      subject(['Jurisdiction Support', 'Jurisdiction Security']),
       'apikeys'
     )
     expect(both.canListApiKeys).toBe(true)
@@ -137,7 +140,7 @@ describe('policy: Sender Operations is scoped to its own organization', () => {
 })
 
 describe('policy: THE escalation guard generalizes to Sender Operations', () => {
-  // Mirrors the IZG Support + Jurisdiction Operations case above, but with the
+  // Mirrors the IZG Support + Jurisdiction Security case above, but with the
   // sender role as the scoped, permission-granting half.
   const mixed = subject(['IZG Support', 'Sender Operations'], ['vha'])
 
@@ -155,8 +158,8 @@ describe('policy: THE escalation guard generalizes to Sender Operations', () => 
 })
 
 describe('policy: union with Sender Operations keeps each role scoped independently', () => {
-  it('Jurisdiction Operations + Sender Operations reaches both, and only both', () => {
-    const s = subject(['Jurisdiction Operations', 'Sender Operations'], ['az', 'vha'])
+  it('Jurisdiction Security + Sender Operations reaches both, and only both', () => {
+    const s = subject(['Jurisdiction Security', 'Sender Operations'], ['az', 'vha'])
     expect(can(s, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(true)
     expect(can(s, 'apikeys', 'canListApiKeys', 'vha').allowed).toBe(true)
     expect(can(s, 'apikeys', 'canListApiKeys', 'md').allowed).toBe(false)
@@ -217,6 +220,102 @@ describe('policy: IZG Program gets exactly what the target matrix grants it (IGD
     expect(mergePageAccess(program, 'apikeys').canListApiKeys).toBeFalsy()
     expect(mergePageAccess(program, 'accesscontrol').canViewAccessControl).toBeFalsy()
     expect(mergePageAccess(program, 'api-doc').canViewApiDoc).toBeFalsy()
+  })
+})
+
+describe('policy: Jurisdiction Security gets exactly what the target matrix grants it (IGDD-3500)', () => {
+  const security = subject(['Jurisdiction Security'], ['az'])
+
+  it('is scoped to its own jurisdictions', () => {
+    expect(hasGlobalTenancy(security)).toBe(false)
+    expect(can(security, 'apikeys', 'canCreateApiKey', 'az').allowed).toBe(true)
+    expect(can(security, 'apikeys', 'canCreateApiKey', 'ma').allowed).toBe(false)
+  })
+
+  it('holds the full API key lifecycle within its own jurisdiction', () => {
+    for (const capability of [
+      'canListApiKeys',
+      'canCreateApiKey',
+      'canRevokeApiKey',
+      'canRenewApiKey',
+      'canCancelApiKey',
+    ] as const) {
+      expect({ capability, allowed: can(security, 'apikeys', capability, 'az').allowed }).toEqual({
+        capability,
+        allowed: true,
+      })
+    }
+  })
+
+  // Everything Jurisdiction Operations holds except Admin Log Search, plus
+  // approving a change request: compared flag by flag, so a grant added to
+  // either role later shows up here as a decision to make.
+  it('holds what Jurisdiction Operations does, except Admin Log Search, plus API keys and approve', () => {
+    const pages = Object.keys(accessLevel['Jurisdiction Security']).filter(
+      (k) => k !== 'globalTenancy'
+    ) as PageKey[]
+    const differences = pages.flatMap((page) =>
+      Object.keys(accessLevel['Jurisdiction Security'][page])
+        .filter(
+          (flag) =>
+            accessLevel['Jurisdiction Security'][page][flag] !==
+            accessLevel['Jurisdiction Operations'][page][flag]
+        )
+        .map((flag) => `${page}.${flag}: ${accessLevel['Jurisdiction Security'][page][flag]}`)
+    )
+    expect(differences.sort()).toEqual([
+      'apikeys.canCancelApiKey: true',
+      'apikeys.canCreateApiKey: true',
+      'apikeys.canListApiKeys: true',
+      'apikeys.canRenewApiKey: true',
+      'apikeys.canRevokeApiKey: true',
+      'console.canViewConsole: false',
+      'edit.canApproveChangeRequest: true',
+    ])
+  })
+})
+
+describe('policy: Jurisdiction Operations is narrowed off API keys and approve (IGDD-3500)', () => {
+  const operations = subject(['Jurisdiction Operations'], ['az'])
+
+  it('holds no API key capability, not even for its own jurisdiction', () => {
+    const access = mergePageAccess(operations, 'apikeys')
+    expect(Object.values(access).some(Boolean)).toBe(false)
+    expect(can(operations, 'apikeys', 'canCreateApiKey', 'az').allowed).toBe(false)
+  })
+
+  it('cannot approve a change request', () => {
+    expect(can(operations, 'edit', 'canApproveChangeRequest', 'az').allowed).toBe(false)
+  })
+
+  it('keeps everything else it held, including editing connections in its own jurisdiction', () => {
+    expect(can(operations, 'edit', 'canChangeCredentials', 'az').allowed).toBe(true)
+    expect(can(operations, 'onboarding', 'canManageSenders', 'az').allowed).toBe(true)
+    expect(can(operations, 'console', 'canViewConsole', 'az').allowed).toBe(true)
+  })
+})
+
+describe('policy: API key and approve holders follow the target matrix (IGDD-3500)', () => {
+  const holders = (page: PageKey, capability: string) =>
+    ROLE_PRECEDENCE.filter(
+      (role) => can(subject([role], ['az']), page, capability as never, 'az').allowed
+    )
+
+  // Sender Operations keeps its keys until it is retired in code; its Okta
+  // group is already gone (IGDD-3600).
+  it('only the Security roles and Sender Operations manage API keys', () => {
+    expect(holders('apikeys', 'canCreateApiKey')).toEqual([
+      'IZG Security',
+      'Jurisdiction Security',
+      'Sender Operations',
+    ])
+  })
+
+  it('only the Security roles approve a change request', () => {
+    expect(holders('edit', 'canApproveChangeRequest')).toEqual([
+      'IZG Security',
+      'Jurisdiction Security',
+    ])
   })
 })
 
@@ -290,7 +389,7 @@ describe('policy: deny by default', () => {
   })
 
   it('a scoped role with no jurisdictions reaches nothing', () => {
-    const s = subject(['Jurisdiction Operations'], [])
+    const s = subject(['Jurisdiction Security'], [])
     expect(can(s, 'apikeys', 'canListApiKeys', 'az').allowed).toBe(false)
   })
 })
@@ -328,6 +427,7 @@ const ADMIN_CAPABILITIES: CapabilityRef[] = [
 // IZG Support left this list in IGDD-3498, when it gained the hub-wide Admin
 // Operations capabilities; its admin grants are asserted in their own block.
 const NON_OPERATIONS_ROLES: CcRole[] = [
+  'Jurisdiction Security',
   'Jurisdiction Operations',
   'Jurisdiction Support',
   'Sender Operations',

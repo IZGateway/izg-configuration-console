@@ -57,7 +57,7 @@ export const menuItems: MenuItem[] = [
     label: 'API Key Management',
     icon: <VpnKeyIcon sx={iconSx} />,
     path: '/apikeys',
-    // Not global-only: Jurisdiction Operations also has full server-side
+    // Not global-only: Jurisdiction Security also has full server-side
     // apikeys access (its own jurisdiction's keys), so gate on the actual
     // permission — otherwise those users could use the page but never find it
     // in the nav.
