@@ -136,7 +136,12 @@ test.beforeAll(async ({ browser }) => {
   // is set on it directly.
   context = await browser.newContext({ viewport: VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginToOkta(
+    page,
+    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
+    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
+    null
+  )
   await page.goto('/apikeys')
   await page.waitForLoadState('networkidle')
 

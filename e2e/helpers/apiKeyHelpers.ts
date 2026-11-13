@@ -41,6 +41,12 @@ export const getStatCardValue = async (
 ): Promise<number> => {
   const labelEl = page.getByText(label, { exact: true })
   const statBox = labelEl.locator('xpath=..')
-  const text = await statBox.locator('p').first().innerText()
-  return parseInt(text, 10)
+  // Read `data-value`, not the visible text. The visible text counts up from 0
+  // (AnimatedNumber), so it can show an earlier number mid-animation, and it
+  // has a thousands separator ("1,231") that parseInt stops at. `data-value`
+  // holds the final count as a plain number (see StatCard).
+  const value = await statBox
+    .getByTestId('stat-card-value')
+    .getAttribute('data-value')
+  return parseInt(value, 10)
 }
