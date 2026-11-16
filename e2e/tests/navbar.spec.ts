@@ -60,19 +60,45 @@ test('Navigation panel has expected links', async () => {
 
 test('Navigation panel can collapse and expand', async () => {
   const navPanel = page.locator('#navigation')
+  // The flex row that holds the panel and the page column (Layout.tsx). Flex
+  // stretch gives the panel the height of this row.
+  const row = navPanel.locator('xpath=..')
+  const viewportHeight = page.viewportSize().height
+  const toggle = navPanel.getByRole('button', {
+    name: 'toggle navigation drawer',
+  })
+
+  // The panel height follows the page content, so it changes with the page
+  // layout (the app footer, reflow when the width changes). Check that the
+  // panel fills the page, not that its height equals an earlier reading.
+  // Polled, because the width has a CSS transition.
+  const expectPanelFillsPage = async () => {
+    await expect
+      .poll(async () => {
+        const panel = await navPanel.boundingBox()
+        const parent = await row.boundingBox()
+        return Math.abs(panel.height - parent.height)
+      })
+      .toBeLessThan(1)
+    expect((await navPanel.boundingBox()).height).toBeGreaterThanOrEqual(
+      viewportHeight
+    )
+  }
+
   const bb = await navPanel.boundingBox()
-  //Exapnded view
-  await navPanel
-    .getByRole('button', { name: 'toggle navigation drawer' })
-    .click()
-  let bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBeGreaterThan(bb.width)
-  expect.soft(bb2.height).toBe(bb.height)
+  await expectPanelFillsPage()
+
+  //Expanded view
+  await toggle.click()
+  await expect
+    .poll(async () => (await navPanel.boundingBox()).width)
+    .toBeGreaterThan(bb.width)
+  await expectPanelFillsPage()
+
   //Collapsed view
-  await navPanel
-    .getByRole('button', { name: 'toggle navigation drawer' })
-    .click()
-  bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBe(bb.width)
-  expect.soft(bb2.height).toBe(bb.height)
+  await toggle.click()
+  await expect
+    .poll(async () => (await navPanel.boundingBox()).width)
+    .toBe(bb.width)
+  await expectPanelFillsPage()
 })
