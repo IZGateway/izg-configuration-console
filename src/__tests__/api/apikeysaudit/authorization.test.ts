@@ -102,7 +102,7 @@ describe('apikeysaudit/index.ts — real declarative gate (IGDD-3549)', () => {
   })
 
   it('admits a jurisdiction-scoped role (capability-only — no scope declared)', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const fetchApiKeyCredentials = jest.fn().mockResolvedValue([
       { sortKey: 'a', jurisdictionId: '1', status: 'active' },
     ])
@@ -142,7 +142,7 @@ describe('apikeysaudit/[sortKey].ts — real declarative gate (IGDD-3549)', () =
   })
 
   it('403s a credential in a non-owned jurisdiction — same capability as index.ts, now reach-scoped', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     const fetchApiKeyCredentialAuditHistory = jest.fn()
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
@@ -158,7 +158,7 @@ describe('apikeysaudit/[sortKey].ts — real declarative gate (IGDD-3549)', () =
   })
 
   it('allows a credential the caller\'s jurisdiction owns', async () => {
-    signIn(['Jurisdiction Operations'], ['az'])
+    signIn(['Jurisdiction Security'], ['az'])
     mockGetDbClient.mockResolvedValue({
       getJurisdiction,
       getApiKeyCredential: jest.fn().mockResolvedValue({ jurisdictionId: '1' }),

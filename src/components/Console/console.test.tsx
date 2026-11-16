@@ -8,6 +8,11 @@ jest.mock('next-auth/react', () => ({
   useSession: jest.fn(),
 }))
 
+// useRoleAccess calls useRouter, which throws outside a mounted Next router.
+jest.mock('next/router', () => ({
+  useRouter: () => ({ pathname: '/console' }),
+}))
+
 jest.mock('../AppHeader', () => ({
   __esModule: true,
   default: function AppHeaderMock() {
@@ -86,8 +91,10 @@ import { mockDestinations } from './__mocks__/mockDestinations'
 
 const mockUseSession = useSession as jest.Mock
 
+// Console gates on the matrix flag console.canViewConsole, so the session needs
+// a role that holds it. IZG Operations does, in every jurisdiction.
 const adminSession = {
-  data: { user: { name: 'Admin User', isAdmin: true } },
+  data: { user: { name: 'Admin User', roles: ['IZG Operations'], jurisdictions: [] } },
   status: 'authenticated',
 }
 
@@ -178,7 +185,7 @@ describe('Console – Destination Filter', () => {
       // Simulate loading state: clear mock data path by making session unauthenticated
       // (In authenticated+mock mode, destinations load instantly so test loading directly)
       mockUseSession.mockReturnValue({
-        data: { user: { isAdmin: true } },
+        data: { user: {} },
         status: 'loading',
       })
       render(<Console />)
@@ -633,9 +640,9 @@ describe('Console – Destination Filter', () => {
   // ── Access control ────────────────────────────────────────────────────────
 
   describe('Access control', () => {
-    it('shows a permission error for non-admin users', async () => {
+    it('shows the access-denied page to a user without console.canViewConsole', async () => {
       mockUseSession.mockReturnValue({
-        data: { user: { name: 'Regular User', isAdmin: false } },
+        data: { user: { name: 'Regular User', roles: [], jurisdictions: [] } },
         status: 'authenticated',
       })
 
@@ -643,11 +650,7 @@ describe('Console – Destination Filter', () => {
         render(<Console />)
       })
 
-      expect(
-        screen.getByText(
-          'You do not have permission to access the Console. Admin access is required.'
-        )
-      ).toBeInTheDocument()
+      expect(screen.getByText('You do not have access to this page.')).toBeInTheDocument()
     })
 
     it('shows a loading spinner while the session is being resolved', async () => {
@@ -660,9 +663,9 @@ describe('Console – Destination Filter', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument()
     })
 
-    it('does not render the filter UI for non-admin users', async () => {
+    it('does not render the filter UI for a user without console.canViewConsole', async () => {
       mockUseSession.mockReturnValue({
-        data: { user: { isAdmin: false } },
+        data: { user: {} },
         status: 'authenticated',
       })
 

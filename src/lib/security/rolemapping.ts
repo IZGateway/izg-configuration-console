@@ -31,6 +31,7 @@ export type CcRole =
   | 'IZG Operations'
   | 'IZG Support'
   | 'IZG Program'
+  | 'Jurisdiction Security'
   | 'Jurisdiction Operations'
   | 'Jurisdiction Support'
   | 'Sender Operations'
@@ -48,13 +49,15 @@ export type CcRole =
  * the target matrix's column order. A user already in the `IZG Security` Okta
  * group gains the role on their next session callback, and where they also hold
  * another role that allows an action, `Decision.grantedBy` names IZG Security
- * from then on.
+ * from then on. `Jurisdiction Security` (IGDD-3500) goes ahead of the other
+ * jurisdiction roles for the same reason, after the global ones.
  */
 export const ROLE_PRECEDENCE: CcRole[] = [
   'IZG Security',
   'IZG Operations',
   'IZG Support',
   'IZG Program',
+  'Jurisdiction Security',
   'Jurisdiction Operations',
   'Jurisdiction Support',
   'Sender Operations',
@@ -74,6 +77,8 @@ const GROUP_ROLE_MAPPING: Record<string, CcRole[]> = {
   'IZG Security': ['IZG Security'],
   'IZG Operations': ['IZG Operations'],
   'IZG Support': ['IZG Support'],
+  // IGDD-3500. Okta group created under this name on IGDD-3600.
+  'Jurisdiction Security': ['Jurisdiction Security'],
   'Jurisdiction Operations': ['Jurisdiction Operations'],
   'Jurisdiction Support': ['Jurisdiction Support'],
   // [CONFIRM] Exact Okta group name with the Okta administrator (see

@@ -43,7 +43,6 @@ module.exports = async (phase, { defaultConfig }) => {
       ]
     },
     env: {
-      OPERATIONS_GROUP: `${process.env.OPERATIONS_GROUP}`,
       USER_GROUP: `${process.env.USER_GROUP}`,
     },
     webpack(config, { nextRuntime }) {

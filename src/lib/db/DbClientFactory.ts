@@ -109,7 +109,7 @@ class EncryptedRepository implements DbClient {
     principal: string
   ) => Promise<AllowedUser>
   fetchAllowedUsersByDestination!: (
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     destinations: Array<string>
   ) => Promise<AllowedUser[]>
   deleteAllowedUser!: (
@@ -289,11 +289,11 @@ class EncryptedRepository implements DbClient {
   }
 
   async fetchLoggedInUsersDestinations(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     jurisdictions: Array<string>
   ): Promise<Destination[]> {
     const results = await this.repository.fetchLoggedInUsersDestinations(
-      isAdmin,
+      hasGlobalReach,
       jurisdictions
     )
     for (const dest of results) {

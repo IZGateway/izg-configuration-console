@@ -39,11 +39,12 @@ const JurisdictionOperationsAccess: RoleAccess = {
     ...defaultTestPageAccessControl,
     canRunConnectionTest: true,
   } as TestPageAccessControl,
+  // Target matrix: "approve change request" is the Security roles only, so
+  // `canApproveChangeRequest` stays at the default `false` (IGDD-3500).
   edit: {
     ...defaultEditPageAccessControl,
     canChangeCredentials: true,
     canCreateChangeRequest: true,
-    canApproveChangeRequest: true,
     canSaveDraft: true,
     canResetDraft: true,
     canRunDraftConnectionTest: true,
@@ -62,13 +63,10 @@ const JurisdictionOperationsAccess: RoleAccess = {
     canViewHubStatusHistory: true,
     canViewChangeHistory: true,
   } as HistoryPageAccessControl,
+  // Target matrix: API Key Management moves to Jurisdiction Security
+  // (IGDD-3500). Issuing credentials is kept apart from managing endpoints.
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
-    canListApiKeys: true,
-    canCreateApiKey: true,
-    canRevokeApiKey: true,
-    canRenewApiKey: true,
-    canCancelApiKey: true,
   } as ApiKeyManagementPageAccessControl,
   onboarding: {
     ...defaultOnboardingPageAccessControl,
@@ -83,9 +81,7 @@ const JurisdictionOperationsAccess: RoleAccess = {
 
   // [PROVISIONAL — IGDD-3472] accesscontrol, adminoperations and api-doc are
   // denied outright. Spreading the all-false defaults and adding nothing is
-  // what makes that deny deliberate rather than incidental. These reproduce
-  // today's access exactly: those surfaces are `isAdmin`-gated and
-  // Jurisdiction Operations is not in OPERATIONS_GROUP.
+  // what makes that deny deliberate rather than incidental.
   accesscontrol: {
     ...defaultAccessControlPageAccessControl,
   },

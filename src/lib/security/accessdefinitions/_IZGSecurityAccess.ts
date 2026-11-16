@@ -94,6 +94,7 @@ const IZGSecurityAccess: RoleAccess = {
     canManagePasswordEncryption: true,
     canResetHubCircuitBreakers: true,
     canRefreshHubDatabase: true,
+    canViewDeepHealthCheckDetail: true,
   },
   console: {
     ...defaultConsolePageAccessControl,

@@ -53,6 +53,7 @@ import {
   API_KEYS_VIEWPORT,
   openApiKeyManagement,
 } from '../helpers/apiKeyHelpers'
+import { ROLES } from '../rbac/roles'
 
 const REQUIRED_ENV = [
   'E2E_RBAC_IZG_SECURITY_USERNAME',
@@ -100,7 +101,11 @@ type Credential = {
   supersededBy?: string
   cancelledAt?: string
 }
-type SessionUser = { isAdmin?: boolean; jurisdictions?: string[] }
+type SessionUser = { roles?: string[]; jurisdictions?: string[] }
+
+// Roles that reach every jurisdiction, from the e2e RBAC role model (which
+// mirrors globalTenancy in src/lib/security/accessdefinitions).
+const GLOBAL_ROLES: string[] = ROLES.filter((r) => r.reach === 'all').map((r) => r.name)
 
 // The caller's own session: its jurisdiction prefixes are exactly the reach
 // the server checks (policy.ts scopeAllows). /api/auth/* needs no DPoP proof.
@@ -109,7 +114,7 @@ const sessionOf = async (page: Page) => {
   expect(res.status).toBe(200)
   const user = (res.body as { user?: SessionUser }).user
   return {
-    isAdmin: Boolean(user?.isAdmin),
+    roles: user?.roles ?? [],
     jurisdictions: (user?.jurisdictions ?? []).map((j) => j.toLowerCase()),
   }
 }
@@ -289,9 +294,11 @@ test.describe('API key RBAC scoping', () => {
       env('E2E_RBAC_JURIS_OPS_FULLNAME')
     ))
     const sessionA = await sessionOf(juris)
-    expect(sessionA.isAdmin, 'Jurisdiction A must not be an admin account').toBe(
-      false
-    )
+    // A global-reach role would make every scoping assertion below vacuous.
+    expect(
+      sessionA.roles.filter((r) => GLOBAL_ROLES.includes(r)),
+      'Jurisdiction A must not hold a global-reach role'
+    ).toEqual([])
     expect(
       sessionA.jurisdictions,
       'Jurisdiction A has no jurisdictions in its session'

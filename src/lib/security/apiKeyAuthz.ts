@@ -27,7 +27,7 @@ export type ApiKeyPermission = keyof ApiKeyManagementPageAccessControl
  * Release flag (IGDD-3444, per the Feature Flag Strategy), independent of
  * role. The feature is still short several planned pieces (filters, audit
  * log, test coverage — see the OpenSpec change), so this lets ops fully
- * hide/disable it for every role — including IZG/Jurisdiction Operations, who
+ * hide/disable it for every role — including IZG/Jurisdiction Security, who
  * otherwise have full access — via a runtime env var (no rebuild: read at
  * request time, unlike a `NEXT_PUBLIC_` var which would be inlined into the
  * client bundle at build time). Defaults to disabled so a missing/unset var

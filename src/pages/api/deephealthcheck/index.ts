@@ -7,7 +7,7 @@ import path from 'path'
 import https from 'https'
 import axios from 'axios'
 import DbClientFactory from '../../../lib/db/DbClientFactory'
-import { asyncRequestContext } from '../../../lib/Context'
+import { currentDetailGranted } from '../../../lib/Context'
 
 /** The result of probing one dependency. */
 interface ComponentHealth {
@@ -24,7 +24,8 @@ interface ComponentHealth {
 }
 
 /**
- * What a caller outside OPERATIONS_GROUP may see of a component result (IGDD-3178).
+ * What a caller without `adminoperations.canViewDeepHealthCheckDetail` may see of a
+ * component result (IGDD-3178).
  *
  * This route is deliberately public so the load balancer can reach it without a
  * credential, which means the full result was reaching anonymous callers: upstream
@@ -37,7 +38,7 @@ type PublicComponentHealth = Pick<
 >
 
 /**
- * Project a component result down to the fields a non-admin caller may see.
+ * Project a component result down to the fields every caller may see.
  *
  * An allowlist rather than a redaction: the result is rebuilt from three named
  * fields, so a field added to any probe later is withheld by default instead of
@@ -55,10 +56,11 @@ const publicView = (result: ComponentHealth): PublicComponentHealth => ({
  *   get:
  *     summary: Reports reachability of each dependency (DB, Okta, Jira, IZ Gateway).
  *     description: >
- *       Callers in OPERATIONS_GROUP receive the full result for each component.
- *       Every other caller — the load balancer probe and signed-in non-admin users
- *       alike — receives only the component name, its status and the time it was
- *       taken. The HTTP status code does not depend on the caller.
+ *       Callers holding adminoperations.canViewDeepHealthCheckDetail receive the
+ *       full result for each component. Every other caller — the load balancer
+ *       probe and signed-in users without that permission alike — receives only
+ *       the component name, its status and the time it was taken. The HTTP status
+ *       code does not depend on the caller.
  *     responses:
  *       200:
  *         description: OK.
@@ -67,15 +69,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const deepHealthCheckResults: ComponentHealth[] = []
   const checkConnections = ['DB', 'OKTA', 'JIRA', 'IZG']
 
-  // Membership of OPERATIONS_GROUP (`session.user.isAdmin`) — not mere
-  // authentication. There is no `signIn` callback, so anyone who completes the Okta
-  // flow holds a session; gating the detail on `session.user` alone would disclose
-  // dependency addresses to a tenant user with no roles and no capabilities anywhere
-  // else in the console. The context is populated by `withMiddleware` for public
-  // routes too, so reading it here needs no extra session plumbing.
-  const isAdmin = Boolean(
-    asyncRequestContext.getStore()?.session?.user?.isAdmin
-  )
+  // A matrix permission (IGDD-3552) — not mere authentication. There is no
+  // `signIn` callback, so anyone who completes the Okta flow holds a session;
+  // gating the detail on `session.user` alone would disclose dependency addresses
+  // to a tenant user with no roles and no capabilities anywhere else in the
+  // console. Decided by the route declaration's `detail` below, not here, so
+  // the decision is visible where every other route declares its access, and
+  // removing it fails closed. With no session the middleware decides false.
+  const canViewDetail = currentDetailGranted()
   const publicDeepHealthCheckResults = () =>
     deepHealthCheckResults.map(publicView)
 
@@ -247,19 +248,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.info('Deep Health Check', { deepHealthCheckResults })
     res
       .status(200)
-      .json(isAdmin ? deepHealthCheckResults : publicDeepHealthCheckResults())
+      .json(
+        canViewDetail ? deepHealthCheckResults : publicDeepHealthCheckResults()
+      )
   } catch (error) {
     // The status code does not depend on the caller, so the load balancer probe is
     // unaffected either way; only the body varies. An uncaught error here is almost
     // always a misconfigured IZG_ENDPOINT_* path, whose message names a filesystem
     // path, so an anonymous caller gets no message at all.
     logger.error('Deep Health Check failed', { errorMessage: error.message })
-    res.status(503).json(isAdmin ? error.message : 'Service Unavailable')
+    res.status(503).json(canViewDetail ? error.message : 'Service Unavailable')
   }
 }
 export default withMiddleware({
   public:
     'Readiness probe for the load balancer; reports dependency reachability, not data. ' +
-    'Callers get component/status/statusAt only — the handler widens the body for ' +
-    'OPERATIONS_GROUP, but never narrows access.',
+    'Callers get component/status/statusAt only; holders of `detail` get the full ' +
+    'result. It never narrows access.',
+  detail: { page: 'adminoperations', capability: 'canViewDeepHealthCheckDetail' },
 })(handler)

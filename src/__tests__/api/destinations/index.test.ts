@@ -38,12 +38,11 @@ describe('GET /api/destinations reach (IGDD-3542)', () => {
     mockFetchLoggedInUsersDestinations.mockResolvedValue([])
   })
 
-  it('passes global reach for an IZG Support session, ignoring isAdmin: false and an empty claim', async () => {
+  it('passes global reach for an IZG Support session with an empty claim', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
       user: {
         email: 'support@example.com',
         roles: ['IZG Support'],
-        isAdmin: false,
         jurisdictions: [],
       },
     })
@@ -59,7 +58,6 @@ describe('GET /api/destinations reach (IGDD-3542)', () => {
       user: {
         email: 'jops@example.com',
         roles: ['Jurisdiction Operations'],
-        isAdmin: false,
         jurisdictions: ['az'],
       },
     })
@@ -77,7 +75,6 @@ describe('GET /api/destinations reach (IGDD-3542)', () => {
       user: {
         email: 'both@example.com',
         roles: ['IZG Support', 'Jurisdiction Operations'],
-        isAdmin: false,
         jurisdictions: ['az'],
       },
     })
@@ -95,7 +92,6 @@ describe('GET /api/destinations reach (IGDD-3542)', () => {
       user: {
         email: 'noreach@example.com',
         roles: ['Jurisdiction Operations'],
-        isAdmin: false,
         jurisdictions: [],
       },
     })

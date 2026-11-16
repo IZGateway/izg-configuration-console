@@ -75,10 +75,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(401).json({ error: 'Unauthorized' })
       }
 
-      // Named `isAdmin` until IGDD-3472, but it never read the session flag —
-      // it is a row-scoping switch computed from the caller's roles ('see every
-      // row' vs 'see only these'). The old name made it look like a real
-      // isAdmin dependency to anyone auditing that axis.
+      // A row-scoping switch computed from the caller's roles ('see every
+      // row' vs 'see only these'), not a permission.
       //
       // Reads `hasGlobalTenancy` from the role matrix, not `isOperationsRole`
       // (PR #729 review; that predicate was deleted in IGDD-3498): the two
