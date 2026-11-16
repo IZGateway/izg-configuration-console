@@ -915,6 +915,49 @@ class Dynamo implements DbClient {
     return null
   }
 
+  async updateDestinationChangeRequestSchedule(
+    id: number,
+    schedule: { scheduledAt: Date; isAsap: boolean; requestedBy: string }
+  ): Promise<boolean> {
+    // An UpdateCommand, not upsertDestinationChangeRequest: that is a full
+    // PutCommand, and a reschedule carries no password. Rebuilding the item
+    // from it stored password = '' while keeping isPasswordDifferent = true,
+    // so the deploy that followed failed (IGDD-3742).
+    const ts = new Date().toISOString()
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+      UpdateExpression:
+        'SET scheduledAt = :scheduledAt, isAsap = :isAsap, requestedAt = :requestedAt, requestedBy = :requestedBy, updatedBy = :updatedBy, updatedOn = :updatedOn',
+      ConditionExpression: 'attribute_exists(sortKey)',
+      ExpressionAttributeValues: {
+        ':scheduledAt': new Date(schedule.scheduledAt).toISOString(),
+        ':isAsap': schedule.isAsap,
+        ':requestedAt': ts,
+        ':requestedBy': schedule.requestedBy,
+        ':updatedBy': getAuditUserString(),
+        ':updatedOn': ts,
+      },
+    }
+    try {
+      await dynamodDbDocClient.send(new UpdateCommand(params))
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        return false
+      }
+      throw error
+    }
+    logger.info('DestinationChangeRequest schedule updated', {
+      id,
+      scheduledAt: params.ExpressionAttributeValues[':scheduledAt'],
+      isAsap: schedule.isAsap,
+    })
+    return true
+  }
+
   async deleteDestinationChangeRequest(id: number): Promise<boolean> {
     const params: DeleteCommandInput = {
       TableName: TABLE_NAME,

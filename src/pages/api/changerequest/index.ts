@@ -173,6 +173,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         res.json('Error saving draft.')
       }
     } else {
+      // The form checks this too (changerequestvalidation.ts), but only the
+      // server can stop a request that bypasses it. A blank new password with
+      // a non-blank confirmation used to be stored as a password change with
+      // an empty password (IGDD-3742). Checked before the Jira ticket exists.
+      const { newPassword, confirmPassword } = requestBody.requested ?? {}
+      if (
+        (!_.isEmpty(newPassword) || !_.isEmpty(confirmPassword)) &&
+        newPassword !== confirmPassword
+      ) {
+        res
+          .status(400)
+          .json({ error: 'New password and confirm password do not match.' })
+        return
+      }
       let changeRequestTicketResponse = null
       try {
         changeRequestTicketResponse = await createChangeRequestTicket({
@@ -193,7 +207,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
             requestBody.isPasswordDifferent = true
             requestBody.requested.password = requestBody.requested.newPassword
           }
-          _.omit(requestBody.requested, ['newPassword', 'confirmPassword'])
+          requestBody.requested = _.omit(requestBody.requested, [
+            'newPassword',
+            'confirmPassword',
+          ])
           await upsertChangeRequest({
             ...requestBody,
             jiraId: changeRequestTicketResponse.key,
@@ -264,33 +281,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           requestBody.isAsap
         )
 
-        await dbClient.upsertDestinationChangeRequest({
+        // Only the schedule is written. This used to rebuild the whole record
+        // from the body with a full PutCommand; the body carries no password,
+        // so a password change was stored with password '' and
+        // isPasswordDifferent still true, and its deploy then failed
+        // (IGDD-3742). isAsap was dropped the same way.
+        const updated = await dbClient.updateDestinationChangeRequestSchedule(
           id,
-          destId: requestBody.destId,
-          destType: requestBody.destType,
-          jiraId: changeRequest.jiraId,
-          requestedBy: requestBody.requestedBy,
-          requestedAt: new Date(),
-          scheduledAt: requestBody.scheduledAt,
-          isDraft: false,
-          isPasswordDifferent: requestBody.isPasswordDifferent,
-          createdBy: requestBody.createdBy,
-          createdOn: requestBody.createdOn,
-          updatedBy: requestBody.updatedBy,
-          updatedOn: requestBody.updatedOn,
-          requested: {
-            destUri: requestBody.requested.destUri,
-            username: requestBody.requested.username,
-            MSH3: requestBody.requested.MSH3,
-            MSH4: requestBody.requested.MSH4,
-            MSH5: requestBody.requested.MSH5,
-            MSH6: requestBody.requested.MSH6,
-            MSH11: requestBody.requested.MSH11,
-            MSH22: requestBody.requested.MSH22,
-            RXA11: requestBody.requested.RXA11,
-            facilityId: requestBody.requested.facilityId,
-          },
-        })
+          {
+            scheduledAt: requestBody.scheduledAt,
+            isAsap: requestBody.isAsap === true,
+            requestedBy: requestBody.requestedBy,
+          }
+        )
+        if (!updated) {
+          res.status(404).json({ error: 'Change request not found' })
+          return
+        }
         logger.info(
           `Change Request schedule with Jira ticket id ${changeRequest.jiraId} was updated.`
         )
