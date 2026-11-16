@@ -200,53 +200,55 @@ run leaves one Cancelled `e2e-cancel-*` row, hidden from the default view.
 
 ---
 
-## RBAC scoping (Jurisdiction Ops vs. IZG Ops)
+## RBAC scoping (Jurisdiction Security vs. IZG Security)
 
 **Test:** `e2e/tests/apiKeyRbacScoping.spec.ts`
 **Source scenario:** test plan §9.8, security regression (cross-reference IGDD-3184).
 Keep permanently: a missing ownership check regresses silently, because the UI hides
 other jurisdictions' keys whether or not the server enforces it.
 
-**Precondition:** IZG Operations creates a throwaway key in Jurisdiction B, "Utah
+**Precondition:** IZG Security creates a throwaway key in Jurisdiction B, "Utah
 Department of Health (sender + jurisdiction)" (`TEST_ORG_NAME` at the top of the test file), and every probe
 targets that key, never a real one. It is Active if B has a domain already authorized in Development, otherwise
 Ready for Validation on a throwaway domain. If ownership is broken, the probes do
 mutate their target. The key is revoked (or cancelled, if pending) during cleanup, so
 each run leaves at most a few revoked/cancelled rows, all in B.
 
-Jurisdiction A is Audacious Inquiry LLC (`JURIS_OPS_ORG_NAME`). The run fails before
-creating anything if B's prefix is among the jurisdiction prefixes in A's own session
-(what the server checks), if A's session has no jurisdictions, or if A is IZG
-Operations.
+Jurisdiction A is the Jurisdiction Security user. Its organizations are the sender
+organizations whose prefix is in A's own session (what the server checks); no name is
+pinned. A creates a throwaway key in the first of them the same way, so its list is
+never empty, and cleanup removes it too. The run fails before creating anything in B
+if B's prefix is among A's prefixes, if A's session has no jurisdictions or names no
+sender organization, if A does not hold Jurisdiction Security, or if A holds a
+global-reach role.
 
-- **IZG Operations:** the Create Key Organization dropdown lists every sender
+- **IZG Security:** the Create Key Organization dropdown lists every sender
   organization returned by `/api/jurisdictions` (the unscoped list)
-- **IZG Operations:** sees every key that Jurisdiction A's user sees
-- **Jurisdiction Operations (A):** `GET /api/apikeys` returns at least one key, every
-  key returned is in Audacious Inquiry LLC, and B's key is in neither
-  the response nor the table
-- **Jurisdiction Operations (A):** calling the routes directly on B's key — view token
+- **IZG Security:** sees every key that Jurisdiction A's user sees
+- **Jurisdiction Security (A):** `GET /api/apikeys` returns the key A created, every
+  key returned is in one of A's organizations, and B's key is in neither the response
+  nor the table
+- **Jurisdiction Security (A):** calling the routes directly on B's key — view token
   (`POST /api/apikeys/token`), renew (`POST /api/apikeys/renew`), revoke
   (`PATCH /api/apikeys`) and cancel (`DELETE /api/apikeys`) — each returns 403
-  "Forbidden - not authorized for this jurisdiction"
 - Afterwards B's key has the status it was created with: not revoked, renewed or
   cancelled
 - **No API key role:** there is no API Key Management nav entry, `/apikeys` shows "You
   do not have access to this page." with no Create Key button, and the list route and
-  every probe above return 403 "Forbidden - insufficient role"
+  every probe above return 403
 
 Probes run as `fetch()` inside the signed-in page, because `/api/*` requires a DPoP
 proof that only the app's fetch wrapper adds. A Playwright `request` call with copied
 cookies is redirected to sign-in before the ownership check ever runs. Failed
-assertions compare only status and error message, never the response body, so a
-regressed view-token probe cannot print a live JWT into the CI log. A failure is a
-security finding: log it per test plan §8.
+assertions compare only the status, never the response body, so a regressed
+view-token probe cannot print a live JWT into the CI log. A failure is a security
+finding: log it per test plan §8.
 
 **Test data** (`.env.test`; locally the spec skips with a reason if any are unset, in CI
-it fails): IZG Operations is `OKTA_USERNAME` / `OKTA_PASSWORD` / `OKTA_USER_FULLNAME`;
-Jurisdiction A is `E2E_RBAC_JURIS_OPS_USERNAME`, `_PASSWORD`, `_FULLNAME` and must own
-at least one key; the no-role user is `E2E_RBAC_NO_ROLE_USERNAME`, `_PASSWORD`,
-`_FULLNAME`. The nightly workflow passes all six `E2E_RBAC_*` values from repository
-secrets. Both organizations are constants in the test file, not env vars:
-`JURIS_OPS_ORG_NAME` (A) and `TEST_ORG_NAME` (B), by their Organization dropdown
-names.
+it fails): IZG Security is `E2E_RBAC_IZG_SECURITY_USERNAME` / `_PASSWORD`; Jurisdiction
+A is `E2E_RBAC_JURIS_SECURITY_USERNAME` / `_PASSWORD`, whose jurisdictions claim must
+name at least one sender organization other than B; the no-role user is
+`E2E_RBAC_NO_ROLE_USERNAME`, `_PASSWORD`, `_FULLNAME`. Neither Security account needs a
+full name: the sign-in skips the header name check. The nightly workflow passes all of
+these from repository secrets. Only B is a constant in the test file
+(`TEST_ORG_NAME`, by its Organization dropdown name).
