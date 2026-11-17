@@ -1,6 +1,9 @@
 import { Page, Locator, BrowserContext, expect, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
-import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
+import {
+  API_KEYS_VIEWPORT,
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
+} from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Create Key: existing authorized domain".
@@ -11,6 +14,8 @@ const TEST_ORG_NAME = 'Audacious Inquiry LLC'
 const TEST_ENV_NAME = 'Development'
 const AUTHORIZED_TEST_DOMAIN = 'createKey.fastTrack.playwright.org'
 const TEST_USE_TYPE = 'Provider'
+
+requireApiKeyAdmin()
 
 let context: BrowserContext
 let page: Page
@@ -98,12 +103,7 @@ test.beforeAll(async ({ browser }) => {
   // on it directly. See API_KEYS_VIEWPORT.
   context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(
-    page,
-    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
-    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
-    null
-  )
+  await loginAsApiKeyAdmin(page)
 })
 
 test.beforeEach(async () => {

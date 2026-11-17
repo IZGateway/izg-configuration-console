@@ -77,6 +77,10 @@ because the role check proves who signed in.
 | Jurisdiction Security | `E2E_RBAC_JURIS_SECURITY` |
 | IZG Program | `E2E_RBAC_IZG_PROGRAM` |
 
+The IZG Security account is also the one every API key spec signs in as
+(`loginAsApiKeyAdmin` in `e2e/helpers/apiKeyHelpers.ts`), and the two Security
+accounts are the API key scoping spec's.
+
 The Confluence page also has CDC Operations and CDC Support columns. Those
 roles are not planned, so they have no column here.
 
