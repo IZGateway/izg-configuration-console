@@ -60,45 +60,39 @@ test('Navigation panel has expected links', async () => {
 
 test('Navigation panel can collapse and expand', async () => {
   const navPanel = page.locator('#navigation')
-  // The flex row that holds the panel and the page column (Layout.tsx). Flex
-  // stretch gives the panel the height of this row.
-  const row = navPanel.locator('xpath=..')
+  // Measure the panel users see, the Drawer's paper. The Drawer root
+  // (#navigation) switches width the moment `open` changes; the paper animates
+  // to it (the width transition in src/components/Navigation/index.tsx). So
+  // only the paper shows whether the visible panel expands and collapses.
+  const paper = navPanel.locator('.MuiDrawer-paper')
   const viewportHeight = page.viewportSize().height
   const toggle = navPanel.getByRole('button', {
     name: 'toggle navigation drawer',
   })
 
-  // The panel height follows the page content, so it changes with the page
-  // layout (the app footer, reflow when the width changes). Check that the
-  // panel fills the page, not that its height equals an earlier reading.
-  // Polled, because the width has a CSS transition.
-  const expectPanelFillsPage = async () => {
+  // The paper is fixed to the window at full height (MUI's Drawer paper), so
+  // it must be as tall as the viewport. 1 px of tolerance absorbs subpixel
+  // layout, e.g. 719.99 at a 720 px viewport.
+  const expectPanelFillsWindow = async () => {
     await expect
-      .poll(async () => {
-        const panel = await navPanel.boundingBox()
-        const parent = await row.boundingBox()
-        return Math.abs(panel.height - parent.height)
-      })
-      .toBeLessThan(1)
-    expect((await navPanel.boundingBox()).height).toBeGreaterThanOrEqual(
-      viewportHeight
-    )
+      .poll(async () => (await paper.boundingBox()).height)
+      .toBeGreaterThanOrEqual(viewportHeight - 1)
   }
 
-  const bb = await navPanel.boundingBox()
-  await expectPanelFillsPage()
+  const collapsedWidth = (await paper.boundingBox()).width
+  await expectPanelFillsWindow()
 
-  //Expanded view
+  // Expanded view. Polled, because the paper's width animates.
   await toggle.click()
   await expect
-    .poll(async () => (await navPanel.boundingBox()).width)
-    .toBeGreaterThan(bb.width)
-  await expectPanelFillsPage()
+    .poll(async () => (await paper.boundingBox()).width)
+    .toBeGreaterThan(collapsedWidth)
+  await expectPanelFillsWindow()
 
-  //Collapsed view
+  // Collapsed view: back to the starting width once the transition ends.
   await toggle.click()
   await expect
-    .poll(async () => (await navPanel.boundingBox()).width)
-    .toBe(bb.width)
-  await expectPanelFillsPage()
+    .poll(async () => (await paper.boundingBox()).width)
+    .toBe(collapsedWidth)
+  await expectPanelFillsWindow()
 })

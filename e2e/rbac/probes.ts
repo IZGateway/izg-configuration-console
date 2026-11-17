@@ -174,12 +174,58 @@ export function uiDestination(
   }
 }
 
+/** A jurisdiction with the prefix the session's jurisdictions claim holds. */
+export interface Jurisdiction {
+  jurisdictionId: string
+  prefix: string
+}
+
+/** True when the probe acts on a jurisdiction rather than a destination. */
+export const usesJurisdiction = (probe: ApiProbe) =>
+  /\{jurisdictionId\}/.test(probe.path + JSON.stringify(probe.body ?? {}))
+
+/**
+ * Every jurisdiction with a prefix, from /api/jurisdictions (reference data,
+ * open to any signed-in user). Empty if the route fails: the probes that need
+ * one then report it.
+ */
+export async function jurisdictionsOf(page: Page): Promise<Jurisdiction[]> {
+  const res = await callApi(page, 'GET', '/api/jurisdictions')
+  if (res.status !== 200 || !Array.isArray(res.body)) return []
+  return (res.body as Array<{ jurisdictionId?: unknown; prefix?: string }>)
+    .filter((j) => j.jurisdictionId != null && j.prefix)
+    .map((j) => ({ jurisdictionId: String(j.jurisdictionId), prefix: j.prefix.toLowerCase() }))
+    .sort((a, b) => a.prefix.localeCompare(b.prefix))
+}
+
 export interface ProbeContext {
   own?: Destination
   foreign?: Destination
   /** Destinations /api/destinations listed outside the session's jurisdictions. */
   outOfClaim: Destination[]
   listed: ListedDestination[]
+  /** A jurisdiction inside the role's reach, and one outside it (own-reach roles only). */
+  ownJurisdiction?: Jurisdiction
+  foreignJurisdiction?: Jurisdiction
+}
+
+/**
+ * The jurisdiction a `{jurisdictionId}` probe acts on, or why there is none.
+ * The jurisdiction list is the same for every caller, so a missing one is a
+ * data problem, never a skip.
+ */
+export function resolveJurisdiction(
+  kind: DestinationKind,
+  ctx: ProbeContext,
+  reach: Reach
+): { jurisdiction: Jurisdiction } | { skip: string } | { error: string } {
+  if (kind === 'own') {
+    if (ctx.ownJurisdiction) return { jurisdiction: ctx.ownJurisdiction }
+    return { error: "no jurisdiction from /api/jurisdictions has a prefix in the session's jurisdictions claim" }
+  }
+  if (reach === 'all') return { skip: 'global reach: every jurisdiction is its own' }
+  if (ctx.foreignJurisdiction) return { jurisdiction: ctx.foreignJurisdiction }
+  return { error: "every jurisdiction from /api/jurisdictions is in the session's jurisdictions claim" }
 }
 
 /**
@@ -214,8 +260,11 @@ export function resolveDestination(
   }
 }
 
-function expand(probe: ApiProbe, dest?: Destination) {
-  const fill = (s: string) => (dest ? fillDest(s, dest) : s)
+function expand(probe: ApiProbe, dest?: Destination, jurisdiction?: Jurisdiction) {
+  const fill = (s: string) => {
+    const filled = dest ? fillDest(s, dest) : s
+    return jurisdiction ? filled.replaceAll('{jurisdictionId}', jurisdiction.jurisdictionId) : filled
+  }
   const body = probe.body
     ? Object.fromEntries(
         Object.entries(probe.body).map(([k, v]) => [k, typeof v === 'string' ? fill(v) : v])
@@ -245,10 +294,12 @@ const UNDECIDED = new Set([408, 429, 502, 503, 504])
 export async function observeApi(
   page: Page,
   probe: ApiProbe,
-  dest?: Destination
+  dest?: Destination,
+  jurisdiction?: Jurisdiction
 ): Promise<Observation & { target: string }> {
-  const { path: url, body } = expand(probe, dest)
-  const target = `${probe.method} ${url}`
+  const { path: url, body } = expand(probe, dest, jurisdiction)
+  // A jurisdiction is in the body, so name it here too.
+  const target = `${probe.method} ${url}${jurisdiction ? ` (jurisdiction ${jurisdiction.prefix})` : ''}`
   let status: number
   try {
     status = (await callApi(page, probe.method, url, body)).status

@@ -47,10 +47,9 @@ jobs:
       E2E_RBAC_NO_ROLE_PASSWORD: ${{ secrets.E2E_RBAC_NO_ROLE_PASSWORD }}
       E2E_RBAC_NO_ROLE_FULLNAME: ${{ secrets.E2E_RBAC_NO_ROLE_FULLNAME }}
       # RBAC matrix check (e2e/rbac, IGDD-3621). IZG Operations and
-      # Jurisdiction Operations reuse the accounts above; a role whose
-      # secrets are unset is reported as CONFIG or PENDING, not run.
-      # IZG Security and Jurisdiction Security are mapped ahead of time: their
-      # columns stay PENDING until roles.ts marks them live.
+      # Jurisdiction Operations reuse the accounts above; a live role whose
+      # secrets are unset is reported as CONFIG, not run. The two Security
+      # accounts are also the API key scoping spec's (apiKeyRbacScoping).
       E2E_RBAC_IZG_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_IZG_SECURITY_USERNAME }}
       E2E_RBAC_IZG_SECURITY_PASSWORD: ${{ secrets.E2E_RBAC_IZG_SECURITY_PASSWORD }}
       E2E_RBAC_JURIS_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_JURIS_SECURITY_USERNAME }}

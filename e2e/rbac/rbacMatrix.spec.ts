@@ -6,8 +6,8 @@
  * every row of e2e/rbac/matrix.ts at up to five layers: the nav link, the
  * page gate, the data a page sends in its payload, the API routes behind the
  * feature, and the controls a page shows on a destination in the right
- * state. Jurisdiction roles' own and foreign destinations come from the
- * session's jurisdictions, not from the API under test. Every cell is recorded,
+ * state. Jurisdiction roles' own and foreign destinations and jurisdictions
+ * come from the session's jurisdictions, not from the API under test. Every cell is recorded,
  * even after a mismatch, and attached as JSON for e2e/rbac/rbacReporter.ts.
  *
  * Report only: the nightly Playwright workflow runs this with
@@ -55,6 +55,7 @@ import {
   ProbeContext,
   SessionInfo,
   foreignDestination,
+  jurisdictionsOf,
   listedDestinations,
   navLinks,
   observeApi,
@@ -63,8 +64,10 @@ import {
   observeUi,
   reachableDestinations,
   resolveDestination,
+  resolveJurisdiction,
   sessionOf,
   uiDestination,
+  usesJurisdiction,
 } from './probes'
 
 const toCheck = (
@@ -110,23 +113,31 @@ async function evaluateRow(
 
   for (const probe of row.pageData ?? []) {
     const target = `${probe.page} pageProps.${probe.prop}`
-    checks.push(toCheck('data', target, expected, await observePageData(page, probe)))
+    // A prop the page no longer sends must be absent for every role.
+    const dataExpected = probe.noLongerSent ? 'denied' : expected
+    checks.push(toCheck('data', target, dataExpected, await observePageData(page, probe)))
   }
 
   // A jurisdiction role's destination list must hold only the jurisdictions
   // in its session. An extra entry is a tenancy leak, and a foreign
-  // destination too, which is how the fold keeps it from any known gap.
-  if (row.checksDestinationList && role.reach === 'own') {
+  // destination too, which is how the fold keeps it from any known gap. A
+  // global role's list must reach beyond its claim.
+  if (row.checksDestinationList) {
     const extra = ctx.outOfClaim.map((d) => `${d.typeId}/${d.destId}`)
+    const own = role.reach === 'own'
     checks.push({
       ...decide(
         'api',
         'GET /api/destinations (outside the jurisdictions claim)',
-        'denied',
+        own ? 'denied' : 'allowed',
         extra.length ? 'allowed' : 'denied',
-        extra.length ? `lists ${extra.join(', ')}` : "lists only the session's jurisdictions"
+        !extra.length
+          ? "lists only the session's jurisdictions"
+          : own
+            ? `lists ${extra.join(', ')}`
+            : `lists ${extra.length} destinations outside the claim`
       ),
-      dest: 'foreign',
+      dest: own ? 'foreign' : undefined,
     })
   }
 
@@ -146,9 +157,22 @@ async function evaluateRow(
       })
       continue
     }
-    let dest
+    if (probe.globalOnly && role.reach === 'own') {
+      checks.push({
+        layer: 'api',
+        target,
+        expected: probeExpected,
+        status: 'SKIPPED',
+        detail: `not sent for a jurisdiction role: it ${probe.globalOnly}`,
+        dest: probe.dest,
+      })
+      continue
+    }
+    let dest, jurisdiction
     if (probe.dest) {
-      const resolved = resolveDestination(probe.dest, ctx, role.reach)
+      const resolved = usesJurisdiction(probe)
+        ? resolveJurisdiction(probe.dest, ctx, role.reach)
+        : resolveDestination(probe.dest, ctx, role.reach)
       if ('skip' in resolved) {
         checks.push({ layer: 'api', target, expected: probeExpected, status: 'SKIPPED', detail: resolved.skip, dest: probe.dest })
         continue
@@ -157,9 +181,10 @@ async function evaluateRow(
         checks.push({ layer: 'api', target, expected: probeExpected, status: 'ERROR', detail: resolved.error, dest: probe.dest })
         continue
       }
-      dest = resolved.dest
+      if ('jurisdiction' in resolved) jurisdiction = resolved.jurisdiction
+      else dest = resolved.dest
     }
-    const obs = await observeApi(page, probe, dest)
+    const obs = await observeApi(page, probe, dest, jurisdiction)
     // `dest` tells the known-gap fold a foreign check from an own one.
     checks.push({ ...toCheck('api', obs.target, probeExpected, obs), dest: probe.dest })
   }
@@ -208,18 +233,23 @@ async function runColumn(
 
   // Own and foreign come from the verified session's jurisdictions, not from
   // /api/destinations: the list is part of what is under test, and a leaked
-  // entry taken as "own" would never be probed as foreign. hasAccessToDestId
-  // matches a destination id against the claim, exactly.
+  // entry taken as "own" would never be probed as foreign. The gate matches a
+  // destination id against the claim exactly, lowercased (policy.ts).
   const listed = await reachableDestinations(page)
   if (role.reach === 'all') cache.record(listed)
   const claims = new Set(session.jurisdictions.map((j) => j.toLowerCase()))
-  const inClaim = (d: { destId: string }) => role.reach === 'all' || claims.has(d.destId.toLowerCase())
-  const own = listed.filter(inClaim)
+  const claimed = (code: string) => claims.has(code.toLowerCase())
+  const own = role.reach === 'all' ? listed : listed.filter((d) => claimed(d.destId))
+  // Jurisdictions are matched on their prefix, the same claim, as the
+  // API key gate matches them (apiKeyAuthz.ts).
+  const jurisdictions = MATRIX.some((r) => r.api?.some(usesJurisdiction)) ? await jurisdictionsOf(page) : []
   const ctx: ProbeContext = {
     own: own[0],
     foreign: foreignDestination(own, cache),
-    outOfClaim: listed.filter((d) => !inClaim(d)),
+    outOfClaim: listed.filter((d) => !claimed(d.destId)),
     listed: MATRIX.some((r) => r.ui?.length) ? await listedDestinations(page) : [],
+    ownJurisdiction: jurisdictions.find((j) => role.reach === 'all' || claimed(j.prefix)),
+    foreignJurisdiction: role.reach === 'all' ? undefined : jurisdictions.find((j) => !claimed(j.prefix)),
   }
   const links = await navLinks(page)
 

@@ -77,6 +77,10 @@ because the role check proves who signed in.
 | Jurisdiction Security | `E2E_RBAC_JURIS_SECURITY` |
 | IZG Program | `E2E_RBAC_IZG_PROGRAM` |
 
+The IZG Security account is also the one every API key spec signs in as
+(`loginAsApiKeyAdmin` in `e2e/helpers/apiKeyHelpers.ts`), and the two Security
+accounts are the API key scoping spec's.
+
 The Confluence page also has CDC Operations and CDC Support columns. Those
 roles are not planned, so they have no column here.
 
@@ -118,21 +122,37 @@ own:
 ## Probes never change data
 
 Every probe is a read, a method the handler does not implement (on a route
-whose gate checks every method), a sentinel id or an empty body the handler
-rejects before any write, or `denyOnly`: sent only to roles the matrix denies,
-whose request the route middleware refuses before the handler runs. Keep it
-that way when adding rows. See the header of `matrix.ts`.
+whose gate checks every method), a sentinel id or a body the handler rejects
+before any write (an empty one, or one naming only the destination or
+jurisdiction the gate decides on), or `denyOnly`: sent only to roles the
+matrix denies, whose request the route middleware refuses before the handler
+runs. Keep it that way when adding rows, even for a gate that is broken: an
+action that a probe can only reach with real data, such as cancelling a
+change request, is not probed. See the header of `matrix.ts`.
 
 Probes that are refused produce `AccessDenied` audit events in the target
 environment's logs. That is expected.
 
 Every API probe names its gate's `refusal` status: 403 for `capability` and
-`byMethod` routes, 401 for the reach checks and for handlers
-that refuse with 401 themselves. Only that status counts as a refusal, so a
+`byMethod` routes, including those that decide the destination too
+(`scope`); 401 for `{ session: true }` routes and for handlers that refuse
+with 401 themselves. Only that status counts as a refusal, so a
 handler's own 401 after the gate let the request through (no such record,
 no destination) shows as a gate that let it through. Read the route before
 setting it. Any 401 is first checked against the session: an ended session
 is an ERROR, not a refusal.
+
+A probe whose body names no destination or jurisdiction can only decide the
+capability for a global-reach role: with no scope named, the gate lets only
+global roles through. Mark it `globalOnly` with the reason, and give the row
+another probe that decides it for jurisdiction roles. The `apikeys.write`
+revoke and cancel probes are the example: the create probes, which name a
+jurisdiction, decide that row for jurisdiction roles.
+
+A `pageData` probe checks that a page's payload carries data only for
+allowed roles. Once a page stops sending the data to anyone, mark it
+`noLongerSent`: it must then be absent for every role, and the row's API
+probe decides who gets the data (`/api-doc` since IGDD-3550).
 
 ## Known gaps in the report
 

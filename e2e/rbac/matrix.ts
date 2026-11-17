@@ -21,13 +21,16 @@ import { RoleName } from './roles'
  *  - a method the handler does not implement, on a route whose authorization
  *    is method-agnostic (`capability:` declarations check every method), so
  *    the gate decides and the handler then refuses;
- *  - a sentinel id or an empty body that the handler rejects before any write;
+ *  - a sentinel id, or a body the handler rejects before any write: an
+ *    empty one, or one naming only the destination or jurisdiction that the
+ *    gate needs to decide;
  *  - `denyOnly`: sent only for roles the matrix denies, for a request that
  *    would act on real data if allowed. The gate should refuse it, but a
  *    `denyOnly` probe must also be one the handler rejects before any read
  *    or write, so that a broken gate still changes nothing. Say how in the
- *    row. Global-reach roles pass hasAccessToDestId for any destination, so
- *    a missing `destId` does not stop them.
+ *    row. A request that names no destination is still let through for a
+ *    global-reach role holding the capability, so leaving it out is no
+ *    protection.
  *
  * Each probe names its gate's `refusal` status, so a handler's own 401
  * after the gate let the request through (a missing record, no destination)
@@ -44,10 +47,13 @@ import { RoleName } from './roles'
 export const MATRIX_SOURCE = {
   page: 'Role Based Access Control for IZ Gateway',
   pageId: '1006043137',
-  version: 13,
+  version: 14,
 } as const
 
-/** Where a probe's destination comes from. See probes.ts `resolveDestination`. */
+/**
+ * Where a probe's destination or jurisdiction comes from. See probes.ts
+ * `resolveDestination` and `resolveJurisdiction`.
+ */
 export type DestinationKind = 'own' | 'foreign'
 
 export interface ApiProbe {
@@ -55,18 +61,29 @@ export interface ApiProbe {
   /**
    * Route path. `{dest}` expands to `<typeId>/<destId>`, and `{typeId}` and
    * `{destId}` to the parts, from the destination named by `dest`.
+   * `{jurisdictionId}` expands to a jurisdiction's id instead, on the same
+   * side: see probes.ts `resolveJurisdiction`.
    */
   path: string
-  /** JSON body. A string value of exactly `'{destId}'` is expanded too. */
+  /** JSON body. Its string values are expanded the same way. */
   body?: Record<string, unknown>
-  /** The probe acts on a destination. Required when the path or body uses one. */
+  /**
+   * The role's own destination or jurisdiction, or a foreign one. Required
+   * when the path or body uses one.
+   */
   dest?: DestinationKind
   /** Set when the probe must not be sent for an allowed role; the reason why. */
   denyOnly?: string
   /**
+   * Set when the probe can decide the capability for a global-reach role
+   * only, so it is not sent for a jurisdiction role; the reason why. The row
+   * needs another probe that decides it for jurisdiction roles.
+   */
+  globalOnly?: string
+  /**
    * The status the route's gate refuses with: 403 for `capability` and
-   * `byMethod` declarations, 401 for the reach checks
-   * (`checkAccessToDestId*`) and for handlers that answer 401 themselves.
+   * `byMethod` declarations, with or without a `scope`; 401 for
+   * `{ session: true }` routes and for handlers that answer 401 themselves.
    * Read the route before setting it.
    */
   refusal: 401 | 403
@@ -110,6 +127,12 @@ export interface PageDataProbe {
   page: string
   /** Key under `pageProps`; present and non-empty means the role got it. */
   prop: string
+  /**
+   * Set when the page no longer sends this prop to anyone, allowed roles
+   * included; the reason why. The prop must then be absent for every role,
+   * and the row's API probe decides who gets the data.
+   */
+  noLongerSent?: string
 }
 
 export interface KnownGap {
@@ -135,8 +158,8 @@ export interface MatrixRow {
   /** Page payload data that is sent iff allowed. */
   pageData?: readonly PageDataProbe[]
   /**
-   * For jurisdiction roles: also check that /api/destinations lists only
-   * the jurisdictions in the session.
+   * Also check what /api/destinations lists: only the session's
+   * jurisdictions for a jurisdiction role, more than that for a global one.
    */
   checksDestinationList?: boolean
   /**
@@ -178,31 +201,8 @@ const MOVES_TO_IZG_SECURITY: KnownGap = {
   reason:
     'Target moves this to IZG Security. IZG Operations keeps it until IZG Security exists.',
 }
-// API key access moves from the Operations roles to the Security roles.
-// IZG Operations' half landed (IGDD-3549): it no longer holds apikeys.*,
-// matching the target matrix, so there is no longer a gap to name for it
-// here. Jurisdiction Operations keeps it until IGDD-3500 creates
-// Jurisdiction Security.
-const API_KEYS_MOVE_TO_SECURITY: Partial<Record<RoleName, KnownGap>> = {
-  'Jurisdiction Operations': {
-    ticket: 'IGDD-3500',
-    reason: 'Target moves API keys to Jurisdiction Security.',
-  },
-}
-
 // Gap reasons stay short and point at the ticket: this repo is public, and
 // the ticket holds the detail.
-
-/** Recorded in authzDebt.ts. */
-const EDIT_PAGE_NOT_ENFORCED: KnownGap = {
-  ticket: 'IGDD-3472',
-  reason: 'Not enforced by role yet.',
-}
-const EDIT_PAGE_GAPS: Partial<Record<RoleName, KnownGap>> = {
-  'IZG Support': EDIT_PAGE_NOT_ENFORCED,
-  'Jurisdiction Support': EDIT_PAGE_NOT_ENFORCED,
-  'IZG Program': EDIT_PAGE_NOT_ENFORCED,
-}
 
 /**
  * IZG Program's two Manage Connections links are off in code on purpose:
@@ -213,17 +213,11 @@ const PROGRAM_LINK_HELD_BACK: KnownGap = {
   reason: 'Not yet granted: held back until the matrix intent is clarified.',
 }
 
-/** The /api-doc spec reaches every signed-in user in the page payload. */
-const SPEC_IN_PAYLOAD: KnownGap = {
-  ticket: 'IGDD-3472',
-  reason: 'Not enforced by role yet: the page payload is not gated.',
-}
-
-/** For `uiOnly`: the control is hidden, but no server check backs it yet. */
-const uiOnlyUntil = (ticket: string): KnownGap => ({
-  ticket,
-  reason: 'UI-only: no server check for this capability yet.',
-})
+/**
+ * For `uiOnly`: the control is hidden, but no server check reads the
+ * capability. No ticket tracks these yet.
+ */
+const UI_ONLY: KnownGap = { reason: 'UI-only: no server check for this capability yet.' }
 
 // UI check targets. The connection table's row menu button is always there
 // once the row has rendered.
@@ -240,13 +234,11 @@ export const MATRIX: readonly MatrixRow[] = [
     id: 'tenancy.reach',
     feature: 'Tenancy — Reach',
     allow: ALL_TARGET_ROLES,
-    // Reach-only route: checkAccessToDestIdSlug, no capability. A foreign
-    // destination is allowed only for roles that reach every jurisdiction.
+    // The destination list is the one reach-only route left: every
+    // destination-scoped route now decides its capability and reach together
+    // (IGDD-3545/3548), so reach is probed on each of those rows, own and
+    // foreign.
     checksDestinationList: true,
-    api: [
-      { method: 'GET', path: '/api/destinations/{dest}', dest: 'own', refusal: 401 },
-      { method: 'GET', path: '/api/destinations/{dest}', dest: 'foreign', refusal: 401 },
-    ],
   },
   // Access Control: one row per tab and action (v13). The three view rows
   // share one code flag, canViewAccessControl, which matches the target: all
@@ -266,7 +258,6 @@ export const MATRIX: readonly MatrixRow[] = [
     allow: [IZG_SEC],
     // PUT validates the body before any read or write: {} is a 400.
     api: [{ method: 'PUT', path: '/api/accessgroups/rbac-probe-nonexistent', body: {}, refusal: 403 }],
-    knownGaps: { 'IZG Operations': MOVES_TO_IZG_SECURITY },
   },
   {
     id: 'accesscontrol.denylist.view',
@@ -305,12 +296,6 @@ export const MATRIX: readonly MatrixRow[] = [
       { method: 'GET', path: '/api/status/reset', refusal: 403 },
       { method: 'GET', path: '/api/status/refresh', refusal: 403 },
     ],
-    knownGaps: {
-      'IZG Support': {
-        ticket: 'IGDD-3498',
-        reason: 'Not yet granted: IZG Support cannot open Admin Operations.',
-      },
-    },
   },
   {
     id: 'adminoperations.passwordencryption-card',
@@ -322,7 +307,6 @@ export const MATRIX: readonly MatrixRow[] = [
       { method: 'GET', path: '/api/encrypt', refusal: 403 },
       { method: 'GET', path: '/api/rotatekey', refusal: 403 },
     ],
-    knownGaps: { 'IZG Operations': MOVES_TO_IZG_SECURITY },
   },
   {
     id: 'apikeys.view',
@@ -332,31 +316,52 @@ export const MATRIX: readonly MatrixRow[] = [
     nav: ['/apikeys'],
     pages: ['/apikeys'],
     api: [{ method: 'GET', path: '/api/apikeys', refusal: 403 }],
-    knownGaps: API_KEYS_MOVE_TO_SECURITY,
   },
   {
     id: 'apikeys.write',
     feature: 'API Key Management — create/renew/revoke',
     allow: [IZG_SEC, JUR_SEC],
     requiresFlag: 'apiKeyManagement',
-    // Revoke (PATCH) and cancel (DELETE) resolve their jurisdiction-scoped
-    // reach declaratively, from the body's sortKey, before the handler ever
-    // runs (IGDD-3549). An empty body resolves to no scope, which this probe
-    // relies on to always answer 403 for a role that lacks the capability —
-    // but a role that HOLDS the capability (a jurisdiction-scoped one, not a
-    // global one) also gets 403 for an empty body, since "no scope named"
-    // falls back to global-reach-only. So this probe cannot distinguish "no
-    // capability" from "has capability, empty body" for Jurisdiction
-    // Operations specifically: it will report `apikeys.write`'s known gap
-    // (IGDD-3500) as closed even though the role still holds the capability.
-    // Create validates the body first, so it cannot tell a denial from bad
-    // input either and is not probed.
+    // Create takes its scope from the body's jurisdictionId (IGDD-3549), so
+    // the gate decides the capability for a real jurisdiction, own or
+    // foreign. If it let the request through, the handler answers 400 for
+    // the missing environments and upn before any read or write.
+    // Revoke (PATCH) and cancel (DELETE) take their scope from a stored
+    // credential's sortKey. An empty body names none, which only a
+    // global-reach role holding the capability passes, so these two decide
+    // the capability for global roles only. For a jurisdiction role the two
+    // create probes decide it.
     // Ownership across jurisdictions: e2e/tests/apiKeyRbacScoping.spec.ts.
     api: [
-      { method: 'PATCH', path: '/api/apikeys', body: {}, refusal: 403 },
-      { method: 'DELETE', path: '/api/apikeys', body: {}, refusal: 403 },
+      {
+        method: 'POST',
+        path: '/api/apikeys',
+        body: { jurisdictionId: '{jurisdictionId}' },
+        dest: 'own',
+        refusal: 403,
+      },
+      {
+        method: 'POST',
+        path: '/api/apikeys',
+        body: { jurisdictionId: '{jurisdictionId}' },
+        dest: 'foreign',
+        refusal: 403,
+      },
+      {
+        method: 'PATCH',
+        path: '/api/apikeys',
+        body: {},
+        refusal: 403,
+        globalOnly: 'names no credential, which only a global-reach role passes',
+      },
+      {
+        method: 'DELETE',
+        path: '/api/apikeys',
+        body: {},
+        refusal: 403,
+        globalOnly: 'names no credential, which only a global-reach role passes',
+      },
     ],
-    knownGaps: API_KEYS_MOVE_TO_SECURITY,
   },
   {
     id: 'changerequest.healthcheck',
@@ -371,7 +376,9 @@ export const MATRIX: readonly MatrixRow[] = [
         ready: CHANGE_REQUEST_READY,
       },
     ],
-    uiOnly: uiOnlyUntil('IGDD-3545'),
+    // The Run button calls the connection test, which checks
+    // test.canRunConnectionTest; nothing on the server reads canRunHealthCheck.
+    uiOnly: UI_ONLY,
   },
   {
     id: 'changerequest.viewdetails',
@@ -391,31 +398,27 @@ export const MATRIX: readonly MatrixRow[] = [
         ready: CHANGE_REQUEST_READY,
       },
     ],
-    uiOnly: uiOnlyUntil('IGDD-3545'),
-    knownGaps: {
-      'IZG Support': { reason: 'Not yet granted: only IZG Operations holds canViewJiraTicket today.' },
-    },
+    // The ticket id is also in GET /api/changerequest/{dest}, which checks
+    // changerequest.canViewDetails; nothing on the server reads
+    // canViewJiraTicket.
+    uiOnly: UI_ONLY,
   },
   {
     id: 'changerequest.reschedule-cancel',
     feature: 'Change Request — reschedule / cancel',
     allow: SECURITY_AND_OPS,
-    // Only the gate's 403 counts as a refusal: the handlers answer 401
-    // themselves. If the gate let one through, the handlers reject these
-    // requests before any read or write (see src/pages/api/changerequest/),
-    // and change request 0 does not exist.
+    // Reschedule only. The body names no destination, which only a
+    // global-reach role holding the capability passes; a destId would let a
+    // broken gate overwrite that destination's change request.
+    // Cancel is not probed: its handler looks the change request up before
+    // deciding, so only a real one would reach the role check, and a broken
+    // check would then cancel it and comment on its Jira ticket.
     api: [
       {
         method: 'PUT',
         path: '/api/changerequest',
         body: {},
         denyOnly: 'reschedules a real change request',
-        refusal: 403,
-      },
-      {
-        method: 'DELETE',
-        path: '/api/changerequest/0',
-        denyOnly: 'cancels a real change request',
         refusal: 403,
       },
     ],
@@ -468,9 +471,8 @@ export const MATRIX: readonly MatrixRow[] = [
     feature: 'Edit Connection — change credentials',
     allow: SECURITY_AND_OPS,
     // The credential fields are on the /edit page itself, so the page is
-    // what is checked (IGDD-3472).
+    // what is checked. Its server-side gate shows the denial screen.
     ui: [{ page: EDIT_PAGE, state: 'idle', control: EDIT_PAGE_CONTROL }],
-    knownGaps: EDIT_PAGE_GAPS,
   },
   {
     id: 'edit.createchangerequest',
@@ -495,7 +497,6 @@ export const MATRIX: readonly MatrixRow[] = [
     // Checked on a destination with a saved draft, which is what the draft
     // buttons act on (IGDD-3472).
     ui: [{ page: EDIT_PAGE, state: 'draft', control: EDIT_PAGE_CONTROL }],
-    knownGaps: EDIT_PAGE_GAPS,
   },
   {
     id: 'edit.approve',
@@ -508,21 +509,24 @@ export const MATRIX: readonly MatrixRow[] = [
     id: 'history.view',
     feature: 'History — all view flags',
     allow: ALL_BUT_PROGRAM,
-    // Reach-only routes (IGDD-3472).
+    // Each route decides its history.* capability and the destination
+    // together. /api/destinations/{dest} is the connection info the History
+    // and Edit pages load.
     api: [
-      { method: 'GET', path: '/api/statushistory/{dest}', dest: 'own', refusal: 401 },
-      { method: 'GET', path: '/api/destinationaudit/{dest}', dest: 'own', refusal: 401 },
+      { method: 'GET', path: '/api/destinations/{dest}', dest: 'own', refusal: 403 },
+      { method: 'GET', path: '/api/destinations/{dest}', dest: 'foreign', refusal: 403 },
+      { method: 'GET', path: '/api/statushistory/{dest}', dest: 'own', refusal: 403 },
+      { method: 'GET', path: '/api/destinationaudit/{dest}', dest: 'own', refusal: 403 },
     ],
-    knownGaps: {
-      'IZG Program': { ticket: 'IGDD-3472', reason: 'Not enforced by role yet.' },
-    },
   },
   {
     id: 'manageconnections.runtest',
     feature: 'Manage Connections — run test',
     allow: ALL_TARGET_ROLES,
-    // POST runs a live test against the IIS. GET passes the reach check and
-    // then the handler refuses the method.
+    // Reachability only, not authorization: the route decides its
+    // capability in the handler, for POST alone, and a GET is a 500 for
+    // everyone. A POST that got through would run a live test against the
+    // IIS, so none is sent.
     api: [{ method: 'GET', path: '/api/tests/connectiontest/{dest}', dest: 'own', refusal: 401 }],
   },
   {
@@ -537,16 +541,15 @@ export const MATRIX: readonly MatrixRow[] = [
         ready: TABLE_ROW_READY,
       },
     ],
-    uiOnly: uiOnlyUntil('IGDD-3545'),
     knownGaps: { 'IZG Program': PROGRAM_LINK_HELD_BACK },
   },
   {
     id: 'manageconnections.view',
     feature: 'Manage Connections — view connections',
     allow: ALL_TARGET_ROLES,
+    // The page loads its connections on the server, behind its own gate.
     nav: ['/manageconnections'],
     pages: ['/manageconnections'],
-    api: [{ method: 'GET', path: '/api/destinations/{dest}', dest: 'own', refusal: 401 }],
   },
   {
     id: 'manageconnections.viewhistory',
@@ -562,7 +565,6 @@ export const MATRIX: readonly MatrixRow[] = [
         ready: TABLE_ROW_READY,
       },
     ],
-    uiOnly: uiOnlyUntil('IGDD-3472'),
     knownGaps: { 'IZG Program': PROGRAM_LINK_HELD_BACK },
   },
   {
@@ -584,21 +586,19 @@ export const MATRIX: readonly MatrixRow[] = [
         ready: TABLE_ROW_READY,
       },
     ],
-    uiOnly: uiOnlyUntil('IGDD-3472'),
+    // Both open /edit, whose server-side gate the edit.* rows check.
   },
   {
     id: 'manageconnections.resetcircuitbreaker',
     feature: 'Manage Connections — reset circuit breaker',
     allow: ALL_TARGET_ROLES,
-    // The handler decides can() for the destination before it checks the
-    // method, and answers 401 itself for a refusal; a GET is decided and then
-    // refused, where POST would really reset.
+    // The gate decides the capability for the destination; the handler
+    // then answers 405 to a GET, where POST would really reset.
     api: [
-      { method: 'GET', path: '/api/status/reset/{dest}', dest: 'own', refusal: 401 },
-      { method: 'GET', path: '/api/status/reset/{dest}', dest: 'foreign', refusal: 401 },
+      { method: 'GET', path: '/api/status/reset/{dest}', dest: 'own', refusal: 403 },
+      { method: 'GET', path: '/api/status/reset/{dest}', dest: 'foreign', refusal: 403 },
     ],
     knownGaps: {
-      'IZG Support': { reason: 'Not yet granted (Implementation Status page: to grant).' },
       'Jurisdiction Support': { reason: 'Not yet granted (Implementation Status page: to grant).' },
     },
   },
@@ -610,16 +610,30 @@ export const MATRIX: readonly MatrixRow[] = [
     // refused. The own destination passes the reach check, so the role
     // decides, with 403.
     api: [{ method: 'GET', path: '/api/maintenance/update/{dest}', dest: 'own', refusal: 403 }],
-    knownGaps: {
-      'IZG Support': { reason: 'Not yet granted (Implementation Status page: to grant).' },
-    },
   },
   {
     id: 'onboarding.manage',
     feature: 'Onboarding Senders — add / edit',
     allow: [IZG_SEC, JUR_SEC, IZG_OPS, JUR_OPS, IZG_SUP],
-    // DELETE checks required fields before anything else: {} is a 400.
-    api: [{ method: 'DELETE', path: '/api/allowedusers', body: {}, refusal: 403 }],
+    // The gate decides the capability for the body's destinationId. If it
+    // let the request through, the handler answers 400 for the missing
+    // principal and environment before any read or write.
+    api: [
+      {
+        method: 'DELETE',
+        path: '/api/allowedusers',
+        body: { destinationId: '{destId}' },
+        dest: 'own',
+        refusal: 403,
+      },
+      {
+        method: 'DELETE',
+        path: '/api/allowedusers',
+        body: { destinationId: '{destId}' },
+        dest: 'foreign',
+        refusal: 403,
+      },
+    ],
   },
   {
     id: 'onboarding.view',
@@ -636,23 +650,24 @@ export const MATRIX: readonly MatrixRow[] = [
     nav: ['/api-doc'],
     pages: ['/api-doc'],
     api: [{ method: 'GET', path: '/api/swaggerjson', refusal: 403 }],
-    // The page gates on the client, but the spec is built into its static
-    // payload, which every signed-in user receives (authzDebt.ts, api-doc).
-    pageData: [{ page: '/api-doc', prop: 'spec' }],
-    knownGaps: {
-      'IZG Operations': MOVES_TO_IZG_SECURITY,
-      'Jurisdiction Security': SPEC_IN_PAYLOAD,
-      'Jurisdiction Operations': SPEC_IN_PAYLOAD,
-      'IZG Support': SPEC_IN_PAYLOAD,
-      'Jurisdiction Support': SPEC_IN_PAYLOAD,
-      'IZG Program': SPEC_IN_PAYLOAD,
-    },
+    // The spec used to be built into the page payload, which every
+    // signed-in user received (fixed by IGDD-3550). The page now fetches it
+    // from /api/swaggerjson, so the payload must not carry it for anyone.
+    pageData: [
+      {
+        page: '/api-doc',
+        prop: 'spec',
+        noLongerSent: 'the page fetches the spec from /api/swaggerjson (IGDD-3550)',
+      },
+    ],
+    knownGaps: { 'IZG Operations': MOVES_TO_IZG_SECURITY },
   },
   {
     id: 'test.runconnectiontest',
     feature: 'Test — run connection test',
     allow: ALL_TARGET_ROLES,
-    // The /test page runs a live test on load, so only the API is probed.
+    // The /test page runs a live test on load, so only the API is probed,
+    // for reachability only: see manageconnections.runtest.
     api: [{ method: 'GET', path: '/api/tests/connectiontest/{dest}', dest: 'own', refusal: 401 }],
   },
   {
