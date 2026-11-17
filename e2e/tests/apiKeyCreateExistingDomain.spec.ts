@@ -1,6 +1,5 @@
 import { Page, Locator, BrowserContext, expect, test } from '@playwright/test'
 import { loginToOkta } from '../helpers/oktaLogin'
-import { logout } from '../helpers/logout'
 import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
@@ -99,7 +98,12 @@ test.beforeAll(async ({ browser }) => {
   // on it directly. See API_KEYS_VIEWPORT.
   context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginToOkta(
+    page,
+    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
+    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
+    null
+  )
 })
 
 test.beforeEach(async () => {
@@ -108,7 +112,9 @@ test.beforeEach(async () => {
 })
 
 test.afterAll(async () => {
-  if (page) await logout(page).catch(() => {})
+  // No Okta logout here. In Edge on GitHub it hangs past the 60 s hook limit,
+  // and the sign-ins of the specs that follow then time out. Closing the
+  // context ends the session, and each spec starts a new context.
   if (page && !page.isClosed()) await page.close()
   if (context) await context.close()
 })
