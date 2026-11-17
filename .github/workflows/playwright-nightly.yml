@@ -8,6 +8,17 @@ on:
     - cron: '0 7 * * 4' # Thursday
     - cron: '0 7 * * 5' # Friday
   workflow_dispatch:
+    inputs:
+      project:
+        description: 'Browser project to run (all runs every project, as the schedule does)'
+        type: choice
+        default: all
+        options:
+          - all
+          - Chrome
+          - Edge
+          - WebKit
+          - Firefox
 
 jobs:
   e2e:
@@ -120,8 +131,17 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (all browsers, no screenshots)
-        run: npx playwright test --reporter=html
+      # A scheduled run has no input, so it runs every project. The input goes
+      # through an environment variable, not into the script text.
+      - name: Run Playwright tests (no screenshots)
+        env:
+          PW_PROJECT: ${{ inputs.project }}
+        run: |
+          if [ -z "$PW_PROJECT" ] || [ "$PW_PROJECT" = "all" ]; then
+            npx playwright test --reporter=html
+          else
+            npx playwright test --reporter=html --project="$PW_PROJECT"
+          fi
 
       - name: Upload HTML Report
         if: always()
