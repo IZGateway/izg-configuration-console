@@ -892,7 +892,14 @@ class Dynamo implements DbClient {
       params.Item.isPasswordDifferent = changeRequestData.isPasswordDifferent
     }
     if (changeRequestData.isPasswordDifferent) {
-      params.Item.password = changeRequestData.requested.password || ''
+      // A body with no password keeps the stored one. Rebuilding the item
+      // stored '' with isPasswordDifferent still true, so the next deploy
+      // failed (IGDD-3742). The stored value is already encrypted and is
+      // copied as is, so it is never encrypted twice.
+      params.Item.password =
+        changeRequestData.requested.password ||
+        (isUpdate ? existing.Item.password : undefined) ||
+        ''
     }
     if (changeRequestData.requested.hasOwnProperty('MSH11')) {
       params.Item.msh11 = changeRequestData.requested.MSH11
