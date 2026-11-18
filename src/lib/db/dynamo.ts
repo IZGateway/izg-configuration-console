@@ -892,7 +892,14 @@ class Dynamo implements DbClient {
       params.Item.isPasswordDifferent = changeRequestData.isPasswordDifferent
     }
     if (changeRequestData.isPasswordDifferent) {
-      params.Item.password = changeRequestData.requested.password || ''
+      // A body with no password keeps the stored one. Rebuilding the item
+      // stored '' with isPasswordDifferent still true, so the next deploy
+      // failed (IGDD-3742). The stored value is already encrypted and is
+      // copied as is, so it is never encrypted twice.
+      params.Item.password =
+        changeRequestData.requested.password ||
+        (isUpdate ? existing.Item.password : undefined) ||
+        ''
     }
     if (changeRequestData.requested.hasOwnProperty('MSH11')) {
       params.Item.msh11 = changeRequestData.requested.MSH11
@@ -913,6 +920,49 @@ class Dynamo implements DbClient {
       return dcr
     }
     return null
+  }
+
+  async updateDestinationChangeRequestSchedule(
+    id: number,
+    schedule: { scheduledAt: Date; isAsap: boolean; requestedBy: string }
+  ): Promise<boolean> {
+    // An UpdateCommand, not upsertDestinationChangeRequest: that is a full
+    // PutCommand, and a reschedule carries no password. Rebuilding the item
+    // from it stored password = '' while keeping isPasswordDifferent = true,
+    // so the deploy that followed failed (IGDD-3742).
+    const ts = new Date().toISOString()
+    const params: UpdateCommandInput = {
+      TableName: TABLE_NAME,
+      Key: {
+        entityType: 'DestinationChangeRequest',
+        sortKey: `${id}`,
+      },
+      UpdateExpression:
+        'SET scheduledAt = :scheduledAt, isAsap = :isAsap, requestedAt = :requestedAt, requestedBy = :requestedBy, updatedBy = :updatedBy, updatedOn = :updatedOn',
+      ConditionExpression: 'attribute_exists(sortKey)',
+      ExpressionAttributeValues: {
+        ':scheduledAt': new Date(schedule.scheduledAt).toISOString(),
+        ':isAsap': schedule.isAsap,
+        ':requestedAt': ts,
+        ':requestedBy': schedule.requestedBy,
+        ':updatedBy': getAuditUserString(),
+        ':updatedOn': ts,
+      },
+    }
+    try {
+      await dynamodDbDocClient.send(new UpdateCommand(params))
+    } catch (error) {
+      if (error.name === 'ConditionalCheckFailedException') {
+        return false
+      }
+      throw error
+    }
+    logger.info('DestinationChangeRequest schedule updated', {
+      id,
+      scheduledAt: params.ExpressionAttributeValues[':scheduledAt'],
+      isAsap: schedule.isAsap,
+    })
+    return true
   }
 
   async deleteDestinationChangeRequest(id: number): Promise<boolean> {
