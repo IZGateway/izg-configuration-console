@@ -14,6 +14,13 @@ export default interface ConfigConsoleMutateRepository {
   upsertDestinationChangeRequest(
     changeRequestData: Omit<DestinationChangeRequest, 'id'> & { id?: number }
   ): Promise<DestinationChangeRequest>
+  // Writes only the schedule and audit attributes of an existing change
+  // request; the stored password and isPasswordDifferent are left untouched
+  // (IGDD-3742). Resolves false when no record exists for the id.
+  updateDestinationChangeRequestSchedule(
+    id: number,
+    schedule: { scheduledAt: Date; isAsap: boolean; requestedBy: string }
+  ): Promise<boolean>
   deleteDestinationChangeRequest(id: number): Promise<boolean>
   createDestinationChangeRequestDeploymentAudit(
     changeRequest: DestinationChangeRequest,

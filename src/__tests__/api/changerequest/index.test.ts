@@ -30,6 +30,7 @@ jest.mock('../../../../logger', () => ({
 }))
 
 const mockUpsertDestinationChangeRequest = jest.fn()
+const mockUpdateDestinationChangeRequestSchedule = jest.fn()
 // Base-repository read (no decrypt) vs the decrypting wrapper's read.
 const mockFetchDestination = jest.fn()
 const mockDecryptingFetchDestination = jest.fn()
@@ -41,6 +42,8 @@ jest.mock('../../../lib/db/DbClientFactory', () => ({
     getDbClient: jest.fn().mockResolvedValue({
       upsertDestinationChangeRequest: (...args: unknown[]) =>
         mockUpsertDestinationChangeRequest(...args),
+      updateDestinationChangeRequestSchedule: (...args: unknown[]) =>
+        mockUpdateDestinationChangeRequestSchedule(...args),
       getRepository: () => ({
         fetchDestination: (...args: unknown[]) => mockFetchDestination(...args),
       }),
@@ -321,6 +324,7 @@ describe('PUT/POST /api/changerequest id is never trusted from the body (IGDD-35
     ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
     ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
     mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
+    mockUpdateDestinationChangeRequestSchedule.mockResolvedValue(true)
     mockGetChangeRequestId.mockReturnValue(999)
     mockFetchDestinationChangeRequestById.mockResolvedValue({
       id: 999,
@@ -384,8 +388,9 @@ describe('PUT/POST /api/changerequest id is never trusted from the body (IGDD-35
     expect(mockChangeRequestTicketComment.mock.calls[0][0]).toBe(
       'REAL-JIRA-999'
     )
-    const [writtenArgs] = mockUpsertDestinationChangeRequest.mock.calls[0]
-    expect(writtenArgs).toMatchObject({ id: 999, jiraId: 'REAL-JIRA-999' })
+    expect(mockUpdateDestinationChangeRequestSchedule.mock.calls[0][0]).toBe(
+      999
+    )
     expect(res.status).toHaveBeenCalledWith(200)
   })
 
@@ -405,7 +410,7 @@ describe('PUT/POST /api/changerequest id is never trusted from the body (IGDD-35
 
     expect(res.status).toHaveBeenCalledWith(404)
     expect(mockChangeRequestTicketComment).not.toHaveBeenCalled()
-    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+    expect(mockUpdateDestinationChangeRequestSchedule).not.toHaveBeenCalled()
   })
 
   it('no longer offers DELETE on this route — the path-param route is the only delete path', async () => {
@@ -471,5 +476,159 @@ describe('POST /api/changerequest draft save requires edit.canSaveDraft', () => 
 
     expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
     expect(res.status).toHaveBeenCalledWith(403)
+  })
+})
+
+/**
+ * IGDD-3742: rescheduling a password change rebuilt the whole record from the
+ * request body, which carries no password. The record was stored with
+ * password '' and isPasswordDifferent still true, and its deploy then failed.
+ */
+describe('PUT /api/changerequest?scheduleupdate preserves the stored change (IGDD-3742)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
+    })
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
+    mockUpdateDestinationChangeRequestSchedule.mockResolvedValue(true)
+    mockGetChangeRequestId.mockReturnValue(999)
+    mockFetchDestinationChangeRequestById.mockResolvedValue({
+      id: 999,
+      jiraId: 'REAL-JIRA-999',
+      destId: 'dest1',
+      isPasswordDifferent: true,
+    })
+  })
+
+  // What the Reschedule dialog sends: the loaded change request, which has
+  // isPasswordDifferent true but no password, plus the new schedule.
+  const rescheduleBody = (overrides: Record<string, unknown> = {}) => ({
+    destId: 'dest1',
+    destType: { typeId: 1, type: 'PROD' },
+    isPasswordDifferent: true,
+    requestedAt: '2026-11-16T17:54:37.000Z',
+    scheduledAt: '2026-11-18T13:00:00.000Z',
+    isAsap: false,
+    // No destUri: the route's URI guard runs first and is not under test.
+    requested: { username: 'user1' },
+    ...overrides,
+  })
+
+  it('writes only the schedule and never rewrites the record', async () => {
+    const { req, res } = buildReqRes(rescheduleBody(), {
+      method: 'PUT',
+      query: { scheduleupdate: 'true' },
+    })
+
+    await handler(req, res)
+
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+    expect(mockUpdateDestinationChangeRequestSchedule).toHaveBeenCalledWith(
+      999,
+      {
+        scheduledAt: '2026-11-18T13:00:00.000Z',
+        isAsap: false,
+        requestedBy: 'real-user@example.com',
+      }
+    )
+    expect(res.status).toHaveBeenCalledWith(200)
+  })
+
+  it('keeps an ASAP request, which used to be dropped', async () => {
+    const { req, res } = buildReqRes(rescheduleBody({ isAsap: true }), {
+      method: 'PUT',
+      query: { scheduleupdate: 'true' },
+    })
+
+    await handler(req, res)
+
+    expect(
+      mockUpdateDestinationChangeRequestSchedule.mock.calls[0][1]
+    ).toMatchObject({ isAsap: true })
+  })
+
+  it('404s when the record disappears before the schedule is written', async () => {
+    mockUpdateDestinationChangeRequestSchedule.mockResolvedValue(false)
+    const { req, res } = buildReqRes(rescheduleBody(), {
+      method: 'PUT',
+      query: { scheduleupdate: 'true' },
+    })
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(404)
+  })
+})
+
+/**
+ * IGDD-3742: the form checks that the two password fields match, but the
+ * server did not. A blank new password with a non-blank confirmation was
+ * stored as a password change with an empty password.
+ */
+describe('POST /api/changerequest password confirmation (IGDD-3742)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { email: 'real-user@example.com', roles: ['IZG Operations'] },
+    })
+    ;(getToken as jest.Mock).mockResolvedValue({ sub: 'user-sub' })
+    ;(hasAccessToDestId as jest.Mock).mockReturnValue(true)
+    mockUpsertDestinationChangeRequest.mockResolvedValue({ id: 1 })
+    mockCreateChangeRequestTicket.mockResolvedValue({ key: 'CCT-1' })
+  })
+
+  const submit = (requested: Record<string, unknown>) =>
+    buildReqRes({
+      destId: 'ak',
+      destType: { typeId: 5, type: 'DEV' },
+      isDraft: false,
+      requested,
+      current: {},
+    })
+
+  it.each([
+    ['a blank new password with a confirmation', '', 'secret'],
+    ['a new password with a blank confirmation', 'secret', ''],
+    ['passwords that differ', 'secret', 'Secret'],
+  ])('rejects %s before raising a ticket', async (_label, newPw, confirmPw) => {
+    const { req, res } = submit({
+      newPassword: newPw,
+      confirmPassword: confirmPw,
+    })
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(mockCreateChangeRequestTicket).not.toHaveBeenCalled()
+    expect(mockUpsertDestinationChangeRequest).not.toHaveBeenCalled()
+  })
+
+  it('stores a matching new password as a password change, without the form-only fields', async () => {
+    const { req, res } = submit({
+      newPassword: 'secret',
+      confirmPassword: 'secret',
+    })
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    const [written] = mockUpsertDestinationChangeRequest.mock.calls[0]
+    expect(written.isPasswordDifferent).toBe(true)
+    expect(written.requested.password).toBe('secret')
+    expect(written.requested).not.toHaveProperty('newPassword')
+    expect(written.requested).not.toHaveProperty('confirmPassword')
+  })
+
+  it('keeps the stored password when neither field is filled', async () => {
+    const { req, res } = submit({ newPassword: '', confirmPassword: '' })
+
+    await handler(req, res)
+
+    expect(res.status).toHaveBeenCalledWith(200)
+    const [written] = mockUpsertDestinationChangeRequest.mock.calls[0]
+    expect(written.isPasswordDifferent).toBe(false)
+    expect(written.requested.password).toBe('stored-password')
   })
 })
