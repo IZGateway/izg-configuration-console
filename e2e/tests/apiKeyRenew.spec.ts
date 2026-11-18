@@ -1,5 +1,4 @@
 import { Page, BrowserContext, expect, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import { apiKeyRow } from '../helpers/createApiKey'
 import {
@@ -7,7 +6,11 @@ import {
   createActiveKeyOnNewDomain,
   requiresDnsBypass,
 } from '../helpers/apiKeyCreate'
-import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
+import {
+  API_KEYS_VIEWPORT,
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
+} from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Renew API Key".
@@ -47,6 +50,8 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // the wrong branch.
 const RENEW_EARLY_THRESHOLD_DAYS = 30
 const RENEWAL_TERM_DAYS = 365
+
+requireApiKeyAdmin()
 
 let context: BrowserContext
 let page: Page
@@ -92,12 +97,7 @@ test.beforeAll(async ({ browser }) => {
     locale: 'en-US',
   })
   page = await context.newPage()
-  await loginToOkta(
-    page,
-    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
-    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
-    null
-  )
+  await loginAsApiKeyAdmin(page)
 })
 
 test.beforeEach(async () => {

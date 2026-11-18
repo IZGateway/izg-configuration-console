@@ -1,42 +1,26 @@
 import { test, expect, Page } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import {
   API_KEYS_VIEWPORT,
   openApiKeyManagement,
   getStatCardValue,
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
 } from '../helpers/apiKeyHelpers'
 
-// IZG Security: IZG Operations lost API key access in IGDD-3549, so
-// OKTA_USERNAME can no longer open /apikeys.
-const requiredEnvs = [
-  'E2E_RBAC_IZG_SECURITY_USERNAME',
-  'E2E_RBAC_IZG_SECURITY_PASSWORD',
-  'BASE_URL',
-] as const
+requireApiKeyAdmin('BASE_URL')
 
 let context
 let page: Page
 
 test.describe('API Key Management dashboard', () => {
   test.beforeAll(async ({ browser }) => {
-    const missing = requiredEnvs.filter((k) => !process.env[k])
-    if (missing.length) {
-      test.skip(true, `Missing env vars: ${missing.join(', ')}`)
-    }
-
     // A context made here does not inherit test.use(), so the viewport is set
     // on it directly. See API_KEYS_VIEWPORT.
     context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
     page = await context.newPage()
 
-    await loginToOkta(
-      page,
-      process.env.E2E_RBAC_IZG_SECURITY_USERNAME as string,
-      process.env.E2E_RBAC_IZG_SECURITY_PASSWORD as string,
-      // No _FULLNAME secret exists for this role: skip the header name check.
-      null
-    )
+    await loginAsApiKeyAdmin(page)
 
     await openApiKeyManagement(page)
   })
@@ -45,7 +29,9 @@ test.describe('API Key Management dashboard', () => {
     if (page && !page.isClosed()) {
       const logoutButton = page.locator('#logout')
       if ((await logoutButton.count()) > 0) {
-        await logout(page)
+        // Cleanup only: a sign-out that fails or times out must not fail the
+        // hook. Closing the context below ends the session anyway.
+        await logout(page).catch(() => {})
       }
       await page.close()
     }

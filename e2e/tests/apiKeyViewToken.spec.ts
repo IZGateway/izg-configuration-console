@@ -24,7 +24,6 @@
  * and skips with a reason when it is unavailable.
  */
 import { expect, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
 import {
   ActionIcon,
   createActiveUnviewedKey,
@@ -35,7 +34,11 @@ import {
   rowAction,
   tokenDialog,
 } from '../helpers/apiKeyCreate'
-import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
+import {
+  API_KEYS_VIEWPORT,
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
+} from '../helpers/apiKeyHelpers'
 
 // loginToOkta alone budgets a 60s navigation retry plus 45s/30s/60s internal
 // waits before the fixture even starts, so the config's 60s default is not
@@ -46,19 +49,7 @@ test.describe.configure({ timeout: 120000 })
 // API_KEYS_VIEWPORT.
 test.use({ viewport: API_KEYS_VIEWPORT })
 
-test.beforeAll(() => {
-  const missing = [
-    'E2E_RBAC_IZG_SECURITY_USERNAME',
-    'E2E_RBAC_IZG_SECURITY_PASSWORD',
-  ].filter(
-    (name) => !process.env[name]
-  )
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`
-    )
-  }
-})
+requireApiKeyAdmin()
 
 test('Unviewed active key can be revealed once; view icon disappears after', async ({
   page,
@@ -68,12 +59,7 @@ test('Unviewed active key can be revealed once; view icon disappears after', asy
   const domain = newDomain()
   const description = newDescription('view-token')
 
-  await loginToOkta(
-    page,
-    process.env.E2E_RBAC_IZG_SECURITY_USERNAME,
-    process.env.E2E_RBAC_IZG_SECURITY_PASSWORD,
-    null
-  )
+  await loginAsApiKeyAdmin(page)
   await page.goto('/apikeys', { waitUntil: 'networkidle' })
   await expect(
     page.getByRole('button', { name: 'Create Key' }),
