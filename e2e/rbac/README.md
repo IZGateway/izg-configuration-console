@@ -117,7 +117,9 @@ own:
   `matrix.ts` and bumps `MATRIX_SOURCE.version`.
 - **A new feature or page:** add a row, with each API probe's `refusal` taken
   from its route (see below). If it cannot be probed safely yet, set
-  `notAutomated` with the reason, so the gap in coverage is visible.
+  `notAutomated` with the reason, so the gap in coverage is visible. If its
+  probes cover only part of it, set `notCovered` with the part left out:
+  every cell of the row lists it, so a PASS does not read as covering it.
 
 ## Probes never change data
 
@@ -128,7 +130,8 @@ jurisdiction the gate decides on), or `denyOnly`: sent only to roles the
 matrix denies, whose request the route middleware refuses before the handler
 runs. Keep it that way when adding rows, even for a gate that is broken: an
 action that a probe can only reach with real data, such as cancelling a
-change request, is not probed. See the header of `matrix.ts`.
+change request, is not probed; its row marks it `notCovered`. See the
+header of `matrix.ts`.
 
 Probes that are refused produce `AccessDenied` audit events in the target
 environment's logs. That is expected.
@@ -152,15 +155,16 @@ jurisdiction, decide that row for jurisdiction roles.
 A `pageData` probe checks that a page's payload carries data only for
 allowed roles. Once a page stops sending the data to anyone, mark it
 `noLongerSent`: it must then be absent for every role, and the row's API
-probe decides who gets the data (`/api-doc` since IGDD-3550).
+probe decides who gets the data (`/api-doc` since IGDD-3550). No known gap
+explains that prop coming back: it is a ❌ FAIL for every role.
 
 ## Known gaps in the report
 
 A `knownGaps` entry explains a mismatch in one direction only: "not yet
 granted" (the role should get it and is refused) or "still granted" (the
 role should be refused and gets it), on the role's own destination. Any
-other mismatch in that cell, above all a foreign destination let through,
-is still a ❌ FAIL. Keep gap reasons short and put the detail in the ticket:
+other mismatch in that cell, above all a foreign destination let through
+or a `noLongerSent` prop sent again, is still a ❌ FAIL. Keep gap reasons short and put the detail in the ticket:
 this repo is public.
 
 ## UI checks and UI-only protection

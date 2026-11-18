@@ -113,22 +113,34 @@ async function evaluateRow(
 
   for (const probe of row.pageData ?? []) {
     const target = `${probe.page} pageProps.${probe.prop}`
-    // A prop the page no longer sends must be absent for every role.
+    // A prop the page no longer sends must be absent for every role, so a
+    // role's known gap must not turn it coming back into a KNOWN_GAP.
     const dataExpected = probe.noLongerSent ? 'denied' : expected
-    checks.push(toCheck('data', target, dataExpected, await observePageData(page, probe)))
+    const check = toCheck('data', target, dataExpected, await observePageData(page, probe))
+    checks.push(probe.noLongerSent ? { ...check, everyRole: true } : check)
   }
 
   // A jurisdiction role's destination list must hold only the jurisdictions
   // in its session. An extra entry is a tenancy leak, and a foreign
   // destination too, which is how the fold keeps it from any known gap. A
-  // global role's list must reach beyond its claim.
-  if (row.checksDestinationList) {
+  // global role's list must reach beyond its claim, unless the claim already
+  // names every jurisdiction: nothing is then outside it to list.
+  const listTarget = 'GET /api/destinations (outside the jurisdictions claim)'
+  if (row.checksDestinationList && role.reach === 'all' && ctx.claimCoversAll) {
+    checks.push({
+      layer: 'api',
+      target: listTarget,
+      expected: 'allowed',
+      status: 'SKIPPED',
+      detail: "the account's jurisdictions claim names every jurisdiction, so no destination is outside it",
+    })
+  } else if (row.checksDestinationList) {
     const extra = ctx.outOfClaim.map((d) => `${d.typeId}/${d.destId}`)
     const own = role.reach === 'own'
     checks.push({
       ...decide(
         'api',
-        'GET /api/destinations (outside the jurisdictions claim)',
+        listTarget,
         own ? 'denied' : 'allowed',
         extra.length ? 'allowed' : 'denied',
         !extra.length
@@ -200,6 +212,17 @@ async function evaluateRow(
     checks.push(toCheck('ui', obs.target, expected, obs))
   }
 
+  // Part of the row no probe covers: listed with the cell's checks, so a
+  // PASS does not read as covering it.
+  if (row.notCovered) {
+    checks.push({
+      layer: 'api',
+      target: row.notCovered.target,
+      status: 'NOT_AUTOMATED',
+      detail: row.notCovered.reason,
+    })
+  }
+
   return applyUiOnly(foldCell(row.id, role.name, checks, gap, expected), expected, row.uiOnly)
 }
 
@@ -241,8 +264,11 @@ async function runColumn(
   const claimed = (code: string) => claims.has(code.toLowerCase())
   const own = role.reach === 'all' ? listed : listed.filter((d) => claimed(d.destId))
   // Jurisdictions are matched on their prefix, the same claim, as the
-  // API key gate matches them (apiKeyAuthz.ts).
-  const jurisdictions = MATRIX.some((r) => r.api?.some(usesJurisdiction)) ? await jurisdictionsOf(page) : []
+  // API key gate matches them (apiKeyAuthz.ts). The destination list check
+  // uses them too, to tell a claim that names every jurisdiction.
+  const jurisdictions = MATRIX.some((r) => r.checksDestinationList || r.api?.some(usesJurisdiction))
+    ? await jurisdictionsOf(page)
+    : []
   const ctx: ProbeContext = {
     own: own[0],
     foreign: foreignDestination(own, cache),
@@ -250,6 +276,8 @@ async function runColumn(
     listed: MATRIX.some((r) => r.ui?.length) ? await listedDestinations(page) : [],
     ownJurisdiction: jurisdictions.find((j) => role.reach === 'all' || claimed(j.prefix)),
     foreignJurisdiction: role.reach === 'all' ? undefined : jurisdictions.find((j) => !claimed(j.prefix)),
+    // An empty list (the route failed) proves nothing, so the check runs.
+    claimCoversAll: jurisdictions.length > 0 && jurisdictions.every((j) => claimed(j.prefix)),
   }
   const links = await navLinks(page)
 

@@ -41,6 +41,12 @@ export interface CheckResult {
   detail: string
   /** For a probe on a destination: whose destination it was. */
   dest?: DestinationKind
+  /**
+   * Set when the check expects the same outcome for every role, whatever the
+   * matrix grants (a `noLongerSent` prop). No known gap explains it or
+   * closes on it.
+   */
+  everyRole?: boolean
 }
 
 export interface CellResult {
@@ -171,8 +177,9 @@ function worst(statuses: CellStatus[]): CellStatus {
  * allowed check that was refused; "still granted" explains a denied check
  * that got through. Those FAIL checks become KNOWN_GAP. Any other FAIL stays
  * a FAIL, above all a foreign destination let through, which is a tenancy
- * leak whatever the gap says. If no check in the gap's direction mismatches
- * any more and one passed, the gap has closed and the entry should go.
+ * leak whatever the gap says, and an `everyRole` check, which no role's gap
+ * covers. If no check in the gap's direction mismatches any more and one
+ * passed, the gap has closed and the entry should go.
  */
 export function foldCell(
   rowId: string,
@@ -182,7 +189,8 @@ export function foldCell(
   expected?: Outcome
 ): CellResult {
   if (!gap) return { rowId, role, status: worst(checks.map((c) => c.status)), checks, gap }
-  const inGapDirection = (c: CheckResult) => c.expected === expected && c.dest !== 'foreign'
+  const inGapDirection = (c: CheckResult) =>
+    c.expected === expected && c.dest !== 'foreign' && !c.everyRole
   const folded = checks.map((c) =>
     c.status === 'FAIL' && inGapDirection(c) ? { ...c, status: 'KNOWN_GAP' as CellStatus } : c
   )

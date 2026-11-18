@@ -66,7 +66,9 @@ test.describe('matrix.ts', () => {
       !!(r.nav?.length || r.pages?.length || r.api?.length || r.ui?.length || r.pageData?.length || r.checksDestinationList)
     const neither = MATRIX.filter((r) => !r.notAutomated && !automated(r)).map((r) => r.id)
     const both = MATRIX.filter((r) => r.notAutomated && automated(r)).map((r) => r.id)
-    expect({ neither, both }).toEqual({ neither: [], both: [] })
+    // A row with nothing probed is notAutomated, not notCovered.
+    const partlyOfNothing = MATRIX.filter((r) => r.notCovered && !automated(r)).map((r) => r.id)
+    expect({ neither, both, partlyOfNothing }).toEqual({ neither: [], both: [], partlyOfNothing: [] })
   })
 
   test('a row with a global-only probe has another probe for jurisdiction roles', () => {
@@ -160,6 +162,15 @@ test.describe('cell logic', () => {
 
   test('a gap is closed only by a check in its direction', () => {
     expect(foldCell('r', 'R', [foreignRefused], gap, 'allowed').status).not.toBe('GAP_CLOSED')
+  })
+
+  test('a gap neither hides nor is closed by a check for every role', () => {
+    // A noLongerSent prop coming back, for a role whose gap is "still granted".
+    const sentAgain: CheckResult = { ...decide('data', 'p', 'denied', 'allowed', 'sent'), everyRole: true }
+    const stillAbsent: CheckResult = { ...decide('data', 'p', 'denied', 'denied', 'absent'), everyRole: true }
+    expect(foldCell('r', 'R', [fail, sentAgain], gap, 'denied').status).toBe('FAIL')
+    expect(foldCell('r', 'R', [fail, stillAbsent], gap, 'denied').status).toBe('KNOWN_GAP')
+    expect(foldCell('r', 'R', [stillAbsent], gap, 'denied').status).not.toBe('GAP_CLOSED')
   })
 
   test('a column that stopped early marks the rows it did not record', () => {

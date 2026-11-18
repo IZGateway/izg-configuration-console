@@ -205,6 +205,10 @@ class RbacReporter implements Reporter {
     for (const row of MATRIX.filter((r) => r.notAutomated)) {
       out.push(`- ${row.feature}: ${row.notAutomated}`)
     }
+    for (const row of MATRIX.filter((r) => r.notCovered)) {
+      const { target, reason, ticket } = row.notCovered
+      out.push(`- ${row.feature}, \`${target}\` only: ${reason}${ticket ? ` (${ticket})` : ''}`)
+    }
     out.push('')
 
     const notRun = ROLES.filter((r) => !this.columns.has(r.name))

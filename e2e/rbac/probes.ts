@@ -207,6 +207,11 @@ export interface ProbeContext {
   /** A jurisdiction inside the role's reach, and one outside it (own-reach roles only). */
   ownJurisdiction?: Jurisdiction
   foreignJurisdiction?: Jurisdiction
+  /**
+   * True when the session's jurisdictions claim names every jurisdiction in
+   * /api/jurisdictions, so no destination can be outside it.
+   */
+  claimCoversAll?: boolean
 }
 
 /**

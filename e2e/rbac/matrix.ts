@@ -177,6 +177,12 @@ export interface MatrixRow {
   knownGaps?: Partial<Record<RoleName, KnownGap>>
   /** Set when no probe can test the row safely yet; the reason why. */
   notAutomated?: string
+  /**
+   * Set when the row's probes cover only part of it: the part left out, and
+   * why. Every cell of the row lists it, and so does the report's "Not
+   * automated" section.
+   */
+  notCovered?: { target: string; reason: string; ticket?: string }
 }
 
 // Column shorthands, in Confluence column order.
@@ -413,6 +419,10 @@ export const MATRIX: readonly MatrixRow[] = [
     // Cancel is not probed: its handler looks the change request up before
     // deciding, so only a real one would reach the role check, and a broken
     // check would then cancel it and comment on its Jira ticket.
+    notCovered: {
+      target: 'DELETE /api/changerequest/{dest} (cancel)',
+      reason: 'needs a real change request to reach its role check, which a broken check would cancel',
+    },
     api: [
       {
         method: 'PUT',
