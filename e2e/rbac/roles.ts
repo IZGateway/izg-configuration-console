@@ -49,17 +49,17 @@ export interface RoleDef {
 export const ROLES: readonly RoleDef[] = [
   {
     name: 'IZG Security',
-    status: 'pending',
+    // In code since #767 (_IZGSecurityAccess.ts, global tenancy).
+    status: 'live',
     reach: 'all',
     accountEnv: 'E2E_RBAC_IZG_SECURITY',
-    tracking: 'IGDD-3600',
   },
   {
     name: 'Jurisdiction Security',
-    status: 'pending',
+    // In code since IGDD-3500 (_JurisdictionSecurityAccess.ts).
+    status: 'live',
     reach: 'own',
     accountEnv: 'E2E_RBAC_JURIS_SECURITY',
-    tracking: 'IGDD-3500',
   },
   {
     name: 'IZG Operations',

@@ -24,14 +24,17 @@ export const loginToOkta = async (
   password: string,
   userFullName: string | null = 'Automation Testerson'
 ) => {
+  // Callers pass different accounts (OKTA_USERNAME, OKTA_NONADMIN_USERNAME,
+  // the E2E_RBAC_<ROLE>_USERNAME accounts), so the message can't name the one
+  // that is unset.
   if (typeof username !== 'string' || username.length === 0) {
     throw new Error(
-      'loginToOkta: username is missing or empty (check OKTA_USERNAME env var)'
+      'loginToOkta: username is missing or empty. Check the _USERNAME env var this spec signs in with.'
     )
   }
   if (typeof password !== 'string' || password.length === 0) {
     throw new Error(
-      'loginToOkta: password is missing or empty (check OKTA_PASSWORD env var)'
+      'loginToOkta: password is missing or empty. Check the _PASSWORD env var this spec signs in with.'
     )
   }
 
