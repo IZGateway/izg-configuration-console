@@ -58,6 +58,8 @@ jobs:
       DRY_RUN: ${{ inputs.dry-run }}
       GITHUB_REGISTRY_NAME: izgateway
       MAIN_BRANCH: ${{ inputs.main-branch }}
+      # Read by the .npmrc that setup-node writes (GitHub Packages auth).
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       RELEASE_TYPE: ${{ inputs.release-type }}
       RELEASE_VERSION: ${{ inputs.release-version }}
       SKIP_APHL: ${{ inputs.skip-aphl }}
@@ -79,18 +81,16 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
+      # registry-url writes an .npmrc that holds the text ${NODE_AUTH_TOKEN}, not the
+      # token. The job env supplies NODE_AUTH_TOKEN. Do not use
+      # `npm config set ... _authToken`: npm writes its command line, with the
+      # token, to ~/.npm/_logs.
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
-
-      - name: Configure npm authentication
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm config set @izgateway:registry https://npm.pkg.github.com/
-          npm config set //npm.pkg.github.com/:_authToken "${NPM_TOKEN}"
-          echo "npm authentication configured"
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
 
       - name: Configure Git identity
         run: |
@@ -286,7 +286,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ steps.build-timestamp.outputs.value }}
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+          secrets: |
+            npm_token=${{ secrets.NPM_TOKEN }}
           push: ${{ inputs.dry-run == false }}
           tags: ${{ steps.image-tags.outputs.tags }}
 

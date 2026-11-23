@@ -1,10 +1,20 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-ARG NPM_TOKEN
-RUN npm config set @izgateway:registry https://npm.pkg.github.com/ \
-    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
-    && npm ci
+# The GitHub Packages token comes from a BuildKit secret, not an ARG, so the image
+# history does not keep it. Build with: --secret id=npm_token,env=NPM_TOKEN
+# The npmrc is on a tmpfs mount, so no layer keeps it. It holds the literal text
+# ${NPM_TOKEN}, and npm reads the value from the environment. Do not put the token
+# on the npm command line: npm writes its command line to /root/.npm/_logs.
+RUN --mount=type=secret,id=npm_token,required=true \
+    --mount=type=tmpfs,target=/run/npm-auth \
+    printf '%s\n' \
+        '@izgateway:registry=https://npm.pkg.github.com/' \
+        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
+    && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
+    && export NPM_TOKEN \
+    && npm ci --userconfig=/run/npm-auth/.npmrc \
+    && rm -rf /root/.npm/_logs
 
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
@@ -40,11 +50,18 @@ RUN set -e; \
     id -u nginx >/dev/null 2>&1 || { echo "ERROR: 'nginx' user not found; required by 'user nginx;' in nginx.conf.template." >&2; exit 1; }
 
 # Install Dependencies and cleanup yarn.lock if present
-ARG NPM_TOKEN
-RUN apk add --no-cache bash gettext tini curl libc6-compat \
-    && npm config set @izgateway:registry https://npm.pkg.github.com/ \
-    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
-    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
+# The token is a BuildKit secret, as in the deps stage. This is the final image.
+RUN --mount=type=secret,id=npm_token,required=true \
+    --mount=type=tmpfs,target=/run/npm-auth \
+    apk add --no-cache bash gettext tini curl libc6-compat \
+    && printf '%s\n' \
+        '@izgateway:registry=https://npm.pkg.github.com/' \
+        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
+    && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
+    && export NPM_TOKEN \
+    && npm ci --omit=dev --userconfig=/run/npm-auth/.npmrc \
+    && rm -rf /root/.npm/_logs \
+    && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 # The API spec, built by `prebuild` from src/pages/api/**, which this stage does
