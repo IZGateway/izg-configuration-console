@@ -25,9 +25,11 @@ jobs:
     runs-on: ubuntu-latest
 
     # id-token: the RBAC report upload signs in to AWS with GitHub OIDC.
+    # actions: the Jira report step looks up which step failed (IGDD-2768).
     permissions:
       contents: read
       id-token: write
+      actions: read
 
     env:
       OKTA_USERNAME: ${{ secrets.OKTA_USERNAME }}
@@ -133,6 +135,7 @@ jobs:
       # A scheduled run has no input, so it runs every project. The input goes
       # through an environment variable, not into the script text.
       - name: Run Playwright tests (no screenshots)
+        id: playwright
         env:
           PW_PROJECT: ${{ inputs.project }}
         run: |
@@ -247,3 +250,18 @@ jobs:
               --body "$file" --content-type "$type" --if-none-match '*' > /dev/null
           done
           echo "Full report: \`${folder}/\` in the RBAC report bucket." >> "$GITHUB_STEP_SUMMARY"
+
+      # Files an IGDD Bug when the scheduled run fails (IGDD-2768, IGDD-2762). The
+      # same failure while that ticket is open adds a comment instead. Scheduled runs
+      # only, so manual runs never file tickets. Must stay the last step.
+      # reason: test failures always map to one ticket, even if a later step (the
+      # report-only RBAC check, or stopping AWS Dev) also fails. Any other failure,
+      # such as AWS Dev not starting, is named after the step that failed.
+      - name: Report failure to Jira
+        if: failure() && github.event_name == 'schedule'
+        uses: IZGateway/izg-dependency-scripts/.github/actions/report-ci-failure@v1
+        with:
+          component: Configuration Console
+          jira-api-url: ${{ secrets.JIRA_API_URL }}
+          jira-auth: ${{ secrets.JIRA_API_AUTH_BASE64 }}
+          reason: ${{ steps.playwright.outcome == 'failure' && 'Playwright tests failed' || '' }}
