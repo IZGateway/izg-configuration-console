@@ -5,16 +5,16 @@
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-# The GitHub Packages token comes from a BuildKit secret, not an ARG, so it is not
-# kept in the image history. Build with: --secret id=npm_token,env=NPM_TOKEN
-# Do not pass the token as an npm command-line flag: npm writes its argv to
-# /root/.npm/_logs. The npmrc goes on a tmpfs mount (never saved in a layer) and
-# holds the literal text ${NPM_TOKEN}, which npm reads from the environment.
-RUN --mount=type=secret,id=npm_token \
+# The GitHub Packages token comes from a BuildKit secret, not an ARG, so the image
+# history does not keep it. Build with: --secret id=npm_token,env=NPM_TOKEN
+# The npmrc is on a tmpfs mount, so no layer keeps it. It holds the literal text
+# ${NPM_TOKEN}, and npm reads the value from the environment. Do not put the token
+# on the npm command line: npm writes its command line to /root/.npm/_logs.
+RUN --mount=type=secret,id=npm_token,required=true \
     --mount=type=tmpfs,target=/run/npm-auth \
     printf '%s\n' \
         '@izgateway:registry=https://npm.pkg.github.com/' \
-        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
+        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
     && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
     && export NPM_TOKEN \
     && npm ci --userconfig=/run/npm-auth/.npmrc \
@@ -56,16 +56,13 @@ RUN set -e; \
     id -u nginx >/dev/null 2>&1 || { echo "ERROR: 'nginx' user not found; required by 'user nginx;' in nginx.conf.template." >&2; exit 1; }
 
 # Install Dependencies and cleanup yarn.lock if present
-# The token is handled as in the deps stage. This stage is the final image, so the
-# token must not stay in a layer, in /root/.npmrc, or in an npm log.
-# The base image supplies bash, curl, and libc6-compat (through gcompat).
-# This stage adds gettext (for envsubst in run_and_monitor.sh) and tini.
-RUN --mount=type=secret,id=npm_token \
+# The token is a BuildKit secret, as in the deps stage. This is the final image.
+RUN --mount=type=secret,id=npm_token,required=true \
     --mount=type=tmpfs,target=/run/npm-auth \
-    apk add --no-cache "gettext>=0.24" "tini>=0.19" \
+    apk add --no-cache bash gettext tini curl libc6-compat \
     && printf '%s\n' \
         '@izgateway:registry=https://npm.pkg.github.com/' \
-        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
+        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
     && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
     && export NPM_TOKEN \
     && npm ci --omit=dev --userconfig=/run/npm-auth/.npmrc \
