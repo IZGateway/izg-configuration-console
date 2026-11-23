@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { izgHubRefresh } from './utils/izghubrefresh'
 
 interface FunctionWithArgs {

@@ -41,9 +41,7 @@ import type { PageControls, PageKey } from './accesslevel'
 // their types.
 /* eslint-disable no-redeclare */
 function useRoleAccess<P extends PageKey>(page: P): Partial<PageControls[P]>
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function useRoleAccess(): any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function useRoleAccess<P extends PageKey>(page?: P): any {
   /* eslint-enable no-redeclare */
   const session = useSession()

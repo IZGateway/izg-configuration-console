@@ -116,7 +116,6 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     }
 
     fetchDestinations()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Filter destinations when destination type changes

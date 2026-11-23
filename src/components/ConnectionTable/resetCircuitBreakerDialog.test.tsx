@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react'
 import ResetCircuitBreakerDialog from './resetCircuitBreakerDialog'

@@ -19,7 +19,7 @@ describe('cryptoSupport', () => {
     ['sentence', 'The quick brown fox jumps over the lazy dog'],
     ['empty string', ''],
     ['short string', 'Short'],
-    ['very long and complex', 'A VeryLongPasswordThatExceedsNormalLengthAndIncludesVariousCharacters1234567890!@#$%^&*()_+-=[]{}|;:\'\",.<>/?`~'],
+    ['very long and complex', 'A VeryLongPasswordThatExceedsNormalLengthAndIncludesVariousCharacters1234567890!@#$%^&*()_+-=[]{}|;:\'",.<>/?`~'],
     ['azure sas token', 'sv=2022-11-02&st=2024-12-07T16%3A00%3A20Z&se=2028-12-08T16%3A00%3A00Z&sr=c&sp=racwdlt&sig=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX%3D'],
     ['multi-token', 'si=izgw_onb&sip=54.205.50.245&spr=https&sv=2022-11-02&sr=c&sig=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX%3D,si=izgw_dev&sip=96.230.147.79&spr=https&sv=2022-11-02&sr=c&sig=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX%3D'],
     ['ip-restricted token', 'si=izgw_dev&sip=24.241.16.161&spr=https&sv=2022-11-02&sr=c&sig=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX%3D']

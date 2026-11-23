@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Destination } from '../type/Destination'
 import { DestinationAudit } from '../type/DestinationAudit'
 import { DestinationChangeRequest } from '../type/DestinationChangeRequest'
@@ -682,7 +680,6 @@ class Dynamo implements DbClient {
     )
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async convertResponseToDestinationChangeRequest(
     item: Record<string, any>
   ): Promise<DestinationChangeRequest> {

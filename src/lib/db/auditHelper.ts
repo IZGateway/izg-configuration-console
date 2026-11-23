@@ -237,12 +237,10 @@ export function serializeDateFields<T extends Record<string, unknown>>(
   for (const field of dateFields) {
     if (result[field] instanceof Date) {
       result[field] = result[field].toISOString()
-    } else if (result[field]) {
-      // Already a string or other type, keep as-is
-      result[field] = result[field]
-    } else {
+    } else if (!result[field]) {
       result[field] = null
     }
+    // Otherwise the value is already a string or other type. Keep it as-is.
   }
   return result
 }

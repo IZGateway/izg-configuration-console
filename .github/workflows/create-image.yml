@@ -24,4 +24,4 @@ jobs:
       - name: Expose value
         id: exposeValue
         run: |
-          echo "::set-output name=releaseDate::${{ env.RELEASE_DATE }}"
+          echo "releaseDate=${{ env.RELEASE_DATE }}" >> "$GITHUB_OUTPUT"
