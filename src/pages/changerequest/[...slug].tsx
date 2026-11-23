@@ -45,7 +45,6 @@ export default Changerequest
 // supply the page-entry capability from one role and reach from a different
 // one. Latent today, same split-decision class this PR closed on the API
 // routes. Anusha, PR #771.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getServerSideProps = withPageAccess<
   'changerequest',
   { changeRequest: any; jiraUrl: string }

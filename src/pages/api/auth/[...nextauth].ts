@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import NextAuth from 'next-auth'
 import OktaProvider from 'next-auth/providers/okta'
 import { randomUUID } from 'crypto'

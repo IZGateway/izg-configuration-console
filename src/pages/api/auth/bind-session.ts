@@ -105,7 +105,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Strip token claims that inflate the cookie but are never read after the
   // jwt callback completes at login. id_token and idToken are OIDC artefacts
   // that are only available during the sign-in flow and serve no runtime purpose.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { idToken: _idToken, id_token: _id_token, ...minimalToken } = token as any
   const updatedToken = { ...minimalToken, boundPublicKey: publicKey }
 

@@ -136,19 +136,16 @@ describe('Dynamo Integration Tests', () => {
 
     const result = await dynamo.upsertDestinationChangeRequest(changeRequest)
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { requestedAt, scheduledAt, id, ...actual } = result
     expect(actual).toEqual(expected)
     result.requested.MSH22 = 'MSH22'
     const result3 = await dynamo.upsertDestinationChangeRequest(result)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
       requestedAt: requestedAt3,
       scheduledAt: scheduledAt3,
       id: id3,
       ...actual2
     } = result3
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const {
       requestedAt: requestedAt4,
       scheduledAt: scheduledAt4,

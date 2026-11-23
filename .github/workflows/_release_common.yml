@@ -175,7 +175,7 @@ jobs:
           set -euo pipefail
 
           npm pkg set version="$RELEASE_VERSION"
-          npm install --package-lock-only --ignore-scripts --force
+          npm install --package-lock-only --ignore-scripts
           git add package.json package-lock.json
           if git diff --cached --quiet; then
             echo "Package version is already $RELEASE_VERSION"
@@ -185,7 +185,7 @@ jobs:
           git push origin "${{ steps.validate.outputs.release_branch }}"
 
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Run code quality checks
         run: npm run code-quality-check
@@ -286,7 +286,8 @@ jobs:
           sbom: false
           build-args: |
             BUILD_ID=${{ steps.build-timestamp.outputs.value }}
-            NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+          secrets: |
+            npm_token=${{ secrets.NPM_TOKEN }}
           push: ${{ inputs.dry-run == false }}
           tags: ${{ steps.image-tags.outputs.tags }}
 
@@ -342,7 +343,7 @@ jobs:
           if [[ "$RELEASE_TYPE" == "standard" ]]; then
             NEXT_VERSION="${{ steps.app-version.outputs.next_version }}"
             npm pkg set version="$NEXT_VERSION"
-            npm install --package-lock-only --ignore-scripts --force
+            npm install --package-lock-only --ignore-scripts
             git add package.json package-lock.json
             if git diff --cached --quiet; then
               echo "Package version is already $NEXT_VERSION"
@@ -352,7 +353,7 @@ jobs:
             fi
           else
             npm pkg set version="$DEVELOP_VERSION"
-            npm install --package-lock-only --ignore-scripts --force
+            npm install --package-lock-only --ignore-scripts
             git add package.json package-lock.json
             if git diff --cached --quiet; then
               echo "Develop version remained at $DEVELOP_VERSION"

@@ -87,15 +87,15 @@ const createChangeRequestTicket = async (
   } to be updated ${isAsap ? 'ASAP' : `on ${scheduledDateTime}`}`
   const changeRequestDetailsTemplate = `*Destination Id*: ${destId}\r\n*Environment*: ${
     destType.type
-  }\r\n*Requested By*: ${requestedBy}\r\n|| ||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Endpoint URL*|${
+  }\r\n*Requested By*: ${requestedBy}\r\n||\u00a0||CURRENT CONFIG VALUES||REQUESTED CONFIG VALUES||\r\n|*Endpoint URL*|${
     _.isEmpty(current.destUri) ? CURRENT_EMPTY_VALUE : current.destUri
   }|${getRequestedValue(requested, 'destUri')}|\r\n|*Username*|${
     _.isEmpty(current.username)
       ? CHANGE_REQUESTED_EMPTY_VALUE
       : current.username
-  }|${getRequestedValue(requested, 'username')}|\r\n|*Password*|REDACTED |${
+  }|${getRequestedValue(requested, 'username')}|\r\n|*Password*|REDACTED\u00a0|${
     !_.isEmpty(requested.password) ? '<UPDATED>' : 'REDACTED - NOT UPDATED'
-  } |\r\n|*Facility id*|${
+  }\u00a0|\r\n|*Facility id*|${
     _.isEmpty(current.facilityId) ? CURRENT_EMPTY_VALUE : current.facilityId
   }|${getRequestedValue(requested, 'facilityId')}|\r\n|*MSH3*|${
     _.isEmpty(current.MSH3) ? CURRENT_EMPTY_VALUE : current.MSH3
@@ -114,7 +114,7 @@ const createChangeRequestTicket = async (
   }|${getRequestedValue(
     requested,
     'RXA11'
-  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}\r\n\r\n*Config Console Links*\r\n\*Review Change Request*: ${CHANGE_REQUEST_URL}/changerequest/${
+  )}|\r\n*Deploy Datetime*: ${scheduledDateTime}\r\n\r\n*Config Console Links*\r\n*Review Change Request*: ${CHANGE_REQUEST_URL}/changerequest/${
     destType.typeId
   }/${destId}`
 

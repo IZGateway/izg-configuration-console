@@ -125,7 +125,7 @@ jobs:
           npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}
           echo "✓ npm authentication configured"
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps

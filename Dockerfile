@@ -1,11 +1,26 @@
+# The base image uses the :latest tag on purpose. The base image rebuilds every day
+# with security patches, and :latest gives each build of this image those patches.
+# GHCR has no version tags for the base image. A digest pin stops the patches.
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-ARG NPM_TOKEN
-RUN npm config set @izgateway:registry https://npm.pkg.github.com/ \
-    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
-    && npm ci
+# The GitHub Packages token comes from a BuildKit secret, not an ARG, so it is not
+# kept in the image history. Build with: --secret id=npm_token,env=NPM_TOKEN
+# Do not pass the token as an npm command-line flag: npm writes its argv to
+# /root/.npm/_logs. The npmrc goes on a tmpfs mount (never saved in a layer) and
+# holds the literal text ${NPM_TOKEN}, which npm reads from the environment.
+RUN --mount=type=secret,id=npm_token \
+    --mount=type=tmpfs,target=/run/npm-auth \
+    printf '%s\n' \
+        '@izgateway:registry=https://npm.pkg.github.com/' \
+        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
+    && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
+    && export NPM_TOKEN \
+    && npm ci --userconfig=/run/npm-auth/.npmrc \
+    && rm -rf /root/.npm/_logs
 
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -21,6 +36,7 @@ ARG NEXT_PUBLIC_APP_ENV=BAKED_NEXT_PUBLIC_APP_ENV
 ARG NEXT_PUBLIC_ELASTIC_INDEX=BAKED_NEXT_PUBLIC_ELASTIC_INDEX
 RUN npm run build
 
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
 WORKDIR /app
 
@@ -40,11 +56,21 @@ RUN set -e; \
     id -u nginx >/dev/null 2>&1 || { echo "ERROR: 'nginx' user not found; required by 'user nginx;' in nginx.conf.template." >&2; exit 1; }
 
 # Install Dependencies and cleanup yarn.lock if present
-ARG NPM_TOKEN
-RUN apk add --no-cache bash gettext tini curl libc6-compat \
-    && npm config set @izgateway:registry https://npm.pkg.github.com/ \
-    && npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN} \
-    && npm ci --omit=dev && find . -type f -name 'yarn.lock' -delete
+# The token is handled as in the deps stage. This stage is the final image, so the
+# token must not stay in a layer, in /root/.npmrc, or in an npm log.
+# The base image supplies bash, curl, and libc6-compat (through gcompat).
+# This stage adds gettext (for envsubst in run_and_monitor.sh) and tini.
+RUN --mount=type=secret,id=npm_token \
+    --mount=type=tmpfs,target=/run/npm-auth \
+    apk add --no-cache "gettext>=0.24" "tini>=0.19" \
+    && printf '%s\n' \
+        '@izgateway:registry=https://npm.pkg.github.com/' \
+        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
+    && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
+    && export NPM_TOKEN \
+    && npm ci --omit=dev --userconfig=/run/npm-auth/.npmrc \
+    && rm -rf /root/.npm/_logs \
+    && find . -type f -name 'yarn.lock' -delete
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 # The API spec, built by `prebuild` from src/pages/api/**, which this stage does
@@ -57,15 +83,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/run_and_monitor.sh ./run_and_moni
 COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
 
-# Replace default filebeat config with custom config file 
-RUN cd ../filebeat && \
-     rm -rf /filebeat.yml && \
-     cp ../app/filebeat.yml ./filebeat.yml
-
-# Replace default metricbeat config with custom config file
-RUN cd ../metricbeat && \
-     rm -rf /metricbeat.yml && \
-     cp ../app/metricbeat.yml ./metricbeat.yml
+# Replace the default filebeat and metricbeat config files with the custom config files
+RUN rm -rf /filebeat.yml /metricbeat.yml \
+    && cp /app/filebeat.yml /filebeat/filebeat.yml \
+    && cp /app/metricbeat.yml /metricbeat/metricbeat.yml
 
 # Make scripts executable and copy Nginx Configuration Template
 RUN chmod a+x replace-variable.sh \
