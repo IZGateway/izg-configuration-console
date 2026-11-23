@@ -18,6 +18,8 @@ on:
 permissions:
   contents: read
   packages: read
+  # actions: read lets the Jira report step look up which step failed (IGDD-2768).
+  actions: read
 
 jobs:
   update-dependencies:
@@ -419,3 +421,16 @@ jobs:
           path: /home/runner/.npm/_logs/
           retention-days: 7
           if-no-files-found: warn
+
+      # Files an IGDD Bug when the nightly run fails, so a dependency PR that cannot
+      # merge is not missed (IGDD-2768). The same failure while that ticket is open
+      # adds a comment instead of a new ticket. Scheduled runs only, so manual runs
+      # never file tickets. Must stay the last step: it reports the last failed step.
+      - name: Report failure to Jira
+        if: failure() && github.event_name == 'schedule'
+        uses: IZGateway/izg-dependency-scripts/.github/actions/report-ci-failure@v1
+        with:
+          component: Configuration Console
+          jira-api-url: ${{ secrets.JIRA_API_URL }}
+          jira-auth: ${{ secrets.JIRA_API_AUTH_BASE64 }}
+          pr-url: ${{ env.PR_URL }}
