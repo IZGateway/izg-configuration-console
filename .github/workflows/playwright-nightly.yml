@@ -122,7 +122,7 @@ jobs:
 
           wait
       - name: Install dependencies
-        run: npm ci --force
+        run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

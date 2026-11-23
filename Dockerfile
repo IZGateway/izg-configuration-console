@@ -14,7 +14,7 @@ RUN --mount=type=secret,id=npm_token,required=true \
     --mount=type=tmpfs,target=/run/npm-auth \
     printf '%s\n' \
         '@izgateway:registry=https://npm.pkg.github.com/' \
-        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
+        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
     && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
     && export NPM_TOKEN \
     && npm ci --userconfig=/run/npm-auth/.npmrc \
@@ -57,12 +57,14 @@ RUN set -e; \
 
 # Install Dependencies and cleanup yarn.lock if present
 # The token is a BuildKit secret, as in the deps stage. This is the final image.
+# The base image supplies bash, curl, and libc6-compat (through gcompat).
+# This stage adds gettext (for envsubst in run_and_monitor.sh) and tini.
 RUN --mount=type=secret,id=npm_token,required=true \
     --mount=type=tmpfs,target=/run/npm-auth \
-    apk add --no-cache bash gettext tini curl libc6-compat \
+    apk add --no-cache "gettext>=0.24" "tini>=0.19" \
     && printf '%s\n' \
         '@izgateway:registry=https://npm.pkg.github.com/' \
-        '//npm.pkg.github.com/:_authToken=${NPM_TOKEN}' > /run/npm-auth/.npmrc \
+        "//npm.pkg.github.com/:_authToken=\${NPM_TOKEN}" > /run/npm-auth/.npmrc \
     && NPM_TOKEN="$(cat /run/secrets/npm_token)" \
     && export NPM_TOKEN \
     && npm ci --omit=dev --userconfig=/run/npm-auth/.npmrc \
