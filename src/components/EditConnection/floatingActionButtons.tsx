@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react'
 import { Tooltip, Box, Fab } from '@mui/material'
 import { useState } from 'react'

@@ -16,7 +16,7 @@ jest.mock('next/router', () => ({
 jest.mock('../AppHeader', () => ({
   __esModule: true,
   default: function AppHeaderMock() {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     return React.createElement('div', { 'data-testid': 'app-header' })
   },
 }))
@@ -24,7 +24,7 @@ jest.mock('../AppHeader', () => ({
 jest.mock('../Container', () => ({
   __esModule: true,
   default: function ContainerMock({ children }: { children: React.ReactNode }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     return React.createElement('div', { 'data-testid': 'container' }, children)
   },
 }))
@@ -38,7 +38,7 @@ jest.mock('./DestinationDetailWidget', () => ({
     selectedConnection?: string
     envTag?: string
   }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     return React.createElement('div', {
       'data-testid': 'detail-widget',
       'data-connection': selectedConnection ?? '',
@@ -54,7 +54,7 @@ jest.mock('./OutboundMessagesWidget', () => ({
   }: {
     selectedConnection?: string
   }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     return React.createElement('div', {
       'data-testid': 'outbound-widget',
       'data-connection': selectedConnection ?? '',
@@ -69,7 +69,7 @@ jest.mock('./InboundMessagesWidget', () => ({
   }: {
     selectedConnection?: string
   }) {
-    const React = require('react') // eslint-disable-line @typescript-eslint/no-var-requires
+    const React = require('react')
     return React.createElement('div', {
       'data-testid': 'inbound-widget',
       'data-connection': selectedConnection ?? '',

@@ -9,7 +9,6 @@ interface statusProps {
   color: boolean
 }
 
-// eslint-disable-next-line react/display-name
 const Status = (props: statusProps) => {
   if (props.color) {
     return (

@@ -184,7 +184,9 @@ const loadColumnWidths = (): ColumnWidthState | null => {
     // Clear corrupted data
     try {
       localStorage.removeItem(STORAGE_KEY)
-    } catch {}
+    } catch {
+      // Ignore: localStorage is unavailable, so there is nothing to clear.
+    }
     return null
   }
 }

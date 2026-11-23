@@ -6,7 +6,7 @@ import LegalDocumentation from './LegalDocumentation'
 import { Slide } from '@mui/material'
 import RequestSupport from './RequestSupport'
 
-const HomeCircleCallouts = ({}) => {
+const HomeCircleCallouts = () => {
   return (
     <Slide in={true} timeout={2000} direction="up">
       <Box

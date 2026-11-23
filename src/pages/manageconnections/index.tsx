@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react'
 import ConnectionsTable from '../../components/ConnectionTable'
 import ErrorBoundary from '../../components/ErrorBoundary'

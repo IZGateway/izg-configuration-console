@@ -1,3 +1,7 @@
+# The base image uses the :latest tag on purpose. The base image rebuilds every day
+# with security patches, and :latest gives each build of this image those patches.
+# GHCR has no version tags for the base image. A digest pin stops the patches.
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -16,6 +20,7 @@ RUN --mount=type=secret,id=npm_token,required=true \
     && npm ci --userconfig=/run/npm-auth/.npmrc \
     && rm -rf /root/.npm/_logs
 
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -31,6 +36,7 @@ ARG NEXT_PUBLIC_APP_ENV=BAKED_NEXT_PUBLIC_APP_ENV
 ARG NEXT_PUBLIC_ELASTIC_INDEX=BAKED_NEXT_PUBLIC_ELASTIC_INDEX
 RUN npm run build
 
+# hadolint ignore=DL3007
 FROM ghcr.io/izgateway/alpine-node-openssl-fips:latest AS runner
 WORKDIR /app
 
@@ -74,15 +80,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/run_and_monitor.sh ./run_and_moni
 COPY --from=builder --chown=nextjs:nodejs /app/replace-variable.sh ./replace-variable.sh
 
 
-# Replace default filebeat config with custom config file 
-RUN cd ../filebeat && \
-     rm -rf /filebeat.yml && \
-     cp ../app/filebeat.yml ./filebeat.yml
-
-# Replace default metricbeat config with custom config file
-RUN cd ../metricbeat && \
-     rm -rf /metricbeat.yml && \
-     cp ../app/metricbeat.yml ./metricbeat.yml
+# Replace the default filebeat and metricbeat config files with the custom config files
+RUN rm -rf /filebeat.yml /metricbeat.yml \
+    && cp /app/filebeat.yml /filebeat/filebeat.yml \
+    && cp /app/metricbeat.yml /metricbeat/metricbeat.yml
 
 # Make scripts executable and copy Nginx Configuration Template
 RUN chmod a+x replace-variable.sh \

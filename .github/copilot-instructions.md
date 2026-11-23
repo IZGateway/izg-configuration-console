@@ -15,7 +15,7 @@
 
 ## Known CVE Remediation Notes
 
-- **uuid (CVE GHSA-w5hq-g745-h8pq):** `next-auth@4` and `@cypress/request` hold uuid at <14.0.0.
+- **uuid (CVE GHSA-w5hq-g745-h8pq):** `next-auth@4` holds uuid at <14.0.0. (`@cypress/request` also did, until Cypress was removed as an unused devDependency in IGDD-2974.)
   The vulnerable functions (`v3/v5/v6` with buffer args) are not called by this app or next-auth.
   Remediation options: patch-package on next-auth, or local CJS shim for uuid@14.
   Root fix: upgrade to next-auth@5 (separate CR).

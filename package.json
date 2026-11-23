@@ -70,9 +70,9 @@
   },
   "devDependencies": {
     "@babel/preset-typescript": "^7.29.7",
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
-    "@izgateway/dependency-scripts": "^1.1.0",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@izgateway/dependency-scripts": "^1.0.10",
     "@next/eslint-plugin-next": "^16.4.6",
     "@playwright/test": "^1.65.1",
     "@testing-library/jest-dom": "^5.17.0",
@@ -86,7 +86,6 @@
     "@typescript-eslint/parser": "^8.72.1",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "cypress": "^16.3.0",
     "dotenv": "^16.6.1",
     "eslint-config-next": "^16.4.6",
     "eslint-config-prettier": "^8.10.2",
@@ -110,9 +109,28 @@
     "glob": "14.0.6",
     "js-yaml": "4.3.2",
     "jsdom": "^28.1.0",
+    "nodemon": {
+      "minimatch": "^11.0.9"
+    },
+    "@swagger-api/apidom-reference": {
+      "minimatch": "^11.0.9"
+    },
     "swagger-ui-react": {
       "immutable": "^4.3.8"
     },
+    "test-exclude": {
+      "minimatch": "^11.0.9"
+    },
     "uuid": "npm:@izgateway/uuid-cjs@^14.0.0"
+  },
+  "allowScripts": {
+    "@parcel/watcher": false,
+    "@scarf/scarf": false,
+    "core-js-pure": false,
+    "@tree-sitter-grammars/tree-sitter-yaml": true,
+    "fsevents": true,
+    "tree-sitter": true,
+    "tree-sitter-json": true,
+    "unrs-resolver": true
   }
 }

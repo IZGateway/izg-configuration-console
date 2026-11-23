@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
 import { SessionProvider, useSession } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { buildDpopProof } from '../lib/dpop'
