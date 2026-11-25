@@ -21,7 +21,13 @@ import {
   expectedOutcome,
   foldCell,
 } from './evaluate'
-import { DestinationCache, foreignDestination, resolveDestination } from './probes'
+import {
+  DestinationCache,
+  foreignDestination,
+  resolveDestination,
+  resolveJurisdiction,
+  usesJurisdiction,
+} from './probes'
 
 const role = (name: string) => ROLES.find((r) => r.name === name)
 
@@ -38,18 +44,40 @@ test.describe('matrix.ts', () => {
   test('probes that use a destination declare where it comes from', () => {
     const missing = MATRIX.flatMap((row) =>
       (row.api ?? [])
-        .filter((p) => /\{dest(Id)?\}/.test(p.path + JSON.stringify(p.body ?? {})) && !p.dest)
+        .filter((p) => /\{(dest|destId|typeId|jurisdictionId)\}/.test(p.path + JSON.stringify(p.body ?? {})) && !p.dest)
         .map((p) => `${row.id}: ${p.method} ${p.path}`)
     )
     expect(missing).toEqual([])
   })
 
+  test('a probe acts on a destination or a jurisdiction, not both', () => {
+    // Only one of the two is resolved for a probe, so the other would be
+    // sent unexpanded.
+    const both = MATRIX.flatMap((row) =>
+      (row.api ?? [])
+        .filter((p) => usesJurisdiction(p) && /\{(dest|destId|typeId)\}/.test(p.path + JSON.stringify(p.body ?? {})))
+        .map((p) => `${row.id}: ${p.method} ${p.path}`)
+    )
+    expect(both).toEqual([])
+  })
+
   test('a row is either automated or says why not', () => {
     const automated = (r: (typeof MATRIX)[number]) =>
-      !!(r.nav?.length || r.pages?.length || r.api?.length || r.ui?.length || r.pageData?.length)
+      !!(r.nav?.length || r.pages?.length || r.api?.length || r.ui?.length || r.pageData?.length || r.checksDestinationList)
     const neither = MATRIX.filter((r) => !r.notAutomated && !automated(r)).map((r) => r.id)
     const both = MATRIX.filter((r) => r.notAutomated && automated(r)).map((r) => r.id)
-    expect({ neither, both }).toEqual({ neither: [], both: [] })
+    // A row with nothing probed is notAutomated, not notCovered.
+    const partlyOfNothing = MATRIX.filter((r) => r.notCovered && !automated(r)).map((r) => r.id)
+    expect({ neither, both, partlyOfNothing }).toEqual({ neither: [], both: [], partlyOfNothing: [] })
+  })
+
+  test('a row with a global-only probe has another probe for jurisdiction roles', () => {
+    // A global-only probe is never sent for a jurisdiction role, so without
+    // another API probe the jurisdiction columns would rest on the UI alone.
+    const undecided = MATRIX.filter(
+      (r) => r.api?.some((p) => p.globalOnly) && !r.api.some((p) => !p.globalOnly)
+    ).map((r) => r.id)
+    expect(undecided).toEqual([])
   })
 
   test('a UI-only row has a UI check to report it on', () => {
@@ -136,6 +164,15 @@ test.describe('cell logic', () => {
     expect(foldCell('r', 'R', [foreignRefused], gap, 'allowed').status).not.toBe('GAP_CLOSED')
   })
 
+  test('a gap neither hides nor is closed by a check for every role', () => {
+    // A noLongerSent prop coming back, for a role whose gap is "still granted".
+    const sentAgain: CheckResult = { ...decide('data', 'p', 'denied', 'allowed', 'sent'), everyRole: true }
+    const stillAbsent: CheckResult = { ...decide('data', 'p', 'denied', 'denied', 'absent'), everyRole: true }
+    expect(foldCell('r', 'R', [fail, sentAgain], gap, 'denied').status).toBe('FAIL')
+    expect(foldCell('r', 'R', [fail, stillAbsent], gap, 'denied').status).toBe('KNOWN_GAP')
+    expect(foldCell('r', 'R', [stillAbsent], gap, 'denied').status).not.toBe('GAP_CLOSED')
+  })
+
   test('a column that stopped early marks the rows it did not record', () => {
     const recorded = foldCell(MATRIX[0].id, 'R', [pass])
     const cells = completeColumn(MATRIX, 'R', [recorded], 'stopped')
@@ -182,6 +219,20 @@ test.describe('cell logic', () => {
       if (saved === undefined) delete process.env.CI
       else process.env.CI = saved
     }
+  })
+
+  test('a jurisdiction probe gets one inside or outside the reach, or reports why not', () => {
+    const ak = { jurisdictionId: '7', prefix: 'ak' }
+    const md = { jurisdictionId: '9', prefix: 'md' }
+    const ctx = { outOfClaim: [], listed: [], ownJurisdiction: ak, foreignJurisdiction: md }
+    expect(resolveJurisdiction('own', ctx, 'own')).toEqual({ jurisdiction: ak })
+    expect(resolveJurisdiction('foreign', ctx, 'own')).toEqual({ jurisdiction: md })
+    expect(resolveJurisdiction('foreign', ctx, 'all')).toHaveProperty('skip')
+    // The jurisdiction list is the same for every role: a missing one is a
+    // data problem, locally too.
+    const none = { outOfClaim: [], listed: [] }
+    expect(resolveJurisdiction('own', none, 'own')).toHaveProperty('error')
+    expect(resolveJurisdiction('foreign', none, 'own')).toHaveProperty('error')
   })
 
   test('UI-only leaves allowed roles and real failures alone', () => {

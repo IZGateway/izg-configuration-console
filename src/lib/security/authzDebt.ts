@@ -79,51 +79,12 @@ export const AUTHZ_DEBT: AuthzDebt[] = [
   // nothing stops a later change deleting the inline check while the
   // reassuring declaration stays behind. Hence a row each, and hence the
   // derived ratchet.
-  {
-    kind: 'in-handler',
-    subject: 'apikeys/index.ts',
-    ticket: 'IGDD-3472',
-    note: 'Per-row jurisdiction filtering plus a multi-environment isAdmin check that is environment reach, not a capability — modelling it needs either a new apikeys.canManageMultiEnvironmentKeys flag or environment as a real scope in can().',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeys/domains.ts',
-    ticket: 'IGDD-3472',
-    note: 'Same multi-environment isAdmin check as apikeys/index.ts.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeys/token.ts',
-    ticket: 'IGDD-3472',
-    note: 'Handler resolves the caller\'s reach per credential; lifting it needs the apikeys capability set reviewed as a whole.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeys/renew/index.ts',
-    ticket: 'IGDD-3472',
-    note: 'As apikeys/token.ts.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeys/verify-domain/index.ts',
-    ticket: 'IGDD-3472',
-    note: 'As apikeys/token.ts.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeysaudit/index.ts',
-    ticket: 'IGDD-3472',
-    note:
-      'Handler checks canListApiKeys, then scopes rows to owned jurisdictions. ' +
-      'Landed on develop after this change was branched, declaring nothing; the ' +
-      'required RouteAuthz argument is what caught it.',
-  },
-  {
-    kind: 'in-handler',
-    subject: 'apikeysaudit/[sortKey].ts',
-    ticket: 'IGDD-3472',
-    note: 'As apikeysaudit/index.ts.',
-  },
+  // The seven apikeys/apikeysaudit in-handler rows (IGDD-3472) were closed by
+  // declare-api-key-endpoint-permissions (IGDD-3549): all seven routes now
+  // declare `capability`/`scope`/`byMethod` declaratively, including the
+  // multi-environment isAdmin check, which was removed outright rather than
+  // modelled (per the resolved decision that it was never a real permission
+  // distinction) — not left as a row naming a flag that will never be built.
   {
     kind: 'in-handler',
     subject: 'changerequest/[...slug].ts',

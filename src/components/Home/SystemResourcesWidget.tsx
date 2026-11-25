@@ -81,8 +81,8 @@ const requestSystemResources = async (url: string) => {
 }
 
 const SystemResourcesWidget = () => {
-  // [IGDD-3474] Shown to every signed-in user, not just isAdmin: the status
-  // report is open to all roles and /api/elasticsearch/query serves only the
+  // [IGDD-3474] Shown to every signed-in user: the status report is open to
+  // all roles and /api/elasticsearch/query serves only the
   // fixed host-metrics query. A null SWR key holds the request until the
   // session is authenticated.
   const { status } = useSession()

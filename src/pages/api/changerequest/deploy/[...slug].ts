@@ -56,10 +56,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const session = await getServerSession(req, res, authOptions)
     // Authorization is declared at the wrapper below (changerequest.canDeployChange),
-    // not decided here. It used to be an `if (session.user.isAdmin)` with no
-    // else, so a caller who failed it got no response at all and the request
-    // stalled. A declaration cannot have that shape: the wrapper answers 403
-    // before the handler runs.
+    // not decided here. It used to be an inline check with no else, so a
+    // caller who failed it got no response at all and the request stalled. A
+    // declaration cannot have that shape: the wrapper answers 403 before the
+    // handler runs.
     let changeRequestPassword = null
     let currentPassword = null
     const changeRequest: DestinationChangeRequest =
@@ -73,10 +73,27 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         changeRequest.destId,
         changeRequest.destType.typeId
       )
-      if (changeRequestPassword && currentPassword) {
-        changeRequest.requested.password = changeRequestPassword
+      // Only the new password is required. The current one is kept for the
+      // deployment audit, and a destination that has no password yet is a
+      // valid target for its first one; requiring it blocked that deploy.
+      if (currentPassword) {
         changeRequest.current.password = currentPassword
+      }
+      if (changeRequestPassword) {
+        changeRequest.requested.password = changeRequestPassword
       } else {
+        // Logged because this used to fail silently, leaving nothing in the
+        // console log to diagnose from (IGDD-3742).
+        logger.error(
+          'Change request is a password change but has no stored password',
+          {
+            changeRequestId,
+            jiraId: changeRequest.jiraId,
+            destId: changeRequest.destId,
+            destinationType: changeRequest.destType.type,
+            operation: 'deploy_change_request',
+          }
+        )
         // `return`, not just a 500. Without it execution fell through and
         // deployed anyway: `updatedDestination.password` took the null
         // `changeRequestPassword`, `updateDestination` wiped the stored
@@ -89,7 +106,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res
           .status(500)
           .json(
-            `Change request id ${changeRequestId} password or current password not found`
+            `Change request id ${changeRequestId} password not found`
           )
       }
     }
@@ -256,8 +273,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
-// An exact 1:1 replacement for the inline isAdmin check this handler used to
-// carry: canDeployChange already exists and is already IZG-Operations-only.
+// Replaced the inline Okta-group check this handler used to carry:
+// canDeployChange already existed and was already IZG-Operations-only.
 // Moving it into the declaration also fixes a defect - the inline check had
 // no else branch, so a non-admin GET fell through, sent nothing, and the
 // request resolved without any response at all.

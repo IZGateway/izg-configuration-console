@@ -72,13 +72,13 @@ const IZGOperationsAccess: RoleAccess = {
   // Management" rows are IZG Security and Jurisdiction Security only. The
   // decision to remove IZG Operations' access belongs to IGDD-3549, so these
   // values are left as they are.
+  // Narrowed off entirely (IGDD-3549, Anusha's 2026-10-28 resolution): the
+  // target matrix is IZG Security and Jurisdiction Security only. IZG
+  // Operations held full access only because no narrower role existed yet —
+  // affected users are expected to already hold IZG Security before this
+  // lands (same shape of change as IGDD-3498's admin-operations narrowing).
   apikeys: {
     ...defaultApiKeyManagementPageAccessControl,
-    canListApiKeys: true,
-    canCreateApiKey: true,
-    canRevokeApiKey: true,
-    canRenewApiKey: true,
-    canCancelApiKey: true,
   } as ApiKeyManagementPageAccessControl,
   onboarding: {
     ...defaultOnboardingPageAccessControl,
@@ -111,6 +111,12 @@ const IZGOperationsAccess: RoleAccess = {
     canViewAdminOperations: true,
     canResetHubCircuitBreakers: true,
     canRefreshHubDatabase: true,
+    // IGDD-3552: IZG Operations is who saw the full body under the Okta
+    // operations-group check this replaced; IZG Security holds it because it
+    // holds every capability. /api/deephealthcheck is exempt from DPoP for the
+    // load balancer, so each further holder also widens what a stolen session
+    // cookie discloses. Widen only with that addressed.
+    canViewDeepHealthCheckDetail: true,
   },
 
   // Target matrix (v13) row "Admin Log Search (current /console route)"

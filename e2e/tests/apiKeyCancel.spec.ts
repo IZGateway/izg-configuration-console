@@ -21,7 +21,6 @@
  *    default).
  */
 import { expect, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
 import {
   createPendingKey,
   newDescription,
@@ -30,7 +29,9 @@ import {
 import {
   API_KEYS_VIEWPORT,
   getStatCardValue,
+  loginAsApiKeyAdmin,
   openApiKeyManagement,
+  requireApiKeyAdmin,
 } from '../helpers/apiKeyHelpers'
 
 // loginToOkta alone budgets a 60s navigation retry plus 45s/30s/60s internal
@@ -42,23 +43,14 @@ test.describe.configure({ timeout: 120000 })
 // API_KEYS_VIEWPORT.
 test.use({ viewport: API_KEYS_VIEWPORT })
 
-test.beforeAll(() => {
-  const missing = ['OKTA_USERNAME', 'OKTA_PASSWORD'].filter(
-    (name) => !process.env[name]
-  )
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`
-    )
-  }
-})
+requireApiKeyAdmin()
 
 test('Cancelling a pending key soft-cancels it: hidden by default, counts unchanged, filterable as Cancelled', async ({
   page,
 }) => {
   const description = newDescription('cancel')
 
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginAsApiKeyAdmin(page)
   await openApiKeyManagement(page)
   await expect(
     page.getByRole('button', { name: 'Create Key' }),

@@ -60,19 +60,39 @@ test('Navigation panel has expected links', async () => {
 
 test('Navigation panel can collapse and expand', async () => {
   const navPanel = page.locator('#navigation')
-  const bb = await navPanel.boundingBox()
-  //Exapnded view
-  await navPanel
-    .getByRole('button', { name: 'toggle navigation drawer' })
-    .click()
-  let bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBeGreaterThan(bb.width)
-  expect.soft(bb2.height).toBe(bb.height)
-  //Collapsed view
-  await navPanel
-    .getByRole('button', { name: 'toggle navigation drawer' })
-    .click()
-  bb2 = await navPanel.boundingBox()
-  expect.soft(bb2.width).toBe(bb.width)
-  expect.soft(bb2.height).toBe(bb.height)
+  // Measure the panel users see, the Drawer's paper. The Drawer root
+  // (#navigation) switches width the moment `open` changes; the paper animates
+  // to it (the width transition in src/components/Navigation/index.tsx). So
+  // only the paper shows whether the visible panel expands and collapses.
+  const paper = navPanel.locator('.MuiDrawer-paper')
+  const viewportHeight = page.viewportSize().height
+  const toggle = navPanel.getByRole('button', {
+    name: 'toggle navigation drawer',
+  })
+
+  // The paper is fixed to the window at full height (MUI's Drawer paper), so
+  // it must be as tall as the viewport. 1 px of tolerance absorbs subpixel
+  // layout, e.g. 719.99 at a 720 px viewport.
+  const expectPanelFillsWindow = async () => {
+    await expect
+      .poll(async () => (await paper.boundingBox()).height)
+      .toBeGreaterThanOrEqual(viewportHeight - 1)
+  }
+
+  const collapsedWidth = (await paper.boundingBox()).width
+  await expectPanelFillsWindow()
+
+  // Expanded view. Polled, because the paper's width animates.
+  await toggle.click()
+  await expect
+    .poll(async () => (await paper.boundingBox()).width)
+    .toBeGreaterThan(collapsedWidth)
+  await expectPanelFillsWindow()
+
+  // Collapsed view: back to the starting width once the transition ends.
+  await toggle.click()
+  await expect
+    .poll(async () => (await paper.boundingBox()).width)
+    .toBe(collapsedWidth)
+  await expectPanelFillsWindow()
 })

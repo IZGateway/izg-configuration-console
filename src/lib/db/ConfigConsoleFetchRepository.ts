@@ -17,7 +17,7 @@ export default interface ConfigConsoleFetchRepository {
   fetchDestination(destId: string, destType: number): Promise<Destination>
   fetchAllDestinations(): Promise<Destination[]>
   fetchLoggedInUsersDestinations(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     jurisdictions: Array<string>
   ): Promise<Destination[]>
   fetchDestinationAuditHistory(
@@ -48,7 +48,7 @@ export default interface ConfigConsoleFetchRepository {
     principal: string
   ): Promise<AllowedUser | null>
   fetchAllowedUsersByDestination(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     destinations: Array<string>
   ): Promise<AllowedUser[]>
   fetchAllowedUserAuditHistory(

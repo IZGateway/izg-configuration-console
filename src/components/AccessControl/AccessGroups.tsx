@@ -49,8 +49,8 @@ interface AccessGroupsProps {
    *
    * Defaults to `false`, so a caller that forgets to pass it hides the
    * controls rather than showing them. Before this change these three controls
-   * had no gate whatsoever — unlike the deny-list and ADS file-type controls
-   * beside them, which at least hid on `isAdmin`.
+   * had no gate whatsoever, unlike the deny-list and ADS file-type controls
+   * beside them.
    */
   canManageAccessGroups?: boolean
 }

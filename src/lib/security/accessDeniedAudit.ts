@@ -39,7 +39,9 @@ export interface AccessDeniedEvent {
    * different page blocks, so the accompanying `page` would be arbitrary too.
    */
   permissionAnyOf?: string[]
+  /** The resolved destination, for a REQUIRES_DESTINATION_SCOPE denial whose scope is a real destination id. */
   destId?: string
+  /** Same shape as `destId`, but for `apikeys.*` denials, whose resolved scope is a jurisdiction prefix, not a destination id (IGDD-3549). */
   jurisdictionId?: string
   /**
    * Which enforcement point refused (IGDD-3472). Optional, so the five

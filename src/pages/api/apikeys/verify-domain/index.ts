@@ -4,8 +4,13 @@ import logger from '../../../../../logger'
 import DbClientFactory from '../../../../lib/db/DbClientFactory'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
-import { requireApiKeyAccess } from '../../../../lib/security/apiKeyAuthz'
+import {
+  isApiKeyManagementEnabled,
+  scopeFromCredentialSortKeyInQuery,
+  scopeFromJurisdictionIdInBody,
+} from '../../../../lib/security/apiKeyAuthz'
 import { recordApiKeyAudit } from '../../../../lib/apikeys/audit'
+import { currentGrantedBy } from '../../../../lib/Context'
 import dns from 'dns/promises'
 
 // DNS-verification bypass for local dev, automated tests, and the deployed
@@ -43,17 +48,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       const dbClient = await DbClientFactory.getDbClient()
+      // Role + tenancy (fix IDOR, matches token.ts: jurisdictionId comes from
+      // the loaded credential, never a client-supplied one) already happened
+      // declaratively, in the route's `scope` extractor, before this handler
+      // ran at all — this is a second, independent read for the business
+      // logic below (accepted two-reads trade-off, IGDD-3549 design.md Risks).
       const credential = await dbClient.getApiKeyCredential(sortKey)
       if (!credential) {
         return res.status(404).json({ error: 'API key not found' })
-      }
-      // Role + tenancy (fix IDOR, matches token.ts): derive jurisdictionId from
-      // the loaded credential rather than trusting a client-supplied one, so a
-      // caller can't pair another jurisdiction's sortKey with its own
-      // jurisdictionId to pass the ownership check.
-      const authz = await requireApiKeyAccess(session, 'canCreateApiKey', credential.jurisdictionId)
-      if (!authz.ok) {
-        return res.status(authz.status).json({ error: authz.error })
       }
       if (credential.status !== 'ready_for_validation') {
         return res.status(409).json({ error: 'Credential is not awaiting validation' })
@@ -112,14 +114,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const { domain, envId, jurisdictionId, sortKey: credentialSortKey } = req.body
     if (!domain || !jurisdictionId) {
       return res.status(400).json({ error: 'domain and jurisdictionId are required' })
-    }
-    // Role + tenancy: verifying a domain authorizes it and activates the
-    // pending credential, so it is gated on the mint capability
-    // (`canCreateApiKey`); a caller may only authorize/activate domains for a
-    // jurisdiction they own.
-    const authz = await requireApiKeyAccess(session, 'canCreateApiKey', jurisdictionId)
-    if (!authz.ok) {
-      return res.status(authz.status).json({ error: authz.error })
     }
 
     const dbClient = await DbClientFactory.getDbClient()
@@ -250,7 +244,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           jurisdictionId: String(jurisdictionId),
           domain: String(domain),
           environments,
-          grantedBy: authz.grantedBy,
+          grantedBy: currentGrantedBy(),
           // 'bypass' means the real DNS TXT lookup was SKIPPED (non-production
           // only). Recorded so a bypassed activation remains distinguishable
           // from a genuinely verified one long after the log line ages out.
@@ -425,7 +419,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       environments,
       validatedBy: activatedBy,
       verificationMethod,
-      grantedBy: authz.grantedBy,
+      grantedBy: currentGrantedBy(),
       operation: 'verifyDomain',
     })
 
@@ -450,6 +444,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 }
 
+// IGDD-3549: declarative capability + reach for both methods, closing this
+// route's `in-handler` debt row. GET reads the credential's stored
+// jurisdictionId (never one the caller could supply directly — the IDOR
+// protection already in place, matching token.ts). POST keeps trusting the
+// body's `jurisdictionId` directly, matching today's code — it separately
+// validates the named domain belongs to that jurisdiction before acting.
 export default withMiddleware({
-  inHandler: 'IGDD-3472: handler resolves the caller reach per credential',
+  featureFlag: isApiKeyManagementEnabled,
+  byMethod: {
+    GET: {
+      page: 'apikeys',
+      capability: 'canCreateApiKey',
+      scope: scopeFromCredentialSortKeyInQuery(),
+    },
+    POST: {
+      page: 'apikeys',
+      capability: 'canCreateApiKey',
+      scope: scopeFromJurisdictionIdInBody(),
+    },
+  },
 })(handler)

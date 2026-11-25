@@ -12,10 +12,11 @@ import { hasGlobalTenancy } from './security/policy'
  * destination, the user reaches it.
  *
  * This is NOT the right check for anything that pairs a permission with a
- * jurisdiction — API-key operations, for example. Those must use
- * `requireApiKeyAccess`, which evaluates permission and reach together per role.
- * Splitting them here is what would let one role's reach combine with another
- * role's permission.
+ * jurisdiction — API-key operations, for example. Those use a declared
+ * `capability` + `scope` on the route (decided by `decideRouteCapability`),
+ * or `canActOnJurisdiction` for a per-row filter, both of which evaluate
+ * permission and reach together per role. Splitting them here is what would
+ * let one role's reach combine with another role's permission.
  *
  * Global reach now comes from the `globalTenancy` flag on each role definition
  * rather than a hardcoded role-name list that was duplicated here and in the

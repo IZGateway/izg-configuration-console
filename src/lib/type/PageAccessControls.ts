@@ -78,6 +78,11 @@ type AdminOperationsPageAccessControl = {
   // per-destination permission into a hub-wide one.
   canResetHubCircuitBreakers: boolean
   canRefreshHubDatabase: boolean
+  // The full /api/deephealthcheck body (dependency URLs and upstream error
+  // messages) rather than the component/status/statusAt projection every
+  // other caller gets (IGDD-3552). Not an entry gate: the route stays public
+  // for the load balancer.
+  canViewDeepHealthCheckDetail: boolean
 }
 
 type ConsolePageAccessControl = {

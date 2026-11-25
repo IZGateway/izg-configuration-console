@@ -8,6 +8,17 @@ on:
     - cron: '0 7 * * 4' # Thursday
     - cron: '0 7 * * 5' # Friday
   workflow_dispatch:
+    inputs:
+      project:
+        description: 'Browser project to run (all runs every project, as the schedule does)'
+        type: choice
+        default: all
+        options:
+          - all
+          - Chrome
+          - Edge
+          - WebKit
+          - Firefox
 
 jobs:
   e2e:
@@ -36,10 +47,9 @@ jobs:
       E2E_RBAC_NO_ROLE_PASSWORD: ${{ secrets.E2E_RBAC_NO_ROLE_PASSWORD }}
       E2E_RBAC_NO_ROLE_FULLNAME: ${{ secrets.E2E_RBAC_NO_ROLE_FULLNAME }}
       # RBAC matrix check (e2e/rbac, IGDD-3621). IZG Operations and
-      # Jurisdiction Operations reuse the accounts above; a role whose
-      # secrets are unset is reported as CONFIG or PENDING, not run.
-      # IZG Security and Jurisdiction Security are mapped ahead of time: their
-      # columns stay PENDING until roles.ts marks them live.
+      # Jurisdiction Operations reuse the accounts above; a live role whose
+      # secrets are unset is reported as CONFIG, not run. The two Security
+      # accounts are also the API key scoping spec's (apiKeyRbacScoping).
       E2E_RBAC_IZG_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_IZG_SECURITY_USERNAME }}
       E2E_RBAC_IZG_SECURITY_PASSWORD: ${{ secrets.E2E_RBAC_IZG_SECURITY_PASSWORD }}
       E2E_RBAC_JURIS_SECURITY_USERNAME: ${{ secrets.E2E_RBAC_JURIS_SECURITY_USERNAME }}
@@ -56,10 +66,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
+      # registry-url writes an .npmrc that holds the text ${NODE_AUTH_TOKEN}, not the
+      # token. Do not use `npm config set ... _authToken`: npm writes its command
+      # line, with the token, to ~/.npm/_logs.
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@izgateway'
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -106,22 +121,25 @@ jobs:
           done
 
           wait
-      - name: Configure npm authentication
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          echo "Configuring npm authentication for GitHub Packages..."
-          npm config set @izgateway:registry https://npm.pkg.github.com/
-          npm config set //npm.pkg.github.com/:_authToken ${NPM_TOKEN}
-          echo "✓ npm authentication configured"
       - name: Install dependencies
         run: npm ci --force
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (all browsers, no screenshots)
-        run: npx playwright test --reporter=html
+      # A scheduled run has no input, so it runs every project. The input goes
+      # through an environment variable, not into the script text.
+      - name: Run Playwright tests (no screenshots)
+        env:
+          PW_PROJECT: ${{ inputs.project }}
+        run: |
+          if [ -z "$PW_PROJECT" ] || [ "$PW_PROJECT" = "all" ]; then
+            npx playwright test --reporter=html
+          else
+            npx playwright test --reporter=html --project="$PW_PROJECT"
+          fi
 
       - name: Upload HTML Report
         if: always()

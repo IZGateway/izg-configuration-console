@@ -5,54 +5,49 @@ import { authOptions } from '../../../pages/api/auth/[...nextauth]'
 
 const session = (args: any) => (authOptions.callbacks as any).session(args)
 
-describe('next-auth session callback — isAdmin group matching', () => {
-  const originalOperationsGroup = process.env.OPERATIONS_GROUP
-
+describe('next-auth session callback', () => {
   beforeEach(() => {
-    process.env.OPERATIONS_GROUP = 'IZG Operations'
     process.env.FEATURE_API_KEY_MANAGEMENT_ENABLED = 'false'
-  })
-
-  afterEach(() => {
-    process.env.OPERATIONS_GROUP = originalOperationsGroup
   })
 
   const baseSession = () => ({ user: {} }) as any
 
-  it('sets isAdmin true for an exact-match group name', async () => {
+  it('resolves roles from an exact-match group name', async () => {
     const result = await session({
       session: baseSession(),
       token: { id: 'u1', groups: ['IZG Operations'], jurisdictions: [] },
     })
-    expect(result.user.isAdmin).toBe(true)
+    expect(result.user.roles).toEqual(['IZG Operations'])
   })
 
-  it('sets isAdmin true for a differently cased/punctuated group name', async () => {
-    // Reviewer-flagged case (PR #666): `isAdmin` used to be a raw `includes`
-    // against OPERATIONS_GROUP while `roles` was normalized via
-    // rolesFromGroups, so a group like `izg-operations` resolved the correct
-    // role but left isAdmin false — silently hiding admin-only controls
-    // (DenyList.tsx, FileTypeList.tsx) that key off isAdmin alone.
+  it('resolves roles from a differently cased/punctuated group name', async () => {
     const result = await session({
       session: baseSession(),
       token: { id: 'u1', groups: ['izg-operations'], jurisdictions: [] },
     })
-    expect(result.user.isAdmin).toBe(true)
+    expect(result.user.roles).toEqual(['IZG Operations'])
   })
 
-  it('sets isAdmin false when no held group matches OPERATIONS_GROUP', async () => {
-    const result = await session({
-      session: baseSession(),
-      token: { id: 'u1', groups: ['Jurisdiction Support'], jurisdictions: [] },
-    })
-    expect(result.user.isAdmin).toBe(false)
-  })
-
-  it('sets isAdmin false when the token has no groups', async () => {
+  it('resolves no roles when the token has no groups', async () => {
     const result = await session({
       session: baseSession(),
       token: { id: 'u1', jurisdictions: [] },
     })
-    expect(result.user.isAdmin).toBe(false)
+    expect(result.user.roles).toEqual([])
+  })
+
+  // IGDD-3552: Okta operations-group membership used to be copied onto the
+  // session as `isAdmin`, an authorization axis the role matrix could not see.
+  // Every access decision now comes from `roles`, so the flag must not return.
+  it.each([
+    ['an IZG Operations member', ['IZG Operations']],
+    ['a jurisdiction user', ['Jurisdiction Support']],
+    ['a user with no groups', []],
+  ])('sets no isAdmin flag for %s', async (_label, groups) => {
+    const result = await session({
+      session: baseSession(),
+      token: { id: 'u1', groups, jurisdictions: [] },
+    })
+    expect(result.user).not.toHaveProperty('isAdmin')
   })
 })

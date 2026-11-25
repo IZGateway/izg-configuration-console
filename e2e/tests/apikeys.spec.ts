@@ -1,5 +1,8 @@
 import { BrowserContext, expect, Page, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
+import {
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
+} from '../helpers/apiKeyHelpers'
 
 // Focused Playwright coverage for use types on the API Key Management page.
 // apiKeyDashboard.spec.ts covers the page itself. This spec covers the USE
@@ -20,6 +23,8 @@ import { loginToOkta } from '../helpers/oktaLogin'
 // into a "More Options" menu below 1600px. These tests read the grid and click
 // the "Renew key" button directly, so they run at a viewport wider than both.
 // The last test narrows the viewport to cover the card layout, then restores it.
+
+requireApiKeyAdmin()
 
 let context: BrowserContext
 let page: Page
@@ -136,7 +141,7 @@ test.beforeAll(async ({ browser }) => {
   // is set on it directly.
   context = await browser.newContext({ viewport: VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginAsApiKeyAdmin(page)
   await page.goto('/apikeys')
   await page.waitForLoadState('networkidle')
 

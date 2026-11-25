@@ -2884,9 +2884,9 @@ const LABEL_TO_USE_TYPE = Object.fromEntries(
 ) as Record<string, AllowedUseType>
 
 // Same display-label <-> id mapping pattern as useTypes above, for the
-// multi-env Create-form picker (IZG Operations only — see isAdmin gating in
-// CreateKeyDialog). CREATE_ENV_OPTIONS ids are numbers; component state keeps
-// them as strings (matching envIds elsewhere in this dialog).
+// multi-env Create-form picker. CREATE_ENV_OPTIONS ids are numbers;
+// component state keeps them as strings (matching envIds elsewhere in this
+// dialog).
 const CREATE_ENV_OPTION_LABELS: string[] = CREATE_ENV_OPTIONS.map(
   (o) => o.displayName
 )
@@ -2930,7 +2930,6 @@ function CreateKeyDialog({
   onCreated: (sortKey: string) => void
 }) {
   const { status: sessionStatus, data: session } = useSession()
-  const isAdmin = !!session?.user?.isAdmin
   const jurisdictions = useOrganizations(sessionStatus)
 
   // The Create flow issues credentials to SENDERS, so the Organization dropdown
@@ -3121,7 +3120,7 @@ function CreateKeyDialog({
           useTypes,
         }),
       })
-      const body = await res.json()
+      const body = await res.json().catch(() => ({}))
       if (res.status === 202) {
         setChallenge({
           sortKey: body.sortKey,
@@ -3161,7 +3160,7 @@ function CreateKeyDialog({
           jurisdictionId,
         }),
       })
-      const body = await res.json()
+      const body = await res.json().catch(() => ({}))
       mutate('/api/apikeys')
       if (!res.ok || !body.verified) {
         setError(body.error || "We couldn't find the expected record.")
@@ -3235,52 +3234,24 @@ function CreateKeyDialog({
         </Select>
       </LabeledField>
       <LabeledField label="Environment" required>
-        {isAdmin ? (
-          // Multi-env is an admin-only capability (server-enforced too, not
-          // just this UI gate) — matches the useTypes multi-select pattern.
-          <SearchableMultiSelect
-            data-testid="create-key-environment"
-            label=""
-            value={envIds.map((id) => ENV_ID_TO_LABEL[id] ?? id)}
-            options={CREATE_ENV_OPTION_LABELS}
-            onChange={(labels) => {
-              setEnvIds(labels.map((l) => LABEL_TO_ENV_ID[l] ?? l))
-              setDnsSelection('')
-              setCustomDomain('')
-            }}
-            placeholder="Select one or more environments"
-            chipColor="primary"
-          />
-        ) : (
-          <Select
-            data-testid="create-key-environment"
-            value={envIds[0] ?? ''}
-            onChange={(e) => {
-              setEnvIds(e.target.value ? [e.target.value] : [])
-              setDnsSelection('')
-              setCustomDomain('')
-            }}
-            displayEmpty
-            fullWidth
-            sx={roundedFieldSx['& .MuiOutlinedInput-root']}
-            renderValue={(value) => {
-              if (!value)
-                return (
-                  <Box sx={{ color: palette.greyText }}>Select environment</Box>
-                )
-              return (
-                CREATE_ENV_OPTIONS.find((o) => String(o.id) === value)
-                  ?.displayName ?? value
-              )
-            }}
-          >
-            {CREATE_ENV_OPTIONS.map((opt) => (
-              <MenuItem key={opt.id} value={String(opt.id)}>
-                {opt.displayName}
-              </MenuItem>
-            ))}
-          </Select>
-        )}
+        {/* Multi-env is no longer admin-only (IGDD-3549, Anusha's 2026-10-28
+            resolution) — any role that can reach this dialog already holds
+            canCreateApiKey, which the server now accepts for any number of
+            environments, so there is no longer a narrower single-select case
+            to branch to. */}
+        <SearchableMultiSelect
+          data-testid="create-key-environment"
+          label=""
+          value={envIds.map((id) => ENV_ID_TO_LABEL[id] ?? id)}
+          options={CREATE_ENV_OPTION_LABELS}
+          onChange={(labels) => {
+            setEnvIds(labels.map((l) => LABEL_TO_ENV_ID[l] ?? l))
+            setDnsSelection('')
+            setCustomDomain('')
+          }}
+          placeholder="Select one or more environments"
+          chipColor="primary"
+        />
       </LabeledField>
       <LabeledField label="Description (optional)">
         <TextField
@@ -4018,7 +3989,7 @@ export default function ApiKeyManagement() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sortKey }),
         })
-        const body = await res.json()
+        const body = await res.json().catch(() => ({}))
         if (!res.ok) {
           showSnackbar(
             'error',
@@ -4081,7 +4052,7 @@ export default function ApiKeyManagement() {
             jurisdictionId: key.jurisdictionId,
           }),
         })
-        const body = await res.json()
+        const body = await res.json().catch(() => ({}))
         mutate('/api/apikeys')
         if (!res.ok || !body.verified) {
           showSnackbar(

@@ -95,6 +95,11 @@ class EncryptedRepository implements DbClient {
     destTypeId: number
   ) => Promise<DestinationAudit[]>
   deleteDestinationChangeRequest!: (id: number) => Promise<boolean>
+  // Passed through unwrapped: it never reads or writes a password.
+  updateDestinationChangeRequestSchedule!: (
+    id: number,
+    schedule: { scheduledAt: Date; isAsap: boolean; requestedBy: string }
+  ) => Promise<boolean>
   getChangeRequestId!: (destId: string, destType: number) => number
   fetchDestinationChangeRequestById!: (
     id: number
@@ -109,7 +114,7 @@ class EncryptedRepository implements DbClient {
     principal: string
   ) => Promise<AllowedUser>
   fetchAllowedUsersByDestination!: (
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     destinations: Array<string>
   ) => Promise<AllowedUser[]>
   deleteAllowedUser!: (
@@ -171,6 +176,8 @@ class EncryptedRepository implements DbClient {
     this.repository = repository
     this.deleteDestinationChangeRequest =
       repository.deleteDestinationChangeRequest.bind(repository)
+    this.updateDestinationChangeRequestSchedule =
+      repository.updateDestinationChangeRequestSchedule.bind(repository)
     this.getChangeRequestId = repository.getChangeRequestId.bind(repository)
     this.fetchAllDestinations = repository.fetchAllDestinations.bind(repository)
     this.fetchDestinationAuditHistory =
@@ -289,11 +296,11 @@ class EncryptedRepository implements DbClient {
   }
 
   async fetchLoggedInUsersDestinations(
-    isAdmin: boolean,
+    hasGlobalReach: boolean,
     jurisdictions: Array<string>
   ): Promise<Destination[]> {
     const results = await this.repository.fetchLoggedInUsersDestinations(
-      isAdmin,
+      hasGlobalReach,
       jurisdictions
     )
     for (const dest of results) {

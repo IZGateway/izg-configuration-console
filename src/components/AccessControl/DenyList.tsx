@@ -187,10 +187,8 @@ const DenyList: React.FC<DenyListComponentProps> = ({
   onDeleteDeny,
 }) => {
   const { setAlert } = useContext(CombinedContext)
-  // Was `Boolean(session?.user?.isAdmin)` — the Okta OPERATIONS_GROUP axis,
-  // which is invisible to can() and cannot be granted to a future role by a
-  // data edit. Now a matrix capability (IGDD-3472), `canManageDenyList`, held by
-  // IZG Security and IZG Operations (target matrix v13, IGDD-3498).
+  // A matrix capability (IGDD-3472), `canManageDenyList`, held by IZG Security
+  // and IZG Operations (target matrix v13, IGDD-3498).
   //
   // Render on true, never hide on false: useRoleAccess returns {} while the
   // session loads, so `{flag && <Control/>}` fails closed.

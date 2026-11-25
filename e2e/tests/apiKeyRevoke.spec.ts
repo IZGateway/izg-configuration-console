@@ -1,8 +1,12 @@
 import { Page, BrowserContext, expect, test } from '@playwright/test'
-import { loginToOkta } from '../helpers/oktaLogin'
 import { logout } from '../helpers/logout'
 import { createApiKeyWithExistingDomain } from '../helpers/createApiKey'
-import { API_KEYS_VIEWPORT } from '../helpers/apiKeyHelpers'
+import {
+  API_KEYS_VIEWPORT,
+  getStatCardValue,
+  loginAsApiKeyAdmin,
+  requireApiKeyAdmin,
+} from '../helpers/apiKeyHelpers'
 
 // Acceptance criteria: e2e/specs/api-key-management/spec.md
 // → "Revoke an active key".
@@ -15,25 +19,22 @@ const AUTHORIZED_TEST_DOMAIN = 'revokeKey.fastTrack.playwright.org'
 const TEST_USE_TYPE = 'Provider'
 const REVOKE_REASON = 'Automated test revocation'
 
+requireApiKeyAdmin()
+
 let context: BrowserContext
 let page: Page
 
-// Reads data-value, not the text: the visible number counts up, so mid-
-// animation it isn't the final count.
-const revokedCount = async () =>
-  Number(
-    await page
-      .getByTestId('stat-card-revoked')
-      .getByTestId('stat-card-value')
-      .getAttribute('data-value')
-  )
+// Through the shared reader, which reads data-value (the visible number counts
+// up, so mid-animation it isn't the final count) and fails on a missing value.
+// Number(null) is 0, so a missing data-value read inline looked like a count.
+const revokedCount = () => getStatCardValue(page, 'REVOKED')
 
 test.beforeAll(async ({ browser }) => {
   // A context made here does not inherit test.use(), so the viewport is set
   // on it directly. See API_KEYS_VIEWPORT.
   context = await browser.newContext({ viewport: API_KEYS_VIEWPORT })
   page = await context.newPage()
-  await loginToOkta(page, process.env.OKTA_USERNAME, process.env.OKTA_PASSWORD)
+  await loginAsApiKeyAdmin(page)
 })
 
 test.beforeEach(async () => {
