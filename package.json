@@ -24,9 +24,9 @@
     "test:rbac": "playwright test -c playwright.rbac.config.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1178.0",
-    "@aws-sdk/client-secrets-manager": "^3.1178.0",
-    "@aws-sdk/lib-dynamodb": "^3.1178.0",
+    "@aws-sdk/client-dynamodb": "^3.1179.0",
+    "@aws-sdk/client-secrets-manager": "^3.1179.0",
+    "@aws-sdk/lib-dynamodb": "^3.1179.0",
     "@axe-core/react": "^4.14.1",
     "@babel/types": "^7.29.15",
     "@elastic/ecs-winston-format": "^1.5.3",
@@ -69,7 +69,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@babel/preset-typescript": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.16",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@izgateway/dependency-scripts": "^1.2.0",
@@ -79,7 +79,7 @@
     "@testing-library/react": "^14.3.1",
     "@types/gtag.js": "^0.0.20",
     "@types/jest": "^30.0.0",
-    "@types/lodash": "^4.17.27",
+    "@types/lodash": "^4.17.28",
     "@types/react": "^18.3.32",
     "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
